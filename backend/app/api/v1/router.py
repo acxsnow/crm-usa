@@ -1,0 +1,18 @@
+from fastapi import APIRouter
+
+from app.modules.auth.router import router as auth_router
+from app.modules.billing.router import router as billing_router
+from app.modules.crm.router import router as crm_router
+from app.modules.field_ops.router import router as field_ops_router
+from app.modules.organizations.audit_router import router as audit_router
+from app.modules.organizations.router import router as organizations_router
+from app.modules.users.router import router as users_router
+
+api_router = APIRouter()
+api_router.include_router(auth_router)
+api_router.include_router(users_router)
+api_router.include_router(organizations_router)
+api_router.include_router(audit_router)
+api_router.include_router(crm_router)
+api_router.include_router(field_ops_router)
+api_router.include_router(billing_router)

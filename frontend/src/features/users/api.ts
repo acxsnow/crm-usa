@@ -1,0 +1,27 @@
+import { apiClient } from "@/lib/apiClient";
+import type { OrgUser, Role, UserListResponse } from "@/types/users";
+
+export async function listUsers(): Promise<UserListResponse> {
+  const res = await apiClient.get<UserListResponse>("/users");
+  return res.data;
+}
+
+export async function inviteUser(payload: { email: string; full_name: string; role_codes: string[] }): Promise<OrgUser> {
+  const res = await apiClient.post<OrgUser>("/users", payload);
+  return res.data;
+}
+
+export async function activateUser(userId: string): Promise<OrgUser> {
+  const res = await apiClient.post<OrgUser>(`/users/${userId}/activate`, {});
+  return res.data;
+}
+
+export async function deactivateUser(userId: string): Promise<OrgUser> {
+  const res = await apiClient.post<OrgUser>(`/users/${userId}/deactivate`, {});
+  return res.data;
+}
+
+export async function listRoles(): Promise<Role[]> {
+  const res = await apiClient.get<Role[]>("/roles");
+  return res.data;
+}
