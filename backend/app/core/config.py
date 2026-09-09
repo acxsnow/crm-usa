@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_USE_TLS: bool = True
 
+    # SMS (Masiv). Keep disabled until Masiv assigns endpoint/credentials.
+    SMS_PROVIDER: str = "console"  # console | masiv
+    MASIV_SMS_URL: str = ""
+    MASIV_USERNAME: str = ""
+    MASIV_PASSWORD: str = ""
+    MASIV_SENDER: str = "PAPCRM"
+
     # S3 (evidence/report storage). When S3_BUCKET is empty, the evidence
     # module falls back to local disk storage under STORAGE_DIR — fine for
     # dev/demo, must be swapped for S3 (signed URLs) before production.

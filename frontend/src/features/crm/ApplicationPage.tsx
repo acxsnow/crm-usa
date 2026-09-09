@@ -1,0 +1,22 @@
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { createApplication, getProgramFormFields, signApplication } from "./api";
+import { SignaturePad } from "@/features/field-ops/SignaturePad";
+
+export function ApplicationPage() {
+  const [params] = useSearchParams();
+  const leadId = params.get("leadId") ?? undefined;
+  const [programCode, setProgramCode] = useState("");
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [terms, setTerms] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const fields = useQuery({ queryKey: ["program-fields", programCode], queryFn: () => getProgramFormFields(programCode), enabled: Boolean(programCode) });
+  const create = useMutation({ mutationFn: () => createApplication({ lead_id: leadId, program_code: programCode, answers, terms_version: "T&C-v1", terms_accepted: terms }), onSuccess: (app) => setApplicationId(app.id) });
+  const sign = useMutation({ mutationFn: (signature: string) => signApplication(applicationId!, customerName, signature) });
+  const setAnswer = (key: string, value: unknown) => setAnswers((current) => ({ ...current, [key]: value }));
+
+  if (sign.isSuccess) return <div className="success-card application-success"><div className="success-check">✓</div><h1>Aplicación lista para revisión</h1><p>La información, aceptación de T&C y firma quedaron guardadas. Administración revisará el caso antes de someterlo.</p><Link className="primary-button" to="/leads">Volver a prospectos</Link></div>;
+  return <div className="application-page"><div className="page-heading"><div><p className="eyebrow">NUEVA APLICACIÓN</p><h1>Calificación del cliente</h1><p className="page-subtitle">Completa la información con el cliente antes de enviarla a administración.</p></div><span className="page-badge">Borrador</span></div><div className="application-card"><label className="field-label">Programa de incentivos<input value={programCode} onChange={(e) => { setProgramCode(e.target.value.toUpperCase()); setAnswers({}); }} placeholder="Ej. TECH_CLEAN_CA" required /></label>{programCode && <div className="dynamic-fields">{fields.isLoading && <p className="page-subtitle">Cargando requisitos...</p>}{!fields.isLoading && fields.data?.length === 0 && <p className="empty-note">Este programa todavía no tiene campos configurados. Puedes guardar la aplicación y agregar los requisitos cuando administración los defina.</p>}{fields.data?.map((field) => <label className="field-label" key={field.id}>{field.label}{field.field_type === "textarea" ? <textarea value={String(answers[field.field_key] ?? "")} onChange={(e) => setAnswer(field.field_key, e.target.value)} required={field.required} /> : field.field_type === "select" ? <select value={String(answers[field.field_key] ?? "")} onChange={(e) => setAnswer(field.field_key, e.target.value)} required={field.required}><option value="">Seleccionar...</option>{(field.options ?? []).map((option) => <option key={option}>{option}</option>)}</select> : <input type={field.field_type === "number" ? "number" : "text"} value={String(answers[field.field_key] ?? "")} onChange={(e) => setAnswer(field.field_key, e.target.value)} required={field.required} />}</label>)}</div>}<label className="terms-check"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} /> Confirmo que el cliente leyó y acepta los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> versión T&C-v1.</label>{!applicationId ? <button className="primary-button" disabled={!programCode || !terms || create.isPending} onClick={() => create.mutate()}>{create.isPending ? "Guardando..." : "Guardar y continuar a firma"}</button> : <div className="signature-step"><p className="eyebrow">FIRMA PRESENCIAL</p><h2>Autorización del cliente</h2><p className="page-subtitle">El cliente firma ahora, acompañado por el vendedor.</p><input className="signature-name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Nombre completo del cliente" required /><SignaturePad disabled={!customerName.trim() || sign.isPending} onCapture={(signature) => sign.mutate(signature)} />{sign.isError && <p className="form-error">No se pudo guardar la firma. Intenta nuevamente.</p>}</div>}</div></div>;
+}

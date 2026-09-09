@@ -107,8 +107,9 @@ Hardening**.
     "Instalación" creates its Project automatically (idempotent), with the
     default checklist applied and the opportunity owner pre-set as
     technician.
-  - **Evidence scope**: photos only for now (JPEG/PNG/WEBP/HEIC), rejected
-    with 400 otherwise; 15MB per file, 40 files per project ceiling.
+  - **Evidence scope**: photos and videos (JPEG/PNG/WEBP/HEIC plus MP4/MOV/WEBM),
+    rejected with 400 otherwise; 15MB per file, 40 files per project ceiling.
+    Images and videos receive a visible GPS + date watermark before storage.
   - 7 new tests (checklist template application, evidence-required gating,
     watermarked evidence download, two-signature attestation + PDF
     generation, assigned-only project scoping, evidence MIME rejection,

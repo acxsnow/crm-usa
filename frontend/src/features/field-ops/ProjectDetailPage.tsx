@@ -6,6 +6,7 @@ import {
   createTask,
   createTaskComment,
   fetchAttestationPdfObjectUrl,
+  fetchEvidenceObjectUrl,
   getAttestation,
   getProject,
   getProjectChecklist,
@@ -20,7 +21,7 @@ import {
 import { listUsers } from "@/features/users/api";
 import { SignaturePad } from "./SignaturePad";
 import { PaginationControls } from "@/components/PaginationControls";
-import type { EvidenceCategory, FieldTask, TaskStatus } from "@/types/fieldOps";
+import type { Evidence, EvidenceCategory, FieldTask, TaskStatus } from "@/types/fieldOps";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
@@ -29,6 +30,46 @@ const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "in_progress", label: "En progreso" },
   { status: "done", label: "Completada" },
 ];
+
+function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const isVideo = evidence.mime_type?.startsWith("video/");
+
+  useEffect(() => {
+    let active = true;
+    fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined);
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => { active = false; window.removeEventListener("keydown", closeOnEscape); };
+  }, [evidence.id, onClose]);
+
+  return <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label="Vista ampliada de evidencia" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="evidence-viewer">
+      <header className="evidence-viewer-header">
+        <div><strong>{evidence.original_filename ?? "Evidencia"}</strong><small>{evidence.category} · {evidence.watermarked ? "Marca visible aplicada" : "Sin marca"}</small></div>
+        <button type="button" className="evidence-viewer-close" onClick={onClose} aria-label="Cerrar vista ampliada">×</button>
+      </header>
+      <div className="evidence-viewer-stage">
+        {url ? (isVideo
+          ? <video controls autoPlay preload="metadata" src={url} />
+          : <img src={url} alt={evidence.original_filename ?? "Evidencia ampliada"} style={{ transform: `scale(${zoom})` }} />)
+          : <div className="evidence-placeholder">Cargando evidencia...</div>}
+      </div>
+      <footer className="evidence-viewer-footer">
+        {!isVideo && <div className="evidence-zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(1, value - 0.25))}>−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(3, value + 0.25))}>+</button><button type="button" onClick={() => setZoom(1)}>Restablecer</button></div>}
+        <div className="evidence-watermark-detail"><strong>Marca de evidencia</strong><span>{evidence.latitude != null && evidence.longitude != null ? `GPS: ${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}` : "GPS: no disponible"}</span><span>{evidence.captured_at ? `Fecha: ${new Date(evidence.captured_at).toLocaleString("es-CO")}` : "Fecha: no disponible"}</span></div>
+      </footer>
+    </div>
+  </div>;
+}
+
+function EvidenceCard({ evidence, onOpen }: { evidence: Evidence; onOpen: (evidence: Evidence) => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => { let active = true; fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined); return () => { active = false; }; }, [evidence.id]);
+  const isVideo = evidence.mime_type?.startsWith("video/");
+  return <article className="evidence-card"><button type="button" className="evidence-preview-button" onClick={() => onOpen(evidence)} aria-label={`Abrir ${evidence.original_filename ?? "evidencia"}`}>{url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={evidence.original_filename ?? "Evidencia"} />) : <div className="evidence-placeholder">Cargando vista previa...</div>}<span className="evidence-open-hint">Ver en detalle ↗</span></button><div className="evidence-card-info"><strong>{evidence.original_filename ?? "Evidencia"}</strong><span>{evidence.category} · {evidence.watermarked ? "Marca visible ✓" : "Sin marca"}</span><small>{evidence.latitude != null && evidence.longitude != null ? `GPS ${evidence.latitude.toFixed(5)}, ${evidence.longitude.toFixed(5)}` : "GPS no disponible"}</small><small>{evidence.captured_at ? new Date(evidence.captured_at).toLocaleString("es-CO") : "Fecha no disponible"}</small></div></article>;
+}
 
 function TaskComments({ taskId }: { taskId: string }) {
   const queryClient = useQueryClient();
@@ -238,6 +279,7 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
   const evidence = evidenceData?.items;
+  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const { data: attestation } = useQuery({
     queryKey: ["project-attestation", projectId],
     queryFn: () => getAttestation(projectId!),
@@ -321,7 +363,7 @@ export function ProjectDetailPage() {
           : geo.status === "denied"
             ? "no disponible / permiso denegado"
             : "solicitando..."}
-        {" "}— cada foto se marca con una marca de agua visible (GPS + fecha).
+        {" "}— la marca se incrusta sobre los píxeles del archivo: abre cualquier cuadro en “Ver en detalle” para verla en la franja inferior y comprobar GPS + fecha.
       </p>
       <form
         className="inline-form"
@@ -337,31 +379,13 @@ export function ProjectDetailPage() {
           <option value="damage">Daño existente</option>
           <option value="other">Otro</option>
         </select>
-        <input type="file" accept="image/*" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <button type="submit" disabled={!file || uploadMutation.isPending}>
           Subir
         </button>
       </form>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Archivo</th>
-            <th>Categoría</th>
-            <th>GPS marcado</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(evidence ?? []).map((ev) => (
-            <tr key={ev.id}>
-              <td>{ev.original_filename}</td>
-              <td>{ev.category}</td>
-              <td>{ev.watermarked ? "Sí" : "No"}</td>
-              <td>{ev.captured_at ? new Date(ev.captured_at).toLocaleString() : "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="evidence-gallery">{(evidence ?? []).map((ev) => <EvidenceCard key={ev.id} evidence={ev} onOpen={setSelectedEvidence} />)}</div>
+      {selectedEvidence && <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />}
       {evidenceData && (
         <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
       )}

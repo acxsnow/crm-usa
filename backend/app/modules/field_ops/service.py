@@ -23,17 +23,17 @@ from app.modules.field_ops.models import (
 )
 from app.modules.field_ops.pdf import build_attestation_pdf, decode_signature_png
 from app.modules.field_ops.storage import save_bytes
-from app.modules.field_ops.watermark import WATERMARKABLE_MIME_TYPES, apply_gps_watermark
+from app.modules.field_ops.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
 from app.shared.audit import record_audit_event
 
 settings = get_settings()
 
-# Evidence scope confirmed with Mateo (Sept 2026): photos only for now (no
-# video support yet), ~10-20 photos per project in real use. Enforced as a
+# Evidence scope confirmed with Mateo (Sept 2026): photos and short videos,
+# ~10-20 evidence items per project in real use. Enforced as a
 # generous ceiling — legitimate uploads should never hit it, but it catches
 # accidental bulk-upload bugs and unsupported file types early.
-ALLOWED_EVIDENCE_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif"}
-MAX_EVIDENCE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB per photo
+ALLOWED_EVIDENCE_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/heic", "image/heif", *VIDEO_MIME_TYPES}
+MAX_EVIDENCE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB per evidence item
 MAX_EVIDENCE_PER_PROJECT = 40  # generous ceiling above the ~10-20 typical count
 
 
@@ -188,7 +188,7 @@ async def complete_checklist_item(
 
 
 # ---------------------------------------------------------------------------
-# Evidence — GPS watermark burned into the image (confirmed requirement)
+# Evidence — GPS/date watermark burned into images and videos
 # ---------------------------------------------------------------------------
 
 async def upload_evidence(
@@ -206,7 +206,7 @@ async def upload_evidence(
     if mime_type not in ALLOWED_EVIDENCE_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type: {mime_type or 'unknown'}. Only photos are accepted (JPEG, PNG, WEBP, HEIC).",
+            detail=f"Unsupported file type: {mime_type or 'unknown'}. Accepted: photos (JPEG, PNG, WEBP, HEIC) and videos (MP4, MOV, WEBM).",
         )
 
     existing_count = len(
@@ -234,10 +234,17 @@ async def upload_evidence(
         except Exception:
             # Corrupt/unsupported image bytes: store the original rather than failing the upload.
             watermarked = False
+    elif mime_type in VIDEO_MIME_TYPES:
+        try:
+            raw_bytes = apply_video_watermark(raw_bytes, latitude=latitude, longitude=longitude, captured_at=captured_at)
+            mime_type = "video/mp4"
+            watermarked = True
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"No se pudo procesar el video con marca de agua: {exc}") from exc
 
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"projects/{project_id}/evidence",
-        filename=file.filename or "evidence", data=raw_bytes,
+        filename=(f"{file.filename.rsplit('.', 1)[0]}.mp4" if mime_type == "video/mp4" and file.filename else (file.filename or "evidence")), data=raw_bytes,
     )
 
     evidence = Evidence(

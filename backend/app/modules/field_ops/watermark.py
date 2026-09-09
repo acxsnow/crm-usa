@@ -1,18 +1,22 @@
 """Burns a VISIBLE watermark (timestamp + GPS coordinates) onto evidence
-photos before they're stored — confirmed requirement (Mateo, Sept 2026):
+photos and videos before they're stored — confirmed requirement (Mateo, Sept 2026):
 "las imagenes que se suban deben quedar como marcadas como si fuera marca de
 agua con la georeferenciación." This is deliberately baked into the pixels,
 not just EXIF/DB metadata, so the watermark survives export/sharing and
 can't be silently stripped.
 """
 import io
+import subprocess
+import tempfile
+from pathlib import Path
 from datetime import datetime
 
 from PIL import Image, ImageDraw, ImageFont
 
-# Image formats we know how to watermark. Anything else (video, PDF, etc.)
-# is stored as-is — GPS/timestamp still recorded in the Evidence row.
+# Image and video formats we know how to watermark. Other formats (PDF, etc.)
+# are outside the evidence upload allow-list.
 WATERMARKABLE_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+VIDEO_MIME_TYPES = {"video/mp4", "video/quicktime", "video/webm", "video/mpeg"}
 
 
 def _format_coords(lat: float, lon: float) -> str:
@@ -56,3 +60,23 @@ def apply_gps_watermark(
     out = io.BytesIO()
     image.save(out, format="JPEG", quality=90)
     return out.getvalue()
+
+
+def apply_video_watermark(
+    video_bytes: bytes, *, latitude: float | None, longitude: float | None, captured_at: datetime | None,
+) -> bytes:
+    """Burn the evidence label into every video frame using ffmpeg."""
+    timestamp = (captured_at or datetime.utcnow()).strftime("%Y-%m-%d %H:%M UTC")
+    location = _format_coords(latitude, longitude) if latitude is not None and longitude is not None else "Sin GPS disponible"
+    label = f"{location}  ·  {timestamp}"
+    with tempfile.TemporaryDirectory(prefix="evidence-video-") as directory:
+        source = Path(directory) / "source"
+        output = Path(directory) / "watermarked.mp4"
+        textfile = Path(directory) / "watermark.txt"
+        source.write_bytes(video_bytes)
+        textfile.write_text(label, encoding="utf-8")
+        command = ["ffmpeg", "-y", "-i", str(source), "-vf", "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile=" + str(textfile) + ":fontcolor=white:fontsize=24:box=1:boxcolor=black@0.6:boxborderw=10:x=20:y=h-th-20", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-c:a", "aac", "-movflags", "+faststart", str(output)]
+        result = subprocess.run(command, capture_output=True, timeout=180)
+        if result.returncode != 0 or not output.exists():
+            raise RuntimeError(result.stderr.decode("utf-8", errors="replace")[-500:])
+        return output.read_bytes()

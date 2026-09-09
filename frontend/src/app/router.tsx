@@ -16,6 +16,8 @@ import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { CustomerSignaturePage } from "@/features/field-ops/CustomerSignaturePage";
+import { ApplicationPage } from "@/features/crm/ApplicationPage";
+import { ApplicationsAdminPage } from "@/features/crm/ApplicationsAdminPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardHome /> },
       { path: "leads", element: <LeadsPage /> },
+      { path: "applications/new", element: <ApplicationPage /> },
+      { path: "applications", element: <ApplicationsAdminPage /> },
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:customerId", element: <CustomerDetailPage /> },
       { path: "opportunities", element: <OpportunitiesPage /> },

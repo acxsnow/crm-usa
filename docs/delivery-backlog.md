@@ -94,9 +94,10 @@ docker-compose infra. See README for what's implemented.
   its Project (idempotent — won't duplicate if it moves between both), with
   the default checklist applied and the opportunity owner pre-set as the
   technician, ready to reassign.
-- **Evidence scope confirmed**: photos only for now (no video yet), with a
-  40-file/15MB-per-file ceiling (real usage is ~10-20 per project) and a
-  MIME allow-list (JPEG/PNG/WEBP/HEIC) enforced server-side.
+- **Evidence scope confirmed**: photos and videos, with a 40-file/15MB-per-file
+  ceiling (real usage is ~10-20 per project) and a server-side MIME allow-list
+  (JPEG/PNG/WEBP/HEIC plus MP4/MOV/WEBM). Images and videos receive a visible
+  GPS + date watermark before storage.
 - **Checklist scope confirmed**: one generic HVAC install checklist is
   enough for now — per-funder-program checklists (spec 18 item 1, CARE vs
   HEEHRA vs LADWP) can be added later as additional `ChecklistTemplate` rows

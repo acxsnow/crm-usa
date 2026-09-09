@@ -4,6 +4,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 const NAV_ITEMS: { to: string; label: string; icon: string; permissions?: string[] }[] = [
   { to: "/", label: "Inicio", icon: "⌂" },
   { to: "/leads", label: "Prospectos", icon: "✦", permissions: ["leads.manage"] },
+  { to: "/applications", label: "Aplicaciones", icon: "✓", permissions: ["leads.manage"] },
   { to: "/opportunities", label: "Pipeline", icon: "◈", permissions: ["opportunities.manage"] },
   { to: "/customers", label: "Clientes", icon: "♙", permissions: ["customers.read"] },
   { to: "/projects", label: "Proyectos", icon: "▣", permissions: ["projects.read_all", "projects.read_assigned"] },

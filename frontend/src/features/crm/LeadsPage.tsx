@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { convertLead, createLead, listLeadsPage } from "./api";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Link } from "react-router-dom";
 import type { Lead } from "@/types/crm";
 
 const PAGE_SIZE = 20;
@@ -123,6 +124,7 @@ export function LeadsPage() {
                   <span className={`status-pill status-${lead.status}`}>{lead.status}</span>
                 </td>
                 <td>
+                  <Link className="link-button" to={`/applications/new?leadId=${lead.id}`}>Abrir aplicación</Link>{" "}
                   {lead.status !== "converted" && (
                     <button
                       className="link-button"

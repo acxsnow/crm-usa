@@ -110,6 +110,59 @@ class CustomerContact(UUIDPKMixin, TimestampMixin, Base):
 
 
 # ---------------------------------------------------------------------------
+# Applications — one customer may have several program applications.
+# ---------------------------------------------------------------------------
+
+class Application(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    __tablename__ = "applications"
+
+    lead_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("leads.id", ondelete="SET NULL"), index=True)
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("customers.id", ondelete="SET NULL"), index=True)
+    program_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    form_version: Mapped[str] = mapped_column(String(50), nullable=False, server_default="1")
+    status: Mapped[str] = mapped_column(String(40), nullable=False, server_default="draft", index=True)
+    answers: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    terms_version: Mapped[str | None] = mapped_column(String(50))
+    terms_accepted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    customer_signature_path: Mapped[str | None] = mapped_column(String(500))
+    customer_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    salesperson_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    salesperson_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_notes: Mapped[str | None] = mapped_column(Text)
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ProgramFormField(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Configurable question/document/photo requirement for one program."""
+    __tablename__ = "program_form_fields"
+
+    program_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    form_version: Mapped[str] = mapped_column(String(50), nullable=False, server_default="1")
+    field_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    field_type: Mapped[str] = mapped_column(String(30), nullable=False, server_default="text")
+    required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    options: Mapped[list | None] = mapped_column(JSON)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class ApplicationDocument(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    __tablename__ = "application_documents"
+
+    application_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True)
+    field_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    original_filename: Mapped[str | None] = mapped_column(String(255))
+    mime_type: Mapped[str | None] = mapped_column(String(100))
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False)
+
+
+# ---------------------------------------------------------------------------
 # Property address (embedded, reused by Lead/Opportunity; Project in phase 3
 # is one-per-property/space per the confirmed domain model)
 # ---------------------------------------------------------------------------
