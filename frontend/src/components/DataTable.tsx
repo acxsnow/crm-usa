@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 export interface Column<T> {
   key: string;
@@ -12,6 +12,10 @@ interface DataTableProps<T> {
   isLoading: boolean;
   emptyMessage?: string;
   getRowKey: (row: T) => string;
+  /** Optional extra row rendered right after each data row, spanning all
+   * columns — for inline detail/expansion content (e.g. attachments and a
+   * payment form under an invoice) that doesn't fit a single table cell. */
+  renderDetailRow?: (row: T) => ReactNode;
 }
 
 export function DataTable<T>({
@@ -20,6 +24,7 @@ export function DataTable<T>({
   isLoading,
   emptyMessage = "Sin resultados para mostrar.",
   getRowKey,
+  renderDetailRow,
 }: DataTableProps<T>) {
   if (isLoading) return <p>Cargando...</p>;
 
@@ -40,11 +45,18 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={getRowKey(row)}>
-              {columns.map((col) => (
-                <td key={col.key}>{col.render ? col.render(row) : cellValue(row, col.key)}</td>
-              ))}
-            </tr>
+            <Fragment key={getRowKey(row)}>
+              <tr>
+                {columns.map((col) => (
+                  <td key={col.key}>{col.render ? col.render(row) : cellValue(row, col.key)}</td>
+                ))}
+              </tr>
+              {renderDetailRow && (
+                <tr>
+                  <td colSpan={columns.length}>{renderDetailRow(row)}</td>
+                </tr>
+              )}
+            </Fragment>
           ))}
           {rows.length === 0 && (
             <tr>

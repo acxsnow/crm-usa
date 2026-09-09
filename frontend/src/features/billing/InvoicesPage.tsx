@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createInvoice,
@@ -12,6 +12,9 @@ import {
 } from "./api";
 import { listProjects } from "@/features/field-ops/api";
 import { PaginationControls } from "@/components/PaginationControls";
+import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
+import { DataTable, type Column } from "@/components/DataTable";
+import { useTableFilters } from "@/lib/useTableFilters";
 import type { Invoice } from "@/types/billing";
 
 const PAGE_SIZE = 20;
@@ -97,9 +100,11 @@ function PaymentForm({ invoiceId }: { invoiceId: string }) {
 
 export function InvoicesPage() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({ queryKey: ["invoices", page], queryFn: () => listInvoicesPage(page, PAGE_SIZE) });
-  const invoices = data?.items;
+  const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
+  const { data, isLoading } = useQuery({
+    queryKey: ["invoices", page, extraParams],
+    queryFn: () => listInvoicesPage(page, PAGE_SIZE, extraParams),
+  });
   const { data: dashboard } = useQuery({ queryKey: ["finance-dashboard"], queryFn: getFinanceDashboard });
   const { data: projects } = useQuery({ queryKey: ["projects-all"], queryFn: listProjects });
 
@@ -122,7 +127,57 @@ export function InvoicesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
   });
 
-  if (isLoading) return <p>Cargando...</p>;
+  const filterFields: FilterFieldDef[] = [
+    {
+      key: "status",
+      label: "Estado",
+      type: "select",
+      options: [
+        { value: "pending", label: "Pendiente" },
+        { value: "sent", label: "Enviada" },
+        { value: "paid", label: "Pagada" },
+        { value: "overdue", label: "Vencida" },
+        { value: "cancelled", label: "Cancelada" },
+      ],
+    },
+    ...(projects && projects.length > 0
+      ? [
+          {
+            key: "project_id",
+            label: "Proyecto",
+            type: "select" as const,
+            options: projects.map((p) => ({ value: p.id, label: p.title })),
+          },
+        ]
+      : []),
+  ];
+
+  const columns: Column<Invoice>[] = [
+    { key: "invoice_number", header: "Factura" },
+    { key: "amount", header: "Monto", render: (inv) => `$${inv.amount.toLocaleString()}` },
+    { key: "paid_amount", header: "Pagado", render: (inv) => `$${inv.paid_amount.toLocaleString()}` },
+    { key: "balance", header: "Saldo", render: (inv) => `$${inv.balance.toLocaleString()}` },
+    {
+      key: "status",
+      header: "Estado",
+      render: (inv) => (
+        <span className={`status-pill status-${inv.status === "paid" ? "active" : inv.status === "overdue" ? "inactive" : ""}`}>
+          {inv.status}
+        </span>
+      ),
+    },
+    { key: "due_date", header: "Vence", render: (inv) => inv.due_date ?? "—" },
+    {
+      key: "actions",
+      header: "",
+      render: (inv) =>
+        inv.status === "pending" && (
+          <button className="link-button" onClick={() => sentMutation.mutate(inv.id)}>
+            Marcar enviada
+          </button>
+        ),
+    },
+  ];
 
   return (
     <div>
@@ -164,50 +219,20 @@ export function InvoicesPage() {
         </button>
       </form>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Factura</th>
-            <th>Monto</th>
-            <th>Pagado</th>
-            <th>Saldo</th>
-            <th>Estado</th>
-            <th>Vence</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {(invoices ?? []).map((inv) => (
-            <Fragment key={inv.id}>
-              <tr>
-                <td>{inv.invoice_number}</td>
-                <td>${inv.amount.toLocaleString()}</td>
-                <td>${inv.paid_amount.toLocaleString()}</td>
-                <td>${inv.balance.toLocaleString()}</td>
-                <td>
-                  <span className={`status-pill status-${inv.status === "paid" ? "active" : inv.status === "overdue" ? "inactive" : ""}`}>
-                    {inv.status}
-                  </span>
-                </td>
-                <td>{inv.due_date ?? "—"}</td>
-                <td>
-                  {inv.status === "pending" && (
-                    <button className="link-button" onClick={() => sentMutation.mutate(inv.id)}>
-                      Marcar enviada
-                    </button>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={7}>
-                  <AttachmentsList invoice={inv} />
-                  {inv.status !== "paid" && inv.status !== "cancelled" && <PaymentForm invoiceId={inv.id} />}
-                </td>
-              </tr>
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+      <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
+      <DataTable
+        columns={columns}
+        rows={data?.items ?? []}
+        isLoading={isLoading}
+        getRowKey={(inv) => inv.id}
+        emptyMessage="Sin facturas para mostrar."
+        renderDetailRow={(inv) => (
+          <>
+            <AttachmentsList invoice={inv} />
+            {inv.status !== "paid" && inv.status !== "cancelled" && <PaymentForm invoiceId={inv.id} />}
+          </>
+        )}
+      />
       {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </div>
   );

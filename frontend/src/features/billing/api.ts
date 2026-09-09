@@ -7,8 +7,12 @@ export async function listInvoices(): Promise<Invoice[]> {
   return res.data;
 }
 
-export async function listInvoicesPage(page: number, pageSize: number): Promise<Page<Invoice>> {
-  return fetchPage<Invoice>("/invoices", page, pageSize);
+export async function listInvoicesPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<Page<Invoice>> {
+  return fetchPage<Invoice>("/invoices", page, pageSize, extraParams);
 }
 
 export async function createInvoice(payload: {
