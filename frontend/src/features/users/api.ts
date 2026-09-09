@@ -6,6 +6,17 @@ export async function listUsers(): Promise<UserListResponse> {
   return res.data;
 }
 
+export async function listUsersPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<UserListResponse> {
+  const res = await apiClient.get<UserListResponse>("/users", {
+    params: { ...extraParams, limit: pageSize, offset: (page - 1) * pageSize },
+  });
+  return res.data;
+}
+
 export async function inviteUser(payload: { email: string; full_name: string; role_codes: string[] }): Promise<OrgUser> {
   const res = await apiClient.post<OrgUser>("/users", payload);
   return res.data;

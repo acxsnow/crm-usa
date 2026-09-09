@@ -6,9 +6,3 @@ export interface AuditEvent {
   entity_id: string | null;
   created_at: string;
 }
-
-export interface AuditEventPage {
-  items: AuditEvent[];
-  page: number;
-  page_size: number;
-}

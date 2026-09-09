@@ -1,12 +1,23 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { activateUser, deactivateUser, inviteUser, listRoles, listUsers } from "./api";
+import { activateUser, deactivateUser, inviteUser, listRoles, listUsersPage } from "./api";
+import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
+import { DataTable, type Column } from "@/components/DataTable";
+import { PaginationControls } from "@/components/PaginationControls";
+import { useTableFilters } from "@/lib/useTableFilters";
+import type { OrgUser } from "@/types/users";
+
+const PAGE_SIZE = 20;
 
 const emptyForm = { email: "", full_name: "", role_codes: [] as string[] };
 
 export function UsersPage() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ["users"], queryFn: listUsers });
+  const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
+  const { data, isLoading } = useQuery({
+    queryKey: ["users", page, extraParams],
+    queryFn: () => listUsersPage(page, PAGE_SIZE, extraParams),
+  });
   const { data: roles } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
 
   const [form, setForm] = useState(emptyForm);
@@ -53,6 +64,59 @@ export function UsersPage() {
 
   const atLimit = data ? data.active_user_count >= data.max_active_users : false;
 
+  const filterFields: FilterFieldDef[] = [
+    { key: "q", label: "Buscar", type: "text", placeholder: "Nombre o email" },
+    {
+      key: "status",
+      label: "Estado",
+      type: "select",
+      options: [
+        { value: "invited", label: "Invitado" },
+        { value: "active", label: "Activo" },
+        { value: "inactive", label: "Inactivo" },
+        { value: "locked", label: "Bloqueado" },
+      ],
+    },
+    ...(roles && roles.length > 0
+      ? [
+          {
+            key: "role",
+            label: "Rol",
+            type: "select" as const,
+            options: roles.map((r) => ({ value: r.code, label: r.name })),
+          },
+        ]
+      : []),
+  ];
+
+  const columns: Column<OrgUser>[] = [
+    { key: "full_name", header: "Nombre" },
+    { key: "email", header: "Email" },
+    { key: "roles", header: "Roles", render: (u) => u.roles.join(", ") },
+    {
+      key: "status",
+      header: "Estado",
+      render: (u) => (
+        <span className={`status-pill ${u.status === "active" ? "status-active" : "status-inactive"}`}>{u.status}</span>
+      ),
+    },
+    { key: "last_login_at", header: "Último acceso", render: (u) => (u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "—") },
+    {
+      key: "actions",
+      header: "",
+      render: (u) =>
+        u.status === "active" ? (
+          <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
+            Desactivar
+          </button>
+        ) : (
+          <button className="link-button" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate(u.id)}>
+            Activar
+          </button>
+        ),
+    },
+  ];
+
   return (
     <div>
       <h1>Usuarios</h1>
@@ -93,56 +157,9 @@ export function UsersPage() {
       </form>
       {error && <p className="warning-banner">{error}</p>}
 
-      {isLoading ? (
-        <p>Cargando...</p>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Roles</th>
-              <th>Estado</th>
-              <th>Último acceso</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.items.map((user) => (
-              <tr key={user.id}>
-                <td>{user.full_name}</td>
-                <td>{user.email}</td>
-                <td>{user.roles.join(", ")}</td>
-                <td>
-                  <span className={`status-pill ${user.status === "active" ? "status-active" : "status-inactive"}`}>
-                    {user.status}
-                  </span>
-                </td>
-                <td>{user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "—"}</td>
-                <td>
-                  {user.status === "active" ? (
-                    <button
-                      className="link-button"
-                      disabled={deactivateMutation.isPending}
-                      onClick={() => deactivateMutation.mutate(user.id)}
-                    >
-                      Desactivar
-                    </button>
-                  ) : (
-                    <button
-                      className="link-button"
-                      disabled={activateMutation.isPending}
-                      onClick={() => activateMutation.mutate(user.id)}
-                    >
-                      Activar
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
+      <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar." />
+      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </div>
   );
 }
