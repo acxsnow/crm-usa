@@ -50,11 +50,17 @@ async def list_leads(
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
     status_filter: str | None = Query(None, alias="status"),
+    q: str | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
     stmt = select(Lead).where(Lead.organization_id == organization_id).order_by(Lead.created_at.desc())
     if status_filter:
         stmt = stmt.where(Lead.status == status_filter)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            (Lead.full_name.ilike(like)) | (Lead.phone.ilike(like)) | (Lead.email.ilike(like))
+        )
     limit, offset = pagination
     return await paginate(db, stmt, limit=limit, offset=offset, response=response)
 
