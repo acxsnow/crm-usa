@@ -169,9 +169,18 @@ async def list_customers(
     response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("customers.read")),
+    status_filter: str | None = Query(None, alias="status"),
+    q: str | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
     stmt = select(Customer).where(Customer.organization_id == organization_id).order_by(Customer.legal_name)
+    if status_filter:
+        stmt = stmt.where(Customer.status == status_filter)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            (Customer.legal_name.ilike(like)) | (Customer.email.ilike(like)) | (Customer.main_phone.ilike(like))
+        )
     limit, offset = pagination
     return await paginate(db, stmt, limit=limit, offset=offset, response=response)
 
