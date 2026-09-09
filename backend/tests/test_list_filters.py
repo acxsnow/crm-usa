@@ -73,3 +73,26 @@ async def test_projects_status_q_and_technician_filters(app_client, db, active_a
 
     resp = await app_client.get("/api/v1/projects", params={"technician_id": str(tech_a)}, headers=headers)
     assert [p["title"] for p in resp.json()] == ["HVAC install - Main St"]
+
+
+from app.modules.crm.models import Application
+
+
+async def test_applications_status_q_filters_and_pagination_header(app_client, db, active_admin_user, seeded_org):
+    org_id = seeded_org["org"].id
+    db.add_all([
+        Application(organization_id=org_id, program_code="CARE", form_version="1", status="pending_review"),
+        Application(organization_id=org_id, program_code="CALFRESH", form_version="1", status="approved"),
+    ])
+    await db.commit()
+
+    token = await _login(app_client, "admin@acme-demo.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = await app_client.get("/api/v1/applications", params={"status": "approved"}, headers=headers)
+    assert resp.status_code == 200
+    assert [a["program_code"] for a in resp.json()] == ["CALFRESH"]
+    assert resp.headers["x-total-count"] == "1"
+
+    resp = await app_client.get("/api/v1/applications", params={"q": "care"}, headers=headers)
+    assert [a["program_code"] for a in resp.json()] == ["CARE"]

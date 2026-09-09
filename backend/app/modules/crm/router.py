@@ -267,14 +267,20 @@ async def add_customer_contact(
 
 @router.get("/applications", response_model=list[ApplicationResponse])
 async def list_applications(
+    response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
     status_filter: str | None = Query(None, alias="status"),
+    q: str | None = Query(None),
+    pagination: tuple[int, int] = Depends(pagination_params),
 ):
     stmt = select(Application).where(Application.organization_id == organization_id).order_by(Application.created_at.desc())
     if status_filter:
         stmt = stmt.where(Application.status == status_filter)
-    return (await db.execute(stmt.limit(500))).scalars().all()
+    if q:
+        stmt = stmt.where(Application.program_code.ilike(f"%{q}%"))
+    limit, offset = pagination
+    return await paginate(db, stmt, limit=limit, offset=offset, response=response)
 
 @router.get("/program-form-fields", response_model=list[ProgramFormFieldResponse])
 async def list_program_form_fields(
