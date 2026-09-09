@@ -81,7 +81,16 @@ async def list_roles(
         select(Role).where((Role.organization_id == organization_id) | (Role.organization_id.is_(None)))
     )
     roles = result.scalars().all()
-    return [RoleResponse(code=r.code, name=r.name, permissions=[p.code for p in r.permissions]) for r in roles]
+    # An org can have its own copy of a system-default role code (see seed.py,
+    # which creates both a NULL-org catalog entry and a per-org copy for the
+    # demo org) — dedupe by code so the org-specific row always wins over the
+    # NULL-org one, instead of listing both.
+    deduped: dict[str, Role] = {}
+    for r in roles:
+        existing = deduped.get(r.code)
+        if existing is None or existing.organization_id is None:
+            deduped[r.code] = r
+    return [RoleResponse(code=r.code, name=r.name, permissions=[p.code for p in r.permissions]) for r in deduped.values()]
 
 
 @router.get("/permissions", response_model=list[PermissionResponse])

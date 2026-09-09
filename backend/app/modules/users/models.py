@@ -38,6 +38,14 @@ class Role(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "roles"
     __table_args__ = (UniqueConstraint("organization_id", "code", name="uq_role_org_code"),)
 
+    # Overrides OrgScopedMixin's NOT NULL — matches alembic/versions/0001_initial.py,
+    # where "roles.organization_id" is nullable=True for exactly this reason
+    # (system-default rows carry NULL). The mixin default had drifted out of
+    # sync with the migration, which only surfaced when tests build the
+    # schema from these models via Base.metadata.create_all() instead of
+    # running the migration.
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
+
     code: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
