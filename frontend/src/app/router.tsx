@@ -12,6 +12,7 @@ import { CustomerDetailPage } from "@/features/crm/CustomerDetailPage";
 import { OpportunitiesPage } from "@/features/crm/OpportunitiesPage";
 import { ProjectsPage } from "@/features/field-ops/ProjectsPage";
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
+import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: "opportunities", element: <OpportunitiesPage /> },
       { path: "projects", element: <ProjectsPage /> },
       { path: "projects/:projectId", element: <ProjectDetailPage /> },
+      { path: "technician-monitor", element: <TechnicianMonitorPage /> },
       { path: "invoices", element: <InvoicesPage /> },
       { path: "users", element: <UsersPage /> },
       { path: "audit-log", element: <AuditLogPage /> },

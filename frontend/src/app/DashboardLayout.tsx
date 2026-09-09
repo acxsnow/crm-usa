@@ -8,6 +8,7 @@ const NAV_ITEMS: { to: string; label: string; icon: string; permissions?: string
   { to: "/opportunities", label: "Pipeline", icon: "◈", permissions: ["opportunities.manage"] },
   { to: "/customers", label: "Clientes", icon: "♙", permissions: ["customers.read"] },
   { to: "/projects", label: "Proyectos", icon: "▣", permissions: ["projects.read_all", "projects.read_assigned"] },
+  { to: "/technician-monitor", label: "Monitor de técnicos", icon: "◉", permissions: ["dashboards.operations"] },
   { to: "/invoices", label: "Facturación", icon: "$", permissions: ["invoices.read"] },
   { to: "/users", label: "Equipo", icon: "♧", permissions: ["users.manage"] },
   { to: "/audit-log", label: "Actividad", icon: "◷", permissions: ["audit.read"] },

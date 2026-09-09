@@ -10,6 +10,27 @@ import type {
   TaskComment,
 } from "@/types/fieldOps";
 
+// --- Technician monitor -------------------------------------------------
+
+export interface TechnicianMonitorRow {
+  user_id: string;
+  full_name: string;
+  logueado: boolean;
+  en_cola: boolean;
+  casos_asignados: number;
+  casos_gestionados_hoy: number;
+  tiempo_gestion_hoy_dias: number | null;
+}
+
+export async function listTechnicianMonitor(): Promise<TechnicianMonitorRow[]> {
+  const res = await apiClient.get<TechnicianMonitorRow[]>("/technician-monitor");
+  return res.data;
+}
+
+export async function updateTechnicianAvailability(userId: string, isAvailable: boolean): Promise<void> {
+  await apiClient.patch(`/technicians/${userId}/availability`, { is_available: isAvailable });
+}
+
 // --- Checklist templates ----------------------------------------------------
 
 export async function seedDefaultChecklistTemplate(): Promise<ChecklistTemplate> {
