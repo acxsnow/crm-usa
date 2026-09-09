@@ -19,6 +19,7 @@ from app.modules.field_ops.models import (
     EvidenceCategory,
     Project,
     ProjectChecklistItem,
+    ProjectStatus,
     Task,
     TaskComment,
 )
@@ -121,7 +122,7 @@ async def list_projects(
     response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: ProjectStatus | None = Query(None, alias="status"),
     q: str | None = Query(None),
     technician_id: uuid.UUID | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),

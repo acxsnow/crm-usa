@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.shared.pagination import paginate, pagination_params
 from app.shared.audit import record_audit_event
 from app.modules.crm import service as crm_service
-from app.modules.crm.models import Activity, Application, ApplicationDocument, Customer, CustomerContact, FunderStatus, Lead, Opportunity, PipelineStage, ProgramFormField, Quote
+from app.modules.crm.models import Activity, Application, ApplicationDocument, Customer, CustomerContact, CustomerStatus, FunderStatus, Lead, LeadStatus, Opportunity, PipelineStage, ProgramFormField, Quote
 from app.modules.crm.schemas import (
     ActivityCreate,
     ActivityResponse,
@@ -57,7 +57,7 @@ async def list_leads(
     response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: LeadStatus | None = Query(None, alias="status"),
     q: str | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
@@ -177,7 +177,7 @@ async def list_customers(
     response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("customers.read")),
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: CustomerStatus | None = Query(None, alias="status"),
     q: str | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
