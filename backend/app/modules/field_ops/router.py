@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,10 +121,20 @@ async def list_projects(
     response: Response,
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+    status_filter: str | None = Query(None, alias="status"),
+    q: str | None = Query(None),
+    technician_id: uuid.UUID | None = Query(None),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
     stmt = select(Project).where(Project.organization_id == organization_id).order_by(Project.created_at.desc())
     stmt = _scope_projects_stmt(stmt, current_user)
+    if status_filter:
+        stmt = stmt.where(Project.status == status_filter)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where((Project.title.ilike(like)) | (Project.address_street.ilike(like)))
+    if technician_id:
+        stmt = stmt.where(Project.primary_technician_user_id == technician_id)
     limit, offset = pagination
     return await paginate(db, stmt, limit=limit, offset=offset, response=response)
 

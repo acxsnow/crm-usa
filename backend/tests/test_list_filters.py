@@ -1,4 +1,5 @@
 from app.modules.crm.models import Customer, CustomerStatus, Lead, LeadStatus
+from app.modules.field_ops.models import Project, ProjectStatus
 
 
 async def _login(app_client, email, password="SuperSecret123"):
@@ -46,3 +47,29 @@ async def test_customers_q_and_status_filters(app_client, db, active_admin_user,
 
     resp = await app_client.get("/api/v1/customers", params={"status": "inactive"}, headers=headers)
     assert [c["legal_name"] for c in resp.json()] == ["Old Client Inc"]
+
+
+async def test_projects_status_q_and_technician_filters(app_client, db, active_admin_user, seeded_org):
+    org_id = seeded_org["org"].id
+    customer = Customer(organization_id=org_id, legal_name="Acme Roofing", status=CustomerStatus.active)
+    db.add(customer)
+    await db.flush()
+
+    tech_a = active_admin_user.id
+    db.add_all([
+        Project(organization_id=org_id, customer_id=customer.id, title="HVAC install - Main St", status=ProjectStatus.scheduled, primary_technician_user_id=tech_a),
+        Project(organization_id=org_id, customer_id=customer.id, title="Roof repair - Oak Ave", status=ProjectStatus.completed, primary_technician_user_id=None),
+    ])
+    await db.commit()
+
+    token = await _login(app_client, "admin@acme-demo.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = await app_client.get("/api/v1/projects", params={"status": "completed"}, headers=headers)
+    assert [p["title"] for p in resp.json()] == ["Roof repair - Oak Ave"]
+
+    resp = await app_client.get("/api/v1/projects", params={"q": "main st"}, headers=headers)
+    assert [p["title"] for p in resp.json()] == ["HVAC install - Main St"]
+
+    resp = await app_client.get("/api/v1/projects", params={"technician_id": str(tech_a)}, headers=headers)
+    assert [p["title"] for p in resp.json()] == ["HVAC install - Main St"]
