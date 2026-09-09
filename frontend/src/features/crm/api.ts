@@ -19,8 +19,12 @@ export async function listLeads(): Promise<Lead[]> {
   return res.data;
 }
 
-export async function listLeadsPage(page: number, pageSize: number, status?: Lead["status"]): Promise<Page<Lead>> {
-  return fetchPage<Lead>("/leads", page, pageSize, { status });
+export async function listLeadsPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<Page<Lead>> {
+  return fetchPage<Lead>("/leads", page, pageSize, extraParams);
 }
 
 export async function createLead(payload: Partial<Lead>): Promise<LeadCreateResult> {
@@ -50,8 +54,12 @@ export async function listCustomers(): Promise<Customer[]> {
   return res.data;
 }
 
-export async function listCustomersPage(page: number, pageSize: number): Promise<Page<Customer>> {
-  return fetchPage<Customer>("/customers", page, pageSize);
+export async function listCustomersPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<Page<Customer>> {
+  return fetchPage<Customer>("/customers", page, pageSize, extraParams);
 }
 
 export async function createCustomer(payload: { legal_name: string }): Promise<Customer> {

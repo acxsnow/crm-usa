@@ -29,7 +29,9 @@ export function DashboardHome() {
   const { data: activeLeads } = useQuery({
     queryKey: ["dashboard-active-leads"],
     queryFn: async () => {
-      const statuses = await Promise.all(["new", "contacted", "qualified"].map((status) => listLeadsPage(1, 1, status as "new" | "contacted" | "qualified")));
+      const statuses = await Promise.all(
+        ["new", "contacted", "qualified"].map((status) => listLeadsPage(1, 1, { status }))
+      );
       return statuses.reduce((total, page) => total + page.total, 0);
     },
     enabled: canSeeLeads,

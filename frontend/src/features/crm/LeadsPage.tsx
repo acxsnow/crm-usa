@@ -4,6 +4,9 @@ import { convertLead, createLead, listLeadsPage } from "./api";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Link } from "react-router-dom";
 import type { Lead } from "@/types/crm";
+import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
+import { DataTable, type Column } from "@/components/DataTable";
+import { useTableFilters } from "@/lib/useTableFilters";
 
 const PAGE_SIZE = 20;
 
@@ -23,8 +26,11 @@ const emptyForm = {
 
 export function LeadsPage() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({ queryKey: ["leads", page], queryFn: () => listLeadsPage(page, PAGE_SIZE) });
+  const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
+  const { data, isLoading } = useQuery({
+    queryKey: ["leads", page, extraParams],
+    queryFn: () => listLeadsPage(page, PAGE_SIZE, extraParams),
+  });
   const leads = data?.items;
   const [form, setForm] = useState(emptyForm);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -53,6 +59,50 @@ export function LeadsPage() {
     if (!form.full_name.trim()) return;
     createMutation.mutate(form);
   }
+
+  const filterFields: FilterFieldDef[] = [
+    { key: "q", label: "Buscar", type: "text", placeholder: "Nombre, teléfono o email" },
+    {
+      key: "status",
+      label: "Estado",
+      type: "select",
+      options: [
+        { value: "new", label: "Nueva" },
+        { value: "contacted", label: "Contactado" },
+        { value: "qualified", label: "Calificado" },
+        { value: "disqualified", label: "Descalificado" },
+        { value: "converted", label: "Convertido" },
+      ],
+    },
+  ];
+
+  const columns: Column<Lead>[] = [
+    { key: "full_name", header: "Nombre" },
+    {
+      key: "address",
+      header: "Dirección",
+      render: (l) => [l.address_street, l.address_unit, l.address_city].filter(Boolean).join(", ") || "—",
+    },
+    { key: "phone", header: "Teléfono", render: (l) => l.phone ?? "—" },
+    { key: "benefit_type", header: "Beneficio", render: (l) => l.benefit_type ?? "—" },
+    { key: "status", header: "Estado", render: (l) => <span className={`status-pill status-${l.status}`}>{l.status}</span> },
+    {
+      key: "actions",
+      header: "",
+      render: (l) => (
+        <>
+          <Link className="link-button" to={`/applications/new?leadId=${l.id}`}>
+            Abrir aplicación
+          </Link>{" "}
+          {l.status !== "converted" && (
+            <button className="link-button" disabled={convertMutation.isPending} onClick={() => convertMutation.mutate(l.id)}>
+              Convertir
+            </button>
+          )}
+        </>
+      ),
+    },
+  ];
 
   return (
     <div className="list-page">
@@ -97,49 +147,8 @@ export function LeadsPage() {
       </form>
       {duplicateWarning && <p className="warning-banner">{duplicateWarning}</p>}
 
-      {isLoading ? (
-        <p>Cargando...</p>
-      ) : (
-        <div className="table-wrap"><table className="data-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Dirección</th>
-              <th>Teléfono</th>
-              <th>Beneficio</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads?.map((lead: Lead) => (
-              <tr key={lead.id}>
-                <td>{lead.full_name}</td>
-                <td>
-                  {[lead.address_street, lead.address_unit, lead.address_city].filter(Boolean).join(", ")}
-                </td>
-                <td>{lead.phone}</td>
-                <td>{lead.benefit_type}</td>
-                <td>
-                  <span className={`status-pill status-${lead.status}`}>{lead.status}</span>
-                </td>
-                <td>
-                  <Link className="link-button" to={`/applications/new?leadId=${lead.id}`}>Abrir aplicación</Link>{" "}
-                  {lead.status !== "converted" && (
-                    <button
-                      className="link-button"
-                      disabled={convertMutation.isPending}
-                      onClick={() => convertMutation.mutate(lead.id)}
-                    >
-                      Convertir
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
+      <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
+      <DataTable columns={columns} rows={leads ?? []} isLoading={isLoading} getRowKey={(l) => l.id} emptyMessage="Sin prospectos para mostrar." />
       {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </div>
   );
