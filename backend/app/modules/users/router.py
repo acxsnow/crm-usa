@@ -1,13 +1,14 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, Query, Request, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_permission
 from app.db.session import get_db
+from app.shared.pagination import paginate, pagination_params
 from app.modules.users import service as users_service
-from app.modules.users.models import User, UserStatus
+from app.modules.users.models import Role, User, UserRole, UserStatus
 from app.modules.users.schemas import UserInviteRequest, UserListResponse, UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -15,12 +16,29 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=UserListResponse)
 async def list_users(
+    response: Response,
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("users.manage")),
+    q: str | None = Query(None),
+    status_filter: UserStatus | None = Query(None, alias="status"),
+    role: str | None = Query(None),
+    pagination: tuple[int, int] = Depends(pagination_params),
 ):
-    result = await db.execute(select(User).where(User.organization_id == organization_id))
-    users = result.scalars().all()
+    stmt = select(User).where(User.organization_id == organization_id).order_by(User.full_name)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where((User.full_name.ilike(like)) | (User.email_display.ilike(like)))
+    if status_filter:
+        stmt = stmt.where(User.status == status_filter)
+    if role:
+        stmt = stmt.where(
+            User.id.in_(
+                select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == role)
+            )
+        )
+    limit, offset = pagination
+    users = await paginate(db, stmt, limit=limit, offset=offset, response=response)
     active_count = await users_service.get_active_user_count(db, organization_id)
     max_users = await users_service.get_max_active_users(db, organization_id)
     return UserListResponse(
@@ -35,7 +53,7 @@ async def list_users(
             )
             for u in users
         ],
-        total=len(users),
+        total=int(response.headers["X-Total-Count"]),
         active_user_count=active_count,
         max_active_users=max_users,
     )
