@@ -7,6 +7,22 @@ from app.modules.crm.schemas import AddressSchema
 from app.modules.field_ops.models import EvidenceCategory, ProjectStatus, TaskStatus
 
 
+# --- Technician monitor -------------------------------------------------
+
+class TechnicianMonitorRow(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    logueado: bool
+    en_cola: bool
+    casos_asignados: int
+    casos_gestionados_hoy: int
+    tiempo_gestion_hoy_dias: float | None
+
+
+class AvailabilityUpdate(BaseModel):
+    is_available: bool
+
+
 # --- Projects ----------------------------------------------------------
 
 class ProjectCreate(AddressSchema):

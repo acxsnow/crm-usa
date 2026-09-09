@@ -73,6 +73,8 @@ class User(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     # whose version doesn't match the user's current value is rejected —
     # this works even without Redis, unlike a single-token denylist.
     token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_available: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     roles: Mapped[list["UserRole"]] = relationship(
         "UserRole", back_populates="user", lazy="selectin", cascade="all, delete-orphan"

@@ -1,6 +1,7 @@
 """Shared FastAPI dependencies: DB session, current user, organization context, permission checks."""
 import uuid
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_jwt_token
 from app.db.session import get_db
 from app.modules.users.models import User, UserStatus
+from app.shared.datetime_utils import as_utc
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -47,6 +49,13 @@ async def get_current_user(
 
     if user.status != UserStatus.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active.")
+
+    # Throttled presence heartbeat for the technician monitor (spec: GTR
+    # phase 2) — only writes when stale, to avoid a DB write on every request.
+    now = datetime.now(timezone.utc)
+    if user.last_seen_at is None or (now - as_utc(user.last_seen_at)) > timedelta(minutes=2):
+        user.last_seen_at = now
+        await db.commit()
 
     request.state.current_user = user
     return user

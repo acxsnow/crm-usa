@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
+from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, pagination_params
 from app.modules.field_ops import service as field_ops_service
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
@@ -25,6 +26,7 @@ from app.modules.field_ops.models import (
 )
 from app.modules.field_ops.schemas import (
     AttestationResponse,
+    AvailabilityUpdate,
     ChecklistItemComplete,
     ChecklistTemplateCreate,
     ChecklistTemplateResponse,
@@ -41,12 +43,13 @@ from app.modules.field_ops.schemas import (
     TaskCreate,
     TaskResponse,
     TaskUpdate,
+    TechnicianMonitorRow,
     CustomerSignatureRequestResponse,
     PublicCustomerSignatureCapture,
     PublicSignatureResponse,
 )
 from app.modules.field_ops.storage import absolute_path
-from app.modules.users.models import User
+from app.modules.users.models import Role, User, UserRole, UserStatus
 
 router = APIRouter(tags=["field-ops"])
 
@@ -106,6 +109,91 @@ async def seed_default_checklist_template(
     await db.commit()
     await db.refresh(template)
     return template
+
+
+# --- Technician monitor (GTR-style) -----------------------------------
+
+@router.get("/technician-monitor", response_model=list[TechnicianMonitorRow])
+async def technician_monitor(
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dashboards.operations")),
+):
+    technicians = (
+        await db.execute(
+            select(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.organization_id == organization_id,
+                Role.code == "field_technician",
+                User.status == UserStatus.active,
+            )
+            .distinct()
+            .order_by(User.full_name)
+        )
+    ).scalars().all()
+
+    today = date.today()
+    now = datetime.now(timezone.utc)
+    rows: list[TechnicianMonitorRow] = []
+    for tech in technicians:
+        projects = (
+            await db.execute(
+                select(Project).where(
+                    Project.organization_id == organization_id,
+                    Project.primary_technician_user_id == tech.id,
+                )
+            )
+        ).scalars().all()
+        assigned = sum(
+            1 for p in projects
+            if p.status in (ProjectStatus.planning, ProjectStatus.scheduled, ProjectStatus.in_progress)
+        )
+        completed_today = [p for p in projects if p.completed_date == today]
+        avg_days = (
+            sum((p.completed_date - p.created_at.date()).days for p in completed_today) / len(completed_today)
+            if completed_today else None
+        )
+        logueado = tech.last_seen_at is not None and (now - as_utc(tech.last_seen_at)) <= timedelta(minutes=5)
+        rows.append(
+            TechnicianMonitorRow(
+                user_id=tech.id,
+                full_name=tech.full_name,
+                logueado=logueado,
+                en_cola=tech.is_available,
+                casos_asignados=assigned,
+                casos_gestionados_hoy=len(completed_today),
+                tiempo_gestion_hoy_dias=avg_days,
+            )
+        )
+    return rows
+
+
+@router.patch("/technicians/{user_id}/availability", status_code=204)
+async def update_technician_availability(
+    user_id: uuid.UUID,
+    payload: AvailabilityUpdate,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dashboards.operations")),
+):
+    technician = (
+        await db.execute(
+            select(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.id == user_id,
+                User.organization_id == organization_id,
+                Role.code == "field_technician",
+            )
+        )
+    ).scalar_one_or_none()
+    if not technician:
+        raise HTTPException(status_code=404, detail="Technician not found.")
+    technician.is_available = payload.is_available
+    await db.commit()
 
 
 # --- Projects ----------------------------------------------------------
