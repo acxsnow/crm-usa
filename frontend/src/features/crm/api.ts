@@ -82,7 +82,13 @@ export interface Application { id: string; lead_id?: string | null; customer_id?
 export async function getProgramFormFields(programCode: string): Promise<ProgramFormField[]> { return (await apiClient.get<ProgramFormField[]>("/program-form-fields", { params: { program_code: programCode } })).data; }
 export async function createApplication(payload: { lead_id?: string; customer_id?: string; program_code: string; answers: Record<string, unknown>; terms_version: string; terms_accepted: boolean }): Promise<Application> { return (await apiClient.post<Application>("/applications", payload)).data; }
 export async function signApplication(applicationId: string, customerName: string, signatureBase64: string): Promise<Application> { return (await apiClient.post<Application>(`/applications/${applicationId}/customer-sign`, { customer_name: customerName, signature_base64: signatureBase64 })).data; }
-export async function listApplications(): Promise<Application[]> { return (await apiClient.get<Application[]>("/applications")).data; }
+export async function listApplicationsPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<Page<Application>> {
+  return fetchPage<Application>("/applications", page, pageSize, extraParams);
+}
 export async function updateApplication(applicationId: string, payload: { status?: string; review_notes?: string }): Promise<Application> { return (await apiClient.patch<Application>(`/applications/${applicationId}`, payload)).data; }
 
 // --- Pipeline / Opportunities -----------------------------------------

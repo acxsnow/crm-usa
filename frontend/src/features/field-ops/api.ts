@@ -29,8 +29,12 @@ export async function listProjects(): Promise<Project[]> {
   return res.data;
 }
 
-export async function listProjectsPage(page: number, pageSize: number): Promise<Page<Project>> {
-  return fetchPage<Project>("/projects", page, pageSize);
+export async function listProjectsPage(
+  page: number,
+  pageSize: number,
+  extraParams: Record<string, string> = {}
+): Promise<Page<Project>> {
+  return fetchPage<Project>("/projects", page, pageSize, extraParams);
 }
 
 export async function getProject(projectId: string): Promise<Project> {

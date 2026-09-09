@@ -3,19 +3,31 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProject, listProjectsPage, seedDefaultChecklistTemplate } from "./api";
 import { listCustomers } from "@/features/crm/api";
+import { listUsers } from "@/features/users/api";
 import { PaginationControls } from "@/components/PaginationControls";
+import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
+import { DataTable, type Column } from "@/components/DataTable";
+import { useTableFilters } from "@/lib/useTableFilters";
+import type { Project } from "@/types/fieldOps";
 
 const PAGE_SIZE = 20;
 
 export function ProjectsPage() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const { data, isLoading } = useQuery({ queryKey: ["projects", page], queryFn: () => listProjectsPage(page, PAGE_SIZE) });
+  const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
+  const { data, isLoading } = useQuery({
+    queryKey: ["projects", page, extraParams],
+    queryFn: () => listProjectsPage(page, PAGE_SIZE, extraParams),
+  });
   const projects = data?.items;
   // Dropdown for the create-project form needs the full customer list, not
   // a page of it — listCustomers() (unpaginated call, capped at the API's
   // 100-row default) is the right fit here, separate from listCustomersPage.
   const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
+  // Best-effort: only users with users.manage (org admins) can list users, so
+  // technicians reading their own assigned projects simply won't get this
+  // filter option — same graceful-degradation pattern as AuditLogPage.
+  const { data: allUsers } = useQuery({ queryKey: ["users"], queryFn: listUsers, retry: false, throwOnError: false });
 
   const [customerId, setCustomerId] = useState("");
   const [title, setTitle] = useState("");
@@ -39,7 +51,47 @@ export function ProjectsPage() {
     },
   });
 
-  if (isLoading) return <p>Cargando...</p>;
+  const filterFields: FilterFieldDef[] = [
+    { key: "q", label: "Buscar", type: "text", placeholder: "Título o dirección" },
+    {
+      key: "status",
+      label: "Estado",
+      type: "select",
+      options: [
+        { value: "planning", label: "Planeación" },
+        { value: "scheduled", label: "Programado" },
+        { value: "in_progress", label: "En progreso" },
+        { value: "completed", label: "Completado" },
+        { value: "cancelled", label: "Cancelado" },
+      ],
+    },
+    ...(allUsers && allUsers.items.length > 0
+      ? [
+          {
+            key: "technician_id",
+            label: "Técnico",
+            type: "select" as const,
+            options: allUsers.items.map((u) => ({ value: u.id, label: u.full_name })),
+          },
+        ]
+      : []),
+  ];
+
+  const columns: Column<Project>[] = [
+    { key: "title", header: "Proyecto" },
+    { key: "address", header: "Dirección", render: (p) => [p.address_street, p.address_unit].filter(Boolean).join(", ") || "—" },
+    { key: "status", header: "Estado", render: (p) => <span className={`status-pill status-${p.status}`}>{p.status}</span> },
+    { key: "scheduled_date", header: "Programado", render: (p) => p.scheduled_date ?? "—" },
+    {
+      key: "actions",
+      header: "",
+      render: (p) => (
+        <Link className="link-button" to={`/projects/${p.id}`}>
+          Ver
+        </Link>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -68,34 +120,8 @@ export function ProjectsPage() {
         </button>
       </form>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Proyecto</th>
-            <th>Dirección</th>
-            <th>Estado</th>
-            <th>Programado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {(projects ?? []).map((p) => (
-            <tr key={p.id}>
-              <td>{p.title}</td>
-              <td>{[p.address_street, p.address_unit].filter(Boolean).join(", ")}</td>
-              <td>
-                <span className={`status-pill status-${p.status}`}>{p.status}</span>
-              </td>
-              <td>{p.scheduled_date ?? "—"}</td>
-              <td>
-                <Link className="link-button" to={`/projects/${p.id}`}>
-                  Ver
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
+      <DataTable columns={columns} rows={projects ?? []} isLoading={isLoading} getRowKey={(p) => p.id} emptyMessage="Sin proyectos para mostrar." />
       {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </div>
   );
