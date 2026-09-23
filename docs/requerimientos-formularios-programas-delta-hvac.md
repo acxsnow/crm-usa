@@ -745,7 +745,25 @@ El vendedor no debe poder enviar una aplicación incompleta si falta un campo, d
 
 ## 10. Flujo administrativo
 
-Estados sugeridos:
+> **Alineación del 17 de septiembre de 2026 (decisiones D2/D6 en `decisiones.md`).**
+> Los estados de esta sección, los "estados operativos" de §11 y los 9
+> estados del PDF son **un solo estado del expediente (`Case`)**, en dos
+> niveles: la **etapa** (los 9 del PDF, más 3 de cierre temprano y `Cerrado`)
+> y el **sub-estado** dentro de la etapa (el detalle de esta sección y de §11).
+> Ejemplo: etapa `Pendiente Aprobación` con sub-estados `Pendiente de
+> revisión`, `Devuelta para corrección`, `Lista para someter`, `Sometida al
+> programa`, `En revisión del programa`. El Kanban del PDF muestra etapas;
+> la bandeja administrativa muestra sub-estados. Etapas:
+> `Sin contacto`, `No interesado`, `No califica` (cierre temprano, reabribles)
+> → `Nuevo Prospecto` → `Pendiente Aprobación` → `Aprobado` / `Rechazado` /
+> `En espera` → `Permiso en Trámite` → `Listo para Instalar` → `Instalado` →
+> `Inspección Pendiente` → `En Proceso de Cobro` → `Pagado` → `Cerrado`.
+> José Javier es dueño de la entidad `Case` y de las transiciones hasta
+> `Pendiente Aprobación`; Mateo, de las transiciones desde ahí en adelante.
+> Ninguna transición es configurable: viven en código con test por regla.
+
+Sub-estados sugeridos (`Borrador` pertenece a la etapa `Nuevo Prospecto`; el
+resto, a `Pendiente Aprobación` y su salida):
 
 1. Borrador.
 2. Pendiente de revisión.
@@ -789,7 +807,9 @@ Después de la aprobación del programa:
 8. Registrar resultado de inspección.
 9. Habilitar expediente de cobro.
 
-Estados operativos sugeridos:
+Estados operativos sugeridos (ver la nota de alineación en §10: son
+etapas del `Case`; `Instalación programada` e `Inspección aprobada` son
+sub-estados de `Listo para Instalar` e `Inspección Pendiente`):
 
 - Nuevo prospecto.
 - Pendiente de aprobación.
@@ -995,45 +1015,135 @@ La regla vigente cambia la distribución anterior:
 ### Cadena A — Formularios y expediente de aplicación
 
 **Responsable completo: José Javier Miranda**  
-**Orden de ejecución:** módulo 1 → módulo 2 → módulo 3
+**Orden de ejecución:** módulo 0 → módulo 1 → módulo 2 → módulo 3
 
-#### Módulo 1 — Catálogo y constructor de formularios dinámicos
+#### Módulo 0 — Usuarios, roles y acceso por módulo
+
+> Agregado el 17 de septiembre de 2026. El PDF no describe un módulo de
+> usuarios, pero define cuatro áreas operativas más gerencia (§1, §2–§5) y todo
+> el flujo depende de que cada etapa tenga un rol responsable. Sin este módulo
+> el sistema solo funciona para el administrador.
 
 José Javier desarrolla y termina:
 
-- Catálogo de programas.
-- Catálogo de campos.
-- Secciones y orden.
-- Campos comunes, Arizona y TECH Clean.
-- Activación/desactivación por programa.
-- Obligatorio, opcional y condicional.
-- Opciones de selección.
-- Versiones y publicación.
-- Panel administrativo.
-- Modelo, migraciones y API.
-- Validaciones.
-- Vista previa.
+- Roles del sistema fieles al PDF: `organization_admin` (Administrador),
+  `salesperson` (Vendedor), `admin_staff` (Administración), `technician`
+  (Técnico), `accounting` (Contabilidad), `management` (Gerencia). Los roles
+  genéricos actuales (`commercial_manager`, `project_manager`, `supervisor`,
+  `finance_user`, `read_only`, `field_technician`) se reemplazan.
+- Matriz rol → permiso inicial en código y seed.
+- Administración de roles desde la UI: crear rol de la organización, editar
+  nombre y permisos de cualquier rol (los del sistema conservan su código),
+  desactivar rol sin usuarios.
+- Cambiar los roles de un usuario existente (hoy solo se asignan al invitar).
+- Menú y rutas filtrados por permiso (ya existe; se ajusta a los nuevos
+  códigos) y pantalla de "sin acceso" en vez de pantalla en blanco.
+- Perfil propio: ver datos y cambiar contraseña.
+- Modelo (sin tablas nuevas: `roles`, `permissions`, `role_permissions`,
+  `user_roles` ya existen), migración de datos para renombrar roles, API,
+  validaciones, auditoría de cambios de rol y permiso.
+- Actualizar `tests/test_rbac_full.py` a los roles nuevos y un test
+  403/2xx por cada permiso nuevo.
 - Pruebas del módulo.
 
-#### Módulo 2 — Aplicación del vendedor, T&C y firma
+#### Módulo 1 — Programa: catálogo, constructor de flujos y zonas
+
+> Alineado el 17 de septiembre de 2026 con `decisiones.md` (D2–D6): el
+> formulario dinámico se generaliza a un flujo por programa (fases → pasos →
+> campos), el expediente es la entidad `Case`, y las zonas viven en el
+> programa.
 
 José Javier desarrolla y termina:
 
-- Formulario dinámico del vendedor.
-- Respuestas por `field_key`.
-- Preguntas condicionales.
-- Resumen previo al envío.
-- T&C y autorización.
-- Firma presencial del cliente.
-- Registro de vendedor, fecha y versión.
-- Estados de aplicación.
-- Validación frontend y backend.
-- Pruebas de aplicación y firma.
+- Catálogo de programas como entidad: código, nombre, activo, funder,
+  **identidad frente al cliente** (nombre, logo, texto de autorización,
+  entidad del invoice; resuelve §17.1), T&C por versión e idioma, y
+  referencias al checklist técnico y a la plantilla de invoice (entidades de
+  la Cadena B; el contrato se acuerda con Mateo).
+- Catálogo de campos con `field_key` estable (§2.5), tipo (§2.3, los 18),
+  opciones normalizadas (§2.6), **`binding`** a columna tipada
+  (`customer.*`, `case.*`) o sin binding (vive en la submission del paso), y
+  banderas **`internal`** (uso interno, §3.6: nunca visible al cliente) y
+  **`sensitive`** (§17.3: exige permiso `fields.view_sensitive` y se
+  enmascara en exportaciones).
+- Reglas de validación por campo: formato (teléfono, email, ZIP), mínimo y
+  máximo, y **opción excluyente** (§3.3: `Ninguno` no se combina con otros
+  programas).
+- Catálogo inicial: campos comunes, Arizona y TECH Clean (Anexo A) **más** la
+  sección "Auditoría técnica preliminar" del PDF §2.4 (amperaje del panel,
+  climatización existente, cocina de inducción, water heater, viabilidad) y
+  los campos de §4.5 que no están en §2.5 (triturador, ventilador,
+  extractor, lavaplatos, pedestal, título y decal de la mobile home,
+  comentarios de acceso/mascotas/estacionamiento). Valores provisionales
+  hasta la respuesta del cliente (D7).
+- Definición de flujo por programa, versionada e inmutable al publicar:
+  fases (rol responsable, orden) → pasos → campos (referencia al catálogo,
+  `requirement_level`, condición, orden, etiqueta y ayuda por programa).
+  Primera versión: la fase Vendedor con los pasos del PDF §2.1–§2.6.
+- Condiciones como reglas JSON simples (`{"field": "...", "eq": "..."}`),
+  sin lenguaje de expresiones.
+- Zonas del programa (parques/comunidades de CA, AZ, NV) y asignación
+  asesor ↔ zona (D5).
+- Plantillas del sistema + copia por organización (mismo patrón que los
+  roles), para vender el producto a otras empresas.
+- Entidad `Case` (D2): reemplaza a `Application` (migración 0007) y a
+  `Opportunity`; absorbe `application_number`, `approval_code`,
+  `funder_status`, `scheduled_install_date` y la dirección de la propiedad;
+  `Project.case_id` reemplaza `opportunity_id`; `Quote` se retira. Migración
+  de datos con `downgrade` real, acordada con Mateo.
+- Panel administrativo: programas, catálogo, editor de la versión (orden y
+  condiciones desde la UI), publicar/archivar, zonas y asesores.
+- Vista previa del flujo por programa.
+- Modelo, migraciones, API, permisos (`programs.*`, `fields.*`,
+  `workflows.*`, `zones.*`), auditoría de publicaciones y cambios.
+- Pruebas del módulo.
+
+#### Módulo 2 — Fase del vendedor: visitas, case, pasos, T&C y firma
+
+> Alineado el 17 de septiembre de 2026 con `decisiones.md` (D2, D6).
+
+José Javier desarrolla y termina:
+
+- Inicio del asesor: sus programas y zonas asignadas (D5).
+- Visita por puerta (D6): crea o reutiliza el `Case` por propiedad
+  (dirección normalizada, unidad/espacio, GPS); cada toque es una submission
+  del paso "Visita" con resultado, GPS, fecha y asesor; estados de cierre
+  temprano `Sin contacto`, `No interesado`, `No califica`, reabribles.
+- Pantalla genérica de paso: renderer por `field_type` para los 18 tipos de
+  §2.3 (incluye dirección dividida, campo calculado/informativo, documento,
+  foto, video y firma), condicionales en vivo, navegación entre pasos.
+- `step_submission` inmutable por paso: respuestas por `field_key`, rol,
+  usuario, fecha, GPS y versión del flujo. Una corrección es otra
+  submission; la anterior queda como historial (§13: nada aprobado se
+  modifica sin trazabilidad).
+- Escritura híbrida: los campos con `binding` van a `Customer`/`Case`; el
+  resto, al JSON de la submission. Detección de cliente existente por
+  teléfono/dirección (reutiliza la normalización actual).
+- Validador de completitud calculado desde la definición: campos,
+  documentos, fotos y firma obligatorios; checklist de faltantes que dice
+  exactamente qué falta (§9).
+- T&C y autorización por programa, versión e idioma (D7 pregunta 14);
+  aceptación con fecha y hora; IP/dispositivo si la política lo permite
+  (§3.5).
+- Firma presencial del cliente, **separada** de la identidad y confirmación
+  del vendedor autenticado (§13).
+- Estados del `Case` hasta `Pendiente Aprobación` con transiciones en
+  código, auditadas (ver nota de §10).
+- Resumen previo al envío y envío bloqueado si falta algo.
+- Validación frontend y backend; Vitest + Testing Library para el renderer.
+- Pruebas de visita, case, pasos, T&C y firma.
 
 #### Módulo 3 — Documentos, fotos y videos
 
+> Alineado el 17 de septiembre de 2026: los requisitos documentales son
+> entradas del catálogo (§6) y el paso "Documentos" de la fase Vendedor
+> (§9 punto 6) es un tipo de paso que este módulo entrega. Incluye los
+> requisitos que faltaban: ID (frente y reverso) y declaración de impuestos,
+> desactivados por defecto hasta la respuesta del cliente (D7).
+
 José Javier desarrolla y termina:
 
+- Requisito documental como entidad del catálogo, activable por programa.
 - Checklist visual de documentos.
 - Carga y reemplazo de archivos.
 - Asociación con requisitos.
@@ -1156,6 +1266,8 @@ José entrega la Cadena A con:
 - Versiones de Arizona y TECH Clean.
 - Datos de prueba.
 - Validaciones documentadas.
+- Roles definitivos, matriz rol → permiso y códigos de permiso reservados
+  para los módulos de la Cadena B (módulo 0).
 
 #### Handoff Mateo → José
 

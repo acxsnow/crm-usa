@@ -22,5 +22,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Dev server runs inside Docker with the source bind-mounted from Windows;
+    // inotify events don't cross that boundary, so poll or edits never reload.
+    watch: { usePolling: true, interval: 500 },
   },
 });

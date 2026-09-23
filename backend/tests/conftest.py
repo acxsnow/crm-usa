@@ -35,6 +35,26 @@ def _isolate_storage_dir(tmp_path, monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _isolate_external_services(monkeypatch):
+    """Tests must never reach the real Redis or SMTP server. When the suite runs
+    inside the `api` container both are reachable (docker-compose wires them
+    up and backend/.env may set EMAIL_PROVIDER=smtp), which leaks rate-limit
+    counters between tests/runs and tries to send real email. Force the
+    in-process fallbacks the code already has for the no-Redis / console case."""
+    from app.core import rate_limit as rate_limit_module
+    from app.core import token_denylist as token_denylist_module
+    from app.modules.notifications import email as email_module
+
+    async def _no_redis():
+        return None
+
+    monkeypatch.setattr(rate_limit_module, "get_redis_if_available", _no_redis)
+    monkeypatch.setattr(token_denylist_module, "get_redis_if_available", _no_redis)
+    monkeypatch.setattr(email_module.settings, "EMAIL_PROVIDER", "console")
+    yield
+
+
 @pytest_asyncio.fixture
 async def db_engine():
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=__import__("sqlalchemy.pool", fromlist=["StaticPool"]).StaticPool, connect_args={"check_same_thread": False})

@@ -44,11 +44,25 @@ async function refreshAccessToken(): Promise<TokenPair> {
   return response.data;
 }
 
+// A 401 from these endpoints means "bad credentials / bad token", not "access
+// token expired" — trying to refresh and then hard-redirecting to /login would
+// wipe the page before the form can show its error message.
+const AUTH_ENDPOINTS = ["/auth/login", "/auth/refresh", "/auth/logout"];
+
+function isAuthEndpoint(url: string | undefined): boolean {
+  return !!url && AUTH_ENDPOINTS.some((path) => url.includes(path));
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthEndpoint(originalRequest.url)
+    ) {
       originalRequest._retry = true;
       try {
         refreshPromise ??= refreshAccessToken();

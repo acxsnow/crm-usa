@@ -13,3 +13,8 @@ backend/storage/
 
 # Superpowers subagent-driven-development workspace (scratch, per-plan)
 .superpowers/
+
+# Claude Code (config local, skills y memoria de sesión)
+.claude/
+skills-lock.json
+.vscode/
