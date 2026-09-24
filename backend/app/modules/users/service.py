@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import HTTPException, status
+from fastapi import status
 from sqlalchemy import delete as sa_delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.security import generate_secure_token
@@ -12,6 +13,7 @@ from app.modules.organizations.models import PlanLimit
 from app.modules.users.models import Invitation, Permission, Role, User, UserRole, UserStatus
 from app.modules.users.selectors import LOCKED_ROLE_CODES, get_org_role_or_404
 from app.shared.audit import record_audit_event
+from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 
 settings = get_settings()
 
@@ -46,26 +48,26 @@ async def invite_user(
     active_count = await get_active_user_count(db, organization_id)
     max_users = await get_max_active_users(db, organization_id)
     if active_count >= max_users:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"This organization has reached its plan limit of {max_users} active users. "
-                "Deactivate a user or contact support to increase the limit."
-            ),
+        raise ConflictError(
+            f"La organización llegó a su límite de {max_users} usuarios activos. "
+            "Desactiva a alguien o solicita ampliar el plan.",
+            code="plan_limit_reached",
         )
 
     existing = await db.execute(
         select(User).where(User.organization_id == organization_id, User.email == normalized_email)
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A user with this email already exists.")
+        raise ConflictError(
+            "Ya existe un usuario con ese correo.", code="email_already_used"
+        )
 
     result = await db.execute(
         select(Role).where(Role.code.in_(role_codes), (Role.organization_id == organization_id) | (Role.organization_id.is_(None)))
     )
     roles = result.scalars().all()
     if not roles:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid roles specified.")
+        raise InvalidInputError("No se indicó ningún rol válido.", code="no_valid_roles")
 
     user = User(
         organization_id=organization_id,
@@ -117,15 +119,15 @@ async def set_user_active_state(
     result = await db.execute(select(User).where(User.id == user_id, User.organization_id == organization_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
 
     if active:
         max_users = await get_max_active_users(db, organization_id)
         active_count = await get_active_user_count(db, organization_id)
         if user.status != UserStatus.active and active_count >= max_users:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"This organization has reached its plan limit of {max_users} active users.",
+            raise ConflictError(
+                f"La organización llegó a su límite de {max_users} usuarios activos.",
+                code="plan_limit_reached",
             )
         before = user.status
         user.status = UserStatus.active
@@ -164,9 +166,9 @@ async def _permissions_by_code(db: AsyncSession, codes: list[str]) -> list[Permi
     found = {p.code: p for p in rows}
     missing = [code for code in unique if code not in found]
     if missing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Estos permisos no existen: {', '.join(sorted(missing))}.",
+        raise InvalidInputError(
+            f"Estos permisos no existen: {', '.join(sorted(missing))}.",
+            code="unknown_permissions",
         )
     return [found[code] for code in unique]
 
@@ -189,9 +191,8 @@ async def create_role(
         )
     ).scalar_one_or_none()
     if existing is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Ya existe un rol con el código '{code}'.",
+        raise ConflictError(
+            f"Ya existe un rol con el código '{code}'.", code="role_code_taken"
         )
 
     role = Role(organization_id=organization_id, code=code, name=name, is_system=False)
@@ -223,13 +224,11 @@ async def update_role(
     permission_codes: list[str] | None = None,
 ) -> Role:
     if code in LOCKED_ROLE_CODES:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "El rol de Administrador no se puede modificar: siempre conserva "
-                "todos los permisos para que nadie quede sin acceso a la "
-                "configuración."
-            ),
+        raise ConflictError(
+            "El rol de Administrador no se puede modificar: siempre conserva "
+            "todos los permisos para que nadie quede sin acceso a la "
+            "configuración.",
+            code="role_locked",
         )
 
     role = await get_org_role_or_404(db, organization_id, code)
@@ -265,27 +264,23 @@ async def delete_role(
         )
     ).scalar_one_or_none()
     if role is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado.")
+        raise NotFoundError("El rol no existe.", code="role_not_found")
 
     if role.is_system or code in LOCKED_ROLE_CODES:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Los roles del sistema no se pueden eliminar; sí se pueden "
-                "renombrar y cambiarles los permisos."
-            ),
+        raise ConflictError(
+            "Los roles del sistema no se pueden eliminar; sí se pueden "
+            "renombrar y cambiarles los permisos.",
+            code="system_role_not_deletable",
         )
 
     in_use = (
         await db.execute(select(func.count(UserRole.id)).where(UserRole.role_id == role.id))
     ).scalar_one()
     if in_use:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Este rol lo tienen {in_use} usuario(s). Cámbiales el rol antes "
-                "de eliminarlo."
-            ),
+        raise ConflictError(
+            f"Este rol lo tienen {in_use} usuario(s). Cámbiales el rol antes "
+            "de eliminarlo.",
+            code="role_in_use",
         )
 
     await record_audit_event(
@@ -319,7 +314,7 @@ async def set_user_roles(
         )
     ).scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
 
     roles = [await get_org_role_or_404(db, organization_id, code) for code in dict.fromkeys(role_codes)]
     before = sorted(ur.role.code for ur in user.roles)
@@ -339,12 +334,10 @@ async def set_user_roles(
             )
         ).scalar_one()
         if not remaining:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Es el único administrador activo. Asigna el rol de "
-                    "Administrador a otra persona antes de quitárselo."
-                ),
+            raise ConflictError(
+                "Es el único administrador activo. Asigna el rol de "
+                "Administrador a otra persona antes de quitárselo.",
+                code="last_admin",
             )
 
     await db.execute(sa_delete(UserRole).where(UserRole.user_id == user.id))
@@ -364,8 +357,15 @@ async def set_user_roles(
     )
     await db.commit()
 
+    # `user.roles` quedó cacheada con los roles anteriores; hay que releerla
+    # para que la respuesta muestre los nuevos y no los de antes del cambio.
     refreshed = (
-        await db.execute(select(User).where(User.id == user.id))
+        await db.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(User.id == user.id)
+            .execution_options(populate_existing=True)
+        )
     ).scalar_one()
     return refreshed
 
@@ -384,7 +384,7 @@ async def update_user(
         )
     ).scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
 
     before = {"full_name": user.full_name}
     user.full_name = full_name

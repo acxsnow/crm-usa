@@ -87,7 +87,11 @@ async def app_client(db_sessionmaker, monkeypatch):
     clear_all_buckets()
     clear_denylist()
 
-    transport = ASGITransport(app=app)
+    # `raise_app_exceptions=False` hace que el cliente de pruebas reciba la
+    # misma respuesta 500 que recibiría un navegador, en vez de re-lanzar la
+    # excepción dentro del test. Sin esto no se puede comprobar qué ve el
+    # usuario cuando algo falla de forma inesperada.
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 

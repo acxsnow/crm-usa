@@ -188,6 +188,16 @@ escrituras exigen `roles.manage`.
   dejaría a la organización sin ningún administrador activo.
 - `PATCH /users/{id}` — cambia el nombre completo.
 
+`GET /auth/me` devuelve, además de `roles` y `permissions`:
+
+- `role_names` — las etiquetas visibles ("Técnico"), para no mostrar códigos
+  en la interfaz.
+- `modules` — los módulos que ese usuario puede abrir, calculados con los
+  módulos **de su organización** (los que el administrador pudo haber
+  editado), no con los valores de código. El menú y las rutas del frontend se
+  construyen con esta lista en vez de repetir allá la lógica de agrupamiento.
+  El super admin de plataforma los recibe todos.
+
 Todas las escrituras quedan en `audit_events` con el antes y el después:
 `roles.created`, `roles.updated`, `roles.deleted`, `users.roles_changed`,
 `users.updated`.

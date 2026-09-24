@@ -92,8 +92,15 @@ complejas**. Delega en `service` (escritura) y `selectors` (lectura).
    (sanitiza nombre, valida MIME y tamaño, contiene la ruta). Se persiste la
    ruta **relativa** a `STORAGE_DIR`. Descarga por endpoint con permiso, nunca
    como estático público.
-7. **Errores**: `HTTPException(400/403/404/409)` con `detail` en español
-   legible para el usuario; 422 lo genera Pydantic solo.
+7. **Errores**: los services y selectors lanzan **excepciones de dominio**
+   (`app/shared/errors.py`: `NotFoundError`, `ConflictError`,
+   `InvalidInputError`, `ForbiddenError`, `AuthenticationError`) con mensaje
+   en español para el usuario y un `code` estable. `app/shared/error_handlers.py`
+   es el único sitio que traduce eso a HTTP, normaliza los 422 de Pydantic,
+   convierte `IntegrityError` en 409 y atrapa cualquier fallo no previsto como
+   500 neutro con traza en el log. Toda respuesta de error lleva `request_id`.
+   `HTTPException` sigue funcionando con el mismo formato (la Cadena B todavía
+   lo usa). Detalle en `docs/ERRORES.md`.
 8. **Nada de secretos en código**: todo por `Settings`; la app se niega a
    arrancar fuera de `development` con `JWT_SECRET_KEY` por defecto.
 9. **Fechas**: siempre `DateTime(timezone=True)` y `datetime.now(timezone.utc)`;

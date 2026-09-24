@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.audit_models import AuditEvent
+from app.shared.request_context import get_request_context
 
 
 async def record_audit_event(
@@ -21,6 +22,10 @@ async def record_audit_event(
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> AuditEvent:
+    # Lo que no venga explícito se toma de la petición en curso: así ninguna
+    # llamada tiene que acordarse de pasar estos tres datos, y los eventos
+    # quedan rastreables hasta la petición que los originó.
+    context = get_request_context()
     event = AuditEvent(
         organization_id=organization_id,
         actor_user_id=actor_user_id,
@@ -29,9 +34,9 @@ async def record_audit_event(
         entity_id=entity_id,
         before_data=_sanitize(before_data),
         after_data=_sanitize(after_data),
-        request_id=request_id,
-        ip_address=ip_address,
-        user_agent=user_agent,
+        request_id=request_id or context.request_id,
+        ip_address=ip_address or context.ip_address,
+        user_agent=user_agent or context.user_agent,
     )
     db.add(event)
     await db.flush()

@@ -222,103 +222,28 @@ borró el rol "Coordinador de zona", editar Administrador devolvió 409, y
 
 ---
 
-### Tarea 4 — Cambiar roles de un usuario y exponer módulos en `/auth/me`
+### Tarea 4 — Roles de usuario y módulos en `/auth/me` ✅ HECHA (23 sep)
 
-**Archivos:**
-- Modificar: `backend/app/modules/users/{router.py,service.py,schemas.py}`
-- Modificar: `backend/app/modules/auth/{router.py,schemas.py}`
-- Crear: `backend/tests/test_users_roles.py`
+**Archivos:** `backend/app/modules/auth/{router,schemas}.py`,
+`backend/app/modules/users/service.py`, `backend/tests/test_users_roles.py`,
+`docs/PERMISOS.md`.
 
-**Interfaces:**
-- Produce: `PATCH /users/{id}/roles`, `PATCH /users/{id}`.
-  `CurrentUserResponse` gana `role_names: list[str]` y `modules: list[str]`.
+**Lo que quedó:** `/auth/me` devuelve `role_names` (etiquetas visibles) y
+`modules` (los que ese usuario puede abrir), calculados con los módulos de su
+organización, no con los valores de código. El super admin de plataforma
+recibe todos. `accept_invitation` usa la misma respuesta, así que quien acepta
+una invitación entra con su menú ya resuelto.
 
-- [ ] **Paso 1: escribir los tests que fallan** — `backend/tests/test_users_roles.py`
+Un detalle que costó un test: tras cambiar los roles de alguien, la respuesta
+devolvía los roles **anteriores**, porque la relación seguía cacheada en la
+sesión. Se relee con `selectinload` + `populate_existing`, igual que en el
+selector de módulos.
 
-```python
-async def test_change_user_roles(app_client, active_admin_user, active_technician_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.patch(
-        f"/api/v1/users/{active_technician_user.id}/roles",
-        json={"role_codes": ["accounting"]}, headers=headers,
-    )
-    assert resp.status_code == 200
-    assert resp.json()["roles"] == ["accounting"]
-
-
-async def test_change_user_roles_requires_permission(app_client, active_technician_user):
-    headers = await _login(app_client, active_technician_user.email)
-    resp = await app_client.patch(
-        f"/api/v1/users/{active_technician_user.id}/roles",
-        json={"role_codes": ["accounting"]}, headers=headers,
-    )
-    assert resp.status_code == 403
-
-
-async def test_cannot_remove_last_organization_admin(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.patch(
-        f"/api/v1/users/{active_admin_user.id}/roles",
-        json={"role_codes": ["management"]}, headers=headers,
-    )
-    assert resp.status_code == 409
-
-
-async def test_role_change_updates_effective_permissions(app_client, active_admin_user, active_technician_user):
-    admin_headers = await _login(app_client, active_admin_user.email)
-    await app_client.patch(
-        f"/api/v1/users/{active_technician_user.id}/roles",
-        json={"role_codes": ["accounting"]}, headers=admin_headers,
-    )
-    tech_headers = await _login(app_client, active_technician_user.email)
-    me = (await app_client.get("/api/v1/auth/me", headers=tech_headers)).json()
-    assert "invoices.read" in me["permissions"]
-    assert "billing" in me["modules"]
-    assert "projects" not in me["modules"]
-    assert me["role_names"] == ["Contabilidad"]
-
-
-async def test_me_exposes_modules_for_technician(app_client, active_technician_user):
-    headers = await _login(app_client, active_technician_user.email)
-    me = (await app_client.get("/api/v1/auth/me", headers=headers)).json()
-    assert set(me["modules"]) >= {"projects", "customers", "dispatch", "expenses"}
-    assert "team" not in me["modules"]
-    assert "billing" not in me["modules"]
-
-
-async def test_update_user_name(app_client, active_admin_user, active_technician_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.patch(
-        f"/api/v1/users/{active_technician_user.id}",
-        json={"full_name": "Nombre Nuevo"}, headers=headers,
-    )
-    assert resp.status_code == 200
-    assert resp.json()["full_name"] == "Nombre Nuevo"
-```
-
-- [ ] **Paso 2: correr y verlos fallar** (404 y KeyError en `modules`).
-
-- [ ] **Paso 3: implementar**
-
-`service.set_user_roles(db, organization_id, user_id, actor, role_codes)`:
-valida que los roles existan en la organización, cuenta los
-`organization_admin` activos antes de quitarlo (409 si queda en cero),
-reemplaza `user_roles`, audita `users.roles_changed` con antes y después.
-`service.update_user(db, ..., full_name)`. En `auth/router.py`, `/auth/me`
-agrega `role_names` (desde `ROLE_LABELS` con respaldo al nombre del rol) y
-`modules` (desde `modules_for_permissions`); para el super admin, todos los
-módulos.
-
-- [ ] **Paso 4: correr los tests hasta que pasen.**
-
-- [ ] **Paso 5: suite completa sin fallos nuevos.**
-
-- [ ] **Paso 6: documentar y commit**
-
-```bash
-git add backend/app/modules/users backend/app/modules/auth backend/tests/test_users_roles.py docs/PERMISOS.md
-git commit -m "feat(users): change user roles and expose modules in /auth/me"
-```
+**Verificación:** 10 tests nuevos en verde; suite completa **120 pasan, 0
+fallan**. Contra la API real, el admin recibe sus 15 módulos y
+`role_names: Administrador`. Un test comprueba el caso que importa: quitarle
+permisos a un módulo desde la base hace que ese módulo deje de aparecer en
+`/auth/me` para quien solo entraba por ahí, y los demás siguen intactos.
 
 ---
 

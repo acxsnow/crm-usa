@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import HTTPException, status
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,7 @@ from app.core.token_denylist import denylist_jti, is_denylisted
 from app.modules.notifications.email import send_email
 from app.modules.users.models import Invitation, PasswordResetToken, User, UserStatus
 from app.shared.audit import record_audit_event
+from app.shared.errors import AuthenticationError, InvalidInputError
 from app.shared.datetime_utils import as_utc
 
 settings = get_settings()
@@ -53,7 +54,7 @@ async def issue_token_pair(db: AsyncSession, user: User) -> tuple[str, str]:
 
 
 async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[str, str]:
-    invalid = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token.")
+    invalid = AuthenticationError("La sesión no es válida. Vuelve a iniciar sesión.")
 
     payload = decode_jwt_token(refresh_token)
     if not payload or payload.get("type") != "refresh":
@@ -136,7 +137,10 @@ async def confirm_password_reset(db: AsyncSession, raw_token: str, new_password:
     )
     reset_token = result.scalar_one_or_none()
 
-    invalid = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token.")
+    invalid = InvalidInputError(
+        "El enlace para restablecer la contraseña no es válido o ya venció.",
+        code="invalid_reset_token",
+    )
     if not reset_token or reset_token.used_at is not None:
         raise invalid
     if as_utc(reset_token.expires_at) < datetime.now(timezone.utc):
@@ -169,7 +173,9 @@ async def accept_invitation(db: AsyncSession, raw_token: str, password: str) -> 
     result = await db.execute(select(Invitation).where(Invitation.token_hash == token_hash))
     invitation = result.scalar_one_or_none()
 
-    invalid = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired invitation.")
+    invalid = InvalidInputError(
+        "La invitación no es válida o ya venció.", code="invalid_invitation"
+    )
     if not invitation or invitation.accepted_at is not None:
         raise invalid
     if as_utc(invitation.expires_at) < datetime.now(timezone.utc):

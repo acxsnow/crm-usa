@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path, PurePosixPath
 
 from app.core.config import get_settings
+from app.shared.errors import InvalidInputError
 
 settings = get_settings()
 
@@ -40,7 +41,12 @@ def save_bytes(*, organization_id: uuid.UUID, subfolder: str, filename: str, dat
     root = _storage_root()
     org_dir = (root / str(organization_id) / subfolder).resolve()
     if root not in org_dir.parents and org_dir != root:
-        raise ValueError("Invalid storage subfolder.")
+        # Un intento de salir del directorio de la organización es una
+        # petición inválida, no un fallo del servidor: con ValueError salía
+        # como 500 y quedaba invisible entre los errores genéricos.
+        raise InvalidInputError(
+            "La ruta de almacenamiento no es válida.", code="invalid_storage_path"
+        )
     org_dir.mkdir(parents=True, exist_ok=True)
     safe_name = f"{uuid.uuid4().hex}_{_sanitize_filename(filename)}"
     path = org_dir / safe_name
@@ -52,7 +58,9 @@ def _resolve_within_root(relative_path: str) -> Path:
     root = _storage_root()
     path = (root / relative_path).resolve()
     if root != path and root not in path.parents:
-        raise ValueError("Invalid storage path.")
+        raise InvalidInputError(
+            "La ruta de almacenamiento no es válida.", code="invalid_storage_path"
+        )
     return path
 
 

@@ -42,7 +42,12 @@ class CurrentUserResponse(BaseModel):
     full_name: str
     organization_id: uuid.UUID
     roles: list[str]
+    # Etiquetas visibles de los roles ("Técnico"), para no mostrar códigos.
+    role_names: list[str] = []
     permissions: list[str]
+    # Módulos que este usuario puede abrir. El menú y las rutas del frontend se
+    # construyen con esto, en vez de repetir allá la lógica de agrupamiento.
+    modules: list[str] = []
 
     model_config = {"from_attributes": True}
 

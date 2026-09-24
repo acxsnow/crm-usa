@@ -4,12 +4,12 @@ Capa de selectors: solo lectura, con el scope de organización siempre
 explícito. La escritura y las reglas de negocio viven en `service.py`."""
 import uuid
 
-from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.modules.users.models import PermissionModule, Role, UserRole
+from app.shared.errors import NotFoundError
 from app.shared.permissions import DEFAULT_MODULES, Module
 
 # El rol de administrador no se edita ni se borra: si se le pudieran quitar
@@ -127,7 +127,7 @@ async def get_org_role_or_404(db: AsyncSession, organization_id: uuid.UUID, code
         )
     ).scalar_one_or_none()
     if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado.")
+        raise NotFoundError("El rol no existe.", code="role_not_found")
 
     copy = Role(
         organization_id=organization_id,

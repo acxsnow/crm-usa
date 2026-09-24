@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.shared.error_handlers import register_error_handlers
+from app.shared.request_context import clear_request_context, set_request_context
 
 settings = get_settings()
 configure_logging()
@@ -46,8 +48,25 @@ app.add_middleware(
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    # Se limpia antes de enlazar: sin esto, el contexto de una petición anterior
+    # sobrevive en el mismo worker y las líneas de log salen con el request_id
+    # equivocado, que es peor que no tener registro.
+    structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
-    response = await call_next(request)
+    # Los manejadores de error lo leen de aquí para incluirlo en la respuesta.
+    request.state.request_id = request_id
+    # La auditoría lo toma de aquí, para no ir pasándolo por parámetro desde
+    # cada endpoint hasta el service que registra el evento.
+    set_request_context(
+        request_id=request_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("User-Agent"),
+    )
+    try:
+        response = await call_next(request)
+    finally:
+        structlog.contextvars.clear_contextvars()
+        clear_request_context()
     response.headers["X-Request-ID"] = request_id
     return response
 
@@ -68,6 +87,10 @@ async def add_security_headers(request: Request, call_next):
     if settings.ENVIRONMENT != "development":
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     return response
+
+
+# Traducción de errores a respuestas HTTP (ver app/shared/error_handlers.py).
+register_error_handlers(app)
 
 
 @app.get("/health")
