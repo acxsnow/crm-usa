@@ -32,6 +32,55 @@ class Permission(UUIDPKMixin, Base):
     description: Mapped[str | None] = mapped_column(String(255))
 
 
+class PermissionModule(UUIDPKMixin, TimestampMixin, Base):
+    """Grupo de permisos y unidad de navegación: el menú y las rutas preguntan
+    "¿el usuario tiene algún permiso de este módulo?" (decisión D9).
+
+    Mismo patrón que `Role`: `organization_id` nulo es la plantilla del sistema
+    y cada organización recibe su copia editable. Los módulos con `is_system`
+    se pueden renombrar, reordenar y cambiarles los permisos, pero no borrar,
+    porque el menú del frontend referencia su `key`."""
+
+    __tablename__ = "permission_modules"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "key", name="uq_permission_module_org_key"),
+    )
+
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
+    key: Mapped[str] = mapped_column(String(50), nullable=False)
+    label: Mapped[str] = mapped_column(String(150), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    items: Mapped[list["PermissionModuleItem"]] = relationship(
+        "PermissionModuleItem",
+        back_populates="module",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+
+class PermissionModuleItem(UUIDPKMixin, Base):
+    """Un permiso dentro de un módulo. Es una tabla de detalle y no una relación
+    directa porque un mismo permiso pertenece a varios módulos."""
+
+    __tablename__ = "permission_module_items"
+    __table_args__ = (
+        UniqueConstraint("module_id", "permission_id", name="uq_permission_module_item"),
+    )
+
+    module_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("permission_modules.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    permission_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    module: Mapped["PermissionModule"] = relationship("PermissionModule", back_populates="items")
+    permission: Mapped["Permission"] = relationship("Permission", lazy="selectin")
+
+
 class Role(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     """System default roles have organization_id = NULL; custom roles belong to an org (spec 5.3)."""
 

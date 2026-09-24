@@ -21,8 +21,44 @@ from app.modules.crm.models import FunderStatus, PipelineStage
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import ChecklistTemplate, ChecklistTemplateItem
 from app.modules.organizations.models import Organization, PlanLimit
-from app.modules.users.models import Permission, Role, User, UserRole, UserStatus
+from app.modules.users.models import (
+    Permission,
+    PermissionModule,
+    PermissionModuleItem,
+    Role,
+    User,
+    UserRole,
+    UserStatus,
+)
 from app.shared.permissions import DEFAULT_ROLE_PERMISSIONS, PERMISSION_CATALOG, ROLE_LABELS
+
+
+def build_permission_modules(
+    organization_id, permissions: dict[str, "Permission"]
+) -> list["PermissionModule"]:
+    """Crea los módulos de permisos a partir de `DEFAULT_MODULES` (decisión D9).
+
+    `organization_id=None` produce la plantilla del sistema; con un id produce
+    la copia editable de esa organización. Mismo patrón que los roles."""
+    from app.modules.users.models import PermissionModule, PermissionModuleItem
+    from app.shared.permissions import DEFAULT_MODULES
+
+    modules = []
+    for order, (key, module) in enumerate(DEFAULT_MODULES.items()):
+        row = PermissionModule(
+            organization_id=organization_id,
+            key=key,
+            label=module.label,
+            sort_order=order,
+            is_system=True,
+        )
+        row.items = [
+            PermissionModuleItem(permission_id=permissions[code].id, sort_order=i)
+            for i, code in enumerate(module.permissions)
+            if code in permissions
+        ]
+        modules.append(row)
+    return modules
 
 
 async def seed_permission_catalog(db) -> dict[str, Permission]:
@@ -51,6 +87,18 @@ async def seed_system_roles(db, permissions: dict[str, Permission]) -> dict[str,
         existing[role_code] = role
     await db.flush()
     return existing
+
+
+async def seed_system_permission_modules(db, permissions: dict[str, Permission]) -> None:
+    """Plantilla del sistema de los módulos de permisos (organization_id NULL)."""
+    result = await db.execute(
+        select(PermissionModule).where(PermissionModule.organization_id.is_(None))
+    )
+    if result.scalars().first():
+        return
+    for module in build_permission_modules(None, permissions):
+        db.add(module)
+    await db.flush()
 
 
 async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None:
@@ -85,6 +133,10 @@ async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None
     await db.flush()
     db.add(UserRole(user_id=admin.id, role_id=org_roles["organization_admin"].id))
 
+    for module in build_permission_modules(org.id, permissions):
+        db.add(module)
+    await db.flush()
+
     for stage in DEFAULT_PIPELINE_STAGES:
         db.add(PipelineStage(organization_id=org.id, **stage))
 
@@ -110,6 +162,7 @@ async def main() -> None:
     async with AsyncSessionLocal() as db:
         permissions = await seed_permission_catalog(db)
         await seed_system_roles(db, permissions)
+        await seed_system_permission_modules(db, permissions)
         if args.demo_org:
             await seed_demo_organization(db, permissions)
         await db.commit()

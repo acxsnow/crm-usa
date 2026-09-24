@@ -123,6 +123,13 @@ async def seeded_org(db: AsyncSession):
         role_objs[role_code] = role
     await db.flush()
 
+    # Módulos de permisos: copia de la organización, igual que en el seed real.
+    from scripts.seed import build_permission_modules
+
+    for module in build_permission_modules(org.id, perm_objs):
+        db.add(module)
+    await db.flush()
+
     from app.modules.crm.models import FunderStatus, PipelineStage
 
     stage_objs: dict[str, PipelineStage] = {}
@@ -143,6 +150,37 @@ async def seeded_org(db: AsyncSession):
         "org": org, "roles": role_objs, "permissions": perm_objs,
         "stages": stage_objs, "funder_statuses": funder_status_objs,
     }
+
+
+@pytest_asyncio.fixture
+async def second_org(db: AsyncSession, seeded_org):
+    """Segunda organización con sus propios roles y módulos, para probar que
+    editar la configuración de una no afecta a la otra."""
+    from scripts.seed import build_permission_modules
+
+    org = Organization(name="Beta Field Services")
+    db.add(org)
+    await db.flush()
+    db.add(PlanLimit(organization_id=org.id, max_active_users=30))
+
+    perm_objs = seeded_org["permissions"]
+    role_objs: dict[str, Role] = {}
+    for role_code, perm_codes in DEFAULT_ROLE_PERMISSIONS.items():
+        role = Role(
+            organization_id=org.id,
+            code=role_code,
+            name=ROLE_LABELS.get(role_code, role_code),
+            is_system=True,
+        )
+        role.permissions = [perm_objs[c] for c in perm_codes]
+        db.add(role)
+        role_objs[role_code] = role
+    await db.flush()
+
+    for module in build_permission_modules(org.id, perm_objs):
+        db.add(module)
+    await db.commit()
+    return {"org": org, "roles": role_objs, "permissions": perm_objs}
 
 
 @pytest_asyncio.fixture
@@ -204,36 +242,65 @@ async def _make_role_user(db: AsyncSession, seeded_org, *, role_code: str, email
     return user
 
 
+# Un usuario activo por cada rol del PDF (decisión D1). `active_admin_user` y
+# `active_technician_user` están arriba.
+
+
 @pytest_asyncio.fixture
-async def active_commercial_manager_user(db: AsyncSession, seeded_org):
+async def active_salesperson_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="commercial_manager", email="commercial@acme-demo.com", full_name="Cara Commercial"
+        db, seeded_org, role_code="salesperson", email="vendedor@acme-demo.com", full_name="Vic Vendedor"
     )
 
 
 @pytest_asyncio.fixture
-async def active_project_manager_user(db: AsyncSession, seeded_org):
+async def active_admin_staff_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="project_manager", email="pm@acme-demo.com", full_name="Pat Manager"
+        db, seeded_org, role_code="admin_staff", email="admin-staff@acme-demo.com", full_name="Ana Administración"
     )
 
 
 @pytest_asyncio.fixture
-async def active_supervisor_user(db: AsyncSession, seeded_org):
+async def active_accounting_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="supervisor", email="supervisor@acme-demo.com", full_name="Sam Supervisor"
+        db, seeded_org, role_code="accounting", email="contabilidad@acme-demo.com", full_name="Coni Contabilidad"
     )
 
 
 @pytest_asyncio.fixture
-async def active_finance_user(db: AsyncSession, seeded_org):
+async def active_management_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="finance_user", email="finance@acme-demo.com", full_name="Fiona Finance"
+        db, seeded_org, role_code="management", email="gerencia@acme-demo.com", full_name="Gabo Gerencia"
     )
 
 
 @pytest_asyncio.fixture
-async def active_read_only_user(db: AsyncSession, seeded_org):
-    return await _make_role_user(
-        db, seeded_org, role_code="read_only", email="readonly@acme-demo.com", full_name="Rae Readonly"
+async def active_roleless_user(db: AsyncSession, seeded_org):
+    """Usuario con un rol de la organización sin ningún permiso: es el estado
+    real justo después de que el administrador crea un rol y todavía no le
+    marca nada. Sirve para comprobar que ninguna ruta se abre por descuido."""
+    org = seeded_org["org"]
+    empty_role = Role(
+        organization_id=org.id,
+        code="sin_permisos",
+        name="Sin permisos",
+        is_system=False,
     )
+    empty_role.permissions = []
+    db.add(empty_role)
+    await db.flush()
+
+    user = User(
+        organization_id=org.id,
+        email="sinpermisos@acme-demo.com",
+        email_display="sinpermisos@acme-demo.com",
+        full_name="Sin Permisos",
+        password_hash=hash_password("SuperSecret123"),
+        status=UserStatus.active,
+    )
+    db.add(user)
+    await db.flush()
+    db.add(UserRole(user_id=user.id, role_id=empty_role.id))
+    await db.commit()
+    await db.refresh(user)
+    return user

@@ -107,3 +107,26 @@ referencia rápida; el detalle vive en las specs de `docs/superpowers/specs/`.
   Comunes: `shared/files/`, `shared/events.py`. Archivos compartidos solo
   se editan agregando líneas. Integración a `main` cada viernes.
 - Orden de la Cadena B: 5 → 6 → 7 → 4. Requiere cambiar §18.2 del `.md`.
+
+## D9 — Los módulos (grupos de permisos) viven en base de datos y se editan desde pantalla
+
+- Fecha: 22 de septiembre de 2026. Tomada por José Javier.
+- Un **módulo** es un grupo de permisos y es la unidad de navegación: el menú
+  y las rutas preguntan "¿el usuario tiene algún permiso de este módulo?".
+- La relación permiso ↔ módulo es de **muchos a muchos**: el módulo tiene la
+  lista de permisos, no al revés. Un mismo permiso puede estar en varios
+  módulos (`dashboards.finance` en Facturación y en Reportes;
+  `programs.read` en Configuración y en Expedientes).
+- Se guardan en dos tablas nuevas, `permission_modules` y
+  `permission_module_items`, con el mismo patrón que los roles: el código
+  (`DEFAULT_MODULES` en `app/shared/permissions.py`) define los valores
+  iniciales y el seed crea la plantilla del sistema más una copia por
+  organización; la tabla es el estado vivo y editable.
+- Los 15 módulos del PDF se marcan `is_system`: se pueden renombrar,
+  reordenar y cambiarles los permisos, pero **no borrar**. Cada uno tiene
+  "restaurar valores por defecto".
+- Riesgo aceptado: si alguien deja un módulo sin permisos, su ítem del menú
+  desaparece aunque la pantalla siga existiendo. Lo mitiga `is_system` +
+  restaurar valores por defecto.
+- Alternativa descartada: dejarlos solo en código (más simple y sin
+  migraciones, pero no editable por el administrador).

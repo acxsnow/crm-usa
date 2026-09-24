@@ -253,17 +253,18 @@ Mecánica:
 
 ## 6. Migración desde `Application` y `Opportunity`
 
-Una sola migración de esquema en el esqueleto (`0009_cases`) y una de
-datos a continuación (`0010_migrate_to_cases`). `downgrade()` real en ambas.
+Una sola migración de esquema en el esqueleto (`0011_cases`) y una de
+datos a continuación (`0012_migrate_to_cases`); `0009` y `0010` quedaron
+tomadas por los módulos de permisos y los roles del PDF. `downgrade()` real en ambas.
 
-Esquema (`0009`):
+Esquema (`0011`):
 
 - Crear `programs`, `program_versions`, `program_zones`, `cases`,
   `case_stage_events`.
 - Agregar `projects.case_id` (nullable, FK, índice).
 - No borrar nada.
 
-Datos (`0010`):
+Datos (`0012`):
 
 - Por cada `Opportunity`: crear un `Program` por cada `funder_program`
   distinto que no exista (código en mayúsculas, `active=true`), y un
