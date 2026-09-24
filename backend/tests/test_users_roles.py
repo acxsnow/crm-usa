@@ -189,3 +189,45 @@ async def test_update_user_name(app_client, active_admin_user, active_technician
     )
     assert resp.status_code == 200, resp.text
     assert resp.json()["full_name"] == "Nombre Nuevo"
+
+
+async def test_inviting_assigns_each_role_once(app_client, active_admin_user, db, seeded_org):
+    """Un rol del sistema existe dos veces —la plantilla y la copia de la
+    organización— y la búsqueda traía ambas, así que el invitado quedaba con el
+    mismo rol dos veces y su nombre salía repetido en pantalla."""
+    from sqlalchemy import func, select
+
+    from app.modules.users.models import Role, User, UserRole
+
+    # La base real tiene las plantillas del sistema que crea `scripts/seed.py`;
+    # sin ellas aquí, el test no reproduciría la condición que causa el fallo.
+    db.add(
+        Role(
+            organization_id=None,
+            code="field_technician",
+            name="Técnico",
+            is_system=True,
+        )
+    )
+    await db.commit()
+
+    headers = await _login(app_client, "admin@acme-demo.com")
+    resp = await app_client.post(
+        "/api/v1/users",
+        json={
+            "email": "unico@acme-demo.com",
+            "full_name": "Uno Solo",
+            "role_codes": ["field_technician"],
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["roles"] == ["field_technician"]
+
+    invitado = (
+        await db.execute(select(User).where(User.email == "unico@acme-demo.com"))
+    ).scalar_one()
+    asignaciones = (
+        await db.execute(select(func.count(UserRole.id)).where(UserRole.user_id == invitado.id))
+    ).scalar_one()
+    assert asignaciones == 1, "el rol quedó asignado más de una vez"

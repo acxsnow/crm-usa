@@ -4,6 +4,8 @@ import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { AcceptInvitationPage } from "@/features/auth/AcceptInvitationPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RequireAccess } from "@/components/RequireAccess";
+import { MODULE } from "@/config/navigation";
 import { DashboardLayout } from "@/app/DashboardLayout";
 import { DashboardHome } from "@/app/DashboardHome";
 import { LeadsPage } from "@/features/crm/LeadsPage";
@@ -20,6 +22,13 @@ import { CustomerSignaturePage } from "@/features/field-ops/CustomerSignaturePag
 import { ApplicationPage } from "@/features/crm/ApplicationPage";
 import { ApplicationsAdminPage } from "@/features/crm/ApplicationsAdminPage";
 
+/**
+ * Cada ruta declara qué módulo o permiso la habilita.
+ *
+ * Sin esto, cualquier usuario con sesión podía abrir `/invoices` o `/users`
+ * escribiendo la dirección: la API rechazaba cada consulta con 403, pero la
+ * pantalla se montaba igual y quedaba una tabla vacía sin explicación.
+ */
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
@@ -35,18 +44,102 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardHome /> },
-      { path: "leads", element: <LeadsPage /> },
-      { path: "applications/new", element: <ApplicationPage /> },
-      { path: "applications", element: <ApplicationsAdminPage /> },
-      { path: "customers", element: <CustomersPage /> },
-      { path: "customers/:customerId", element: <CustomerDetailPage /> },
-      { path: "opportunities", element: <OpportunitiesPage /> },
-      { path: "projects", element: <ProjectsPage /> },
-      { path: "projects/:projectId", element: <ProjectDetailPage /> },
-      { path: "technician-monitor", element: <TechnicianMonitorPage /> },
-      { path: "invoices", element: <InvoicesPage /> },
-      { path: "users", element: <UsersPage /> },
-      { path: "audit-log", element: <AuditLogPage /> },
+      {
+        path: "leads",
+        element: (
+          <RequireAccess permission="leads.manage" moduleLabel="Prospectos">
+            <LeadsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "customers",
+        element: (
+          <RequireAccess module={MODULE.CUSTOMERS} moduleLabel="Prospectos y clientes">
+            <CustomersPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "customers/:customerId",
+        element: (
+          <RequireAccess module={MODULE.CUSTOMERS} moduleLabel="Prospectos y clientes">
+            <CustomerDetailPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "applications/new",
+        element: (
+          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+            <ApplicationPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "applications",
+        element: (
+          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+            <ApplicationsAdminPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "opportunities",
+        element: (
+          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+            <OpportunitiesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "projects",
+        element: (
+          <RequireAccess module={MODULE.PROJECTS} moduleLabel="Proyectos e instalación">
+            <ProjectsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "projects/:projectId",
+        element: (
+          <RequireAccess module={MODULE.PROJECTS} moduleLabel="Proyectos e instalación">
+            <ProjectDetailPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "technician-monitor",
+        element: (
+          <RequireAccess permission="dashboards.operations" moduleLabel="el monitor de técnicos">
+            <TechnicianMonitorPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "invoices",
+        element: (
+          <RequireAccess module={MODULE.BILLING} moduleLabel="Facturación y cobros">
+            <InvoicesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "users",
+        element: (
+          <RequireAccess module={MODULE.TEAM} moduleLabel="Usuarios y roles">
+            <UsersPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "audit-log",
+        element: (
+          <RequireAccess module={MODULE.AUDIT} moduleLabel="Auditoría">
+            <AuditLogPage />
+          </RequireAccess>
+        ),
+      },
     ],
   },
 ]);

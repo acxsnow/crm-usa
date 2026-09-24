@@ -1368,3 +1368,72 @@ button {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* --- Menú agrupado por módulo (config/navigation.ts) --- */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-group + .nav-group {
+  margin-top: 1rem;
+}
+
+.nav-group-label {
+  padding: 0 1rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+/* Módulos declarados pero todavía no construidos: se ven, no se abren. */
+.nav-link.disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.user-identity {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.user-role {
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+
+/* --- Pantalla "sin acceso" (components/NoAccess.tsx) --- */
+.no-access {
+  max-width: 34rem;
+  margin: 4rem auto;
+  padding: 2.5rem;
+  text-align: center;
+  background: var(--surface, #fff);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.no-access-icon {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+.no-access h1 {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.no-access p {
+  margin: 0 0 1.5rem;
+  opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+  .no-access {
+    margin: 2rem 1rem;
+    padding: 1.5rem;
+  }
+}

@@ -247,82 +247,55 @@ permisos a un módulo desde la base hace que ese módulo deje de aparecer en
 
 ---
 
-### Tarea 5 — Menú por módulo y protección de rutas (frontend)
+### Tarea 5 — Menú por módulo y protección de rutas ✅ HECHA (23 sep)
 
-**Archivos:**
-- Crear: `frontend/src/config/navigation.ts`,
-  `frontend/src/components/RequireAccess.tsx`,
-  `frontend/src/components/NoAccess.tsx`
-- Modificar: `frontend/src/app/{router.tsx,DashboardLayout.tsx}`,
-  `frontend/src/features/auth/AuthContext.tsx`,
-  `frontend/src/types/auth.ts`
+**Archivos:** `frontend/src/config/navigation.ts`,
+`frontend/src/components/{RequireAccess,NoAccess}.tsx`,
+`frontend/src/app/{router,DashboardLayout}.tsx`,
+`frontend/src/features/auth/AuthContext.tsx`, `frontend/src/types/auth.ts`,
+`frontend/src/index.css`.
 
-**Interfaces:**
-- Consume: `/auth/me` con `modules` y `role_names` (tarea 4).
-- Produce: `buildNavForUser(user): NavGroup[]`; `hasModule(module): boolean`
-  en `useAuth()`; `<RequireAccess module="billing">` y
-  `<RequireAccess permission="roles.manage">`.
+**Lo que quedó:**
 
-- [ ] **Paso 1: `navigation.ts`**
+- `navigation.ts` con los 15 módulos en 5 grupos y `buildNavForUser(user)`,
+  calcado del `navigation.tsx` de `ventas_pap`. El layout ya no lleva el menú
+  adentro: solo lo pinta.
+- Los módulos que aún no existen salen **en gris** (`disabled`), así que el mapa
+  completo del sistema se ve desde el primer día.
+- `hasModule()` en `AuthContext`, alimentado por `modules` de `/auth/me`.
+- `RequireAccess` en **todas** las rutas. No monta los hijos cuando no hay
+  acceso: si solo escondiera la pantalla, los componentes se montarían igual y
+  dispararían consultas que el backend rechaza una por una.
+- Pantalla "Sin acceso" en español, con enlace a Inicio.
+- El nombre del rol se muestra en la cabecera.
 
-Constantes `MODULE` (las 15 claves), y `NAV_GROUPS` con la estructura de la
-sección 7 del spec: cada ítem con `label`, `href`, `icon`, y **o**
-`module` **o** `permission`, más `disabled: true` en los módulos que aún no
-existen. `buildNavForUser(user)` devuelve los grupos con sus ítems visibles
-(el super admin ve todo) y descarta los grupos que quedan vacíos.
+**Tres cosas que encontró la prueba en navegador, no los tests:**
 
-- [ ] **Paso 2: `hasModule` en `AuthContext`**
+1. **El rol se asignaba dos veces al invitar.** Un rol del sistema existe como
+   plantilla y como copia de la organización, y `invite_user` traía las dos.
+   En pantalla salía "Técnico · Técnico". Corregido con deduplicación por
+   código (gana la copia de la organización) y un test que **reproduce las
+   condiciones reales**: el primer intento pasó en verde porque el entorno de
+   pruebas no creaba las plantillas del sistema.
+2. **El técnico veía "Prospectos".** `customers` agrupa prospectos y clientes,
+   y el técnico tiene `customers.read` (necesita ver el cliente de su proyecto)
+   pero no `leads.manage`. Habría entrado para recibir un 403. Prospectos pasó
+   a declararse por permiso puntual. Es el riesgo conocido de agrupar: cuando
+   un ítem no corresponde al módulo completo, se declara con `permission`.
+3. **Mi propio script de prueba estaba mal**: comprobaba "el técnico entra a
+   facturación" con la sesión del contable, que sí tiene acceso. Corregido.
 
-```tsx
-const hasModule = useCallback(
-  (module: string) => user?.modules.includes(module) ?? false,
-  [user]
-);
-```
-y `modules: string[]`, `role_names: string[]` en `CurrentUser`.
+**Verificación en navegador, con tres usuarios reales:**
 
-- [ ] **Paso 3: `NoAccess.tsx` y `RequireAccess.tsx`**
+- Administrador: los 11 ítems construidos + 9 en gris.
+- Técnico: Inicio, Clientes, Proyectos.
+- Contabilidad: Inicio, Clientes, Expedientes, Pipeline, Proyectos,
+  Facturación, Auditoría.
+- El técnico entrando por URL a `/invoices`, `/users` y `/leads` ve "No tienes
+  acceso a esta sección" y **no dispara ninguna consulta** (`pidio_datos:
+  false` en los tres casos).
 
-`NoAccess` muestra "No tienes acceso a este módulo", el nombre del módulo y
-un enlace a Inicio. `RequireAccess` recibe `module` o `permission`, y
-devuelve `<NoAccess/>` si el usuario no cumple; **no** monta los hijos, para
-que no se disparen consultas.
-
-- [ ] **Paso 4: envolver todas las rutas en `router.tsx`**
-
-Cada ruta hija de `"/"` queda envuelta: `/leads` y `/customers` con
-`module="customers"`; `/applications` y `/opportunities` con `module="cases"`;
-`/projects` con `module="projects"`; `/technician-monitor` con
-`permission="dashboards.operations"`; `/invoices` con `module="billing"`;
-`/users` con `module="team"`; `/audit-log` con `module="audit"`.
-`/customers/:customerId` y `/projects/:projectId` heredan el de su listado.
-
-- [ ] **Paso 5: `DashboardLayout` usa `buildNavForUser`**
-
-Quitar `NAV_ITEMS` del layout; pintar grupos con su etiqueta, ítems
-deshabilitados en gris y sin enlace. Mostrar `role_names` en la cabecera.
-
-- [ ] **Paso 6: verificar compilación**
-
-Ejecutar: `docker compose exec -T frontend sh -c "npx tsc -b && npx vite build"`
-Esperado: limpio.
-
-- [ ] **Paso 7: verificar en navegador con dos roles**
-
-Con la skill `browser-automation`: entrar como admin (ve todo, incluido
-"Roles y permisos" deshabilitado hasta la tarea 6) y como técnico (ve solo
-lo suyo). Abrir `/invoices` por URL como técnico y confirmar "Sin acceso"
-sin peticiones a `/invoices` en la consola de red.
-
-- [ ] **Paso 8: documentar y commit**
-
-`docs/PERMISOS.md`: sección "Menú y rutas" explicando `navigation.ts`,
-`hasModule` y `RequireAccess`.
-
-```bash
-git add frontend/src docs/PERMISOS.md
-git commit -m "feat(frontend): module-based menu and route protection"
-```
+Suite: **141 pasan, 0 fallan**; `tsc -b` y `vite build` limpios.
 
 ---
 

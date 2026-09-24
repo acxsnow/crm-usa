@@ -62,10 +62,23 @@ async def invite_user(
             "Ya existe un usuario con ese correo.", code="email_already_used"
         )
 
+    # Un rol del sistema existe dos veces: la plantilla (`organization_id`
+    # nulo) y la copia de la organización. Sin deduplicar por código, el
+    # invitado quedaba con el mismo rol asignado dos veces y su nombre salía
+    # repetido en pantalla. Gana la copia de la organización, que es la que el
+    # administrador puede editar.
     result = await db.execute(
-        select(Role).where(Role.code.in_(role_codes), (Role.organization_id == organization_id) | (Role.organization_id.is_(None)))
+        select(Role).where(
+            Role.code.in_(role_codes),
+            (Role.organization_id == organization_id) | (Role.organization_id.is_(None)),
+        )
     )
-    roles = result.scalars().all()
+    por_codigo: dict[str, Role] = {}
+    for role in result.scalars().all():
+        existente = por_codigo.get(role.code)
+        if existente is None or existente.organization_id is None:
+            por_codigo[role.code] = role
+    roles = list(por_codigo.values())
     if not roles:
         raise InvalidInputError("No se indicó ningún rol válido.", code="no_valid_roles")
 
