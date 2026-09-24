@@ -204,8 +204,22 @@ Todas las escrituras quedan en `audit_events` con el antes y el después:
 
 ## Cómo dar o quitar accesos (operación)
 
-Desde la pantalla de Roles y permisos (pendiente, tarea 6 del plan). Mientras
-tanto, con la API de arriba.
+Desde **Roles y permisos** (`/roles`, requiere `roles.manage`):
+
+1. Elegir el rol en la lista de la izquierda, o pulsar "Crear rol".
+2. Marcar o desmarcar permisos. Están agrupados por módulo: la casilla del
+   módulo marca todo el grupo de una vez, y "Ver detalle" abre los permisos
+   individuales. La casilla queda en estado intermedio cuando el rol tiene
+   parte del módulo.
+3. Guardar. El cambio afecta a todos los usuarios de ese rol en su siguiente
+   carga.
+
+Para cambiarle el rol a una persona: **Equipo** (`/users`), acción "Editar".
+
+Un permiso que pertenece a varios módulos aparece en cada uno, y marcarlo
+desde cualquiera lo activa en todos: lo que se guarda es el permiso, no su
+ubicación en el menú. Al desmarcar un módulo completo, los permisos que
+también pertenecen a otro módulo marcado se conservan.
 
 Dos protecciones que conviene conocer:
 

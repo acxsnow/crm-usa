@@ -299,60 +299,44 @@ Suite: **141 pasan, 0 fallan**; `tsc -b` y `vite build` limpios.
 
 ---
 
-### Tarea 6 — Pantalla de roles y permisos
+### Tarea 6 — Pantalla de roles y permisos ✅ HECHA (23 sep)
 
-**Archivos:**
-- Crear: `frontend/src/features/roles/{api.ts,queries.ts,RolesPage.tsx}`,
-  `frontend/src/features/roles/components/{RoleForm.tsx,PermissionPicker.tsx}`
-- Modificar: `frontend/src/app/router.tsx`, `frontend/src/types/users.ts`,
-  `frontend/src/index.css`
+**Archivos:** `frontend/src/features/roles/{api,queries,RolesPage}.tsx`,
+`frontend/src/features/roles/components/PermissionPicker.tsx`,
+`frontend/src/app/router.tsx`, `frontend/src/types/users.ts`,
+`frontend/src/index.css`, `docs/PERMISOS.md`.
 
-**Interfaces:**
-- Consume: `GET /permissions`, `GET/POST/PATCH/DELETE /roles` (tarea 3).
-- Produce: ruta `/roles` con `permission="roles.manage"`.
+**Lo que quedó:**
 
-- [ ] **Paso 1: `api.ts` y `queries.ts`**
+- Lista de roles con nombre, origen (Sistema o Propio), número de permisos y
+  de usuarios.
+- Crear rol con código validado, editar nombre y permisos, eliminar los
+  propios con confirmación.
+- `PermissionPicker`: permisos agrupados por módulo, con casilla por grupo en
+  tres estados (todo, nada, parcial) y "Ver detalle" para el permiso
+  individual. El administrador piensa en módulos, no en 72 códigos.
+- Un permiso que está en varios módulos aparece en cada uno; marcarlo desde
+  cualquiera lo activa en todos. Al **desmarcar** un módulo completo, los
+  permisos que también pertenecen a otro módulo marcado se conservan: de lo
+  contrario, apagar Facturación apagaría `dashboards.finance` en Reportes.
+- El rol Administrador se muestra con todo marcado, deshabilitado y con un
+  aviso que explica por qué está bloqueado.
+- Los errores que se muestran son los del backend, que ya vienen en español y
+  explican la regla concreta ("Este rol lo tienen 2 usuario(s)…").
+- `queries.ts` centraliza las claves de consulta, para que guardar siempre
+  refresque la lista.
 
-Funciones `listPermissionCatalog`, `listRoles`, `createRole`, `updateRole`,
-`deleteRole`; hooks con `queryKey` centralizada (`rolesKeys.all`,
-`rolesKeys.catalog`) e invalidación tras cada mutación.
+**Verificación en navegador:** la lista muestra los 6 roles con su metadata
+correcta; el rol Administrador sale bloqueado (aviso presente, botón Guardar
+ausente, todas las casillas deshabilitadas); se creó "Coordinador de zona"
+marcando el módulo Proyectos completo (15 permisos) y persiste tras recargar.
 
-- [ ] **Paso 2: `PermissionPicker.tsx`**
-
-Recibe el catálogo y los códigos marcados; pinta un bloque por módulo con su
-etiqueta, una casilla "todo el módulo" (estado indeterminado si hay
-selección parcial) y las casillas de cada permiso con su descripción. En
-móvil, cada módulo colapsado. Deshabilitado completo cuando el rol está
-bloqueado.
-
-- [ ] **Paso 3: `RoleForm.tsx` y `RolesPage.tsx`**
-
-Lista con nombre, código, tipo (Sistema / Organización), número de usuarios y
-acciones. Crear rol (código, nombre, permisos) y editar (nombre, permisos).
-Borrar solo roles de organización sin usuarios, con confirmación. Estados de
-carga, vacío y error. Textos en español.
-
-- [ ] **Paso 4: ruta y enlace**
-
-`/roles` en `router.tsx` con `RequireAccess permission="roles.manage"`; el
-ítem del menú ya existe desde la tarea 5 (se le quita `disabled`).
-
-- [ ] **Paso 5: compilación**
-
-Ejecutar: `docker compose exec -T frontend sh -c "npx tsc -b && npx vite build"`
-
-- [ ] **Paso 6: verificar en navegador**
-
-Crear el rol "Coordinador de zona" con el módulo Proyectos completo,
-guardarlo, recargar y ver que persiste; intentar editar "Administrador" y ver
-que está bloqueado.
-
-- [ ] **Paso 7: documentar y commit**
-
-```bash
-git add frontend/src docs/PERMISOS.md
-git commit -m "feat(roles): add roles and permissions admin screen"
-```
+**Criterio de aceptación del módulo 0, comprobado de punta a punta:** el
+administrador creó el rol desde la pantalla, se lo asignó al usuario técnico
+por API, y ese usuario pasó a tener `role_names: ["Coordinador de zona"]` con
+los módulos `cases` y `projects` — sin tocar código ni base de datos. Todo
+quedó en `audit_events` (`roles.created`, `roles.deleted`,
+`users.roles_changed`).
 
 ---
 

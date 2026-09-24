@@ -18,6 +18,7 @@ import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPag
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
+import { RolesPage } from "@/features/roles/RolesPage";
 import { CustomerSignaturePage } from "@/features/field-ops/CustomerSignaturePage";
 import { ApplicationPage } from "@/features/crm/ApplicationPage";
 import { ApplicationsAdminPage } from "@/features/crm/ApplicationsAdminPage";
@@ -129,6 +130,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess module={MODULE.TEAM} moduleLabel="Usuarios y roles">
             <UsersPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "roles",
+        element: (
+          <RequireAccess permission="roles.manage" moduleLabel="Roles y permisos">
+            <RolesPage />
           </RequireAccess>
         ),
       },
