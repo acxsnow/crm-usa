@@ -28,3 +28,56 @@ class UserListResponse(BaseModel):
     total: int
     active_user_count: int
     max_active_users: int
+
+
+# --- Roles, permisos y módulos ---------------------------------------------
+
+
+class PermissionResponse(BaseModel):
+    code: str
+    description: str
+
+
+class PermissionModuleResponse(BaseModel):
+    key: str
+    label: str
+    permissions: list[str]
+
+
+class PermissionCatalogResponse(BaseModel):
+    """El catálogo completo más los módulos de la organización.
+
+    La pantalla de roles lo usa para pintar las casillas agrupadas; los
+    módulos vienen de la base, no del código, porque el administrador puede
+    haberlos editado."""
+
+    modules: list[PermissionModuleResponse]
+    permissions: list[PermissionResponse]
+
+
+class RoleResponse(BaseModel):
+    code: str
+    name: str
+    is_system: bool
+    is_locked: bool
+    permissions: list[str]
+    user_count: int
+
+
+class RoleCreate(BaseModel):
+    code: str = Field(pattern=r"^[a-z][a-z0-9_]{2,49}$")
+    name: str = Field(min_length=1, max_length=150)
+    permissions: list[str] = Field(default_factory=list)
+
+
+class RoleUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    permissions: list[str] | None = None
+
+
+class UserRolesUpdate(BaseModel):
+    role_codes: list[str] = Field(min_length=1)
+
+
+class UserUpdate(BaseModel):
+    full_name: str = Field(min_length=1, max_length=255)

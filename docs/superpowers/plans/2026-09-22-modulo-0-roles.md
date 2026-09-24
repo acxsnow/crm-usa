@@ -186,176 +186,39 @@ conserva sus 72 permisos.
 
 ---
 
-### Tarea 3 — API de roles y permisos
+### Tarea 3 — API de roles y permisos ✅ HECHA (23 sep)
 
 **Archivos:**
-- Crear: `backend/app/modules/users/selectors.py`,
-  `backend/app/modules/users/roles_router.py`
-- Modificar: `backend/app/modules/users/{service.py,schemas.py}`,
-  `backend/app/modules/organizations/router.py`, `backend/app/api/v1/router.py`
-- Modificar: `backend/tests/test_roles.py`
+- Crear: `backend/app/modules/users/roles_router.py`
+- Modificar: `backend/app/modules/users/{selectors,service,schemas,router}.py`,
+  `backend/app/modules/organizations/router.py`, `backend/app/api/v1/router.py`,
+  `backend/tests/test_roles.py`, `docs/PERMISOS.md`
 
-**Interfaces:**
-- Produce: `GET /permissions`, `GET /roles`, `POST /roles`,
-  `PATCH /roles/{code}`, `DELETE /roles/{code}`.
-  `RoleResponse = {code, name, is_system, is_locked, permissions: list[str], user_count: int}`.
-  `PermissionResponse = {code, description, module}`.
-  `PermissionCatalogResponse = {modules: list[{key, label}], permissions: list[PermissionResponse]}`.
+**Lo que quedó:** `GET /permissions`, `GET/POST/PATCH/DELETE /roles`, y
+—adelantado de la tarea 4 porque los tests de borrado lo necesitaban—
+`PATCH /users/{id}/roles` y `PATCH /users/{id}`. `GET /roles` se mudó de
+`organizations` a `users/roles_router.py`; la ruta pública no cambió.
 
-- [ ] **Paso 1: escribir los tests que fallan** — `backend/tests/test_roles.py`
+Reglas implementadas, cada una con su test:
 
-Tests (con el helper `_login` que ya usan los otros archivos de test):
+- El rol Administrador está bloqueado: 409 al intentar editarlo o borrarlo.
+- No se puede quitar el último administrador activo de la organización: 409.
+- Editar un rol del sistema crea y modifica **la copia de la organización**,
+  nunca la plantilla que comparten todas.
+- Un permiso inventado da 400 con el código exacto en el mensaje, en vez de
+  guardarse en silencio.
+- Un rol con usuarios asignados no se borra: 409 diciendo cuántos.
+- `GET /roles` y `GET /permissions` aceptan `users.manage` además de
+  `roles.manage`: antes exigían solo `roles.manage` y la pantalla de Equipo se
+  quedaba sin la lista para quien únicamente administra usuarios.
+- Aislamiento por organización: los roles de una no se ven ni se editan desde
+  otra (404).
 
-```python
-async def test_list_permissions_groups_by_module(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.get("/api/v1/permissions", headers=headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert {"key": "billing", "label": "Facturación y cobros"} in body["modules"]
-    codes = {p["code"]: p["module"] for p in body["permissions"]}
-    assert codes["invoices.read"] == "billing"
-    assert codes["expenses.create_own"] == "expenses"
-
-
-async def test_list_permissions_requires_permission(app_client, active_technician_user):
-    headers = await _login(app_client, active_technician_user.email)
-    resp = await app_client.get("/api/v1/permissions", headers=headers)
-    assert resp.status_code == 403
-
-
-async def test_create_role(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.post(
-        "/api/v1/roles",
-        json={"code": "zone_coordinator", "name": "Coordinador de zona",
-              "permissions": ["projects.read_all", "dispatch.manage"]},
-        headers=headers,
-    )
-    assert resp.status_code == 201, resp.text
-    assert resp.json()["is_system"] is False
-    assert set(resp.json()["permissions"]) == {"projects.read_all", "dispatch.manage"}
-
-
-async def test_create_role_rejects_unknown_permission(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.post(
-        "/api/v1/roles",
-        json={"code": "x_role", "name": "X", "permissions": ["no.existe"]},
-        headers=headers,
-    )
-    assert resp.status_code == 400
-
-
-async def test_create_role_rejects_system_code(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.post(
-        "/api/v1/roles",
-        json={"code": "salesperson", "name": "Otro", "permissions": ["customers.read"]},
-        headers=headers,
-    )
-    assert resp.status_code == 409
-
-
-async def test_update_system_role_permissions(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.patch(
-        "/api/v1/roles/salesperson",
-        json={"permissions": ["customers.read"]},
-        headers=headers,
-    )
-    assert resp.status_code == 200
-    assert resp.json()["permissions"] == ["customers.read"]
-
-
-async def test_cannot_edit_locked_admin_role(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.patch(
-        "/api/v1/roles/organization_admin",
-        json={"permissions": ["customers.read"]},
-        headers=headers,
-    )
-    assert resp.status_code == 409
-
-
-async def test_cannot_delete_system_role(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    resp = await app_client.delete("/api/v1/roles/salesperson", headers=headers)
-    assert resp.status_code == 409
-
-
-async def test_delete_role_with_users_is_rejected(app_client, active_admin_user, active_technician_user):
-    headers = await _login(app_client, active_admin_user.email)
-    await app_client.post(
-        "/api/v1/roles",
-        json={"code": "temp_role", "name": "Temporal", "permissions": ["customers.read"]},
-        headers=headers,
-    )
-    await app_client.patch(
-        f"/api/v1/users/{active_technician_user.id}/roles",
-        json={"role_codes": ["temp_role"]}, headers=headers,
-    )
-    resp = await app_client.delete("/api/v1/roles/temp_role", headers=headers)
-    assert resp.status_code == 409
-
-
-async def test_delete_role_without_users(app_client, active_admin_user):
-    headers = await _login(app_client, active_admin_user.email)
-    await app_client.post(
-        "/api/v1/roles",
-        json={"code": "temp_role", "name": "Temporal", "permissions": ["customers.read"]},
-        headers=headers,
-    )
-    resp = await app_client.delete("/api/v1/roles/temp_role", headers=headers)
-    assert resp.status_code == 204
-
-
-async def test_roles_are_scoped_to_the_organization(app_client, active_admin_user, other_org_admin_user):
-    headers = await _login(app_client, other_org_admin_user.email)
-    resp = await app_client.patch(
-        "/api/v1/roles/zone_coordinator", json={"name": "X"}, headers=headers
-    )
-    assert resp.status_code == 404
-```
-
-(`other_org_admin_user` es una fixture nueva: admin de una segunda
-organización; se agrega en `conftest.py` reutilizando `seeded_org`.)
-
-- [ ] **Paso 2: correr y verlos fallar**
-
-Ejecutar: `docker compose exec -T api python -m pytest tests/test_roles.py -q`
-Esperado: FALLAN con 404 (las rutas no existen).
-
-- [ ] **Paso 3: implementar selectors, service, schemas y router**
-
-`selectors.py`: `roles_for_org(db, organization_id)` (dedup plantilla vs
-copia, con `user_count`), `get_role_or_404(db, organization_id, code)`.
-`service.py`: `create_role`, `update_role` (crea la copia de la organización
-si aún no existe antes de modificarla), `delete_role`, todos con
-`record_audit_event`. `roles_router.py` con los cinco endpoints y
-`require_any_permission("roles.manage", "users.manage")` en los GET,
-`require_permission("roles.manage")` en las escrituras. Quitar `GET /roles`
-de `organizations/router.py` y registrar el router nuevo en `api/v1/router.py`.
-
-- [ ] **Paso 4: correr los tests hasta que pasen**
-
-Ejecutar: `docker compose exec -T api python -m pytest tests/test_roles.py -q`
-Esperado: PASAN.
-
-- [ ] **Paso 5: suite completa + Swagger**
-
-Ejecutar: `docker compose exec -T api python -m pytest -q` (sin fallos nuevos)
-y revisar `http://localhost:8000/api/docs` que los cinco endpoints aparezcan.
-
-- [ ] **Paso 6: documentar y commit**
-
-`docs/PERMISOS.md`: sección "API de roles" con los cinco endpoints, sus
-permisos y sus códigos de error.
-
-```bash
-git add backend/app/modules/users backend/app/modules/organizations/router.py backend/app/api/v1/router.py backend/tests/test_roles.py docs/PERMISOS.md
-git commit -m "feat(roles): add roles and permissions API"
-```
+**Verificación:** 19 tests de roles en verde; suite completa **110 pasan, 0
+fallan**. Probado también contra la API real: catálogo con 15 módulos y 72
+permisos, `dashboards.finance` aparece en `billing` y en `reports`, se creó y
+borró el rol "Coordinador de zona", editar Administrador devolvió 409, y
+`audit_events` registró `roles.created` y `roles.deleted`.
 
 ---
 

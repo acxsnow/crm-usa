@@ -161,9 +161,50 @@ un usuario que estaba en `supervisor` y pasó a Administración vuelve a
 `project_manager`, porque al fusionar dos roles en uno esa información se
 pierde.
 
+## API de roles y permisos
+
+Todo bajo `/api/v1`. Los `GET` aceptan `roles.manage` **o** `users.manage`
+(quien administra usuarios necesita leer los roles para poder asignarlos); las
+escrituras exigen `roles.manage`.
+
+- `GET /permissions` — catálogo completo más los módulos de la organización
+  con sus permisos. Es lo que la pantalla usa para pintar las casillas
+  agrupadas. Los módulos vienen de la base, no del código, porque el
+  administrador pudo haberlos editado.
+- `GET /roles` — roles de la organización con `code`, `name`, `is_system`,
+  `is_locked`, `permissions` y `user_count`. Si existe la copia de la
+  organización, esa gana sobre la plantilla del sistema.
+- `POST /roles` — crea un rol propio. `code` en minúsculas, sin espacios
+  (`^[a-z][a-z0-9_]{2,49}$`). Errores: 409 si el código ya existe, 400 si
+  algún permiso no está en el catálogo, 422 si el código no cumple el formato.
+- `PATCH /roles/{code}` — cambia nombre y/o permisos. Editar un rol del
+  sistema modifica **la copia de la organización**, nunca la plantilla; si la
+  copia no existe todavía, se crea en ese momento. Errores: 409 si el rol está
+  bloqueado, 400 si un permiso no existe, 404 si el rol no es de esta
+  organización.
+- `DELETE /roles/{code}` — solo roles propios y sin usuarios. Errores: 409 si
+  es del sistema o si lo tiene alguien asignado.
+- `PATCH /users/{id}/roles` — reemplaza los roles de una persona. 409 si
+  dejaría a la organización sin ningún administrador activo.
+- `PATCH /users/{id}` — cambia el nombre completo.
+
+Todas las escrituras quedan en `audit_events` con el antes y el después:
+`roles.created`, `roles.updated`, `roles.deleted`, `users.roles_changed`,
+`users.updated`.
+
 ## Cómo dar o quitar accesos (operación)
 
-Pendiente: se completa con la pantalla de Roles y permisos (tarea 6 del plan).
+Desde la pantalla de Roles y permisos (pendiente, tarea 6 del plan). Mientras
+tanto, con la API de arriba.
+
+Dos protecciones que conviene conocer:
+
+- **El rol Administrador está bloqueado.** No se puede editar ni borrar, y
+  siempre conserva todos los permisos. Sin eso, alguien podría quitarse el
+  acceso a Usuarios y Roles y quedar encerrado fuera de la configuración, sin
+  forma de volver a entrar salvo tocando la base de datos.
+- **No se puede quitar el último administrador activo.** El sistema responde
+  409 y pide asignarle el rol a otra persona primero.
 
 ## Cómo proteger un endpoint nuevo (desarrollo)
 
