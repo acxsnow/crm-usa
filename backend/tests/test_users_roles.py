@@ -3,6 +3,10 @@
 `/auth/me` incluye `modules`: la lista de módulos que ese usuario puede abrir.
 El menú y las rutas del frontend se construyen con eso, así que si aquí se
 calcula mal, alguien ve ítems que no puede usar o deja de ver los suyos."""
+import pytest
+
+from app.modules.users import service as user_service
+from app.shared.errors import ForbiddenError
 
 
 async def _login(app_client, email, password="SuperSecret123"):
@@ -231,3 +235,150 @@ async def test_inviting_assigns_each_role_once(app_client, active_admin_user, db
         await db.execute(select(func.count(UserRole.id)).where(UserRole.user_id == invitado.id))
     ).scalar_one()
     assert asignaciones == 1, "el rol quedó asignado más de una vez"
+
+
+# ---------------------------------------------------------------------------
+# Un usuario, un rol
+# ---------------------------------------------------------------------------
+
+async def test_a_user_cannot_be_invited_with_two_roles(app_client, active_admin_user):
+    """Regla de negocio: una persona tiene un rol y solo uno. La pantalla ofrece
+    botones de opción, pero la regla vive en la API: esconder la posibilidad en
+    la interfaz no impide mandar dos por HTTP."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    resp = await app_client.post(
+        "/api/v1/users",
+        json={
+            "email": "dos-roles@acme-demo.com",
+            "full_name": "Dos Roles",
+            "role_codes": ["salesperson", "field_technician"],
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 422, resp.text
+
+    listado = (await app_client.get("/api/v1/users", headers=headers)).json()
+    assert "dos-roles@acme-demo.com" not in [u["email"] for u in listado["items"]]
+
+
+async def test_a_user_cannot_be_given_two_roles(app_client, active_admin_user):
+    headers = await _login(app_client, "admin@acme-demo.com")
+    creado = await app_client.post(
+        "/api/v1/users",
+        json={
+            "email": "un-rol@acme-demo.com",
+            "full_name": "Un Rol",
+            "role_codes": ["salesperson"],
+        },
+        headers=headers,
+    )
+    assert creado.status_code == 201, creado.text
+    user_id = creado.json()["id"]
+
+    resp = await app_client.patch(
+        f"/api/v1/users/{user_id}/roles",
+        json={"role_codes": ["salesperson", "accounting"]},
+        headers=headers,
+    )
+    assert resp.status_code == 422, resp.text
+
+    # El rol que ya tenía no se tocó.
+    actual = (await app_client.get("/api/v1/users", headers=headers)).json()["items"]
+    fila = next(u for u in actual if u["email"] == "un-rol@acme-demo.com")
+    assert fila["roles"] == ["salesperson"]
+
+
+async def test_changing_to_a_single_role_still_works(app_client, active_admin_user):
+    """El caso normal no se rompe: cambiar de un rol a otro."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    creado = await app_client.post(
+        "/api/v1/users",
+        json={
+            "email": "cambia-rol@acme-demo.com",
+            "full_name": "Cambia Rol",
+            "role_codes": ["salesperson"],
+        },
+        headers=headers,
+    )
+    user_id = creado.json()["id"]
+
+    resp = await app_client.patch(
+        f"/api/v1/users/{user_id}/roles",
+        json={"role_codes": ["accounting"]},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["roles"] == ["accounting"]
+
+
+# ---------------------------------------------------------------------------
+# Solo un administrador reparte el rol de administrador
+# ---------------------------------------------------------------------------
+
+async def test_a_non_admin_cannot_grant_the_admin_role(
+    db, seeded_org, active_admin_staff_user, active_salesperson_user
+):
+    """Escalada de privilegios: quien pueda administrar usuarios sin ser
+    administrador (un rol propio con `users.manage`, por ejemplo "Coordinador
+    de zona") no puede repartir el rol de Administrador — ni a otro ni a sí
+    mismo, que sería darse todos los permisos."""
+    with pytest.raises(ForbiddenError):
+        await user_service.set_user_roles(
+            db,
+            organization_id=seeded_org["org"].id,
+            actor=active_admin_staff_user,
+            user_id=active_salesperson_user.id,
+            role_codes=["organization_admin"],
+        )
+
+
+async def test_a_non_admin_cannot_invite_an_admin(db, seeded_org, active_admin_staff_user):
+    with pytest.raises(ForbiddenError):
+        await user_service.invite_user(
+            db,
+            organization_id=seeded_org["org"].id,
+            inviter=active_admin_staff_user,
+            email="nuevo-admin@acme-demo.com",
+            full_name="Nuevo Admin",
+            role_codes=["organization_admin"],
+        )
+
+
+async def test_an_admin_can_grant_the_admin_role(
+    db, seeded_org, active_admin_user, active_salesperson_user
+):
+    actualizado = await user_service.set_user_roles(
+        db,
+        organization_id=seeded_org["org"].id,
+        actor=active_admin_user,
+        user_id=active_salesperson_user.id,
+        role_codes=["organization_admin"],
+    )
+    assert [ur.role.code for ur in actualizado.roles] == ["organization_admin"]
+
+
+async def test_a_non_admin_can_still_assign_any_other_role(
+    db, seeded_org, active_admin_staff_user, active_salesperson_user
+):
+    """La restricción es solo sobre el rol de Administrador; lo demás sigue
+    siendo trabajo normal de quien administra usuarios."""
+    actualizado = await user_service.set_user_roles(
+        db,
+        organization_id=seeded_org["org"].id,
+        actor=active_admin_staff_user,
+        user_id=active_salesperson_user.id,
+        role_codes=["accounting"],
+    )
+    assert [ur.role.code for ur in actualizado.roles] == ["accounting"]
+
+
+async def test_me_says_whether_the_person_can_grant_the_admin_role(
+    app_client, active_admin_user, active_admin_staff_user
+):
+    """El frontend esconde la opción "Administrador" con esto. La regla real la
+    impone la API; este campo solo evita ofrecer algo que va a ser rechazado."""
+    admin = await _login(app_client, "admin@acme-demo.com")
+    assert (await app_client.get("/api/v1/auth/me", headers=admin)).json()["can_grant_admin"] is True
+
+    otro = await _login(app_client, "admin-staff@acme-demo.com")
+    assert (await app_client.get("/api/v1/auth/me", headers=otro)).json()["can_grant_admin"] is False

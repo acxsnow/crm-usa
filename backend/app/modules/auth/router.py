@@ -119,6 +119,8 @@ async def _current_user_response(db: AsyncSession, user: User) -> CurrentUserRes
         role_names=[ur.role.name for ur in user.roles],
         permissions=sorted(perms),
         modules=sorted(open_modules),
+        can_grant_admin=user.is_platform_super_admin
+        or any(ur.role.code == "organization_admin" for ur in user.roles),
     )
 
 

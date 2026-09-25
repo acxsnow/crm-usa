@@ -9,7 +9,10 @@ from app.modules.users.models import UserStatus
 class UserInviteRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=1, max_length=255)
-    role_codes: list[str] = Field(min_length=1)
+    # Una persona tiene un rol y solo uno. Se mantiene como lista porque
+    # `user_roles` sigue siendo muchos a muchos: si la regla cambia, se
+    # sube este tope y no hay que migrar nada.
+    role_codes: list[str] = Field(min_length=1, max_length=1)
 
 
 class UserResponse(BaseModel):
@@ -76,7 +79,10 @@ class RoleUpdate(BaseModel):
 
 
 class UserRolesUpdate(BaseModel):
-    role_codes: list[str] = Field(min_length=1)
+    # Una persona tiene un rol y solo uno. Se mantiene como lista porque
+    # `user_roles` sigue siendo muchos a muchos: si la regla cambia, se
+    # sube este tope y no hay que migrar nada.
+    role_codes: list[str] = Field(min_length=1, max_length=1)
 
 
 class UserUpdate(BaseModel):

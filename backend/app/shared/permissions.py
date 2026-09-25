@@ -263,7 +263,9 @@ DEFAULT_MODULES: dict[str, Module] = {
     "config": Module(
         "Configuración de programas",
         [
-            "programs.read",
+            # `programs.read` NO va aquí: leer el catálogo es parte de trabajar
+            # un expediente (vive en `cases`), no de administrar el programa.
+            # Estaba en los dos y le encendía este módulo entero al vendedor.
             "programs.manage",
             "fields.manage",
             "fields.view_sensitive",

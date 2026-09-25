@@ -10,10 +10,7 @@ from app.modules.organizations.models import Organization, PlanLimit
 from app.modules.organizations.schemas import (
     OrganizationSettingsResponse,
     OrganizationSettingsUpdate,
-    PermissionResponse,
-    RoleResponse,
 )
-from app.modules.users.models import Permission, Role
 from app.shared.audit import record_audit_event
 
 router = APIRouter(tags=["organization"])
@@ -69,12 +66,3 @@ async def update_organization_settings(
         timezone=org.timezone, currency=org.currency, contact_email=org.contact_email,
         contact_phone=org.contact_phone, max_active_users=plan_limit.max_active_users if plan_limit else 30,
     )
-
-
-@router.get("/permissions", response_model=list[PermissionResponse])
-async def list_permissions(
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(require_permission("roles.manage")),
-):
-    result = await db.execute(select(Permission).order_by(Permission.code))
-    return [PermissionResponse(code=p.code, description=p.description) for p in result.scalars().all()]

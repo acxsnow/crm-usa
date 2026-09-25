@@ -40,17 +40,26 @@ El usuario con `is_platform_super_admin` pasa la capa 2 completa.
 
 ## Módulos (grupos de permisos)
 
-Un **módulo** es un grupo de permisos. Es la unidad de navegación: el menú y
-las rutas del frontend preguntan *"¿este usuario tiene algún permiso de este
-módulo?"*, no por permisos sueltos.
+Un **módulo** es un grupo de permisos. Es la unidad con la que el
+administrador *asigna* permisos a un rol: la pantalla de Roles los muestra
+agrupados así, y la casilla del módulo marca todo el grupo de una vez.
+
+**Un módulo no decide qué se ve.** `modules_for_permissions` abre un módulo con
+*cualquiera* de sus permisos, así que gatear una pantalla por módulo deja
+entrar a quien apenas comparte uno. El menú y las rutas del frontend se
+declaran por **el permiso que cada pantalla exige** — el mismo que el backend
+verifica con `require_permission` — y varios permisos en un ítem se leen como
+"alguno de" (Expedientes se muestra con `cases.read_own` *o* con
+`cases.read_all`). Ver `frontend/src/config/navigation.ts`.
+
+> Regla: un rol solo ve aquello para lo que tiene permiso.
 
 **El módulo tiene la lista de permisos, no al revés.** El permiso es solo un
 código y su descripción; no sabe dónde se muestra. Así la relación es de
 muchos a muchos y un mismo permiso puede pertenecer a varios módulos:
 
 - `dashboards.finance` está en Facturación y en Reportes.
-- `programs.read` está en Configuración y en Expedientes (el vendedor lo
-  necesita para elegir el programa).
+- `profitability.read` está en Conciliación y en Reportes.
 - `evidence.read_all` está en Proyectos y en Expedientes (Administración las
   revisa dentro del expediente).
 
@@ -70,9 +79,11 @@ roles. Editar un módulo cambia la copia de la organización, nunca la
 plantilla ni el código.
 
 Los 15 módulos del sistema se pueden renombrar, reordenar y cambiarles los
-permisos, pero **no borrar**, porque el menú del frontend referencia su clave.
-Si un módulo se queda sin permisos, su ítem del menú desaparece para todos:
-por eso cada módulo tiene "restaurar valores por defecto".
+permisos, pero **no borrar**: son la agrupación con la que se asignan permisos
+y la pantalla de Roles quedaría sin estructura. Vaciar un módulo no esconde
+ninguna pantalla —el menú va por permiso—, pero deja esos permisos sin forma
+de asignarse en bloque; por eso cada módulo tiene "restaurar valores por
+defecto".
 
 Salen de los cuatro bloques de "Funcionalidades requeridas" del PDF
 `Delta_HVAC_Flujo_de_Trabajo_Operativo.pdf`. El criterio para separar dos
@@ -202,9 +213,10 @@ escrituras exigen `roles.manage`.
   en la interfaz.
 - `modules` — los módulos que ese usuario puede abrir, calculados con los
   módulos **de su organización** (los que el administrador pudo haber
-  editado), no con los valores de código. El menú y las rutas del frontend se
-  construyen con esta lista en vez de repetir allá la lógica de agrupamiento.
-  El super admin de plataforma los recibe todos.
+  editado), no con los valores de código. El super admin de plataforma los
+  recibe todos. **El menú no se construye con esta lista** sino con
+  `permissions`, por la razón explicada en "Módulos"; `modules` queda para
+  agrupar y para diagnóstico.
 
 Todas las escrituras quedan en `audit_events` con el antes y el después:
 `roles.created`, `roles.updated`, `roles.deleted`, `users.roles_changed`,

@@ -13,7 +13,7 @@ from app.modules.organizations.models import PlanLimit
 from app.modules.users.models import Invitation, Permission, Role, User, UserRole, UserStatus
 from app.modules.users.selectors import LOCKED_ROLE_CODES, get_org_role_or_404
 from app.shared.audit import record_audit_event
-from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+from app.shared.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 
 settings = get_settings()
 
@@ -67,6 +67,8 @@ async def invite_user(
     # invitado quedaba con el mismo rol asignado dos veces y su nombre salía
     # repetido en pantalla. Gana la copia de la organización, que es la que el
     # administrador puede editar.
+    _require_exactly_one_role(list(dict.fromkeys(role_codes)))
+    await _require_admin_to_grant_admin(db, actor=inviter, codes=list(role_codes))
     result = await db.execute(
         select(Role).where(
             Role.code.in_(role_codes),
@@ -309,6 +311,45 @@ async def delete_role(
     await db.commit()
 
 
+async def _require_admin_to_grant_admin(db: AsyncSession, *, actor: User, codes: list[str]) -> None:
+    """Solo un administrador reparte el rol de administrador.
+
+    Sin esto, cualquier rol propio con `users.manage` —un "Coordinador de zona",
+    por ejemplo— podría ascender a alguien a Administrador, o ascenderse a sí
+    mismo, y quedarse con los 72 permisos. Es escalada de privilegios: el
+    permiso de administrar usuarios no incluye el de crear administradores.
+
+    Se consulta por `actor.id` y no por `actor.roles` porque el actor llega de
+    la dependencia de autenticación y su relación puede no venir cargada."""
+    if "organization_admin" not in codes or actor.is_platform_super_admin:
+        return
+    es_admin = (
+        await db.execute(
+            select(func.count(UserRole.id))
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.user_id == actor.id, Role.code == "organization_admin")
+        )
+    ).scalar_one()
+    if not es_admin:
+        raise ForbiddenError(
+            "Solo un administrador puede otorgar el rol de Administrador.",
+            code="cannot_grant_admin",
+        )
+
+
+def _require_exactly_one_role(codes: list[str]) -> None:
+    """Una persona tiene un rol y solo uno.
+
+    Va en el servicio y no solo en el esquema HTTP porque `invite_user` y
+    `set_user_roles` también se llaman desde `scripts/seed.py` y desde tareas,
+    donde Pydantic no interviene. `user_roles` sigue siendo muchos a muchos: la
+    regla es de negocio, no de la base."""
+    if len(codes) != 1:
+        raise InvalidInputError(
+            "Una persona solo puede tener un rol.", code="single_role_required"
+        )
+
+
 async def set_user_roles(
     db: AsyncSession,
     *,
@@ -329,7 +370,10 @@ async def set_user_roles(
     if user is None:
         raise NotFoundError("El usuario no existe.", code="user_not_found")
 
-    roles = [await get_org_role_or_404(db, organization_id, code) for code in dict.fromkeys(role_codes)]
+    codes = list(dict.fromkeys(role_codes))
+    _require_exactly_one_role(codes)
+    await _require_admin_to_grant_admin(db, actor=actor, codes=codes)
+    roles = [await get_org_role_or_404(db, organization_id, code) for code in codes]
     before = sorted(ur.role.code for ur in user.roles)
 
     if "organization_admin" in before and "organization_admin" not in {r.code for r in roles}:

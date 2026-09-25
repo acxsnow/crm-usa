@@ -61,7 +61,8 @@ def test_a_permission_can_belong_to_several_modules():
     """La relación permiso ↔ módulo es de muchos a muchos: el mismo permiso
     puede encender más de un ítem del menú."""
     assert modules_for_permissions(["dashboards.finance"]) == {"billing", "reports"}
-    assert modules_for_permissions(["programs.read"]) == {"cases", "config"}
+    assert modules_for_permissions(["evidence.read_all"]) == {"cases", "projects"}
+    assert modules_for_permissions(["profitability.read"]) == {"finance_close", "reports"}
 
 
 def test_role_matrix_only_uses_catalog_codes():
@@ -103,3 +104,27 @@ def test_technician_matrix_opens_the_expected_modules():
     assert "billing" not in modules
     assert "team" not in modules
     assert "config" not in modules
+
+
+def test_only_a_program_administrator_opens_the_config_module():
+    """`config` agrupa la configuración de programas, campos, flujos y zonas.
+    Abrirlo para quien solo puede *leer* el catálogo de programas era un error:
+    el vendedor tiene `programs.read` porque elige el programa desde el
+    expediente, y eso le encendía el módulo entero en el menú."""
+    for role, permissions in DEFAULT_ROLE_PERMISSIONS.items():
+        opens_config = "config" in modules_for_permissions(permissions)
+        can_configure = "programs.manage" in permissions
+        assert opens_config == can_configure, (
+            f"el rol {role} "
+            + ("abre" if opens_config else "no abre")
+            + " config pero "
+            + ("sí" if can_configure else "no")
+            + " puede administrar programas"
+        )
+
+
+def test_reading_the_program_catalog_is_part_of_working_a_case():
+    """`programs.read` vive en `cases` (el vendedor elige el programa desde el
+    expediente) y **no** en `config`, que es administrar el programa."""
+    assert "programs.read" in DEFAULT_MODULES["cases"].permissions
+    assert "programs.read" not in DEFAULT_MODULES["config"].permissions

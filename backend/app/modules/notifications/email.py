@@ -55,7 +55,20 @@ async def send_email(*, to: str, template: str, context: dict) -> bool:
     safe_context = {k: v for k, v in context.items() if not any(key in k.lower() for key in sensitive_keys)}
 
     if settings.EMAIL_PROVIDER != "smtp":
-        logger.info("email.send", to=to, template=template, provider=settings.EMAIL_PROVIDER, context=safe_context)
+        # En modo consola no hay correo real, así que el enlace se registra
+        # completo: es la única forma de completar una invitación o un
+        # restablecimiento, porque del token solo se guarda el hash. Sin esto,
+        # invitar a alguien creaba un usuario que nunca podía entrar.
+        # Con un proveedor real el enlace nunca se escribe: quien lea los
+        # registros no debe poder entrar con la cuenta de otro.
+        logger.info(
+            "email.send",
+            to=to,
+            template=template,
+            provider=settings.EMAIL_PROVIDER,
+            context=safe_context,
+            dev_links={k: v for k, v in context.items() if "link" in k.lower()},
+        )
         return True
 
     try:

@@ -48,6 +48,10 @@ class CurrentUserResponse(BaseModel):
     # Módulos que este usuario puede abrir. El menú y las rutas del frontend se
     # construyen con esto, en vez de repetir allá la lógica de agrupamiento.
     modules: list[str] = []
+    # Si esta persona puede otorgar el rol de Administrador. El frontend esconde
+    # esa opción con esto; la regla la impone el servicio (`_require_admin_to_
+    # grant_admin`), no la pantalla.
+    can_grant_admin: bool = False
 
     model_config = {"from_attributes": True}
 

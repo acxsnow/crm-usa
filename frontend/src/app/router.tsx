@@ -5,7 +5,6 @@ import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
 import { AcceptInvitationPage } from "@/features/auth/AcceptInvitationPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RequireAccess } from "@/components/RequireAccess";
-import { MODULE } from "@/config/navigation";
 import { DashboardLayout } from "@/app/DashboardLayout";
 import { DashboardHome } from "@/app/DashboardHome";
 import { LeadsPage } from "@/features/crm/LeadsPage";
@@ -56,7 +55,7 @@ export const router = createBrowserRouter([
       {
         path: "customers",
         element: (
-          <RequireAccess module={MODULE.CUSTOMERS} moduleLabel="Prospectos y clientes">
+          <RequireAccess permission="customers.read" moduleLabel="Clientes">
             <CustomersPage />
           </RequireAccess>
         ),
@@ -64,7 +63,7 @@ export const router = createBrowserRouter([
       {
         path: "customers/:customerId",
         element: (
-          <RequireAccess module={MODULE.CUSTOMERS} moduleLabel="Prospectos y clientes">
+          <RequireAccess permission="customers.read" moduleLabel="Clientes">
             <CustomerDetailPage />
           </RequireAccess>
         ),
@@ -72,7 +71,7 @@ export const router = createBrowserRouter([
       {
         path: "applications/new",
         element: (
-          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+          <RequireAccess permission="cases.create" moduleLabel="la creación de expedientes">
             <ApplicationPage />
           </RequireAccess>
         ),
@@ -80,7 +79,7 @@ export const router = createBrowserRouter([
       {
         path: "applications",
         element: (
-          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+          <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
             <ApplicationsAdminPage />
           </RequireAccess>
         ),
@@ -88,7 +87,7 @@ export const router = createBrowserRouter([
       {
         path: "opportunities",
         element: (
-          <RequireAccess module={MODULE.CASES} moduleLabel="Expedientes">
+          <RequireAccess permission="opportunities.manage" moduleLabel="el Pipeline">
             <OpportunitiesPage />
           </RequireAccess>
         ),
@@ -96,7 +95,7 @@ export const router = createBrowserRouter([
       {
         path: "projects",
         element: (
-          <RequireAccess module={MODULE.PROJECTS} moduleLabel="Proyectos e instalación">
+          <RequireAccess permission={["projects.read_all", "projects.read_assigned"]} moduleLabel="Proyectos e instalación">
             <ProjectsPage />
           </RequireAccess>
         ),
@@ -104,7 +103,7 @@ export const router = createBrowserRouter([
       {
         path: "projects/:projectId",
         element: (
-          <RequireAccess module={MODULE.PROJECTS} moduleLabel="Proyectos e instalación">
+          <RequireAccess permission={["projects.read_all", "projects.read_assigned"]} moduleLabel="Proyectos e instalación">
             <ProjectDetailPage />
           </RequireAccess>
         ),
@@ -120,7 +119,7 @@ export const router = createBrowserRouter([
       {
         path: "invoices",
         element: (
-          <RequireAccess module={MODULE.BILLING} moduleLabel="Facturación y cobros">
+          <RequireAccess permission="invoices.read" moduleLabel="Facturación y cobros">
             <InvoicesPage />
           </RequireAccess>
         ),
@@ -128,7 +127,7 @@ export const router = createBrowserRouter([
       {
         path: "users",
         element: (
-          <RequireAccess module={MODULE.TEAM} moduleLabel="Usuarios y roles">
+          <RequireAccess permission="users.manage" moduleLabel="Usuarios y roles">
             <UsersPage />
           </RequireAccess>
         ),
@@ -144,7 +143,7 @@ export const router = createBrowserRouter([
       {
         path: "audit-log",
         element: (
-          <RequireAccess module={MODULE.AUDIT} moduleLabel="Auditoría">
+          <RequireAccess permission="audit.read" moduleLabel="Auditoría">
             <AuditLogPage />
           </RequireAccess>
         ),

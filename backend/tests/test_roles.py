@@ -294,3 +294,38 @@ async def test_roles_are_scoped_to_the_organization(app_client, active_admin_use
         "/api/v1/roles/solo_acme", json={"name": "Hackeado"}, headers=other_headers
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Configuración de la organización
+# ---------------------------------------------------------------------------
+
+async def test_organization_settings_endpoint_works(app_client, active_admin_user):
+    """Guarda de regresión: al mudar `GET /roles` y `GET /permissions` a su
+    propio router, este endpoint quedó sin cobertura y un import mal borrado
+    lo habría roto en producción sin que ningún test lo notara."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    resp = await app_client.get("/api/v1/organization/settings", headers=headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["name"] == "Acme Field Services"
+    assert body["max_active_users"] == 30
+
+
+async def test_organization_settings_requires_permission(app_client, active_technician_user):
+    headers = await _login(app_client, "tech@acme-demo.com")
+    resp = await app_client.get("/api/v1/organization/settings", headers=headers)
+    assert resp.status_code == 403
+
+
+async def test_permissions_endpoint_is_not_duplicated(app_client, active_admin_user):
+    """Había dos rutas `GET /permissions` registradas —la nueva y una anterior
+    que quedó viva en el router de organización—; la segunda no se alcanzaba
+    nunca, pero salía duplicada en el contrato de la API."""
+    from app.main import app
+
+    rutas = [
+        r for r in app.routes
+        if getattr(r, "path", "") == "/api/v1/permissions" and "GET" in getattr(r, "methods", set())
+    ]
+    assert len(rutas) == 1, f"hay {len(rutas)} rutas GET /permissions registradas"

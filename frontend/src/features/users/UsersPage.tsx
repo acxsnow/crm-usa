@@ -5,7 +5,8 @@ import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { useTableFilters } from "@/lib/useTableFilters";
-import { UserEditPanel } from "./components/UserEditPanel";
+import { UserEditPanel, rolesAsignables } from "./components/UserEditPanel";
+import { useAuth } from "@/features/auth/AuthContext";
 import type { OrgUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
@@ -20,6 +21,7 @@ export function UsersPage() {
     queryFn: () => listUsersPage(page, PAGE_SIZE, extraParams),
   });
   const { data: roles } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
+  const { user } = useAuth();
 
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
@@ -48,17 +50,15 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
-  function toggleRole(code: string) {
-    setForm((f) => ({
-      ...f,
-      role_codes: f.role_codes.includes(code) ? f.role_codes.filter((c) => c !== code) : [...f.role_codes, code],
-    }));
+  /** Una persona tiene un rol y solo uno: elegir reemplaza, no suma. */
+  function elegirRol(code: string) {
+    setForm((f) => ({ ...f, role_codes: [code] }));
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!form.email.trim() || !form.full_name.trim() || form.role_codes.length === 0) {
-      setError("Email, nombre y al menos un rol son obligatorios.");
+      setError("Email, nombre y rol son obligatorios.");
       return;
     }
     inviteMutation.mutate(form);
@@ -158,9 +158,15 @@ export function UsersPage() {
           required
         />
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-          {(roles ?? []).map((role) => (
+          {rolesAsignables(roles ?? [], user?.can_grant_admin ?? false, []).map((role) => (
             <label key={role.code} style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.85rem" }}>
-              <input type="checkbox" checked={form.role_codes.includes(role.code)} onChange={() => toggleRole(role.code)} />
+              <input
+                type="radio"
+                name="rol-de-la-invitacion"
+                value={role.code}
+                checked={form.role_codes[0] === role.code}
+                onChange={() => elegirRol(role.code)}
+              />
               {role.name}
             </label>
           ))}

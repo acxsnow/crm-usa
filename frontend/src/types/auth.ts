@@ -14,4 +14,10 @@ export interface CurrentUser {
    * agrupamiento ni se desactualiza si el administrador la cambia.
    */
   modules: string[];
+  /**
+   * Si puede otorgar el rol de Administrador. Se esconde esa opción con esto,
+   * pero la regla la impone la API: un rol propio con `users.manage` no debe
+   * poder ascender a nadie a Administrador, ni a sí mismo.
+   */
+  can_grant_admin: boolean;
 }
