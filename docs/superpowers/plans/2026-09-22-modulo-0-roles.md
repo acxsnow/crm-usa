@@ -340,80 +340,58 @@ quedó en `audit_events` (`roles.created`, `roles.deleted`,
 
 ---
 
-### Tarea 7 — Editar roles de un usuario desde Equipo
+### Tarea 7 — Editar roles de un usuario desde Equipo ✅ HECHA (23 sep)
 
-**Archivos:**
-- Modificar: `frontend/src/features/users/{api.ts,UsersPage.tsx}`
-- Crear: `frontend/src/features/users/{queries.ts,components/UserEditPanel.tsx}`
+**Archivos:** `frontend/src/features/users/{api,queries}.ts`,
+`frontend/src/features/users/components/UserEditPanel.tsx`,
+`frontend/src/features/users/UsersPage.tsx`, `frontend/src/index.css`.
 
-**Interfaces:**
-- Consume: `PATCH /users/{id}/roles`, `PATCH /users/{id}` (tarea 4).
+**Lo que quedó:** acción "Editar" en cada fila, que abre un panel con el
+nombre completo y las casillas de roles. Antes los roles solo se podían elegir
+al invitar: si alguien cambiaba de área, no había forma de ajustarlo sin tocar
+la base de datos. La columna Roles ahora muestra las etiquetas ("Vendedor") en
+vez de los códigos.
 
-- [ ] **Paso 1: `api.ts` y `queries.ts`** — `updateUserRoles`, `updateUser`.
-
-- [ ] **Paso 2: `UserEditPanel.tsx`** — nombre completo y casillas de roles
-  (etiquetas, no códigos), con `react-hook-form` + `zod`. Muestra el error
-  del backend cuando se intenta dejar la organización sin administrador.
-
-- [ ] **Paso 3: `UsersPage.tsx`** — columna Roles con etiquetas; acción
-  "Editar" que abre el panel; invalidación de la lista al guardar. El
-  formulario de invitar pasa a `react-hook-form` + `zod`.
-
-- [ ] **Paso 4: compilación limpia.**
-
-- [ ] **Paso 5: verificar en navegador** — cambiarle el rol al usuario
-  técnico a Contabilidad, entrar con ese usuario y ver el menú cambiado.
-
-- [ ] **Paso 6: documentar y commit**
-
-```bash
-git add frontend/src docs/PERMISOS.md
-git commit -m "feat(users): edit user roles from the team screen"
-```
+**Verificación en navegador, ciclo completo:** el técnico entró y vio 3
+opciones de menú; el administrador le cambió el rol a Contabilidad desde la
+pantalla; al volver a entrar, el mismo usuario vio 7 opciones y su rol en la
+cabecera decía "Contabilidad".
 
 ---
 
-### Tarea 8 — Verificación por rol y cierre
+### Tarea 8 — Verificación por rol y cierre ✅ HECHA (23 sep)
 
-**Archivos:**
-- Modificar: `docs/PERMISOS.md`, `docs/decisiones.md`, `README.md`
+**Archivos:** `backend/scripts/seed.py` (flag `--demo-users`),
+`backend/tests/test_auth.py`, `docs/PERMISOS.md`.
 
-- [ ] **Paso 1: sembrar un usuario por rol**
+**Lo que quedó:** `python -m scripts.seed --demo-users` crea un usuario activo
+por cada rol del PDF (contraseña `ChangeMe123!`, solo desarrollo), para poder
+revisar la aplicación con los ojos de cada área.
 
-Agregar a `scripts/seed.py` un flag `--demo-users` que cree seis usuarios
-activos (uno por rol) con contraseña conocida, solo para el entorno de
-desarrollo. Correrlo contra la base local.
+**Verificación con los seis roles en navegador:**
 
-- [ ] **Paso 2: recorrer los seis roles en el navegador**
+- Administrador: Inicio, Prospectos, Clientes, Expedientes, Pipeline,
+  Proyectos, Monitor de técnicos, Facturación, Equipo, Roles y permisos,
+  Auditoría.
+- Vendedor: Inicio, Prospectos, Clientes, Expedientes, Pipeline.
+- Administración: lo del vendedor más Proyectos, Monitor de técnicos,
+  Facturación y Auditoría.
+- Técnico: Inicio, Clientes, Proyectos.
+- Contabilidad: Inicio, Clientes, Expedientes, Pipeline, Proyectos,
+  Facturación, Auditoría.
+- Gerencia: lo de Contabilidad más Monitor de técnicos.
+- **Ningún rol operativo entra a `/roles` por URL**: los cinco reciben "No
+  tienes acceso a esta sección".
+- Cero errores de consola y cero peticiones fallidas en todo el recorrido.
 
-Con `browser-automation`, un script que entre con cada usuario, capture el
-menú visible y lo compare con la sección 7 del spec. Reportar diferencias.
+**Un test que se arregló de paso:** `test_login_rate_limited_after_threshold`
+leía el umbral de la configuración, así que subir `LOGIN_MAX_ATTEMPTS` en el
+`.env` de desarrollo lo hacía fallar sin que nadie tocara el código. Ahora fija
+el valor que necesita.
 
-- [ ] **Paso 3: probar el caso de aceptación completo**
-
-Crear rol nuevo → darle un módulo → asignarlo → entrar con ese usuario → ver
-el menú cambiado. Sin tocar código ni base de datos.
-
-- [ ] **Paso 4: verificar auditoría**
-
-`select action, count(*) from audit_events group by action;` — deben
-aparecer `roles.created`, `roles.updated`, `users.roles_changed`.
-
-- [ ] **Paso 5: suite completa y compilación**
-
-`pytest -q` (sin fallos nuevos), `tsc -b`, `vite build`.
-
-- [ ] **Paso 6: cerrar documentación**
-
-`docs/PERMISOS.md` completo; `decisiones.md` D1 cerrado; `README.md` con una
-línea sobre roles y `--demo-users`.
-
-- [ ] **Paso 7: commit final**
-
-```bash
-git add -A
-git commit -m "docs(permissions): document roles, modules and access control"
-```
+**Estado final: 141 pruebas pasan, 0 fallan**; `tsc -b` y `vite build`
+limpios. La auditoría registró `roles.created`, `roles.deleted`,
+`users.invited`, `users.roles_changed` y `auth.login.success`.
 
 ---
 

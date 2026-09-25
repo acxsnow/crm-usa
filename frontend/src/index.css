@@ -1630,3 +1630,60 @@ button {
     display: none;
   }
 }
+
+/* --- Edición de un usuario (features/users) --- */
+.user-edit-panel {
+  margin: 1rem 0 1.5rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(30, 58, 138, 0.25);
+  border-radius: 12px;
+}
+
+.user-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-edit-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.user-edit-email {
+  margin: 0.15rem 0 1rem;
+  font-size: 0.85rem;
+  opacity: 0.65;
+}
+
+.role-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.role-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+fieldset.field {
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+fieldset.field legend {
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.row-actions {
+  display: inline-flex;
+  gap: 0.75rem;
+}

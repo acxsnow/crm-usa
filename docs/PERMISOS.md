@@ -4,9 +4,17 @@ Cómo se autoriza el acceso en crm-usa y cómo dar o quitar accesos sin tocar
 código. Diseño completo en
 `docs/superpowers/specs/2026-09-22-modulo-0-roles-design.md`.
 
-> Estado: en construcción (módulo 0, semana del 21 de septiembre de 2026).
-> Cada sección se completa al terminar su tarea del plan
-> `docs/superpowers/plans/2026-09-22-modulo-0-roles.md`.
+> Estado: módulo 0 terminado el 23 de septiembre de 2026.
+> Plan y verificación en `docs/superpowers/plans/2026-09-22-modulo-0-roles.md`.
+
+## Usuarios de prueba (solo desarrollo)
+
+`python -m scripts.seed --demo-users` crea un usuario activo por cada rol,
+todos con la contraseña `ChangeMe123!`: `vendedor@demo-org.com`,
+`administracion@demo-org.com`, `tecnico@demo-org.com`,
+`contabilidad@demo-org.com` y `gerencia@demo-org.com`, además del
+`admin@demo-org.com` que crea `--demo-org`. Sirven para revisar la aplicación
+con los ojos de cada área.
 
 ## El modelo en una frase
 

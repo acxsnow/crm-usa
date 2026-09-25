@@ -5,6 +5,7 @@ import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { useTableFilters } from "@/lib/useTableFilters";
+import { UserEditPanel } from "./components/UserEditPanel";
 import type { OrgUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
@@ -22,6 +23,7 @@ export function UsersPage() {
 
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [editando, setEditando] = useState<OrgUser | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: inviteUser,
@@ -92,7 +94,13 @@ export function UsersPage() {
   const columns: Column<OrgUser>[] = [
     { key: "full_name", header: "Nombre" },
     { key: "email", header: "Email" },
-    { key: "roles", header: "Roles", render: (u) => u.roles.join(", ") },
+    {
+      key: "roles",
+      header: "Roles",
+      // Se muestra la etiqueta ("Vendedor"), no el código ("salesperson").
+      render: (u) =>
+        u.roles.map((code) => roles?.find((r) => r.code === code)?.name ?? code).join(", "),
+    },
     {
       key: "status",
       header: "Estado",
@@ -104,16 +112,22 @@ export function UsersPage() {
     {
       key: "actions",
       header: "",
-      render: (u) =>
-        u.status === "active" ? (
-          <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
-            Desactivar
+      render: (u) => (
+        <span className="row-actions">
+          <button className="link-button" onClick={() => setEditando(u)}>
+            Editar
           </button>
-        ) : (
-          <button className="link-button" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate(u.id)}>
-            Activar
-          </button>
-        ),
+          {u.status === "active" ? (
+            <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
+              Desactivar
+            </button>
+          ) : (
+            <button className="link-button" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate(u.id)}>
+              Activar
+            </button>
+          )}
+        </span>
+      ),
     },
   ];
 
@@ -156,6 +170,14 @@ export function UsersPage() {
         </button>
       </form>
       {error && <p className="warning-banner">{error}</p>}
+
+      {editando && (
+        <UserEditPanel
+          user={editando}
+          roles={roles ?? []}
+          onClose={() => setEditando(null)}
+        />
+      )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar." />
