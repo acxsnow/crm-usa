@@ -18,7 +18,7 @@ export function NoAccess({ moduleLabel }: { moduleLabel?: string }) {
           : "Tu rol no incluye acceso a esta sección."}{" "}
         Si crees que deberías tenerlo, pídeselo al administrador.
       </p>
-      <Link className="button-primary" to="/">
+      <Link className="primary-button" to="/">
         Volver al inicio
       </Link>
     </div>

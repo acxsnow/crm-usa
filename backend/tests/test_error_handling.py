@@ -177,3 +177,31 @@ async def test_http_exception_keeps_working(app_client):
     assert resp.status_code == 401
     assert resp.json()["detail"]
     assert resp.json()["request_id"]
+
+
+# ---------------------------------------------------------------------------
+# CORS en las respuestas de error
+# ---------------------------------------------------------------------------
+
+async def test_unexpected_error_still_carries_cors_headers(app_client, failing_app):
+    """Un 500 tiene que llegar al navegador.
+
+    El manejador de excepciones no controladas vive en el middleware de errores
+    de Starlette, que está por encima del de CORS: su respuesta no pasaba por
+    ahí, el navegador la bloqueaba por política de origen y el frontend recibía
+    un error de red en vez del 500. El usuario nunca veía el código de
+    referencia que necesita para reportar el problema."""
+    resp = await app_client.get(
+        "/_test_errors/boom", headers={"Origin": "http://localhost:5173"}
+    )
+    assert resp.status_code == 500
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    assert resp.json()["request_id"]
+
+
+async def test_domain_errors_carry_cors_headers(app_client, failing_app):
+    resp = await app_client.get(
+        "/_test_errors/not-found", headers={"Origin": "http://localhost:5173"}
+    )
+    assert resp.status_code == 404
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"

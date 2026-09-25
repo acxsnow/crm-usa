@@ -136,3 +136,22 @@ se silenciaba con `except Exception: pass` y nadie se enteraba.
 - Los mensajes estaban mezclados en inglés y español, con la UI en español.
 - El cliente de pruebas re-lanzaba las excepciones en vez de devolver el 500,
   así que **ningún test veía lo que ve el usuario** ante un fallo inesperado.
+
+## Cosas que encontró la revisión del refactor (24 de septiembre)
+
+- **El 500 no llegaba al navegador.** `add_middleware` inserta al principio de
+  la cadena, así que el último en registrarse es el más externo. CORS se
+  registraba primero y quedaba como el más *interno*: las respuestas generadas
+  por los middlewares de arriba —entre ellas el 500— salían sin cabeceras de
+  origen, el navegador las bloqueaba y el frontend veía un error de red en
+  lugar del error real. El usuario nunca habría visto el código de referencia.
+  CORS se registra ahora de último, y el fallo no controlado se atrapa en el
+  middleware de petición (no solo en `@app.exception_handler(Exception)`, que
+  vive por encima de CORS y no pasaría por él). Dos tests lo cubren.
+- **El 403 salía en inglés y con el código interno del permiso**
+  (`Missing required permission: invoices.read`). No le dice nada a quien usa
+  la aplicación y revela la estructura de autorización. Ahora responde "No
+  tienes permiso para realizar esta acción" y el permiso que faltó queda en el
+  log como `permission_denied`, junto al `request_id`, para poder
+  diagnosticarlo.
+- Los mensajes de sesión inválida y cuenta inactiva también estaban en inglés.

@@ -8,11 +8,19 @@ function mensajeDeError(err: unknown, porDefecto: string): string {
   return detail ?? porDefecto;
 }
 
+function mismosRoles(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((code) => b.includes(code));
+}
+
 /**
  * Edición de una persona: su nombre y sus roles.
  *
  * Los roles solo se podían elegir al invitar; si alguien cambiaba de área, no
  * había forma de ajustarlo sin tocar la base de datos.
+ *
+ * Quien lo monta debe pasarle `key={user.id}`: el estado inicial se toma de
+ * `user` al montar, así que sin la clave, abrir la edición de otra fila con el
+ * panel ya abierto conservaría el nombre y los roles de la persona anterior.
  */
 export function UserEditPanel({
   user,
@@ -25,6 +33,13 @@ export function UserEditPanel({
 }) {
   const [nombre, setNombre] = useState(user.full_name);
   const [seleccionados, setSeleccionados] = useState<string[]>(user.roles);
+  // Lo último que quedó realmente guardado. Comparar contra `user` no sirve:
+  // esa prop no se refresca tras guardar, así que un segundo guardado que
+  // revirtiera el cambio no enviaría nada y aun así diría "guardado".
+  const [persistido, setPersistido] = useState({
+    nombre: user.full_name,
+    roles: user.roles,
+  });
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -42,7 +57,8 @@ export function UserEditPanel({
     setError(null);
     setAviso(null);
 
-    if (!nombre.trim()) {
+    const nombreLimpio = nombre.trim();
+    if (!nombreLimpio) {
       setError("El nombre es obligatorio.");
       return;
     }
@@ -51,16 +67,24 @@ export function UserEditPanel({
       return;
     }
 
+    const cambioNombre = nombreLimpio !== persistido.nombre;
+    const cambiaronRoles = !mismosRoles(seleccionados, persistido.roles);
+    if (!cambioNombre && !cambiaronRoles) {
+      setAviso("No hay cambios que guardar.");
+      return;
+    }
+
     try {
-      if (nombre.trim() !== user.full_name) {
-        await guardarNombre.mutateAsync({ userId: user.id, fullName: nombre.trim() });
-      }
-      const cambiaronRoles =
-        seleccionados.length !== user.roles.length ||
-        seleccionados.some((c) => !user.roles.includes(c));
+      // Los roles van primero porque son los que el backend puede rechazar
+      // (dejar la organización sin administrador). Si fallan, el nombre no se
+      // llega a tocar y el panel queda igual que antes, sin cambios a medias.
       if (cambiaronRoles) {
         await guardarRoles.mutateAsync({ userId: user.id, roleCodes: seleccionados });
       }
+      if (cambioNombre) {
+        await guardarNombre.mutateAsync({ userId: user.id, fullName: nombreLimpio });
+      }
+      setPersistido({ nombre: nombreLimpio, roles: seleccionados });
       setAviso("Cambios guardados.");
     } catch (err) {
       setError(mensajeDeError(err, "No se pudieron guardar los cambios."));
@@ -70,7 +94,7 @@ export function UserEditPanel({
   return (
     <div className="user-edit-panel">
       <div className="user-edit-header">
-        <h2>Editar a {user.full_name}</h2>
+        <h2>Editar a {persistido.nombre}</h2>
         <button className="ghost-button" onClick={onClose}>
           Cerrar
         </button>
@@ -107,7 +131,7 @@ export function UserEditPanel({
       {aviso && <p className="form-success">{aviso}</p>}
 
       <div className="role-actions">
-        <button className="button-primary" onClick={guardar} disabled={guardando}>
+        <button className="primary-button" onClick={guardar} disabled={guardando}>
           {guardando ? "Guardando…" : "Guardar"}
         </button>
       </div>

@@ -90,6 +90,27 @@ def _request_context(request: Request) -> dict[str, Any]:
     }
 
 
+def build_unhandled_error_response(request: Request, exc: Exception) -> JSONResponse:
+    """Respuesta para un fallo no previsto: traza completa al log, mensaje
+    neutro al usuario.
+
+    Vive aparte del manejador registrado porque el middleware de petición la
+    necesita: ver el comentario en `app/main.py`."""
+    logger.error(
+        "unhandled_error",
+        error_type=type(exc).__name__,
+        error=str(exc),
+        **_request_context(request),
+        exc_info=True,
+    )
+    return error_response(
+        request,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=GENERIC_ERROR_MESSAGE,
+        code="internal_error",
+    )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def _domain_error(request: Request, exc: DomainError) -> JSONResponse:
@@ -171,18 +192,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
-        """Red de seguridad. Cualquier cosa que no se previó termina aquí, con
-        traza completa en el log y un mensaje neutro para el usuario."""
-        logger.error(
-            "unhandled_error",
-            error_type=type(exc).__name__,
-            error=str(exc),
-            **_request_context(request),
-            exc_info=True,
-        )
-        return error_response(
-            request,
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=GENERIC_ERROR_MESSAGE,
-            code="internal_error",
-        )
+        """Última red de seguridad, para lo que ocurra fuera del middleware de
+        petición (por ejemplo, en otro middleware). El camino normal lo atrapa
+        `add_request_id` en `main.py`, para que la respuesta pase por CORS."""
+        return build_unhandled_error_response(request, exc)

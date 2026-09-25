@@ -46,18 +46,13 @@ export function PermissionPicker({
   function toggleWholeModule(permissions: string[], allSelected: boolean) {
     if (disabled) return;
     if (allSelected) {
-      // Un permiso compartido con otro módulo se conserva si ese otro sigue
-      // marcado; de lo contrario, desmarcar un módulo apagaría permisos que el
-      // administrador sí quería.
-      const enOtrosModulos = new Set(
-        catalog.modules
-          .filter((m) => !permissions.every((p) => m.permissions.includes(p)))
-          .filter((m) => m.permissions.some((p) => selectedSet.has(p)))
-          .flatMap((m) => m.permissions)
-      );
-      onChange(
-        selected.filter((c) => !permissions.includes(c) || enOtrosModulos.has(c))
-      );
+      // Desmarcar el módulo quita todos sus permisos, sin excepciones. Si
+      // alguno pertenece también a otro módulo, el contador de ese otro baja a
+      // la vista: es una regla predecible. Una versión anterior intentaba
+      // conservar los compartidos, y el resultado era que desmarcar un módulo
+      // dejaba permisos marcados sin que se entendiera por qué.
+      const delModulo = new Set(permissions);
+      onChange(selected.filter((code) => !delModulo.has(code)));
     } else {
       onChange([...new Set([...selected, ...permissions])]);
     }

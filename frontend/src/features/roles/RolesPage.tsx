@@ -124,7 +124,7 @@ export function RolesPage() {
             no tiene ninguno de un módulo, ese módulo no le aparece en el menú.
           </p>
         </div>
-        <button className="button-primary" onClick={empezarCreacion}>
+        <button className="primary-button" onClick={empezarCreacion}>
           Crear rol
         </button>
       </div>
@@ -208,7 +208,7 @@ export function RolesPage() {
               {!bloqueado && (
                 <div className="role-actions">
                   <button
-                    className="button-primary"
+                    className="primary-button"
                     onClick={guardar}
                     disabled={crear.isPending || actualizar.isPending}
                   >

@@ -173,6 +173,10 @@ export function UsersPage() {
 
       {editando && (
         <UserEditPanel
+          // La clave fuerza un montaje nuevo al cambiar de persona: el estado
+          // del panel se toma de `user` al montar, así que sin esto abrir otra
+          // fila conservaría el nombre y los roles de la anterior.
+          key={editando.id}
           user={editando}
           roles={roles ?? []}
           onClose={() => setEditando(null)}
