@@ -21,6 +21,7 @@ from app.shared import audit_models  # noqa: F401
 from app.modules.crm import models as crm_models  # noqa: F401
 from app.modules.field_ops import models as field_ops_models  # noqa: F401
 from app.modules.billing import models as billing_models  # noqa: F401
+from app.modules.cases import models as cases_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -202,6 +203,28 @@ async def active_admin_user(db: AsyncSession, seeded_org):
     db.add(user)
     await db.flush()
     db.add(UserRole(user_id=user.id, role_id=role.id))
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def second_org_admin_user(db: AsyncSession, second_org):
+    """Administrador de la OTRA organización. Sirve para probar que el
+    aislamiento multi-tenant lo hace la consulta y no la pantalla: este usuario
+    no debe ver ni un registro de la primera."""
+    org = second_org["org"]
+    user = User(
+        organization_id=org.id,
+        email="admin@otra-demo.com",
+        email_display="admin@otra-demo.com",
+        full_name="Otra Organización",
+        password_hash=hash_password("SuperSecret123"),
+        status=UserStatus.active,
+    )
+    db.add(user)
+    await db.flush()
+    db.add(UserRole(user_id=user.id, role_id=second_org["roles"]["organization_admin"].id))
     await db.commit()
     await db.refresh(user)
     return user

@@ -51,22 +51,28 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operación comercial",
     items: [
-      { label: "Prospectos", to: "/leads", icon: "✦", permission: "leads.manage" },
-      // El técnico tiene `customers.read` porque necesita ver el cliente de su
-      // proyecto, así que llega hasta aquí — pero no a Prospectos.
+      // NO hay ítem "Prospectos": `Lead` se retira. El expediente ES la puerta
+      // desde el primer toque, así que un prospecto y un caso eran la misma cosa
+      // con dos nombres. Ver `docs/superpowers/specs/2026-09-25-esqueleto-case-design.md`.
       { label: "Clientes", to: "/customers", icon: "♙", permission: "customers.read" },
       {
+        // El centro del trabajo del vendedor. Apunta a `/applications` hasta que
+        // exista la pantalla de expedientes (módulo 2); el modelo ya es `Case`.
         label: "Expedientes",
         to: "/applications",
         icon: "✓",
         permission: ["cases.read_own", "cases.read_all"],
       },
-      { label: "Pipeline", to: "/opportunities", icon: "◈", permission: "opportunities.manage" },
+      // NO hay ítem "Pipeline": `Opportunity` se retira. Su reemplazo es el
+      // tablero de expedientes por etapa, dentro de Expedientes (módulo 2).
       {
-        label: "Documentos",
+        // Solo para quien revisa: es la cola de "todo lo que llegó pendiente".
+        // Al vendedor no le sirve una pantalla aparte — sus adjuntos viven
+        // dentro del expediente, que es donde los sube.
+        label: "Documentos por revisar",
         to: "/documents",
         icon: "🗎",
-        permission: ["documents.manage", "documents.review"],
+        permission: "documents.review",
         disabled: true,
       },
     ],

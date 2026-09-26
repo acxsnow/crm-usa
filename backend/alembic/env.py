@@ -14,6 +14,7 @@ from app.modules.users import models as users_models  # noqa: F401
 from app.modules.crm import models as crm_models  # noqa: F401
 from app.modules.field_ops import models as field_ops_models  # noqa: F401
 from app.modules.billing import models as billing_models  # noqa: F401
+from app.modules.cases import models as cases_models  # noqa: F401
 from app.shared import audit_models  # noqa: F401
 
 config = context.config
