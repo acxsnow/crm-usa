@@ -21,8 +21,44 @@ from app.modules.crm.models import FunderStatus, PipelineStage
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import ChecklistTemplate, ChecklistTemplateItem
 from app.modules.organizations.models import Organization, PlanLimit
-from app.modules.users.models import Permission, Role, User, UserRole, UserStatus
+from app.modules.users.models import (
+    Permission,
+    PermissionModule,
+    PermissionModuleItem,
+    Role,
+    User,
+    UserRole,
+    UserStatus,
+)
 from app.shared.permissions import DEFAULT_ROLE_PERMISSIONS, PERMISSION_CATALOG, ROLE_LABELS
+
+
+def build_permission_modules(
+    organization_id, permissions: dict[str, "Permission"]
+) -> list["PermissionModule"]:
+    """Crea los módulos de permisos a partir de `DEFAULT_MODULES` (decisión D9).
+
+    `organization_id=None` produce la plantilla del sistema; con un id produce
+    la copia editable de esa organización. Mismo patrón que los roles."""
+    from app.modules.users.models import PermissionModule, PermissionModuleItem
+    from app.shared.permissions import DEFAULT_MODULES
+
+    modules = []
+    for order, (key, module) in enumerate(DEFAULT_MODULES.items()):
+        row = PermissionModule(
+            organization_id=organization_id,
+            key=key,
+            label=module.label,
+            sort_order=order,
+            is_system=True,
+        )
+        row.items = [
+            PermissionModuleItem(permission_id=permissions[code].id, sort_order=i)
+            for i, code in enumerate(module.permissions)
+            if code in permissions
+        ]
+        modules.append(row)
+    return modules
 
 
 async def seed_permission_catalog(db) -> dict[str, Permission]:
@@ -51,6 +87,18 @@ async def seed_system_roles(db, permissions: dict[str, Permission]) -> dict[str,
         existing[role_code] = role
     await db.flush()
     return existing
+
+
+async def seed_system_permission_modules(db, permissions: dict[str, Permission]) -> None:
+    """Plantilla del sistema de los módulos de permisos (organization_id NULL)."""
+    result = await db.execute(
+        select(PermissionModule).where(PermissionModule.organization_id.is_(None))
+    )
+    if result.scalars().first():
+        return
+    for module in build_permission_modules(None, permissions):
+        db.add(module)
+    await db.flush()
 
 
 async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None:
@@ -85,6 +133,10 @@ async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None
     await db.flush()
     db.add(UserRole(user_id=admin.id, role_id=org_roles["organization_admin"].id))
 
+    for module in build_permission_modules(org.id, permissions):
+        db.add(module)
+    await db.flush()
+
     for stage in DEFAULT_PIPELINE_STAGES:
         db.add(PipelineStage(organization_id=org.id, **stage))
 
@@ -102,16 +154,81 @@ async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None
     print("Created demo organization with admin login: admin@demo-org.com / ChangeMe123!")
 
 
+DEMO_USERS = [
+    ("salesperson", "vendedor@demo-org.com", "Vicky Vendedora"),
+    ("admin_staff", "administracion@demo-org.com", "Andrés Administración"),
+    ("field_technician", "tecnico@demo-org.com", "Tito Técnico"),
+    ("accounting", "contabilidad@demo-org.com", "Clara Contable"),
+    ("management", "gerencia@demo-org.com", "Gabriel Gerencia"),
+]
+
+DEMO_USER_PASSWORD = "ChangeMe123!"
+
+
+async def seed_demo_users(db) -> None:
+    """Un usuario activo por cada rol del PDF, para revisar la aplicación con
+    los ojos de cada área. Solo para desarrollo: todos comparten contraseña."""
+    result = await db.execute(select(Organization).where(Organization.name == "Demo Organization"))
+    org = result.scalar_one_or_none()
+    if org is None:
+        print("No existe la organización demo; corre primero con --demo-org.")
+        return
+
+    roles = {
+        r.code: r
+        for r in (
+            await db.execute(select(Role).where(Role.organization_id == org.id))
+        ).scalars().all()
+    }
+
+    creados = 0
+    for role_code, email, full_name in DEMO_USERS:
+        role = roles.get(role_code)
+        if role is None:
+            print(f"  falta el rol {role_code}, se omite {email}")
+            continue
+        existing = (
+            await db.execute(
+                select(User).where(User.organization_id == org.id, User.email == email)
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            continue
+        user = User(
+            organization_id=org.id,
+            email=email,
+            email_display=email,
+            full_name=full_name,
+            password_hash=hash_password(DEMO_USER_PASSWORD),
+            status=UserStatus.active,
+        )
+        db.add(user)
+        await db.flush()
+        db.add(UserRole(user_id=user.id, role_id=role.id))
+        creados += 1
+
+    await db.flush()
+    print(f"Usuarios de prueba: {creados} creados (contraseña {DEMO_USER_PASSWORD}).")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--demo-org", action="store_true", help="Also create a demo organization + admin user")
+    parser.add_argument(
+        "--demo-users",
+        action="store_true",
+        help="Crea un usuario activo por cada rol del PDF (solo desarrollo)",
+    )
     args = parser.parse_args()
 
     async with AsyncSessionLocal() as db:
         permissions = await seed_permission_catalog(db)
         await seed_system_roles(db, permissions)
+        await seed_system_permission_modules(db, permissions)
         if args.demo_org:
             await seed_demo_organization(db, permissions)
+        if args.demo_users:
+            await seed_demo_users(db)
         await db.commit()
     print("Seed complete.")
 

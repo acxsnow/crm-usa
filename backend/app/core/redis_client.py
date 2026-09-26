@@ -11,10 +11,12 @@ doesn't add a connection-timeout delay to every single request.
 import time
 
 import redis.asyncio as aioredis
+import structlog
 
 from app.core.config import get_settings
 
 settings = get_settings()
+logger = structlog.get_logger(__name__)
 
 _client: aioredis.Redis | None = None
 _available: bool | None = None
@@ -42,11 +44,26 @@ async def get_redis_if_available() -> aioredis.Redis | None:
         return None
 
     client = _get_client()
+    was_available = _available
     try:
         await client.ping()
+        if was_available is False:
+            logger.info("redis.recovered")
         _available = True
         return client
-    except Exception:
+    except Exception as exc:
+        # Solo se registra en la transición: el estado se cachea 15 segundos,
+        # pero sin esta guarda cada recomprobación llenaría el log.
+        if was_available is not False:
+            logger.warning(
+                "redis.unavailable",
+                error=str(exc),
+                impact=(
+                    "el control de intentos de login y la revocación de tokens "
+                    "pasan a memoria por proceso: con varios workers dejan de "
+                    "ser compartidos"
+                ),
+            )
         _available = False
         _last_checked_at = now
         return None

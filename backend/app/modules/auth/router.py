@@ -18,6 +18,8 @@ from app.modules.auth.schemas import (
     TokenPair,
 )
 from app.modules.users.models import User
+from app.modules.users.selectors import modules_for_organization
+from app.shared.permissions import modules_for_permissions
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -95,28 +97,42 @@ async def confirm_password_reset(payload: PasswordResetConfirmSchema, db: AsyncS
     return MessageResponse(message="Your password was changed.")
 
 
-@router.post("/invitations/accept", response_model=CurrentUserResponse)
-async def accept_invitation(payload: InvitationAcceptSchema, db: AsyncSession = Depends(get_db)):
-    user = await auth_service.accept_invitation(db, payload.token, payload.password)
+async def _current_user_response(db: AsyncSession, user: User) -> CurrentUserResponse:
+    """Arma la respuesta que el frontend usa para construir el menú.
+
+    `modules` se calcula con los módulos de la organización (que el
+    administrador pudo haber editado), no con los valores de código; el
+    super admin de plataforma los ve todos."""
     perms = get_effective_permissions(user)
+    modules = await modules_for_organization(db, user.organization_id)
+    if user.is_platform_super_admin:
+        open_modules = set(modules)
+    else:
+        open_modules = modules_for_permissions(perms, modules)
+
     return CurrentUserResponse(
         id=user.id,
         email=user.email_display,
         full_name=user.full_name,
         organization_id=user.organization_id,
         roles=[ur.role.code for ur in user.roles],
+        role_names=[ur.role.name for ur in user.roles],
         permissions=sorted(perms),
+        modules=sorted(open_modules),
+        can_grant_admin=user.is_platform_super_admin
+        or any(ur.role.code == "organization_admin" for ur in user.roles),
     )
+
+
+@router.post("/invitations/accept", response_model=CurrentUserResponse)
+async def accept_invitation(payload: InvitationAcceptSchema, db: AsyncSession = Depends(get_db)):
+    user = await auth_service.accept_invitation(db, payload.token, payload.password)
+    return await _current_user_response(db, user)
 
 
 @router.get("/me", response_model=CurrentUserResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
-    perms = get_effective_permissions(current_user)
-    return CurrentUserResponse(
-        id=current_user.id,
-        email=current_user.email_display,
-        full_name=current_user.full_name,
-        organization_id=current_user.organization_id,
-        roles=[ur.role.code for ur in current_user.roles],
-        permissions=sorted(perms),
-    )
+async def get_me(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await _current_user_response(db, current_user)

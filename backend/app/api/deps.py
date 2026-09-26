@@ -3,6 +3,7 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
+import structlog
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -15,6 +16,10 @@ from app.shared.datetime_utils import as_utc
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
+logger = structlog.get_logger(__name__)
+
+NO_PERMISSION_MESSAGE = "No tienes permiso para realizar esta acción."
+
 
 async def get_current_user(
     request: Request,
@@ -23,7 +28,7 @@ async def get_current_user(
 ) -> User:
     credentials_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials.",
+        detail="Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     if not token:
@@ -48,7 +53,10 @@ async def get_current_user(
         raise credentials_error
 
     if user.status != UserStatus.active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta no está activa. Contacta al administrador.",
+        )
 
     # Throttled presence heartbeat for the technician monitor (spec: GTR
     # phase 2) — only writes when stale, to avoid a DB write on every request.
@@ -78,9 +86,18 @@ def require_permission(permission_code: str) -> Callable:
 
     async def _checker(current_user: User = Depends(get_current_user)) -> User:
         if permission_code not in get_effective_permissions(current_user):
+            logger.info(
+                "permission_denied",
+                required=permission_code,
+                user_id=str(current_user.id),
+                organization_id=str(current_user.organization_id),
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required permission: {permission_code}",
+                # El código del permiso no se devuelve al cliente: no le dice
+                # nada a quien usa la aplicación y revela la estructura interna
+                # de autorización. Queda en el log junto al request_id.
+                detail=NO_PERMISSION_MESSAGE,
             )
         return current_user
 
@@ -95,9 +112,15 @@ def require_any_permission(*permission_codes: str) -> Callable:
 
     async def _checker(current_user: User = Depends(get_current_user)) -> User:
         if not (set(permission_codes) & get_effective_permissions(current_user)):
+            logger.info(
+                "permission_denied",
+                required_any=list(permission_codes),
+                user_id=str(current_user.id),
+                organization_id=str(current_user.organization_id),
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required permission (any of): {', '.join(permission_codes)}",
+                detail=NO_PERMISSION_MESSAGE,
             )
         return current_user
 

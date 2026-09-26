@@ -19,5 +19,27 @@ export interface UserListResponse {
 export interface Role {
   code: string;
   name: string;
+  /** Viene con el sistema (no se puede borrar) o lo creó la organización. */
+  is_system: boolean;
+  /** Bloqueado: ni se edita ni se borra. Solo el rol de Administrador. */
+  is_locked: boolean;
   permissions: string[];
+  user_count: number;
+}
+
+export interface Permission {
+  code: string;
+  description: string;
+}
+
+/** Grupo de permisos; es la unidad que enciende un ítem del menú. */
+export interface PermissionModule {
+  key: string;
+  label: string;
+  permissions: string[];
+}
+
+export interface PermissionCatalog {
+  modules: PermissionModule[];
+  permissions: Permission[];
 }

@@ -9,6 +9,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permissionCode: string) => boolean;
+  /** ¿Tiene algún permiso de este módulo? Es lo que decide el menú y las rutas. */
+  hasModule: (moduleKey: string) => boolean;
   refreshCurrentUser: () => Promise<void>;
 }
 
@@ -63,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
+  const hasModule = useCallback(
+    (moduleKey: string) => user?.modules?.includes(moduleKey) ?? false,
+    [user]
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -71,9 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       hasPermission,
+      hasModule,
       refreshCurrentUser: fetchCurrentUser,
     }),
-    [user, isLoading, login, logout, hasPermission, fetchCurrentUser]
+    [user, isLoading, login, logout, hasPermission, hasModule, fetchCurrentUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

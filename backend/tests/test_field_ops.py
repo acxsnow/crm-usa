@@ -132,14 +132,33 @@ async def test_attestation_requires_both_signatures_before_pdf_generated(app_cli
     assert pdf_resp.content[:4] == b"%PDF"
 
 
-async def test_evidence_upload_rejects_non_photo_file_types(app_client, active_admin_user, seeded_org):
+async def test_evidence_upload_rejects_unsupported_file_types(app_client, active_admin_user, seeded_org):
+    """Solo se aceptan fotos y videos; cualquier otro tipo se rechaza con 400."""
+    headers = await _admin_headers(app_client, active_admin_user)
+    _, project_id, _ = await _create_customer_and_project(app_client, headers)
+
+    files = {"file": ("contrato.pdf", b"%PDF-1.4 fake", "application/pdf")}
+    resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "other"}, headers=headers)
+    assert resp.status_code == 400
+    assert "application/pdf" in resp.json()["detail"]
+
+
+async def test_evidence_upload_rejects_a_corrupt_video_without_leaking_internals(
+    app_client, active_admin_user, seeded_org
+):
+    """Un archivo que dice ser video pero no lo es debe dar 400 con un mensaje
+    para el usuario. Antes devolvía 422 con el volcado de error de ffmpeg, que
+    expone rutas internas del servidor y versiones de librerías."""
     headers = await _admin_headers(app_client, active_admin_user)
     _, project_id, _ = await _create_customer_and_project(app_client, headers)
 
     files = {"file": ("clip.mp4", b"not-really-a-video", "video/mp4")}
     resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "other"}, headers=headers)
     assert resp.status_code == 400
-    assert "Only photos are accepted" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    assert "video" in detail.lower()
+    for leak in ("/tmp/", "ffmpeg", "libav", "Error opening input"):
+        assert leak not in detail, f"el detalle filtra información interna: {detail}"
 
 
 async def test_field_technician_only_sees_assigned_projects(app_client, active_admin_user, active_technician_user, seeded_org):

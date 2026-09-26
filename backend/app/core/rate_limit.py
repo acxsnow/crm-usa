@@ -9,7 +9,11 @@ availability check.
 import time
 from collections import defaultdict
 
+import structlog
+
 from app.core.redis_client import get_redis_if_available
+
+logger = structlog.get_logger(__name__)
 
 # In-memory fallback store.
 _buckets: dict[str, list[float]] = defaultdict(list)
@@ -38,9 +42,11 @@ async def is_rate_limited(key: str, *, max_attempts: int, window_seconds: int) -
         if count == 1:
             await redis.expire(redis_key, window_seconds)
         return count > max_attempts
-    except Exception:
-        # Redis flaked mid-request: fail open to the in-memory store rather
-        # than blocking login entirely.
+    except Exception as exc:
+        # Redis falló a mitad de la petición: se cae al contador en memoria en
+        # vez de bloquear el login por completo. Queda registrado porque el
+        # límite deja de ser compartido entre workers.
+        logger.warning("rate_limit.redis_failed", key=key, error=str(exc))
         return _is_rate_limited_in_memory(key, max_attempts=max_attempts, window_seconds=window_seconds)
 
 
@@ -50,8 +56,9 @@ async def reset_bucket(key: str) -> None:
     if redis is not None:
         try:
             await redis.delete(f"ratelimit:{key}")
-        except Exception:
-            pass
+        except Exception as exc:
+            # No es crítico: la clave expira sola por TTL.
+            logger.info("rate_limit.reset_failed", key=key, error=str(exc))
 
 
 def clear_all_buckets() -> None:

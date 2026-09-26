@@ -33,7 +33,7 @@ async def test_heartbeat_sets_last_seen_at_and_throttles(app_client, db, active_
     assert active_admin_user.last_seen_at > first_seen
 
 
-async def test_technician_monitor_metrics_scoped_to_today(app_client, db, active_project_manager_user, active_technician_user, seeded_org):
+async def test_technician_monitor_metrics_scoped_to_today(app_client, db, active_admin_staff_user, active_technician_user, seeded_org):
     from app.modules.crm.models import Customer, CustomerStatus
     from app.modules.field_ops.models import Project, ProjectStatus
 
@@ -53,7 +53,7 @@ async def test_technician_monitor_metrics_scoped_to_today(app_client, db, active
     ])
     await db.commit()
 
-    token = await _login(app_client, "pm@acme-demo.com")
+    token = await _login(app_client, "admin-staff@acme-demo.com")
     headers = {"Authorization": f"Bearer {token}"}
     resp = await app_client.get("/api/v1/technician-monitor", headers=headers)
     assert resp.status_code == 200
@@ -73,8 +73,8 @@ async def test_technician_monitor_requires_dashboards_operations_permission(app_
     assert resp.status_code == 403
 
 
-async def test_availability_toggle_updates_is_available(app_client, db, active_project_manager_user, active_technician_user, seeded_org):
-    token = await _login(app_client, "pm@acme-demo.com")
+async def test_availability_toggle_updates_is_available(app_client, db, active_admin_staff_user, active_technician_user, seeded_org):
+    token = await _login(app_client, "admin-staff@acme-demo.com")
     headers = {"Authorization": f"Bearer {token}"}
 
     resp = await app_client.patch(
@@ -88,12 +88,12 @@ async def test_availability_toggle_updates_is_available(app_client, db, active_p
     assert active_technician_user.is_available is True
 
 
-async def test_availability_toggle_404s_for_non_technician(app_client, active_project_manager_user, seeded_org):
-    token = await _login(app_client, "pm@acme-demo.com")
+async def test_availability_toggle_404s_for_non_technician(app_client, active_admin_staff_user, seeded_org):
+    token = await _login(app_client, "admin-staff@acme-demo.com")
     headers = {"Authorization": f"Bearer {token}"}
 
     resp = await app_client.patch(
-        f"/api/v1/technicians/{active_project_manager_user.id}/availability",
+        f"/api/v1/technicians/{active_admin_staff_user.id}/availability",
         json={"is_available": True},
         headers=headers,
     )

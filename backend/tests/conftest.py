@@ -21,6 +21,7 @@ from app.shared import audit_models  # noqa: F401
 from app.modules.crm import models as crm_models  # noqa: F401
 from app.modules.field_ops import models as field_ops_models  # noqa: F401
 from app.modules.billing import models as billing_models  # noqa: F401
+from app.modules.cases import models as cases_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -32,6 +33,26 @@ def _isolate_storage_dir(tmp_path, monkeypatch):
     from app.modules.field_ops import storage as storage_module
 
     monkeypatch.setattr(storage_module.settings, "STORAGE_DIR", str(tmp_path / "storage"))
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _isolate_external_services(monkeypatch):
+    """Tests must never reach the real Redis or SMTP server. When the suite runs
+    inside the `api` container both are reachable (docker-compose wires them
+    up and backend/.env may set EMAIL_PROVIDER=smtp), which leaks rate-limit
+    counters between tests/runs and tries to send real email. Force the
+    in-process fallbacks the code already has for the no-Redis / console case."""
+    from app.core import rate_limit as rate_limit_module
+    from app.core import token_denylist as token_denylist_module
+    from app.modules.notifications import email as email_module
+
+    async def _no_redis():
+        return None
+
+    monkeypatch.setattr(rate_limit_module, "get_redis_if_available", _no_redis)
+    monkeypatch.setattr(token_denylist_module, "get_redis_if_available", _no_redis)
+    monkeypatch.setattr(email_module.settings, "EMAIL_PROVIDER", "console")
     yield
 
 
@@ -67,7 +88,11 @@ async def app_client(db_sessionmaker, monkeypatch):
     clear_all_buckets()
     clear_denylist()
 
-    transport = ASGITransport(app=app)
+    # `raise_app_exceptions=False` hace que el cliente de pruebas reciba la
+    # misma respuesta 500 que recibiría un navegador, en vez de re-lanzar la
+    # excepción dentro del test. Sin esto no se puede comprobar qué ve el
+    # usuario cuando algo falla de forma inesperada.
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
@@ -103,6 +128,13 @@ async def seeded_org(db: AsyncSession):
         role_objs[role_code] = role
     await db.flush()
 
+    # Módulos de permisos: copia de la organización, igual que en el seed real.
+    from scripts.seed import build_permission_modules
+
+    for module in build_permission_modules(org.id, perm_objs):
+        db.add(module)
+    await db.flush()
+
     from app.modules.crm.models import FunderStatus, PipelineStage
 
     stage_objs: dict[str, PipelineStage] = {}
@@ -126,6 +158,37 @@ async def seeded_org(db: AsyncSession):
 
 
 @pytest_asyncio.fixture
+async def second_org(db: AsyncSession, seeded_org):
+    """Segunda organización con sus propios roles y módulos, para probar que
+    editar la configuración de una no afecta a la otra."""
+    from scripts.seed import build_permission_modules
+
+    org = Organization(name="Beta Field Services")
+    db.add(org)
+    await db.flush()
+    db.add(PlanLimit(organization_id=org.id, max_active_users=30))
+
+    perm_objs = seeded_org["permissions"]
+    role_objs: dict[str, Role] = {}
+    for role_code, perm_codes in DEFAULT_ROLE_PERMISSIONS.items():
+        role = Role(
+            organization_id=org.id,
+            code=role_code,
+            name=ROLE_LABELS.get(role_code, role_code),
+            is_system=True,
+        )
+        role.permissions = [perm_objs[c] for c in perm_codes]
+        db.add(role)
+        role_objs[role_code] = role
+    await db.flush()
+
+    for module in build_permission_modules(org.id, perm_objs):
+        db.add(module)
+    await db.commit()
+    return {"org": org, "roles": role_objs, "permissions": perm_objs}
+
+
+@pytest_asyncio.fixture
 async def active_admin_user(db: AsyncSession, seeded_org):
     org = seeded_org["org"]
     role = seeded_org["roles"]["organization_admin"]
@@ -140,6 +203,28 @@ async def active_admin_user(db: AsyncSession, seeded_org):
     db.add(user)
     await db.flush()
     db.add(UserRole(user_id=user.id, role_id=role.id))
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def second_org_admin_user(db: AsyncSession, second_org):
+    """Administrador de la OTRA organización. Sirve para probar que el
+    aislamiento multi-tenant lo hace la consulta y no la pantalla: este usuario
+    no debe ver ni un registro de la primera."""
+    org = second_org["org"]
+    user = User(
+        organization_id=org.id,
+        email="admin@otra-demo.com",
+        email_display="admin@otra-demo.com",
+        full_name="Otra Organización",
+        password_hash=hash_password("SuperSecret123"),
+        status=UserStatus.active,
+    )
+    db.add(user)
+    await db.flush()
+    db.add(UserRole(user_id=user.id, role_id=second_org["roles"]["organization_admin"].id))
     await db.commit()
     await db.refresh(user)
     return user
@@ -184,36 +269,65 @@ async def _make_role_user(db: AsyncSession, seeded_org, *, role_code: str, email
     return user
 
 
+# Un usuario activo por cada rol del PDF (decisión D1). `active_admin_user` y
+# `active_technician_user` están arriba.
+
+
 @pytest_asyncio.fixture
-async def active_commercial_manager_user(db: AsyncSession, seeded_org):
+async def active_salesperson_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="commercial_manager", email="commercial@acme-demo.com", full_name="Cara Commercial"
+        db, seeded_org, role_code="salesperson", email="vendedor@acme-demo.com", full_name="Vic Vendedor"
     )
 
 
 @pytest_asyncio.fixture
-async def active_project_manager_user(db: AsyncSession, seeded_org):
+async def active_admin_staff_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="project_manager", email="pm@acme-demo.com", full_name="Pat Manager"
+        db, seeded_org, role_code="admin_staff", email="admin-staff@acme-demo.com", full_name="Ana Administración"
     )
 
 
 @pytest_asyncio.fixture
-async def active_supervisor_user(db: AsyncSession, seeded_org):
+async def active_accounting_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="supervisor", email="supervisor@acme-demo.com", full_name="Sam Supervisor"
+        db, seeded_org, role_code="accounting", email="contabilidad@acme-demo.com", full_name="Coni Contabilidad"
     )
 
 
 @pytest_asyncio.fixture
-async def active_finance_user(db: AsyncSession, seeded_org):
+async def active_management_user(db: AsyncSession, seeded_org):
     return await _make_role_user(
-        db, seeded_org, role_code="finance_user", email="finance@acme-demo.com", full_name="Fiona Finance"
+        db, seeded_org, role_code="management", email="gerencia@acme-demo.com", full_name="Gabo Gerencia"
     )
 
 
 @pytest_asyncio.fixture
-async def active_read_only_user(db: AsyncSession, seeded_org):
-    return await _make_role_user(
-        db, seeded_org, role_code="read_only", email="readonly@acme-demo.com", full_name="Rae Readonly"
+async def active_roleless_user(db: AsyncSession, seeded_org):
+    """Usuario con un rol de la organización sin ningún permiso: es el estado
+    real justo después de que el administrador crea un rol y todavía no le
+    marca nada. Sirve para comprobar que ninguna ruta se abre por descuido."""
+    org = seeded_org["org"]
+    empty_role = Role(
+        organization_id=org.id,
+        code="sin_permisos",
+        name="Sin permisos",
+        is_system=False,
     )
+    empty_role.permissions = []
+    db.add(empty_role)
+    await db.flush()
+
+    user = User(
+        organization_id=org.id,
+        email="sinpermisos@acme-demo.com",
+        email_display="sinpermisos@acme-demo.com",
+        full_name="Sin Permisos",
+        password_hash=hash_password("SuperSecret123"),
+        status=UserStatus.active,
+    )
+    db.add(user)
+    await db.flush()
+    db.add(UserRole(user_id=user.id, role_id=empty_role.id))
+    await db.commit()
+    await db.refresh(user)
+    return user

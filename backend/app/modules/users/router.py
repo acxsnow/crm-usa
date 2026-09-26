@@ -9,7 +9,13 @@ from app.db.session import get_db
 from app.shared.pagination import paginate, pagination_params
 from app.modules.users import service as users_service
 from app.modules.users.models import Role, User, UserRole, UserStatus
-from app.modules.users.schemas import UserInviteRequest, UserListResponse, UserResponse
+from app.modules.users.schemas import (
+    UserInviteRequest,
+    UserListResponse,
+    UserResponse,
+    UserRolesUpdate,
+    UserUpdate,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -117,3 +123,50 @@ async def deactivate_user(
         id=user.id, email=user.email_display, full_name=user.full_name, status=user.status,
         roles=[ur.role.code for ur in user.roles], last_login_at=user.last_login_at,
     )
+
+
+def _user_response(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        email=user.email_display,
+        full_name=user.full_name,
+        status=user.status,
+        roles=[ur.role.code for ur in user.roles],
+        last_login_at=user.last_login_at,
+    )
+
+
+@router.patch("/{user_id}/roles", response_model=UserResponse)
+async def set_user_roles(
+    user_id: uuid.UUID,
+    payload: UserRolesUpdate,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("users.manage")),
+):
+    user = await users_service.set_user_roles(
+        db,
+        organization_id=organization_id,
+        actor=current_user,
+        user_id=user_id,
+        role_codes=payload.role_codes,
+    )
+    return _user_response(user)
+
+
+@router.patch("/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: uuid.UUID,
+    payload: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("users.manage")),
+):
+    user = await users_service.update_user(
+        db,
+        organization_id=organization_id,
+        actor=current_user,
+        user_id=user_id,
+        full_name=payload.full_name,
+    )
+    return _user_response(user)

@@ -13,7 +13,11 @@ Two mechanisms, matching what each action needs:
 """
 import time
 
+import structlog
+
 from app.core.redis_client import get_redis_if_available
+
+logger = structlog.get_logger(__name__)
 
 # In-memory fallback: jti -> expiry epoch seconds.
 _denylist: dict[str, float] = {}
@@ -34,8 +38,10 @@ async def denylist_jti(jti: str, ttl_seconds: int) -> None:
         try:
             await redis.setex(f"denylist:{jti}", ttl_seconds, "1")
             return
-        except Exception:
-            pass
+        except Exception as exc:
+            # El token queda revocado solo en este proceso: otro worker podría
+            # seguir aceptándolo hasta que expire. Hay que saberlo.
+            logger.warning("denylist.redis_write_failed", error=str(exc))
     _prune_expired()
     _denylist[jti] = time.time() + ttl_seconds
 
@@ -45,8 +51,8 @@ async def is_denylisted(jti: str) -> bool:
     if redis is not None:
         try:
             return bool(await redis.exists(f"denylist:{jti}"))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("denylist.redis_read_failed", error=str(exc))
     _prune_expired()
     return jti in _denylist
 

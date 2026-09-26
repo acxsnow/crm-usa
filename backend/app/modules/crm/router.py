@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_permission
 from app.db.session import get_db
+from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 from app.shared.pagination import paginate, pagination_params
 from app.shared.audit import record_audit_event
 from app.modules.crm import service as crm_service
@@ -103,8 +104,7 @@ async def get_lead(
     result = await db.execute(select(Lead).where(Lead.id == lead_id, Lead.organization_id == organization_id))
     lead = result.scalar_one_or_none()
     if not lead:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Lead not found.")
+        raise NotFoundError("El prospecto no existe.", code="lead_not_found")
     return lead
 
 
@@ -114,12 +114,11 @@ async def update_lead(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(select(Lead).where(Lead.id == lead_id, Lead.organization_id == organization_id))
     lead = result.scalar_one_or_none()
     if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found.")
+        raise NotFoundError("El prospecto no existe.", code="lead_not_found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(lead, field, value)
     await db.commit()
@@ -151,12 +150,13 @@ async def import_leads(
     """CSV importer for the existing spreadsheets (spec 18 item 7). Column
     mapping is caller-supplied since the source sheets vary by mobile-home
     park / funder program rather than sharing one fixed layout."""
-    from fastapi import HTTPException
 
     try:
         mapping = json.loads(column_mapping)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="column_mapping must be valid JSON.")
+        raise InvalidInputError(
+            "El mapeo de columnas no es un JSON válido.", code="invalid_column_mapping"
+        )
 
     raw_bytes = await file.read()
     try:
@@ -212,12 +212,11 @@ async def get_customer(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("customers.read")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.organization_id == organization_id))
     customer = result.scalar_one_or_none()
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found.")
+        raise NotFoundError("El cliente no existe.", code="customer_not_found")
     return customer
 
 
@@ -227,12 +226,11 @@ async def update_customer(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("customers.update")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.organization_id == organization_id))
     customer = result.scalar_one_or_none()
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found.")
+        raise NotFoundError("El cliente no existe.", code="customer_not_found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(customer, field, value)
     await record_audit_event(
@@ -251,11 +249,10 @@ async def add_customer_contact(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("contacts.manage")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.organization_id == organization_id))
     if not result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Customer not found.")
+        raise NotFoundError("El cliente no existe.", code="customer_not_found")
     contact = CustomerContact(customer_id=customer_id, **payload.model_dump())
     db.add(contact)
     await db.commit()
@@ -305,8 +302,10 @@ async def create_application(
     current_user: User = Depends(require_permission("leads.manage")),
 ):
     if not payload.lead_id and not payload.customer_id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="La aplicación debe estar asociada a un prospecto o cliente.")
+        raise InvalidInputError(
+            "La aplicación debe estar asociada a un prospecto o cliente.",
+            code="application_without_owner",
+        )
     application = Application(
         organization_id=organization_id, salesperson_user_id=current_user.id,
         terms_accepted_at=datetime.now(timezone.utc) if payload.terms_accepted else None,
@@ -326,10 +325,9 @@ async def get_application(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise NotFoundError("La aplicación no existe.", code="application_not_found")
     return application
 
 
@@ -339,10 +337,9 @@ async def list_application_documents(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
     exists = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not exists:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise NotFoundError("La aplicación no existe.", code="application_not_found")
     result = await db.execute(select(ApplicationDocument).where(ApplicationDocument.application_id == application_id, ApplicationDocument.organization_id == organization_id).order_by(ApplicationDocument.created_at.desc()))
     return result.scalars().all()
 
@@ -353,14 +350,13 @@ async def upload_application_document(
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
     from app.modules.field_ops.storage import save_bytes
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise NotFoundError("La aplicación no existe.", code="application_not_found")
     data = await file.read()
     if len(data) > 15 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="El archivo no puede superar 15 MB.")
+        raise InvalidInputError("El archivo no puede superar 15 MB.", code="file_too_large")
     relative_path = save_bytes(organization_id=organization_id, subfolder=f"applications/{application_id}", filename=file.filename or "document", data=data)
     document = ApplicationDocument(application_id=application_id, organization_id=organization_id, field_key=field_key, file_path=relative_path, original_filename=file.filename, mime_type=file.content_type, size_bytes=len(data), uploaded_by_user_id=current_user.id)
     db.add(document)
@@ -376,10 +372,9 @@ async def update_application(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise NotFoundError("La aplicación no existe.", code="application_not_found")
     changes = payload.model_dump(exclude_unset=True)
     if changes.get("terms_accepted") is True and not application.terms_accepted:
         application.terms_accepted_at = datetime.now(timezone.utc)
@@ -401,14 +396,16 @@ async def sign_application_with_customer(
     application_id: uuid.UUID, payload: ApplicationCustomerSignature, db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(require_permission("leads.manage")),
 ):
-    from fastapi import HTTPException
     from app.modules.field_ops.pdf import decode_signature_png
     from app.modules.field_ops.storage import save_bytes
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
-        raise HTTPException(status_code=404, detail="Application not found.")
+        raise NotFoundError("La aplicación no existe.", code="application_not_found")
     if not application.terms_accepted:
-        raise HTTPException(status_code=400, detail="El cliente debe aceptar los Términos y Condiciones antes de firmar.")
+        raise InvalidInputError(
+            "El cliente debe aceptar los Términos y Condiciones antes de firmar.",
+            code="terms_not_accepted",
+        )
     answers = dict(application.answers or {})
     answers["customer_name"] = payload.customer_name.strip()
     application.answers = answers
@@ -431,12 +428,11 @@ async def customer_timeline(
     current_user: User = Depends(require_permission("customers.read")),
 ):
     """Customer 360 view (spec 7.3): opportunities, activities, quotes for this customer."""
-    from fastapi import HTTPException
 
     result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.organization_id == organization_id))
     customer = result.scalar_one_or_none()
     if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found.")
+        raise NotFoundError("El cliente no existe.", code="customer_not_found")
 
     opportunities = (
         await db.execute(select(Opportunity).where(Opportunity.customer_id == customer_id).order_by(Opportunity.created_at.desc()))
@@ -518,14 +514,13 @@ async def update_opportunity(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("opportunities.manage")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(
         select(Opportunity).where(Opportunity.id == opportunity_id, Opportunity.organization_id == organization_id)
     )
     opportunity = result.scalar_one_or_none()
     if not opportunity:
-        raise HTTPException(status_code=404, detail="Opportunity not found.")
+        raise NotFoundError("La oportunidad no existe.", code="opportunity_not_found")
     updates = payload.model_dump(exclude_unset=True)
     if "funder_status_code" in updates:
         code = updates.pop("funder_status_code")
@@ -608,12 +603,11 @@ async def update_activity(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("activities.manage")),
 ):
-    from fastapi import HTTPException
 
     result = await db.execute(select(Activity).where(Activity.id == activity_id, Activity.organization_id == organization_id))
     activity = result.scalar_one_or_none()
     if not activity:
-        raise HTTPException(status_code=404, detail="Activity not found.")
+        raise NotFoundError("La actividad no existe.", code="activity_not_found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(activity, field, value)
     await db.commit()

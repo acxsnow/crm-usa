@@ -12,7 +12,7 @@ writes and not just reads. Positive-path (2xx) coverage for the "happy"
 role already exists in test_crm.py / test_field_ops.py / test_billing.py;
 here we add a few cross-module positive checks to confirm the intended
 role *can* reach endpoints outside its "home" module where the permission
-matrix grants it (e.g. commercial_manager can read projects/invoices).
+matrix grants it (por ejemplo, Gerencia puede leer proyectos y facturas).
 """
 import uuid
 
@@ -111,9 +111,9 @@ async def test_field_technician_forbidden_from_crm_writes(app_client, active_tec
     assert resp.status_code == 403
 
 
-async def test_finance_user_forbidden_from_crm_management(app_client, active_finance_user):
-    """finance_user only has customers.read in CRM — everything else must 403."""
-    token = await _login(app_client, "finance@acme-demo.com")
+async def test_accounting_forbidden_from_crm_management(app_client, active_accounting_user):
+    """Contabilidad solo tiene customers.read en CRM; lo demás debe dar 403."""
+    token = await _login(app_client, "contabilidad@acme-demo.com")
     for path in ["/api/v1/leads", "/api/v1/opportunities", "/api/v1/activities", "/api/v1/quotes"]:
         resp = await app_client.get(path, headers=_auth(token))
         assert resp.status_code == 403, f"{path} -> {resp.status_code}"
@@ -124,13 +124,13 @@ async def test_finance_user_forbidden_from_crm_management(app_client, active_fin
 
 
 # ---------------------------------------------------------------------------
-# Field ops module — commercial_manager has projects.read_all and
-# invoices.read but none of the field_ops write/management permissions
-# (tasks.manage, checklists.manage, evidence.create), so those must 403.
+# Field ops module — Gerencia tiene projects.read_all e invoices.read pero
+# ninguno de los permisos de escritura de campo (tasks.manage,
+# checklists.manage, evidence.create), así que esos deben dar 403.
 # ---------------------------------------------------------------------------
 
-async def test_commercial_manager_forbidden_from_field_ops_management(app_client, active_commercial_manager_user):
-    token = await _login(app_client, "commercial@acme-demo.com")
+async def test_management_forbidden_from_field_ops_management(app_client, active_management_user):
+    token = await _login(app_client, "gerencia@acme-demo.com")
 
     resp = await app_client.get("/api/v1/checklist-templates", headers=_auth(token))
     assert resp.status_code == 403
@@ -192,8 +192,8 @@ async def test_field_technician_only_sees_projects_read_assigned_scope(app_clien
 
 
 # ---------------------------------------------------------------------------
-# Billing module — field_technician and commercial_manager both lack every
-# invoices.* permission (commercial_manager only has invoices.read).
+# Billing module — el Técnico no tiene ningún permiso invoices.*, y
+# Administración solo tiene invoices.read (más billing.submit).
 # ---------------------------------------------------------------------------
 
 async def test_field_technician_forbidden_from_all_billing_endpoints(app_client, active_technician_user):
@@ -225,8 +225,8 @@ async def test_field_technician_forbidden_from_all_billing_endpoints(app_client,
     assert resp.status_code == 403
 
 
-async def test_commercial_manager_can_read_but_not_write_invoices(app_client, active_commercial_manager_user):
-    token = await _login(app_client, "commercial@acme-demo.com")
+async def test_admin_staff_can_read_but_not_write_invoices(app_client, active_admin_staff_user):
+    token = await _login(app_client, "admin-staff@acme-demo.com")
 
     # invoices.read is granted.
     resp = await app_client.get("/api/v1/invoices", headers=_auth(token))
@@ -252,26 +252,33 @@ async def test_commercial_manager_can_read_but_not_write_invoices(app_client, ac
     assert resp.status_code == 403
 
 
-async def test_finance_user_can_manage_invoices_end_to_end_permission_gate(app_client, active_finance_user):
-    """finance_user has the full invoices.* set plus dashboards.finance —
-    confirm every billing read endpoint's permission gate lets it through
-    (functional create/payment/status-transition flows are already covered
-    in test_billing.py; this asserts the *permission* layer specifically)."""
-    token = await _login(app_client, "finance@acme-demo.com")
+async def test_accounting_can_manage_invoices_end_to_end_permission_gate(app_client, active_accounting_user):
+    """Contabilidad tiene todo el conjunto invoices.* más dashboards.finance;
+    se confirma que cada endpoint de lectura de facturación la deja pasar (los
+    flujos funcionales de crear, pagar y cambiar de estado ya están en
+    test_billing.py; aquí se afirma la capa de *permisos*)."""
+    token = await _login(app_client, "contabilidad@acme-demo.com")
 
     for path in ["/api/v1/invoices", "/api/v1/invoices-export.csv", "/api/v1/finance/dashboard"]:
         resp = await app_client.get(path, headers=_auth(token))
         assert resp.status_code == 200, f"{path} -> {resp.status_code} {resp.text}"
 
-    # finance_user has no projects.read_all/read_assigned, so field_ops stays out of reach.
+    # A diferencia del rol financiero anterior, Contabilidad sí tiene
+    # projects.read_all: lo necesita para la rentabilidad por proyecto (PDF §4.5).
     resp = await app_client.get("/api/v1/projects", headers=_auth(token))
+    assert resp.status_code == 200
+
+    # Pero no puede escribir en campo.
+    resp = await app_client.post(
+        "/api/v1/projects", json={"customer_id": RANDOM_ID, "title": "T"}, headers=_auth(token)
+    )
     assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------
-# read_only role — carries zero permissions in the default catalog (granted
-# per-resource individually by an admin per spec 5.3). Every endpoint in
-# every module must reject it, which is a good sanity check that no route
+# Rol sin permisos — es lo que queda cuando el administrador crea un rol nuevo
+# y todavía no le marca nada. Todo endpoint de todo módulo debe rechazarlo, lo
+# que además confirma que ninguna ruta
 # accidentally allows an authenticated-but-unpermissioned user through.
 # ---------------------------------------------------------------------------
 
@@ -290,8 +297,9 @@ ALL_MODULE_GET_ENDPOINTS = CRM_GET_ENDPOINTS + [
 ]
 
 
-async def test_read_only_role_forbidden_everywhere(app_client, active_read_only_user):
-    token = await _login(app_client, "readonly@acme-demo.com")
+async def test_role_without_permissions_is_forbidden_everywhere(app_client, active_roleless_user):
+    """Un rol recién creado, sin permisos marcados, no abre ningún módulo."""
+    token = await _login(app_client, "sinpermisos@acme-demo.com")
     for path in ALL_MODULE_GET_ENDPOINTS:
         resp = await app_client.get(path, headers=_auth(token))
         assert resp.status_code == 403, f"{path} -> {resp.status_code}"
@@ -303,12 +311,11 @@ async def test_read_only_role_forbidden_everywhere(app_client, active_read_only_
 # field_ops/billing, which are newer and org-scope every query by hand).
 # ---------------------------------------------------------------------------
 
-async def test_project_manager_sees_empty_lists_for_unrelated_org_data(app_client, active_project_manager_user, db, seeded_org):
-    """Regression guard: project_manager has projects.read_all/invoices.read,
-    but with no data seeded in this org, list endpoints must return an empty
-    list rather than leaking rows from another test's org (each test gets a
-    fresh in-memory DB, so this also doubles as a not-found-isn't-500 check)."""
-    token = await _login(app_client, "pm@acme-demo.com")
+async def test_admin_staff_sees_empty_lists_for_unrelated_org_data(app_client, active_admin_staff_user, db, seeded_org):
+    """Guarda de regresión: Administración tiene projects.read_all e
+    invoices.read, pero sin datos sembrados en esta organización los listados
+    deben devolver lista vacía y no filas de la organización de otro test."""
+    token = await _login(app_client, "admin-staff@acme-demo.com")
     resp = await app_client.get("/api/v1/projects", headers=_auth(token))
     assert resp.status_code == 200
     assert resp.json() == []

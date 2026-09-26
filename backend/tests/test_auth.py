@@ -41,8 +41,16 @@ async def test_inactive_user_cannot_login(app_client, db, active_admin_user):
     assert resp.status_code == 401
 
 
-async def test_login_rate_limited_after_threshold(app_client, active_admin_user):
-    for _ in range(5):
+async def test_login_rate_limited_after_threshold(app_client, active_admin_user, monkeypatch):
+    """El umbral se fija aquí en vez de leerlo de la configuración: si depende
+    del entorno, subir `LOGIN_MAX_ATTEMPTS` en un `.env` de desarrollo hace
+    fallar el test sin que nadie haya tocado el código."""
+    from app.modules.auth import router as auth_router
+
+    limite = 5
+    monkeypatch.setattr(auth_router.settings, "LOGIN_MAX_ATTEMPTS", limite)
+
+    for _ in range(limite):
         resp = await app_client.post(
             "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "wrong-password"}
         )

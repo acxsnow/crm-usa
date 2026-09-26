@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.shared.error_handlers import build_unhandled_error_response, register_error_handlers
+from app.shared.request_context import clear_request_context, set_request_context
 
 settings = get_settings()
 configure_logging()
@@ -34,20 +36,36 @@ app = FastAPI(
 frontend_dist = Path(__file__).resolve().parent.parent / "frontend_dist"
 frontend_index = frontend_dist / "index.html"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.FRONTEND_APP_URL],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    # Se limpia antes de enlazar: sin esto, el contexto de una petición anterior
+    # sobrevive en el mismo worker y las líneas de log salen con el request_id
+    # equivocado, que es peor que no tener registro.
+    structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
-    response = await call_next(request)
+    # Los manejadores de error lo leen de aquí para incluirlo en la respuesta.
+    request.state.request_id = request_id
+    # La auditoría lo toma de aquí, para no ir pasándolo por parámetro desde
+    # cada endpoint hasta el service que registra el evento.
+    set_request_context(
+        request_id=request_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("User-Agent"),
+    )
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        # Se atrapa aquí, y no solo con `@app.exception_handler(Exception)`,
+        # porque ese manejador vive en el middleware de errores de Starlette,
+        # que está POR ENCIMA del de CORS: su respuesta no pasaría por CORS, el
+        # navegador la bloquearía por política de origen y el frontend vería un
+        # error de red en vez del 500 con su código de referencia. Desde este
+        # middleware, la respuesta sí sube por CORS.
+        response = build_unhandled_error_response(request, exc)
+    finally:
+        structlog.contextvars.clear_contextvars()
+        clear_request_context()
     response.headers["X-Request-ID"] = request_id
     return response
 
@@ -68,6 +86,25 @@ async def add_security_headers(request: Request, call_next):
     if settings.ENVIRONMENT != "development":
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     return response
+
+
+# CORS se registra DE ÚLTIMO a propósito: `add_middleware` inserta al principio
+# de la cadena, así que el último en registrarse es el más externo. Si CORS
+# quedara por dentro, las respuestas que generan los middlewares de arriba
+# —en particular el 500 de un fallo no controlado— saldrían sin cabeceras de
+# origen, el navegador las bloquearía y el frontend vería un error de red en
+# lugar del error real.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_APP_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Traducción de errores a respuestas HTTP (ver app/shared/error_handlers.py).
+register_error_handlers(app)
 
 
 @app.get("/health")

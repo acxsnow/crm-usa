@@ -5,6 +5,8 @@ import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { useTableFilters } from "@/lib/useTableFilters";
+import { UserEditPanel, rolesAsignables } from "./components/UserEditPanel";
+import { useAuth } from "@/features/auth/AuthContext";
 import type { OrgUser } from "@/types/users";
 
 const PAGE_SIZE = 20;
@@ -19,9 +21,11 @@ export function UsersPage() {
     queryFn: () => listUsersPage(page, PAGE_SIZE, extraParams),
   });
   const { data: roles } = useQuery({ queryKey: ["roles"], queryFn: listRoles });
+  const { user } = useAuth();
 
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [editando, setEditando] = useState<OrgUser | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: inviteUser,
@@ -46,17 +50,15 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
-  function toggleRole(code: string) {
-    setForm((f) => ({
-      ...f,
-      role_codes: f.role_codes.includes(code) ? f.role_codes.filter((c) => c !== code) : [...f.role_codes, code],
-    }));
+  /** Una persona tiene un rol y solo uno: elegir reemplaza, no suma. */
+  function elegirRol(code: string) {
+    setForm((f) => ({ ...f, role_codes: [code] }));
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!form.email.trim() || !form.full_name.trim() || form.role_codes.length === 0) {
-      setError("Email, nombre y al menos un rol son obligatorios.");
+      setError("Email, nombre y rol son obligatorios.");
       return;
     }
     inviteMutation.mutate(form);
@@ -92,7 +94,13 @@ export function UsersPage() {
   const columns: Column<OrgUser>[] = [
     { key: "full_name", header: "Nombre" },
     { key: "email", header: "Email" },
-    { key: "roles", header: "Roles", render: (u) => u.roles.join(", ") },
+    {
+      key: "roles",
+      header: "Roles",
+      // Se muestra la etiqueta ("Vendedor"), no el código ("salesperson").
+      render: (u) =>
+        u.roles.map((code) => roles?.find((r) => r.code === code)?.name ?? code).join(", "),
+    },
     {
       key: "status",
       header: "Estado",
@@ -104,16 +112,22 @@ export function UsersPage() {
     {
       key: "actions",
       header: "",
-      render: (u) =>
-        u.status === "active" ? (
-          <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
-            Desactivar
+      render: (u) => (
+        <span className="row-actions">
+          <button className="link-button" onClick={() => setEditando(u)}>
+            Editar
           </button>
-        ) : (
-          <button className="link-button" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate(u.id)}>
-            Activar
-          </button>
-        ),
+          {u.status === "active" ? (
+            <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
+              Desactivar
+            </button>
+          ) : (
+            <button className="link-button" disabled={activateMutation.isPending} onClick={() => activateMutation.mutate(u.id)}>
+              Activar
+            </button>
+          )}
+        </span>
+      ),
     },
   ];
 
@@ -144,9 +158,15 @@ export function UsersPage() {
           required
         />
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-          {(roles ?? []).map((role) => (
+          {rolesAsignables(roles ?? [], user?.can_grant_admin ?? false, []).map((role) => (
             <label key={role.code} style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.85rem" }}>
-              <input type="checkbox" checked={form.role_codes.includes(role.code)} onChange={() => toggleRole(role.code)} />
+              <input
+                type="radio"
+                name="rol-de-la-invitacion"
+                value={role.code}
+                checked={form.role_codes[0] === role.code}
+                onChange={() => elegirRol(role.code)}
+              />
               {role.name}
             </label>
           ))}
@@ -156,6 +176,18 @@ export function UsersPage() {
         </button>
       </form>
       {error && <p className="warning-banner">{error}</p>}
+
+      {editando && (
+        <UserEditPanel
+          // La clave fuerza un montaje nuevo al cambiar de persona: el estado
+          // del panel se toma de `user` al montar, así que sin esto abrir otra
+          // fila conservaría el nombre y los roles de la anterior.
+          key={editando.id}
+          user={editando}
+          roles={roles ?? []}
+          onClose={() => setEditando(null)}
+        />
+      )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar." />

@@ -36,3 +36,13 @@ export async function listRoles(): Promise<Role[]> {
   const res = await apiClient.get<Role[]>("/roles");
   return res.data;
 }
+
+export async function updateUserRoles(userId: string, roleCodes: string[]): Promise<OrgUser> {
+  const res = await apiClient.patch<OrgUser>(`/users/${userId}/roles`, { role_codes: roleCodes });
+  return res.data;
+}
+
+export async function updateUser(userId: string, fullName: string): Promise<OrgUser> {
+  const res = await apiClient.patch<OrgUser>(`/users/${userId}`, { full_name: fullName });
+  return res.data;
+}

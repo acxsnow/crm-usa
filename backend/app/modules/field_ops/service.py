@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import structlog
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,7 @@ from app.modules.field_ops.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME
 from app.shared.audit import record_audit_event
 
 settings = get_settings()
+logger = structlog.get_logger(__name__)
 
 # Evidence scope confirmed with Mateo (Sept 2026): photos and short videos,
 # ~10-20 evidence items per project in real use. Enforced as a
@@ -240,7 +242,24 @@ async def upload_evidence(
             mime_type = "video/mp4"
             watermarked = True
         except Exception as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"No se pudo procesar el video con marca de agua: {exc}") from exc
+            # El detalle de ffmpeg trae rutas temporales del servidor y versiones
+            # de librerías: se registra, no se devuelve. Al cliente le basta con
+            # saber que el archivo no es un video procesable, y eso es un 400
+            # (lo que mandó está mal), no un 422.
+            logger.warning(
+                "evidence.video_watermark_failed",
+                project_id=str(project_id),
+                organization_id=str(organization_id),
+                filename=file.filename,
+                error=str(exc),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "No se pudo procesar el video. Verifica que el archivo esté "
+                    "completo y sea un video válido (MP4, MOV o WEBM)."
+                ),
+            ) from exc
 
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"projects/{project_id}/evidence",
