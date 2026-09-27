@@ -48,7 +48,7 @@ from app.modules.field_ops.schemas import (
     PublicCustomerSignatureCapture,
     PublicSignatureResponse,
 )
-from app.modules.field_ops.storage import absolute_path
+from app.shared.files.storage import absolute_path
 from app.modules.users.models import Role, User, UserRole, UserStatus
 
 router = APIRouter(tags=["field-ops"])
@@ -448,7 +448,7 @@ async def upload_evidence(
 ):
     """Upload endpoint (spec 18 item 2/3: GPS mandatory when the browser
     allows it). Confirmed requirement: a visible GPS watermark is burned
-    into the stored image — see field_ops/watermark.py."""
+    into the stored image — see shared/files/watermark.py."""
     return await field_ops_service.upload_evidence(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id, file=file,
         category=category, latitude=latitude, longitude=longitude, captured_at=captured_at,

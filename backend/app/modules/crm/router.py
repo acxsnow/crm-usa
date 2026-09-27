@@ -218,7 +218,7 @@ async def upload_application_document(
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("documents.manage")),
 ):
-    from app.modules.field_ops.storage import save_bytes
+    from app.shared.files.storage import save_bytes
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
         raise NotFoundError("La aplicación no existe.", code="application_not_found")
@@ -265,7 +265,7 @@ async def sign_application_with_customer(
     organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(require_permission("cases.submit")),
 ):
     from app.modules.field_ops.pdf import decode_signature_png
-    from app.modules.field_ops.storage import save_bytes
+    from app.shared.files.storage import save_bytes
     application = (await db.execute(select(Application).where(Application.id == application_id, Application.organization_id == organization_id))).scalar_one_or_none()
     if not application:
         raise NotFoundError("La aplicación no existe.", code="application_not_found")

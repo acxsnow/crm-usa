@@ -30,7 +30,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 def _isolate_storage_dir(tmp_path, monkeypatch):
     """Evidence/attestation files go under a per-test tmp dir instead of the
     repo's backend/storage/ folder."""
-    from app.modules.field_ops import storage as storage_module
+    from app.shared.files import storage as storage_module
 
     monkeypatch.setattr(storage_module.settings, "STORAGE_DIR", str(tmp_path / "storage"))
     yield

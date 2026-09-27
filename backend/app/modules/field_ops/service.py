@@ -23,8 +23,8 @@ from app.modules.field_ops.models import (
     TaskStatus,
 )
 from app.modules.field_ops.pdf import build_attestation_pdf, decode_signature_png
-from app.modules.field_ops.storage import save_bytes
-from app.modules.field_ops.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
+from app.shared.files.storage import save_bytes
+from app.shared.files.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError
 

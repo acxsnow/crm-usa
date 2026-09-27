@@ -88,10 +88,10 @@ Hardening**.
   - **Evidence upload** (`POST /projects/{id}/evidence`): captures GPS
     (mandatory whenever the browser allows it) and burns a **visible
     watermark** (coordinates + timestamp) into the stored image —
-    `app/modules/field_ops/watermark.py` — this was an explicit requirement,
+    `app/shared/files/watermark.py` — this was an explicit requirement,
     not just EXIF metadata. Files are stored on local disk under
     `backend/storage/` for now; swapping to S3 with signed URLs (spec
-    section 12) only touches `field_ops/storage.py`.
+    section 12) only touches `shared/files/storage.py`.
   - **Digital signature capture**: the technician signs from the CRM and the
     customer signs from a secure, single-use link delivered by email; once both
     signatures are present, an attestation PDF is generated automatically
@@ -186,7 +186,7 @@ and further OWASP items.
   see Phase 4 note above — the backend endpoints existed since Phase 4, the UI was
   the gap.
 - **OWASP Top 10 pass — done** (findings fixed, not just reviewed):
-  - **Path traversal (CWE-22, A01)**: `app/modules/field_ops/storage.py` built
+  - **Path traversal (CWE-22, A01)**: `app/shared/files/storage.py` built
     the stored filename by string-concatenating the caller-supplied filename
     straight into a `Path`, so a crafted multipart filename like
     `../../etc/passwd` could have written outside the org's storage
@@ -347,7 +347,7 @@ to be refined against the real intake PDFs.
 
 - **Kept local for now, on purpose** (confirmed with Mateo): evidence,
   attestation PDFs, and invoice attachments stay on local disk
-  (`backend/storage/`), not S3 — `app/modules/field_ops/storage.py` is the
+  (`backend/storage/`), not S3 — `app/shared/files/storage.py` is the
   one place that would change (it already stores a storage-relative path,
   not an absolute one, so no model changes needed when this does happen).
   Email delivery is required for invitations, password recovery, overdue

@@ -20,7 +20,7 @@ from app.modules.billing.schemas import (
     InvoiceResponse,
     InvoiceUpdate,
 )
-from app.modules.field_ops.storage import absolute_path, save_bytes
+from app.shared.files.storage import absolute_path, save_bytes
 from app.modules.users.models import User
 
 router = APIRouter(tags=["billing"])

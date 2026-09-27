@@ -5,7 +5,7 @@ generic smoke test."""
 import io
 import uuid
 
-from app.modules.field_ops.storage import _sanitize_filename, save_bytes
+from app.shared.files.storage import _sanitize_filename, save_bytes
 
 
 async def _login(app_client, email, password="SuperSecret123"):
@@ -32,7 +32,7 @@ def test_sanitize_filename_strips_traversal_sequences():
 
 
 def test_save_bytes_never_escapes_storage_root(tmp_path, monkeypatch):
-    from app.modules.field_ops import storage as storage_module
+    from app.shared.files import storage as storage_module
 
     monkeypatch.setattr(storage_module.settings, "STORAGE_DIR", str(tmp_path / "storage"))
     org_id = uuid.uuid4()

@@ -85,7 +85,7 @@ def build_attestation_pdf(
         ("Firma del cliente", attestation.customer_signature_path, attestation.customer_signed_at),
     ]:
         if sig_path:
-            from app.modules.field_ops.storage import absolute_path
+            from app.shared.files.storage import absolute_path
             img = RLImage(str(absolute_path(sig_path)), width=2.6 * inch, height=1.1 * inch)
             sig_cells.append(img)
         else:

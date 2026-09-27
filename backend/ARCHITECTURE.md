@@ -88,7 +88,7 @@ complejas**. Delega en `service` (escritura) y `selectors` (lectura).
    `await db.commit()` al final. Si algo lanza antes, no hay commit.
 5. **Paginación**: todo listado que pueda crecer usa `pagination_params` +
    `paginate()` (default 100, máx 500, total en `X-Total-Count`).
-6. **Archivos**: solo a través de `app/modules/field_ops/storage.py`
+6. **Archivos**: solo a través de `app/shared/files/storage.py`
    (sanitiza nombre, valida MIME y tamaño, contiene la ruta). Se persiste la
    ruta **relativa** a `STORAGE_DIR`. Descarga por endpoint con permiso, nunca
    como estático público.

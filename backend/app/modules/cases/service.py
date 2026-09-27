@@ -10,6 +10,7 @@ de casi todo lo demás, **no se puede reconstruir después**.
 Cada cadena registra sus propias guardas con `stages.register_guard()` desde su
 paquete; nadie edita el archivo de otro.
 """
+import inspect
 import uuid
 from datetime import datetime, timezone
 
@@ -228,7 +229,12 @@ async def transition(
         )
 
     for guard in stages.guards_for(desde, to_stage):
-        guard(db=db, case=case, actor_id=actor_id, reason=reason)
+        # Las guardas pueden ser `async`: las del tramo de campo consultan la
+        # base (checklist completo, permisos vigentes) y con una sesión
+        # asíncrona no hay otra forma. Las síncronas siguen igual (COD-08).
+        resultado = guard(db=db, case=case, actor_id=actor_id, reason=reason)
+        if inspect.isawaitable(resultado):
+            await resultado
 
     if substatus is not None and substatus not in stages.SUBSTATUSES.get(to_stage, set()):
         raise InvalidInputError(
