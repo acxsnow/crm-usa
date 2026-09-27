@@ -14,7 +14,7 @@ export function CustomerDetailPage() {
 
   if (isLoading || !data) return <p>Cargando...</p>;
 
-  const { customer, opportunities, activities, quotes } = data;
+  const { customer, cases, activities } = data;
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ legal_name: customer.legal_name, main_phone: customer.main_phone ?? "", email: customer.email ?? "", billing_address: customer.billing_address ?? "", notes: customer.notes ?? "" });
   const updateMutation = useMutation({ mutationFn: () => updateCustomer(customer.id, form), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] }); setEditing(false); } });
@@ -39,27 +39,31 @@ export function CustomerDetailPage() {
       </section>
 
       <section>
-        <h2>Oportunidades</h2>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Título</th>
-              <th>Etapa</th>
-              <th>Programa</th>
-              <th>Dirección</th>
-            </tr>
-          </thead>
-          <tbody>
-            {opportunities.map((o) => (
-              <tr key={o.id}>
-                <td>{o.title}</td>
-                <td>{o.stage.name}</td>
-                <td>{o.funder_program}</td>
-                <td>{[o.address_street, o.address_unit].filter(Boolean).join(", ")}</td>
+        <h2>Expedientes</h2>
+        {cases.length === 0 ? (
+          <p className="muted">Este cliente todavía no tiene expedientes.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Expediente</th>
+                <th>Etapa</th>
+                <th>Dirección</th>
+                <th>Abierto</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cases.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.case_number}</td>
+                  <td>{c.stage_label}</td>
+                  <td>{[c.address_street, c.address_unit].filter(Boolean).join(", ")}</td>
+                  <td>{new Date(c.created_at).toLocaleDateString("es-CO")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section>
@@ -73,16 +77,6 @@ export function CustomerDetailPage() {
         </ul>
       </section>
 
-      <section>
-        <h2>Cotizaciones</h2>
-        <ul className="plain-list">
-          {quotes.map((q) => (
-            <li key={q.id}>
-              {q.quote_number} — {q.currency} {q.total_amount.toFixed(2)} ({q.status})
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

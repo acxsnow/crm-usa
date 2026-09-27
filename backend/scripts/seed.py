@@ -16,8 +16,8 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
-from app.modules.crm.defaults import DEFAULT_FUNDER_STATUSES, DEFAULT_PIPELINE_STAGES
-from app.modules.crm.models import FunderStatus, PipelineStage
+from app.modules.crm.defaults import DEFAULT_FUNDER_STATUSES
+from app.modules.crm.models import FunderStatus
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import ChecklistTemplate, ChecklistTemplateItem
 from app.modules.organizations.models import Organization, PlanLimit
@@ -136,9 +136,6 @@ async def seed_demo_organization(db, permissions: dict[str, Permission]) -> None
     for module in build_permission_modules(org.id, permissions):
         db.add(module)
     await db.flush()
-
-    for stage in DEFAULT_PIPELINE_STAGES:
-        db.add(PipelineStage(organization_id=org.id, **stage))
 
     for funder_status in DEFAULT_FUNDER_STATUSES:
         db.add(FunderStatus(organization_id=org.id, **funder_status))

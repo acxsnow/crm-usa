@@ -45,7 +45,6 @@ from typing import NamedTuple
 
 PERMISSION_CATALOG: list[tuple[str, str]] = [
     # Prospectos y clientes (PDF §2.3)
-    ("leads.manage", "Gestionar prospectos"),
     ("customers.create", "Crear clientes"),
     ("customers.read", "Ver clientes"),
     ("customers.update", "Editar clientes"),
@@ -62,8 +61,6 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("cases.close_admin", "Cerrar expedientes administrativamente"),
     ("dashboards.commercial", "Ver el tablero comercial"),
     # Obsoletos: se retiran con Opportunity/Quote en el módulo 1 (decisión D2).
-    ("opportunities.manage", "Gestionar oportunidades (obsoleto)"),
-    ("quotes.manage", "Gestionar cotizaciones (obsoleto)"),
     # Documentos (PDF §3, "Gestor documental inteligente")
     ("documents.manage", "Cargar y reemplazar documentos"),
     ("documents.review", "Aceptar o rechazar documentos"),
@@ -160,7 +157,6 @@ DEFAULT_MODULES: dict[str, Module] = {
     "customers": Module(
         "Prospectos y clientes",
         [
-            "leads.manage",
             "customers.create",
             "customers.read",
             "customers.update",
@@ -180,8 +176,6 @@ DEFAULT_MODULES: dict[str, Module] = {
             "cases.approve",
             "cases.close_admin",
             "dashboards.commercial",
-            "opportunities.manage",
-            "quotes.manage",
             # El vendedor elige el programa desde el expediente.
             "programs.read",
             # Administración revisa las evidencias dentro del expediente.
@@ -312,7 +306,6 @@ _ALL_PERMISSIONS = [code for code, _ in PERMISSION_CATALOG]
 DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
     "organization_admin": _ALL_PERMISSIONS,
     "salesperson": [
-        "leads.manage",
         "customers.create",
         "customers.read",
         "customers.update",
@@ -328,7 +321,6 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "profile.manage",
     ],
     "admin_staff": [
-        "leads.manage",
         "customers.create",
         "customers.read",
         "customers.update",

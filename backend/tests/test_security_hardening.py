@@ -92,21 +92,21 @@ async def test_invoice_attachment_rejects_disallowed_mime_type(app_client, db, a
 # Pagination
 # ---------------------------------------------------------------------------
 
-async def test_leads_list_is_paginated_with_total_count_header(app_client, active_admin_user, seeded_org):
+async def test_list_is_paginated_with_total_count_header(app_client, active_admin_user, seeded_org):
     token = await _login(app_client, "admin@acme-demo.com")
 
     for i in range(5):
         resp = await app_client.post(
-            "/api/v1/leads", json={"full_name": f"Lead {i}"}, headers=_auth(token)
+            "/api/v1/customers", json={"legal_name": f"Cliente {i}"}, headers=_auth(token)
         )
         assert resp.status_code == 201
 
-    resp = await app_client.get("/api/v1/leads?limit=2&offset=0", headers=_auth(token))
+    resp = await app_client.get("/api/v1/customers?limit=2&offset=0", headers=_auth(token))
     assert resp.status_code == 200
     assert len(resp.json()) == 2
     assert resp.headers["X-Total-Count"] == "5"
 
-    resp = await app_client.get("/api/v1/leads?limit=2&offset=4", headers=_auth(token))
+    resp = await app_client.get("/api/v1/customers?limit=2&offset=4", headers=_auth(token))
     assert resp.status_code == 200
     assert len(resp.json()) == 1
     assert resp.headers["X-Total-Count"] == "5"
@@ -114,7 +114,7 @@ async def test_leads_list_is_paginated_with_total_count_header(app_client, activ
 
 async def test_pagination_limit_is_capped(app_client, active_admin_user):
     token = await _login(app_client, "admin@acme-demo.com")
-    resp = await app_client.get("/api/v1/leads?limit=99999", headers=_auth(token))
+    resp = await app_client.get("/api/v1/customers?limit=99999", headers=_auth(token))
     assert resp.status_code == 422  # exceeds MAX_LIMIT, rejected by validation
 
 

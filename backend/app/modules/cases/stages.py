@@ -191,3 +191,39 @@ def clear_guards() -> None:
     """Solo para pruebas: las guardas se registran al importar, así que un test
     que registre la suya debe poder dejar el registro como lo encontró."""
     _GUARDS.clear()
+
+
+# ---------------------------------------------------------------------------
+# Efectos
+# ---------------------------------------------------------------------------
+
+# Una **guarda** decide si la transición puede ocurrir; un **efecto** hace algo
+# porque ocurrió. El caso del contrato: al entrar a `approved` se crea el
+# proyecto de instalación.
+#
+# Los efectos son `async` y corren DENTRO de la transacción del cambio de
+# etapa, antes del commit: si el efecto falla, la transición no queda hecha.
+# Lo contrario dejaría expedientes aprobados sin proyecto, y nadie se enteraría
+# hasta que el técnico no encontrara nada que instalar.
+#
+# Ejemplo (módulo 5, Mateo):
+#     register_effect("pending_approval", "approved", crear_proyecto)
+_EFFECTS: dict[tuple[str, str], list[Callable]] = {}
+
+
+def register_effect(from_stage: str, to_stage: str, fn: Callable) -> None:
+    if not is_allowed(from_stage, to_stage):
+        raise KeyError(
+            f"no se puede registrar un efecto para una transición que no existe: "
+            f"{from_stage} -> {to_stage}"
+        )
+    _EFFECTS.setdefault((from_stage, to_stage), []).append(fn)
+
+
+def effects_for(from_stage: str, to_stage: str) -> list[Callable]:
+    return _EFFECTS.get((from_stage, to_stage), [])
+
+
+def clear_effects() -> None:
+    """Solo para pruebas."""
+    _EFFECTS.clear()

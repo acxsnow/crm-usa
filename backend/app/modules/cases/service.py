@@ -195,6 +195,11 @@ async def transition(
     if campo_fecha and getattr(case, campo_fecha) is None:
         setattr(case, campo_fecha, datetime.now(timezone.utc))
 
+    # Los efectos corren con la etapa ya cambiada y antes del commit: ven el
+    # hecho consumado, y si alguno falla nada queda a medias.
+    for effect in stages.effects_for(desde, to_stage):
+        await effect(db=db, case=case, actor_id=actor_id, reason=reason)
+
     _record_event(
         db,
         case=case,

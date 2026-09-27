@@ -56,9 +56,8 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     customer_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    opportunity_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("opportunities.id"), index=True)
-    # El expediente del que nace el proyecto. Reemplaza a `opportunity_id`,
-    # que se conserva hasta que se retire `Opportunity` (módulo 1).
+    # El expediente del que nace el proyecto. Reemplazó a `opportunity_id`, que
+    # se retiró junto con el modelo anterior.
     case_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("cases.id"), index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     project_type: Mapped[str | None] = mapped_column(String(100))

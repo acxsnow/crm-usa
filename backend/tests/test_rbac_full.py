@@ -35,22 +35,19 @@ RANDOM_ID = str(uuid.uuid4())
 
 
 # ---------------------------------------------------------------------------
-# CRM module — field_technician has none of leads/customers.create-update/
-# contacts/opportunities/quotes/activities permissions, so every CRM
+# CRM module — el técnico no tiene permisos de expedientes, de creación o
+# edición de clientes, ni de contactos y actividades, así que todo el CRM
 # read/write endpoint must reject it.
 # ---------------------------------------------------------------------------
 
 CRM_GET_ENDPOINTS = [
-    "/api/v1/leads",
-    f"/api/v1/leads/{RANDOM_ID}",
+    "/api/v1/cases",
+    f"/api/v1/cases/{RANDOM_ID}",
     "/api/v1/customers",
     f"/api/v1/customers/{RANDOM_ID}",
     f"/api/v1/customers/{RANDOM_ID}/timeline",
-    "/api/v1/pipeline-stages",
     "/api/v1/funder-statuses",
-    "/api/v1/opportunities",
     "/api/v1/activities",
-    "/api/v1/quotes",
 ]
 
 # field_technician carries customers.read (spec 5.3 matrix), so those two
@@ -77,7 +74,7 @@ async def test_field_technician_forbidden_from_crm_writes(app_client, active_tec
     token = await _login(app_client, "tech@acme-demo.com")
 
     resp = await app_client.post(
-        "/api/v1/leads", json={"full_name": "Jane Doe"}, headers=_auth(token)
+        "/api/v1/cases", json={"stage_code": "no_contact"}, headers=_auth(token)
     )
     assert resp.status_code == 403
 
@@ -92,35 +89,37 @@ async def test_field_technician_forbidden_from_crm_writes(app_client, active_tec
     assert resp.status_code == 403
 
     resp = await app_client.post(
-        "/api/v1/opportunities",
-        json={"customer_id": RANDOM_ID, "title": "New opp", "stage_code": "new"},
-        headers=_auth(token),
-    )
-    assert resp.status_code == 403
-
-    resp = await app_client.post(
         "/api/v1/activities",
         json={"type": "call", "subject": "Follow up", "owner_user_id": RANDOM_ID},
         headers=_auth(token),
     )
     assert resp.status_code == 403
 
-    resp = await app_client.post(
-        "/api/v1/quotes", json={"customer_id": RANDOM_ID}, headers=_auth(token)
-    )
-    assert resp.status_code == 403
 
 
 async def test_accounting_forbidden_from_crm_management(app_client, active_accounting_user):
-    """Contabilidad solo tiene customers.read en CRM; lo demás debe dar 403."""
+    """Contabilidad lee expedientes y clientes para poder facturar, pero no
+    administra nada del CRM."""
     token = await _login(app_client, "contabilidad@acme-demo.com")
-    for path in ["/api/v1/leads", "/api/v1/opportunities", "/api/v1/activities", "/api/v1/quotes"]:
-        resp = await app_client.get(path, headers=_auth(token))
-        assert resp.status_code == 403, f"{path} -> {resp.status_code}"
 
-    # customers.read IS granted, so this must succeed.
-    resp = await app_client.get("/api/v1/customers", headers=_auth(token))
-    assert resp.status_code == 200
+    # Lectura: sí. Es lo que necesita para saber qué está cobrando.
+    for path in ["/api/v1/cases", "/api/v1/customers"]:
+        resp = await app_client.get(path, headers=_auth(token))
+        assert resp.status_code == 200, f"{path} -> {resp.status_code}"
+
+    # Escritura y actividades: no.
+    resp = await app_client.get("/api/v1/activities", headers=_auth(token))
+    assert resp.status_code == 403
+
+    resp = await app_client.post(
+        "/api/v1/customers", json={"legal_name": "Doe Household"}, headers=_auth(token)
+    )
+    assert resp.status_code == 403
+
+    resp = await app_client.post(
+        "/api/v1/cases", json={"stage_code": "no_contact"}, headers=_auth(token)
+    )
+    assert resp.status_code == 403
 
 
 # ---------------------------------------------------------------------------

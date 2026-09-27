@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listOverdueTasks } from "@/features/field-ops/api";
-import { listLeadsPage } from "@/features/crm/api";
+import { listCasesPage } from "@/features/cases/api";
 import { listCustomersPage } from "@/features/crm/api";
 import { listProjectsPage } from "@/features/field-ops/api";
 import { listInvoicesPage } from "@/features/billing/api";
@@ -22,19 +22,24 @@ async function loadAllPages<T>(fetchPage: (page: number, pageSize: number) => Pr
 export function DashboardHome() {
   const { user, hasPermission } = useAuth();
   const canSeeTasks = hasPermission("projects.read_all") || hasPermission("projects.read_assigned");
-  const canSeeLeads = hasPermission("leads.manage");
+  const canSeeCases =
+    hasPermission("cases.read_own") || hasPermission("cases.read_all");
   const canSeeCustomers = hasPermission("customers.read");
   const canSeeFinance = hasPermission("invoices.read");
 
-  const { data: activeLeads } = useQuery({
-    queryKey: ["dashboard-active-leads"],
+  // Expedientes que siguen en juego: los que ya abrieron la puerta y todavía
+  // no se cerraron. Reemplaza el conteo de prospectos del modelo anterior.
+  const { data: activeCases } = useQuery({
+    queryKey: ["dashboard-active-cases"],
     queryFn: async () => {
-      const statuses = await Promise.all(
-        ["new", "contacted", "qualified"].map((status) => listLeadsPage(1, 1, { status }))
+      const etapas = await Promise.all(
+        ["new_prospect", "pending_approval", "approved"].map((stage_code) =>
+          listCasesPage(1, 1, { stage_code })
+        )
       );
-      return statuses.reduce((total, page) => total + page.total, 0);
+      return etapas.reduce((total: number, page) => total + page.total, 0);
     },
-    enabled: canSeeLeads,
+    enabled: canSeeCases,
   });
   const { data: customers } = useQuery({
     queryKey: ["dashboard-customers"],
@@ -70,9 +75,9 @@ export function DashboardHome() {
 
   return (
     <div className="dashboard-page">
-      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.toUpperCase()}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div><Link className="primary-button" to="/leads">+ Nuevo prospecto</Link></div>
+      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.toUpperCase()}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div><Link className="primary-button" to="/applications">+ Nuevo expediente</Link></div>
       <section className="metric-grid" aria-label="Resumen de operación">
-        <article className="metric-card"><div className="metric-icon coral">✦</div><div><span>Prospectos activos</span><strong>{activeLeads ?? "—"}</strong><small className="neutral">• Nuevos, contactados y calificados</small></div></article>
+        <article className="metric-card"><div className="metric-icon coral">✦</div><div><span>Expedientes activos</span><strong>{activeCases ?? "—"}</strong><small className="neutral">• En prospecto, revisión o aprobados</small></div></article>
         <article className="metric-card"><div className="metric-icon purple">♙</div><div><span>Clientes registrados</span><strong>{customers?.total ?? "—"}</strong><small className="neutral">• Total en tu cartera</small></div></article>
         <article className="metric-card"><div className="metric-icon blue">▣</div><div><span>Proyectos en curso</span><strong>{activeProjects ?? "—"}</strong><small className="neutral">• Planificados, programados o activos</small></div></article>
         <article className="metric-card"><div className="metric-icon green">$</div><div><span>Cobrado este mes</span><strong>{canSeeFinance ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(monthlyCollected) : "—"}</strong><small className="neutral">• Pagos registrados en {monthName}</small></div></article>

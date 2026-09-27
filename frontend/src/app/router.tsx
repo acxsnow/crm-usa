@@ -7,10 +7,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RequireAccess } from "@/components/RequireAccess";
 import { DashboardLayout } from "@/app/DashboardLayout";
 import { DashboardHome } from "@/app/DashboardHome";
-import { LeadsPage } from "@/features/crm/LeadsPage";
 import { CustomersPage } from "@/features/crm/CustomersPage";
 import { CustomerDetailPage } from "@/features/crm/CustomerDetailPage";
-import { OpportunitiesPage } from "@/features/crm/OpportunitiesPage";
 import { ProjectsPage } from "@/features/field-ops/ProjectsPage";
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
@@ -45,14 +43,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardHome /> },
       {
-        path: "leads",
-        element: (
-          <RequireAccess permission="leads.manage" moduleLabel="Prospectos">
-            <LeadsPage />
-          </RequireAccess>
-        ),
-      },
-      {
         path: "customers",
         element: (
           <RequireAccess permission="customers.read" moduleLabel="Clientes">
@@ -81,14 +71,6 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
             <ApplicationsAdminPage />
-          </RequireAccess>
-        ),
-      },
-      {
-        path: "opportunities",
-        element: (
-          <RequireAccess permission="opportunities.manage" moduleLabel="el Pipeline">
-            <OpportunitiesPage />
           </RequireAccess>
         ),
       },

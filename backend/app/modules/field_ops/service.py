@@ -26,6 +26,7 @@ from app.modules.field_ops.pdf import build_attestation_pdf, decode_signature_pn
 from app.modules.field_ops.storage import save_bytes
 from app.modules.field_ops.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
 from app.shared.audit import record_audit_event
+from app.shared.errors import InvalidInputError
 
 settings = get_settings()
 logger = structlog.get_logger(__name__)
@@ -116,46 +117,66 @@ async def get_or_create_default_checklist_template(db: AsyncSession, *, organiza
     return template
 
 
-async def auto_create_project_from_opportunity(
-    db: AsyncSession, *, organization_id: uuid.UUID, actor_id: uuid.UUID, opportunity,
-) -> Project:
-    """Confirmed with Mateo (Sept 2026): a Project is created automatically
-    the moment an Opportunity reaches "Aprobada"/"Instalación", pre-loaded
-    with the default checklist and ready to assign a technician. Idempotent —
-    moving between those two stages more than once won't create duplicates."""
-    existing = await db.execute(select(Project).where(Project.opportunity_id == opportunity.id))
-    project = existing.scalar_one_or_none()
-    if project:
-        return project
+async def auto_create_project_from_case(db: AsyncSession, *, case, actor_id: uuid.UUID | None) -> Project:
+    """Crea el proyecto de instalación al aprobarse el expediente.
 
-    template = await get_or_create_default_checklist_template(db, organization_id=organization_id)
+    Contrato `docs/contratos/case.md` §4: al entrar a `approved` se crea el
+    `Project`, una sola vez. Reemplaza a `auto_create_project_from_opportunity`.
 
+    **No hace commit**: corre como efecto dentro de la transacción del cambio de
+    etapa, así que el expediente aprobado y su proyecto se guardan juntos o no
+    se guarda ninguno. Idempotente: volver a entrar a `approved` desde `on_hold`
+    devuelve el proyecto existente.
+    """
+    existing = (
+        await db.execute(select(Project).where(Project.case_id == case.id))
+    ).scalar_one_or_none()
+    if existing:
+        return existing
+
+    if case.customer_id is None:
+        # `Project.customer_id` es obligatorio. Un expediente sin cliente no
+        # debería llegar a aprobado; si llega, el mensaje dice qué falta en vez
+        # de reventar con un error de base de datos.
+        raise InvalidInputError(
+            f"El expediente {case.case_number} no tiene cliente, así que no se "
+            "puede crear el proyecto de instalación.",
+            code="case_without_customer",
+        )
+
+    template = await get_or_create_default_checklist_template(
+        db, organization_id=case.organization_id
+    )
     project = Project(
-        organization_id=organization_id,
-        customer_id=opportunity.customer_id,
-        opportunity_id=opportunity.id,
-        title=opportunity.title,
+        organization_id=case.organization_id,
+        customer_id=case.customer_id,
+        case_id=case.id,
+        # El número del expediente va en el título porque es lo que la gente se
+        # dice por teléfono entre Administración y el técnico.
+        title=f"Instalación · {case.case_number}",
         project_type="hvac_install",
-        primary_technician_user_id=opportunity.owner_user_id,
-        address_street=opportunity.address_street,
-        address_unit=opportunity.address_unit,
-        address_city=opportunity.address_city,
-        address_state=opportunity.address_state,
-        address_zip=opportunity.address_zip,
-        latitude=opportunity.latitude,
-        longitude=opportunity.longitude,
+        address_street=case.address_street,
+        address_unit=case.address_unit,
+        address_city=case.address_city,
+        address_state=case.address_state,
+        address_zip=case.address_zip,
+        latitude=case.latitude,
+        longitude=case.longitude,
     )
     db.add(project)
     await db.flush()
-    await apply_checklist_template(db, organization_id=organization_id, project_id=project.id, template_id=template.id)
-
-    await record_audit_event(
-        db, organization_id=organization_id, actor_user_id=actor_id,
-        action="projects.auto_created_from_opportunity", entity_type="Project", entity_id=str(project.id),
-        after_data={"opportunity_id": str(opportunity.id)},
+    await apply_checklist_template(
+        db, organization_id=case.organization_id, project_id=project.id, template_id=template.id
     )
-    await db.commit()
-    await db.refresh(project)
+    await record_audit_event(
+        db,
+        organization_id=case.organization_id,
+        actor_user_id=actor_id,
+        action="projects.auto_created_from_case",
+        entity_type="Project",
+        entity_id=str(project.id),
+        after_data={"case_id": str(case.id), "case_number": case.case_number},
+    )
     return project
 
 

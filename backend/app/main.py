@@ -106,6 +106,13 @@ app.add_middleware(
 # Traducción de errores a respuestas HTTP (ver app/shared/error_handlers.py).
 register_error_handlers(app)
 
+# Cada cadena engancha sus efectos al motor de etapas del expediente desde su
+# propio paquete; aquí solo se importan para que el registro ocurra. Sin esta
+# línea, aprobar un expediente no crearía su proyecto de instalación.
+from app.modules.field_ops import case_hooks  # noqa: E402
+
+case_hooks.register()
+
 
 @app.get("/health")
 async def health():

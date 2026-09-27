@@ -27,7 +27,8 @@ class AvailabilityUpdate(BaseModel):
 
 class ProjectCreate(AddressSchema):
     customer_id: uuid.UUID
-    opportunity_id: uuid.UUID | None = None
+    # El expediente del que nace el proyecto; reemplazó a `opportunity_id`.
+    case_id: uuid.UUID | None = None
     title: str = Field(min_length=1, max_length=255)
     project_type: str | None = None
     scheduled_date: date | None = None
@@ -48,7 +49,7 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(AddressSchema):
     id: uuid.UUID
     customer_id: uuid.UUID
-    opportunity_id: uuid.UUID | None
+    case_id: uuid.UUID | None
     title: str
     project_type: str | None
     status: ProjectStatus

@@ -11,7 +11,7 @@ from app.core.token_denylist import clear_denylist
 from app.core.security import hash_password
 from app.db.base import Base
 from app.db import session as db_session_module
-from app.modules.crm.defaults import DEFAULT_FUNDER_STATUSES, DEFAULT_PIPELINE_STAGES
+from app.modules.crm.defaults import DEFAULT_FUNDER_STATUSES
 from app.modules.organizations.models import Organization, PlanLimit
 from app.modules.users.models import Permission, Role, User, UserRole, UserStatus
 from app.shared.permissions import DEFAULT_ROLE_PERMISSIONS, PERMISSION_CATALOG, ROLE_LABELS
@@ -135,13 +135,7 @@ async def seeded_org(db: AsyncSession):
         db.add(module)
     await db.flush()
 
-    from app.modules.crm.models import FunderStatus, PipelineStage
-
-    stage_objs: dict[str, PipelineStage] = {}
-    for stage_data in DEFAULT_PIPELINE_STAGES:
-        stage = PipelineStage(organization_id=org.id, **stage_data)
-        db.add(stage)
-        stage_objs[stage_data["code"]] = stage
+    from app.modules.crm.models import FunderStatus
 
     funder_status_objs: dict[str, FunderStatus] = {}
     for status_data in DEFAULT_FUNDER_STATUSES:
@@ -153,7 +147,7 @@ async def seeded_org(db: AsyncSession):
 
     return {
         "org": org, "roles": role_objs, "permissions": perm_objs,
-        "stages": stage_objs, "funder_statuses": funder_status_objs,
+        "funder_statuses": funder_status_objs,
     }
 
 

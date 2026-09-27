@@ -6,14 +6,14 @@ import { SignaturePad } from "@/features/field-ops/SignaturePad";
 
 export function ApplicationPage() {
   const [params] = useSearchParams();
-  const leadId = params.get("leadId") ?? undefined;
+  const customerId = params.get("customerId") ?? undefined;
   const [programCode, setProgramCode] = useState("");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [terms, setTerms] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const fields = useQuery({ queryKey: ["program-fields", programCode], queryFn: () => getProgramFormFields(programCode), enabled: Boolean(programCode) });
-  const create = useMutation({ mutationFn: () => createApplication({ lead_id: leadId, program_code: programCode, answers, terms_version: "T&C-v1", terms_accepted: terms }), onSuccess: (app) => setApplicationId(app.id) });
+  const create = useMutation({ mutationFn: () => createApplication({ customer_id: customerId, program_code: programCode, answers, terms_version: "T&C-v1", terms_accepted: terms }), onSuccess: (app) => setApplicationId(app.id) });
   const sign = useMutation({ mutationFn: (signature: string) => signApplication(applicationId!, customerName, signature) });
   const setAnswer = (key: string, value: unknown) => setAnswers((current) => ({ ...current, [key]: value }));
 

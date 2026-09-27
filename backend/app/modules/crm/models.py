@@ -35,14 +35,6 @@ class CustomerStatus(str, enum.Enum):
     inactive = "inactive"
 
 
-class LeadStatus(str, enum.Enum):
-    new = "new"
-    contacted = "contacted"
-    qualified = "qualified"
-    disqualified = "disqualified"
-    converted = "converted"
-
-
 class ActivityType(str, enum.Enum):
     call = "call"
     email = "email"
@@ -51,25 +43,6 @@ class ActivityType(str, enum.Enum):
     task = "task"
     follow_up = "follow_up"
 
-
-class QuoteStatus(str, enum.Enum):
-    draft = "draft"
-    sent = "sent"
-    accepted = "accepted"
-    rejected = "rejected"
-    expired = "expired"
-
-
-# Funder / benefit-program vocabulary is intentionally free text (String), not
-# an enum, because organizations run different program mixes (spec 4:
-# "Configuration over hard coding") — e.g. CARE, MEDICAL, CALFRESH, HEEHRA,
-# LADWP, TAXES, or a future program. Validated against an org-configurable
-# list in the UI rather than the database schema.
-
-
-# ---------------------------------------------------------------------------
-# Customer / contacts
-# ---------------------------------------------------------------------------
 
 class Customer(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "customers"
@@ -116,7 +89,6 @@ class CustomerContact(UUIDPKMixin, TimestampMixin, Base):
 class Application(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "applications"
 
-    lead_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("leads.id", ondelete="SET NULL"), index=True)
     customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("customers.id", ondelete="SET NULL"), index=True)
     program_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     form_version: Mapped[str] = mapped_column(String(50), nullable=False, server_default="1")
@@ -181,43 +153,6 @@ class PropertyAddressMixin:
 # Leads
 # ---------------------------------------------------------------------------
 
-class Lead(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Base):
-    __tablename__ = "leads"
-
-    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    company_name: Mapped[str | None] = mapped_column(String(255))
-    phone: Mapped[str | None] = mapped_column(String(32))
-    phone_normalized: Mapped[str | None] = mapped_column(String(32), index=True)
-    email: Mapped[str | None] = mapped_column(String(255))
-    email_normalized: Mapped[str | None] = mapped_column(String(255), index=True)
-    source: Mapped[str | None] = mapped_column(String(100))
-    benefit_type: Mapped[str | None] = mapped_column(String(100))  # CARE / MEDICAL / CALFRESH / ...
-    funder_program: Mapped[str | None] = mapped_column(String(100))  # HEEHRA / LADWP / ...
-    interested_service: Mapped[str | None] = mapped_column(String(255))
-    assigned_owner_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
-    status: Mapped[LeadStatus] = mapped_column(
-        Enum(LeadStatus, name="lead_status"), default=LeadStatus.new, nullable=False
-    )
-    notes: Mapped[str | None] = mapped_column(Text)
-    converted_customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
-    converted_opportunity_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
-
-
-# ---------------------------------------------------------------------------
-# Pipeline stages (org-configurable, spec 7.1) and opportunities
-# ---------------------------------------------------------------------------
-
-class PipelineStage(UUIDPKMixin, OrgScopedMixin, Base):
-    __tablename__ = "pipeline_stages"
-    __table_args__ = (UniqueConstraint("organization_id", "code", name="uq_pipeline_stage_org_code"),)
-
-    code: Mapped[str] = mapped_column(String(50), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    is_won: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_lost: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
-
 class FunderStatus(UUIDPKMixin, OrgScopedMixin, Base):
     """Org-configurable catalog of funder/program approval statuses (what the
     funder reports back — CARE/MEDICAL/CALFRESH/HEEHRA/LADWP, etc). Separate
@@ -231,49 +166,6 @@ class FunderStatus(UUIDPKMixin, OrgScopedMixin, Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-
-class Opportunity(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Base):
-    __tablename__ = "opportunities"
-
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    primary_contact_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    estimated_amount: Mapped[float | None] = mapped_column(Numeric(12, 2))
-    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
-    probability: Mapped[int | None] = mapped_column(Integer)
-    expected_close_date: Mapped[date | None] = mapped_column(Date)
-    stage_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("pipeline_stages.id"), nullable=False, index=True)
-    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
-    loss_reason: Mapped[str | None] = mapped_column(String(255))
-
-    # Funder-program specific fields (confirmed domain model).
-    benefit_type: Mapped[str | None] = mapped_column(String(100))
-    funder_program: Mapped[str | None] = mapped_column(String(100))
-    application_number: Mapped[str | None] = mapped_column(String(100))
-    approval_code: Mapped[str | None] = mapped_column(String(100))
-    funder_status_id: Mapped[uuid.UUID | None] = mapped_column(
-        GUID(), ForeignKey("funder_statuses.id"), index=True
-    )
-
-    # Extra intake fields captured on the real forms (confirmed with Mateo
-    # Sept 2026), previously only tracked in the manual spreadsheets.
-    utility_account_number: Mapped[str | None] = mapped_column(String(100))
-    meter_number: Mapped[str | None] = mapped_column(String(100))
-    unit_type: Mapped[str | None] = mapped_column(String(100))  # mobile home / apartment / house size, etc.
-    scheduled_install_date: Mapped[date | None] = mapped_column(Date)
-
-    source_lead_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
-
-    stage: Mapped["PipelineStage"] = relationship("PipelineStage", lazy="joined")
-    funder_status: Mapped["FunderStatus | None"] = relationship("FunderStatus", lazy="joined")
-
-
-# ---------------------------------------------------------------------------
-# Activities
-# ---------------------------------------------------------------------------
 
 class Activity(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "activities"
@@ -294,36 +186,3 @@ class Activity(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 # Opportunity can go straight from "Aprobada" to a Project without a Quote)
 # ---------------------------------------------------------------------------
 
-class Quote(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
-    __tablename__ = "quotes"
-
-    quote_number: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    customer_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
-    opportunity_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
-    project_description: Mapped[str | None] = mapped_column(Text)
-    issue_date: Mapped[date | None] = mapped_column(Date)
-    expiry_date: Mapped[date | None] = mapped_column(Date)
-    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
-    status: Mapped[QuoteStatus] = mapped_column(Enum(QuoteStatus, name="quote_status"), default=QuoteStatus.draft, nullable=False)
-    notes: Mapped[str | None] = mapped_column(Text)
-    total_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
-
-    line_items: Mapped[list["QuoteLineItem"]] = relationship(
-        "QuoteLineItem", back_populates="quote", cascade="all, delete-orphan", order_by="QuoteLineItem.sort_order",
-        lazy="selectin",
-    )
-
-
-class QuoteLineItem(UUIDPKMixin, Base):
-    __tablename__ = "quote_line_items"
-
-    quote_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("quotes.id", ondelete="CASCADE"), nullable=False, index=True)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    description: Mapped[str] = mapped_column(String(500), nullable=False)
-    quantity: Mapped[float] = mapped_column(Numeric(10, 2), default=1, nullable=False)
-    unit_price: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
-    discount: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
-    tax_value: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
-    line_total: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
-
-    quote: Mapped["Quote"] = relationship("Quote", back_populates="line_items")
