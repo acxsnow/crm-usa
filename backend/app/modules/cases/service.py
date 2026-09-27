@@ -20,7 +20,7 @@ from app.modules.cases import stages
 from app.modules.cases.models import Case, CaseStageEvent
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
-from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.errors import ForbiddenError, InvalidInputError, NotFoundError
 from app.shared.normalize import normalize_address
 
 
@@ -70,6 +70,48 @@ def _record_event(
             occurred_at=datetime.now(timezone.utc),
         )
     )
+
+
+def _require_stage_permission(
+    *,
+    to_stage: str,
+    actor_id: uuid.UUID | None,
+    actor_permissions: frozenset[str] | set[str],
+    case: Case,
+) -> None:
+    """Dos controles, y los dos faltaban (SEG-07).
+
+    1. **Separación de funciones**: cada etapa exige su permiso. Antes la ruta
+       admitía a quien tuviera *cualquiera* de los permisos del expediente y
+       después aceptaba cualquier transición del mapa, así que un vendedor
+       aprobaba el suyo.
+    2. **Dueño**: quien solo puede ver los propios (`cases.read_own`) tampoco
+       puede mover los ajenos. La consulta ya lo comprobaba; el cambio de etapa
+       no.
+    """
+    # Primero que la etapa exista: `to_stage` llega del cliente y una etapa
+    # inventada haría estallar el mapa de permisos con un 500 en vez de decir
+    # que el dato es inválido.
+    if to_stage not in stages.STAGES:
+        raise InvalidInputError(
+            f"La etapa «{to_stage}» no existe.", code="unknown_stage"
+        )
+
+    if actor_permissions == stages.SYSTEM_ACTOR:
+        return
+
+    requerido = stages.permission_for(to_stage)
+    if requerido not in actor_permissions:
+        raise ForbiddenError(
+            f"No tienes permiso para pasar un expediente a "
+            f"«{stages.STAGE_LABELS[to_stage]}».",
+            code="stage_not_allowed_for_role",
+        )
+
+    if "cases.read_all" not in actor_permissions and case.assigned_salesperson_id != actor_id:
+        # 404 y no 403: confirmar que existe ya sería revelar de más, igual que
+        # en la consulta.
+        raise NotFoundError("El expediente no existe.", code="case_not_found")
 
 
 async def create_case(
@@ -159,15 +201,25 @@ async def transition(
     case: Case,
     to_stage: str,
     actor_id: uuid.UUID | None,
+    actor_permissions: frozenset[str] | set[str],
     reason: str | None = None,
     substatus: str | None = None,
 ) -> Case:
     """Mueve el expediente de etapa. **La única puerta de entrada.**
 
-    En orden: valida contra el mapa, corre las guardas de esa transición,
-    cambia la etapa, escribe la fecha hito, inserta el historial, audita y emite
-    el evento. Si algo falla antes del `commit`, no queda nada a medias."""
+    En orden: comprueba que quien actúa pueda entrar a esa etapa y que el
+    expediente sea suyo, valida contra el mapa, corre las guardas, cambia la
+    etapa, escribe la fecha hito, inserta el historial, audita y emite el
+    evento. Si algo falla antes del `commit`, no queda nada a medias.
+
+    `actor_permissions` es obligatorio a propósito: era opcional y eso dejaba
+    que cualquier llamador lo olvidara y se saltara el control sin enterarse
+    (hallazgo SEG-07). Para migraciones y tareas del sistema se pasa
+    `stages.SYSTEM_ACTOR`."""
     desde = case.stage_code
+    _require_stage_permission(
+        to_stage=to_stage, actor_id=actor_id, actor_permissions=actor_permissions, case=case
+    )
     if not stages.is_allowed(desde, to_stage):
         raise InvalidInputError(
             f"No se puede pasar de «{stages.STAGE_LABELS[desde]}» a "
@@ -243,6 +295,7 @@ async def set_substatus(
     case: Case,
     substatus: str,
     actor_id: uuid.UUID | None,
+    actor_permissions: frozenset[str] | set[str],
     reason: str | None = None,
 ) -> Case:
     """Cambia el sub-estado sin mover de etapa.
@@ -251,6 +304,12 @@ async def set_substatus(
     vendedor y el sub-estado pasa a `returned`, pero la etapa sigue siendo
     `pending_approval`. Si retrocediera de etapa, el contador de días de
     aprobación se reiniciaría y el reporte de tiempos mentiría."""
+    _require_stage_permission(
+        to_stage=case.stage_code,
+        actor_id=actor_id,
+        actor_permissions=actor_permissions,
+        case=case,
+    )
     permitidos = stages.SUBSTATUSES.get(case.stage_code, set())
     if substatus not in permitidos:
         raise InvalidInputError(

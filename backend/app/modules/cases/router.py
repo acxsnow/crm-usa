@@ -152,15 +152,20 @@ async def transition_case(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(
         require_any_permission(
-            "cases.submit", "cases.review", "cases.approve", "cases.close_admin"
+            "cases.create", "cases.submit", "cases.review", "cases.approve",
+            "cases.close_admin", "permits.manage", "dispatch.manage",
+            "checklists.complete", "inspections.manage", "billing.submit",
+            "invoices.record_payment",
         )
     ),
 ):
     """Mueve el expediente de etapa.
 
-    El permiso de aquí es la puerta gruesa: quién puede mover *algo*. Qué
-    transición concreta es válida lo decide el mapa
-    (`ALLOWED_TRANSITIONS`) y las guardas que registra cada módulo."""
+    El permiso de aquí es solo la puerta gruesa: quién puede mover *algo*. Quién
+    puede entrar a **esta** etapa lo decide `transition()` con el mapa
+    `STAGE_PERMISSION`, que también comprueba que el expediente sea suyo. Antes
+    la puerta gruesa era el único control y un vendedor aprobaba el propio
+    (SEG-07)."""
     case = await case_service.get_case_or_404(
         db, organization_id=organization_id, case_id=case_id
     )
@@ -169,6 +174,7 @@ async def transition_case(
         case=case,
         to_stage=payload.to_stage,
         actor_id=current_user.id,
+        actor_permissions=get_effective_permissions(current_user),
         reason=payload.reason,
         substatus=payload.substatus,
     )
@@ -194,6 +200,7 @@ async def set_case_substatus(
         case=case,
         substatus=payload.substatus,
         actor_id=current_user.id,
+        actor_permissions=get_effective_permissions(current_user),
         reason=payload.reason,
     )
     return _to_response(case)

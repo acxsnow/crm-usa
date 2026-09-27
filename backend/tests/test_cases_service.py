@@ -120,7 +120,7 @@ async def test_creating_writes_the_first_history_entry(db, seeded_org):
 async def test_an_allowed_transition_moves_the_case_and_writes_history(db, seeded_org):
     actor = uuid.uuid4()
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=actor)
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=actor, actor_permissions=stages.SYSTEM_ACTOR)
 
     assert case.stage_code == "pending_approval"
     eventos = await case_service.list_stage_events(db, organization_id=case.organization_id, case_id=case.id)
@@ -132,7 +132,7 @@ async def test_an_allowed_transition_moves_the_case_and_writes_history(db, seede
 async def test_a_forbidden_transition_is_rejected_and_changes_nothing(db, seeded_org):
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
     with pytest.raises(InvalidInputError):
-        await case_service.transition(db, case=case, to_stage="paid", actor_id=uuid.uuid4())
+        await case_service.transition(db, case=case, to_stage="paid", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
 
     assert case.stage_code == "new_prospect"
     eventos = await case_service.list_stage_events(db, organization_id=case.organization_id, case_id=case.id)
@@ -142,14 +142,15 @@ async def test_a_forbidden_transition_is_rejected_and_changes_nothing(db, seeded
 async def test_the_milestone_date_is_written_by_the_transition(db, seeded_org):
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
     assert case.submitted_at is None
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     assert case.submitted_at is not None
 
 
 async def test_the_reason_is_copied_onto_the_case_for_the_board(db, seeded_org):
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
     await case_service.transition(
-        db, case=case, to_stage="not_interested", actor_id=uuid.uuid4(), reason="Ya tiene aire nuevo"
+        db, case=case, to_stage="not_interested", actor_id=uuid.uuid4(),
+        actor_permissions=stages.SYSTEM_ACTOR, reason="Ya tiene aire nuevo"
     )
     assert case.stage_reason == "Ya tiene aire nuevo"
 
@@ -165,10 +166,10 @@ async def test_a_guard_can_block_a_transition(db, seeded_org):
 
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
     for destino in ("pending_approval", "approved", "permit_in_progress", "ready_to_install"):
-        await case_service.transition(db, case=case, to_stage=destino, actor_id=uuid.uuid4())
+        await case_service.transition(db, case=case, to_stage=destino, actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
 
     with pytest.raises(InvalidInputError):
-        await case_service.transition(db, case=case, to_stage="installed", actor_id=uuid.uuid4())
+        await case_service.transition(db, case=case, to_stage="installed", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     assert case.stage_code == "ready_to_install"
     assert case.completed_at is None
 
@@ -184,7 +185,7 @@ async def test_every_transition_emits_an_event(db, seeded_org):
     domain_events.subscribe("case.stage_changed", lambda name, payload: recibidos.append(payload))
 
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
 
     assert len(recibidos) == 1
     assert recibidos[0]["to_stage"] == "pending_approval"
@@ -200,7 +201,7 @@ async def test_a_failing_subscriber_does_not_undo_the_transition(db, seeded_org)
 
     domain_events.subscribe("case.stage_changed", explota)
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     assert case.stage_code == "pending_approval"
 
 
@@ -213,11 +214,11 @@ async def test_a_returned_case_stays_in_the_same_stage(db, seeded_org):
     contador de días de aprobación se reiniciaría y el reporte de tiempos
     mentiría."""
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     enviado_en = case.submitted_at
 
     await case_service.set_substatus(
-        db, case=case, substatus="returned", actor_id=uuid.uuid4(), reason="Falta el recibo de luz"
+        db, case=case, substatus="returned", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR, reason="Falta el recibo de luz"
     )
     assert case.stage_code == "pending_approval"
     assert case.substatus_code == "returned"
@@ -226,10 +227,11 @@ async def test_a_returned_case_stays_in_the_same_stage(db, seeded_org):
 
 async def test_a_substatus_that_does_not_belong_to_the_stage_is_rejected(db, seeded_org):
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     with pytest.raises(InvalidInputError):
         await case_service.set_substatus(
-            db, case=case, substatus="install_scheduled", actor_id=uuid.uuid4()
+            db, case=case, substatus="install_scheduled", actor_id=uuid.uuid4(),
+            actor_permissions=stages.SYSTEM_ACTOR,
         )
 
 
@@ -237,9 +239,9 @@ async def test_changing_the_stage_clears_the_previous_substatus(db, seeded_org):
     """`returned` no puede sobrevivir a la aprobación: sería un expediente
     aprobado y devuelto al mismo tiempo."""
     case = await _new_case(db, seeded_org["org"].id, stage_code="new_prospect")
-    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4())
-    await case_service.set_substatus(db, case=case, substatus="returned", actor_id=uuid.uuid4())
-    await case_service.transition(db, case=case, to_stage="approved", actor_id=uuid.uuid4())
+    await case_service.transition(db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
+    await case_service.set_substatus(db, case=case, substatus="returned", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
+    await case_service.transition(db, case=case, to_stage="approved", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR)
     assert case.substatus_code is None
 
 

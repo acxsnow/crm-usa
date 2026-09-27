@@ -53,7 +53,7 @@ async def _case_en(db, org_id, etapa, actor=None):
     )
     camino = {"pending_approval": ["pending_approval"], "approved": ["pending_approval", "approved"]}
     for destino in camino.get(etapa, []):
-        case = await case_service.transition(db, case=case, to_stage=destino, actor_id=actor)
+        case = await case_service.transition(db, case=case, to_stage=destino, actor_id=actor, actor_permissions=stages.SYSTEM_ACTOR)
     return case
 
 
@@ -92,7 +92,8 @@ async def test_an_effect_that_fails_undoes_the_transition(db, seeded_org):
 
     with pytest.raises(InvalidInputError):
         await case_service.transition(
-            db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4()
+            db, case=case, to_stage="pending_approval", actor_id=uuid.uuid4(),
+            actor_permissions=stages.SYSTEM_ACTOR,
         )
     await db.rollback()
 
@@ -195,7 +196,7 @@ async def test_approving_a_case_without_a_customer_says_what_is_missing(db, seed
     )
     case = await case_service.transition(
         db, case=case, to_stage="pending_approval", actor_id=actor
-    )
+    , actor_permissions=stages.SYSTEM_ACTOR)
     with pytest.raises(InvalidInputError) as exc:
-        await case_service.transition(db, case=case, to_stage="approved", actor_id=actor)
+        await case_service.transition(db, case=case, to_stage="approved", actor_id=actor, actor_permissions=stages.SYSTEM_ACTOR)
     assert "no tiene cliente" in str(exc.value)

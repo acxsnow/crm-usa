@@ -144,3 +144,39 @@ def test_an_unknown_stage_is_rejected_instead_of_silently_false():
     escritura: parecería una transición prohibida y no un código inexistente."""
     with pytest.raises(KeyError):
         stages.is_allowed("etapa_inventada", "closed")
+
+
+# ---------------------------------------------------------------------------
+# Permiso por etapa (SEG-07)
+# ---------------------------------------------------------------------------
+
+def test_every_stage_declares_the_permission_it_requires():
+    """Sin esto, entrar a una etapa nueva quedaría sin control de acceso y
+    nadie lo notaría hasta que alguien aprobara lo que no debe."""
+    for code in stages.STAGES:
+        assert code in stages.STAGE_PERMISSION, f"la etapa {code} no declara permiso"
+
+
+def test_the_declared_permissions_exist_in_the_catalog():
+    from app.shared.permissions import PERMISSION_CATALOG
+
+    catalogo = {code for code, _ in PERMISSION_CATALOG}
+    for etapa, permiso in stages.STAGE_PERMISSION.items():
+        assert permiso in catalogo, f"{etapa} exige un permiso inexistente: {permiso}"
+
+
+def test_selling_and_approving_are_separated():
+    """El corazón de SEG-07: enviar a revisión y aprobar no pueden pedir el
+    mismo permiso, o el vendedor aprueba lo suyo."""
+    assert stages.STAGE_PERMISSION["pending_approval"] == "cases.submit"
+    assert stages.STAGE_PERMISSION["approved"] == "cases.approve"
+    assert stages.STAGE_PERMISSION["pending_approval"] != stages.STAGE_PERMISSION["approved"]
+
+
+def test_the_salesperson_matrix_cannot_approve():
+    from app.shared.permissions import DEFAULT_ROLE_PERMISSIONS
+
+    vendedor = set(DEFAULT_ROLE_PERMISSIONS["salesperson"])
+    assert stages.STAGE_PERMISSION["pending_approval"] in vendedor
+    for etapa in ("approved", "rejected", "on_hold", "permit_in_progress", "installed", "paid", "closed"):
+        assert stages.STAGE_PERMISSION[etapa] not in vendedor, f"el vendedor puede entrar a {etapa}"

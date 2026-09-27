@@ -101,6 +101,47 @@ STAGE_MILESTONE: dict[str, str] = {
 }
 
 
+# El permiso que exige ENTRAR a cada etapa. Es la separación de funciones del
+# flujo del cliente puesta en código: el vendedor manda a revisión, pero no
+# aprueba; quien aprueba no instala; quien instala no cobra.
+#
+# Va aquí y no en el router porque `transition()` es la única puerta de entrada
+# y también se llama desde tareas y scripts, donde no hay petición HTTP que
+# validar. Hallazgo SEG-07.
+STAGE_PERMISSION: dict[str, str] = {
+    # Salidas tempranas y apertura: son del vendedor en la calle.
+    "no_contact": "cases.create",
+    "not_interested": "cases.create",
+    "not_eligible": "cases.create",
+    "new_prospect": "cases.create",
+    # El vendedor envía a revisión.
+    "pending_approval": "cases.submit",
+    # Administración decide. El vendedor NO puede llegar aquí: es el punto
+    # exacto que SEG-07 dejaba abierto.
+    "approved": "cases.approve",
+    "rejected": "cases.approve",
+    "on_hold": "cases.approve",
+    # Campo.
+    "permit_in_progress": "permits.manage",
+    "ready_to_install": "dispatch.manage",
+    "installed": "checklists.complete",
+    "inspection_pending": "inspections.manage",
+    # Cobro.
+    "billing_in_progress": "billing.submit",
+    "paid": "invoices.record_payment",
+    # Cierre administrativo, desde cualquier etapa.
+    "closed": "cases.close_admin",
+}
+
+# Quien tiene esto puede hacer cualquier transición sin pasar por el mapa de
+# permisos: migraciones y tareas del sistema, que no actúan en nombre de nadie.
+SYSTEM_ACTOR = frozenset({"__system__"})
+
+
+def permission_for(to_stage: str) -> str:
+    return STAGE_PERMISSION[to_stage]
+
+
 def _build_transitions() -> dict[str, set[str]]:
     """Arma el mapa. Se construye en una función para poder agregar en un solo
     sitio las reglas que valen para todas las etapas."""

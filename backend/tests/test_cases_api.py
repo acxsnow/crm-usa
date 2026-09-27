@@ -176,9 +176,11 @@ async def test_the_salesperson_sends_the_case_to_review(app_client, active_sales
 
 
 async def test_a_forbidden_transition_is_rejected_with_a_readable_message(
-    app_client, active_salesperson_user
+    app_client, active_admin_user
 ):
-    headers = await _login(app_client, "vendedor@acme-demo.com")
+    """Con un administrador, que tiene todos los permisos: así lo que responde
+    es la validación del mapa de transiciones y no la del permiso."""
+    headers = await _login(app_client, "admin@acme-demo.com")
     creado = (
         await app_client.post(
             "/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=headers
@@ -194,14 +196,44 @@ async def test_a_forbidden_transition_is_rejected_with_a_readable_message(
     assert "Nuevo prospecto" in resp.json()["detail"]
 
 
-async def test_a_technician_cannot_move_a_case(app_client, active_technician_user):
+async def test_a_technician_cannot_move_a_case(
+    app_client, active_technician_user, active_admin_user
+):
+    """El técnico tiene `checklists.complete`, así que pasa la puerta gruesa de
+    la ruta. Lo que lo detiene es el permiso de la etapa concreta."""
+    del_admin = await _login(app_client, "admin@acme-demo.com")
+    caso = (
+        await app_client.post(
+            "/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=del_admin
+        )
+    ).json()
+
     headers = await _login(app_client, "tech@acme-demo.com")
     resp = await app_client.post(
-        f"/api/v1/cases/{uuid.uuid4()}/transition",
+        f"/api/v1/cases/{caso['id']}/transition",
         json={"to_stage": "pending_approval"},
         headers=headers,
     )
     assert resp.status_code == 403, resp.text
+    assert resp.json()["code"] == "stage_not_allowed_for_role"
+
+
+async def test_an_invented_stage_is_a_bad_request_not_a_crash(app_client, active_admin_user):
+    """`to_stage` llega del cliente: una etapa inventada tiene que decir que el
+    dato es inválido, no reventar contra el mapa de permisos."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    caso = (
+        await app_client.post(
+            "/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=headers
+        )
+    ).json()
+    resp = await app_client.post(
+        f"/api/v1/cases/{caso['id']}/transition",
+        json={"to_stage": "etapa_inventada"},
+        headers=headers,
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["code"] == "unknown_stage"
 
 
 async def test_the_stage_catalog_is_exposed_for_the_frontend(app_client, active_salesperson_user):
@@ -215,3 +247,91 @@ async def test_the_stage_catalog_is_exposed_for_the_frontend(app_client, active_
     assert primera["code"] == "no_contact"
     assert primera["label"] == "Sin contacto"
     assert primera["is_initial"] is True
+
+
+# ---------------------------------------------------------------------------
+# SEG-07: separación entre vender y aprobar
+# ---------------------------------------------------------------------------
+
+async def test_a_salesperson_cannot_approve_their_own_case(app_client, active_salesperson_user):
+    """El hallazgo SEG-07. El vendedor manda a revisión y ahí se detiene: quien
+    aprueba es Administración. Si esto se rompe, el vendedor se aprueba sus
+    propias ventas y el flujo del cliente deja de significar nada."""
+    headers = await _login(app_client, "vendedor@acme-demo.com")
+    creado = (
+        await app_client.post(
+            "/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=headers
+        )
+    ).json()
+
+    enviado = await app_client.post(
+        f"/api/v1/cases/{creado['id']}/transition",
+        json={"to_stage": "pending_approval"},
+        headers=headers,
+    )
+    assert enviado.status_code == 200, enviado.text
+
+    for etapa in ("approved", "rejected", "on_hold"):
+        resp = await app_client.post(
+            f"/api/v1/cases/{creado['id']}/transition",
+            json={"to_stage": etapa},
+            headers=headers,
+        )
+        assert resp.status_code == 403, f"el vendedor pudo pasar a {etapa}: {resp.text}"
+        assert resp.json()["code"] == "stage_not_allowed_for_role"
+
+
+async def test_admin_staff_can_approve(app_client, active_admin_staff_user, active_salesperson_user):
+    """El contrapeso: quien sí tiene el permiso pasa.
+
+    Lleva cliente porque aprobar dispara la creación del proyecto de
+    instalación, y `Project.customer_id` es obligatorio."""
+    del_vendedor = await _login(app_client, "vendedor@acme-demo.com")
+    cliente = (
+        await app_client.post(
+            "/api/v1/customers", json={"legal_name": "Marge Simpson"}, headers=del_vendedor
+        )
+    ).json()
+    creado = (
+        await app_client.post(
+            "/api/v1/cases",
+            json=_puerta(stage_code="new_prospect", customer_id=cliente["id"]),
+            headers=del_vendedor,
+        )
+    ).json()
+    await app_client.post(
+        f"/api/v1/cases/{creado['id']}/transition",
+        json={"to_stage": "pending_approval"},
+        headers=del_vendedor,
+    )
+
+    de_admin = await _login(app_client, "admin-staff@acme-demo.com")
+    resp = await app_client.post(
+        f"/api/v1/cases/{creado['id']}/transition",
+        json={"to_stage": "approved"},
+        headers=de_admin,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["stage_code"] == "approved"
+
+
+async def test_a_salesperson_cannot_move_someone_elses_case(
+    app_client, active_salesperson_user, active_admin_user
+):
+    """La otra mitad de SEG-07: el cambio de etapa no comprobaba el dueño,
+    aunque la consulta sí. Responde 404, no 403: confirmar que existe ya sería
+    revelar de más."""
+    del_admin = await _login(app_client, "admin@acme-demo.com")
+    ajeno = (
+        await app_client.post(
+            "/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=del_admin
+        )
+    ).json()
+
+    del_vendedor = await _login(app_client, "vendedor@acme-demo.com")
+    resp = await app_client.post(
+        f"/api/v1/cases/{ajeno['id']}/transition",
+        json={"to_stage": "pending_approval"},
+        headers=del_vendedor,
+    )
+    assert resp.status_code == 404, resp.text

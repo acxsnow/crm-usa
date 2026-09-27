@@ -368,6 +368,29 @@ solo permiso del grupo. Por eso `RequireAccess` ya no acepta `module`.
 **`docker compose restart` no relee el `.env`.** Hay que hacer
 `docker compose up -d --force-recreate api`.
 
+**Vite sirve un bundle viejo aunque el archivo esté bien.** Su servidor puede
+dejar de detectar cambios —sobre todo después de un reinicio o de muchos
+archivos borrados a la vez— y seguir sirviendo transformaciones cacheadas. Los
+síntomas engañan: etiquetas de menú que ya no existen en el código, botones que
+desaparecen, pantallas que vuelven a una versión anterior. Parece que un merge
+se comió el trabajo, y no es eso.
+
+Cómo distinguirlo de un problema real, en este orden:
+
+1. `git diff <rama-antes> HEAD --stat` — si el frontend no aparece, el código
+   está intacto y el problema es lo que se sirve.
+2. `docker compose exec frontend grep -o 'label: "[^"]*"' src/config/navigation.ts`
+   — confirma que el contenedor ve el archivo correcto en disco.
+3. `docker compose logs frontend --tail 20` — si la última línea es de hace
+   horas o menciona archivos que ya borraste, el vigilante murió.
+
+El arreglo:
+
+```bash
+docker compose exec frontend sh -c "rm -rf node_modules/.vite"
+docker compose restart frontend
+```
+
 **Un panel de edición que conserva los datos de la fila anterior.** Todo panel
 que tome su estado inicial de una prop necesita `key={algo.id}`. Sin eso, abrir
 otra fila con el panel abierto muestra —y guarda— los datos del anterior. Es una
