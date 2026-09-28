@@ -14,9 +14,16 @@ export function SignaturePad({ onCapture, disabled }: SignaturePadProps) {
 
   const getContext = () => canvasRef.current?.getContext("2d") ?? null;
 
+  // El lienzo se muestra a todo el ancho de su contenedor, así que su tamaño
+  // en pantalla no es el de sus píxeles: se escala la posición del dedo para
+  // que el trazo caiga donde se toca.
   const pointerPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) * canvas.width) / rect.width,
+      y: ((e.clientY - rect.top) * canvas.height) / rect.height,
+    };
   };
 
   const start = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -33,7 +40,7 @@ export function SignaturePad({ onCapture, disabled }: SignaturePadProps) {
     const ctx = getContext();
     const { x, y } = pointerPos(e);
     if (ctx) {
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.strokeStyle = "#111827";
       ctx.lineTo(x, y);
@@ -63,20 +70,22 @@ export function SignaturePad({ onCapture, disabled }: SignaturePadProps) {
     <div>
       <canvas
         ref={canvasRef}
-        width={300}
-        height={120}
-        style={{ border: "1px solid #d1d5db", borderRadius: 8, background: "white", touchAction: "none" }}
+        width={600}
+        height={220}
+        className="signature-canvas"
+        aria-label="Recuadro para firmar"
+        style={{ border: "1px solid #d1d5db", borderRadius: 8, background: "white", touchAction: "none", width: "100%", maxWidth: 600, height: "auto" }}
         onPointerDown={start}
         onPointerMove={move}
         onPointerUp={end}
         onPointerLeave={end}
       />
       <div className="inline-form" style={{ marginTop: "0.5rem" }}>
-        <button type="button" onClick={clear} disabled={disabled}>
-          Limpiar
+        <button type="button" className="acta-btn is-quiet" onClick={clear} disabled={disabled || !hasStroke}>
+          Borrar
         </button>
-        <button type="button" onClick={capture} disabled={disabled || !hasStroke}>
-          Confirmar firma
+        <button type="button" className="acta-btn is-primary" onClick={capture} disabled={disabled || !hasStroke}>
+          Firmar
         </button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createTask,
@@ -17,23 +17,29 @@ import {
   updateTask,
   uploadEvidence,
 } from "./api";
-import { listUsers } from "@/features/users/api";
 import { SignaturePad } from "./SignaturePad";
 import { PaginationControls } from "@/components/PaginationControls";
 import { type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useFieldCatalogs, useInstallers } from "./module5Api";
+import { CameraIcon, CheckCircleIcon, CheckIcon, ClockIcon, GearIcon, PinIcon, SendIcon, VideoIcon } from "./components/icons";
 import { ChecklistPanel } from "./components/ChecklistPanel";
 import { ConditionsPanel } from "./components/ConditionsPanel";
 import { EquipmentPanel } from "./components/EquipmentPanel";
 import { InspectionsPanel } from "./components/InspectionsPanel";
 import { CloseInstallationStep, ReleaseOrderStep } from "./components/InstallationPanel";
-import { InstallationRecord, deriveStates, useRecordData } from "./components/InstallationRecord";
+import { InstallationRecord, closeRequirements, deriveStates, useRecordData } from "./components/InstallationRecord";
 import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
+
+const COLUMN_ICON: Record<TaskStatus, JSX.Element> = {
+  pending: <ClockIcon size={17} />,
+  in_progress: <GearIcon size={17} />,
+  done: <CheckCircleIcon size={17} />,
+};
 
 const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "pending", label: "Pendiente" },
@@ -78,9 +84,30 @@ function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: ()
 function EvidenceCard({ evidence, onOpen }: { evidence: Evidence; onOpen: (evidence: Evidence) => void }) {
   const { data: categoryLabels } = useFieldCatalogs();
   const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => { let active = true; fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined); return () => { active = false; }; }, [evidence.id]);
   const isVideo = evidence.mime_type?.startsWith("video/");
-  return <article className="evidence-card"><button type="button" className="evidence-preview-button" onClick={() => onOpen(evidence)} aria-label={`Abrir ${evidence.original_filename ?? "evidencia"}`}>{url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={evidence.original_filename ?? "Evidencia"} />) : <div className="evidence-placeholder">Cargando vista previa...</div>}<span className="evidence-open-hint">Ver en detalle ↗</span></button><div className="evidence-card-info"><strong>{evidence.original_filename ?? "Evidencia"}</strong><span>{categoryLabels?.evidence_categories[evidence.category] ?? evidence.category} · {evidence.watermarked ? "Marca visible ✓" : "Sin marca"}</span><small>{evidence.latitude != null && evidence.longitude != null ? `GPS ${evidence.latitude.toFixed(5)}, ${evidence.longitude.toFixed(5)}` : "GPS no disponible"}</small><small>{evidence.captured_at ? new Date(evidence.captured_at).toLocaleString("es-CO") : "Fecha no disponible"}</small></div></article>;
+  useEffect(() => {
+    let active = true;
+    fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [evidence.id]);
+  const categoria = categoryLabels?.evidence_categories[evidence.category] ?? evidence.category;
+  const cuando = evidence.captured_at ?? evidence.created_at;
+
+  return (
+    <figure className="annex-thumb">
+      <button type="button" className="annex-thumb-img" onClick={() => onOpen(evidence)} aria-label={`Ver ${categoria} en detalle`}>
+        {url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={categoria} />) : <span className="annex-thumb-loading">Cargando…</span>}
+        {isVideo && <span className="annex-thumb-play" aria-hidden="true">▶</span>}
+      </button>
+      {/* La foto ya trae la marca grabada en los píxeles; repetirla encima la
+          tapaba. Aquí va como dato legible. */}
+      <figcaption>
+        <strong>{categoria}</strong>
+        <span><ClockIcon size={11} /> {new Date(cuando).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</span>
+        <span><PinIcon size={11} /> {evidence.latitude != null && evidence.longitude != null ? `${evidence.latitude.toFixed(4)}, ${evidence.longitude.toFixed(4)}` : "Sin GPS"}</span>
+      </figcaption>
+    </figure>
+  );
 }
 
 function TaskComments({ taskId }: { taskId: string }) {
@@ -135,7 +162,10 @@ function TaskBoard({ projectId }: { projectId: string }) {
   // Best-effort: only users with users.manage see the assignee dropdown
   // populated with real names; everyone else can still create/move tasks,
   // just without a name-based picker.
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: listUsers, retry: false, throwOnError: false });
+  // Responsables posibles: quien puede instalar. El listado general de
+  // usuarios exige `users.manage`, que Administración no tiene.
+  const { hasPermission } = useAuth();
+  const { data: installers } = useInstallers(hasPermission("dispatch.manage"));
 
   const [title, setTitle] = useState("");
   const [assignedUserId, setAssignedUserId] = useState("");
@@ -164,87 +194,112 @@ function TaskBoard({ projectId }: { projectId: string }) {
 
   const assigneeName = (userId?: string | null) => {
     if (!userId) return "Sin asignar";
-    const match = users?.items.find((u) => u.id === userId);
+    const match = installers?.find((u) => u.id === userId);
     return match ? match.full_name : "Asignado";
   };
 
   return (
-    <div>
-      <h3>Tablero de tareas</h3>
+    <section className="annex-section" aria-labelledby="anexo-tareas">
+      <div className="annex-section-head">
+        <h3 id="anexo-tareas">Tareas internas</h3>
+        <span className="annex-count">{(tasks ?? []).length} en total</span>
+      </div>
       <form
-        className="inline-form"
+        className="panel-form annex-task-form"
         onSubmit={(e) => {
           e.preventDefault();
           if (title.trim()) createMutation.mutate();
         }}
       >
-        <input placeholder="Nueva tarea" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        <select value={assignedUserId} onChange={(e) => setAssignedUserId(e.target.value)}>
-          <option value="">Sin asignar</option>
-          {(users?.items ?? []).map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.full_name}
-            </option>
-          ))}
-        </select>
-        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        <button type="submit" disabled={createMutation.isPending}>
+        <div className="field annex-task-title">
+          <label htmlFor="tarea-titulo">Tarea</label>
+          <input id="tarea-titulo" placeholder="Llevar soporte antivibración" value={title}
+            onChange={(e) => setTitle(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="tarea-responsable">Responsable</label>
+          <select id="tarea-responsable" value={assignedUserId} onChange={(e) => setAssignedUserId(e.target.value)}>
+            <option value="">Sin asignar</option>
+            {(installers ?? []).map((u) => (
+              <option key={u.id} value={u.id}>{u.full_name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="tarea-vence">Vence</label>
+          <input id="tarea-vence" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </div>
+        <button type="submit" className="acta-btn is-primary" disabled={createMutation.isPending}>
           Agregar tarea
         </button>
       </form>
 
-      <div className="pipeline-board">
-        {TASK_COLUMNS.map((column) => (
-          <div key={column.status} className="pipeline-column">
-            <h3>
-              {column.label} <span className="pipeline-count">{(tasks ?? []).filter((t) => t.status === column.status).length}</span>
-            </h3>
-            {(tasks ?? [])
-              .filter((t) => t.status === column.status)
-              .map((task: FieldTask) => (
-                <div key={task.id} className="pipeline-card">
-                  <div>
-                    {task.title}
-                    {task.is_overdue && (
-                      <span className="status-pill status-inactive" style={{ marginLeft: "0.4rem" }}>
-                        vencida
-                      </span>
-                    )}
-                  </div>
-                  <div className="pipeline-card-meta">
-                    {assigneeName(task.assigned_user_id)}
-                    {task.due_date ? ` · vence ${new Date(task.due_date).toLocaleDateString()}` : ""}
-                  </div>
-                  <select
-                    value={task.status}
-                    onChange={(e) => moveMutation.mutate({ taskId: task.id, status: e.target.value as TaskStatus })}
-                  >
-                    {TASK_COLUMNS.map((c) => (
-                      <option key={c.status} value={c.status}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="link-button"
-                    style={{ marginTop: "0.3rem" }}
-                    onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
-                  >
-                    {expandedTaskId === task.id ? "Ocultar comentarios" : "Comentarios"}
-                  </button>
-                  {expandedTaskId === task.id && <TaskComments taskId={task.id} />}
-                </div>
-              ))}
-            {(tasks ?? []).filter((t) => t.status === column.status).length === 0 && (
-              <p className="page-subtitle">Sin tareas.</p>
-            )}
-          </div>
-        ))}
+      <div className="annex-board">
+        {TASK_COLUMNS.map((column) => {
+          const enColumna = (tasks ?? []).filter((t) => t.status === column.status);
+          return (
+            <div key={column.status} className={`annex-column is-${column.status}`}>
+              <h4>
+                <span className="annex-column-title">{COLUMN_ICON[column.status]} {column.label}</span>
+                <span className="annex-count">{enColumna.length}</span>
+              </h4>
+              <ul className="annex-task-list">
+                {enColumna.map((task: FieldTask) => {
+                  const hecha = task.status === "done";
+                  return (
+                    <li key={task.id} className="annex-task">
+                      <div className="annex-task-row">
+                        {hecha ? (
+                          <span className="annex-task-done" aria-hidden="true"><CheckIcon size={16} strokeWidth={2.4} /></span>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            className="annex-task-check"
+                            aria-label={`Marcar «${task.title}» como completada`}
+                            onChange={() => moveMutation.mutate({ taskId: task.id, status: "done" })}
+                          />
+                        )}
+                        <div className="annex-task-text">
+                          <span className="annex-task-name">
+                            {task.title}
+                            {task.is_overdue && <span className="annex-overdue">Vencida</span>}
+                          </span>
+                          <span className="annex-task-meta">
+                            {assigneeName(task.assigned_user_id)}
+                            {task.due_date ? `, vence el ${new Date(task.due_date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
+                          </span>
+                          <span className="annex-task-links">
+                            {task.status === "pending" && (
+                              <button type="button" className="acta-link" onClick={() => moveMutation.mutate({ taskId: task.id, status: "in_progress" })}>
+                                Empezar
+                              </button>
+                            )}
+                            {hecha && (
+                              <button type="button" className="acta-link" onClick={() => moveMutation.mutate({ taskId: task.id, status: "pending" })}>
+                                Reabrir
+                              </button>
+                            )}
+                            <button type="button" className="acta-link"
+                              onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
+                              {expandedTaskId === task.id ? "Ocultar comentarios" : "Comentarios"}
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                      {expandedTaskId === task.id && <TaskComments taskId={task.id} />}
+                    </li>
+                  );
+                })}
+              </ul>
+              {enColumna.length === 0 && <p className="acta-empty">Sin tareas.</p>}
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 }
+
 
 function useGeolocation() {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -271,6 +326,11 @@ function useGeolocation() {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  // De dónde se llegó (la Agenda o la lista de proyectos lo pasan al abrir).
+  // Sin eso, por ejemplo con un enlace directo, se vuelve a Proyectos.
+  const volver = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? {};
+  const backTo = volver.backTo ?? "/projects";
+  const backLabel = volver.backLabel ?? "Proyectos";
   const queryClient = useQueryClient();
   const geo = useGeolocation();
 
@@ -307,6 +367,7 @@ export function ProjectDetailPage() {
   const { data: catalogs } = useFieldCatalogs();
   const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
@@ -345,6 +406,9 @@ export function ProjectDetailPage() {
 
   return (
     <div className="acta-page">
+      <Link to={backTo} className="acta-back">
+        <span aria-hidden="true">‹</span> Volver a {backLabel}
+      </Link>
       <InstallationRecord
         project={project}
         technicianName={technicianName}
@@ -379,7 +443,10 @@ export function ProjectDetailPage() {
           },
           {
             key: "close", title: "Cierre de la instalación", ...estados.close,
-            body: <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete")} />,
+            body: (
+              <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete")}
+                requirements={closeRequirements(project, recordData)} />
+            ),
           },
           {
             key: "inspection", title: "Inspección municipal", ...estados.inspection,
@@ -391,72 +458,155 @@ export function ProjectDetailPage() {
         ]}
       />
 
-      <h2 className="acta-annex-title">Anexos</h2>
-      <TaskBoard projectId={project.id} />
+      <section className="acta acta-annex" aria-label="Anexos del acta">
+        <header className="annex-header">
+          <div>
+            <h2 className="acta-title">Anexos</h2>
+            <p className="acta-lead">Evidencias, firmas y tareas internas de esta instalación.</p>
+          </div>
+          <span className={`annex-gps ${geo.status === "granted" && geo.coords ? "is-on" : "is-off"}`}>
+            <PinIcon size={16} />
+            {geo.status === "granted" && geo.coords
+              ? <>GPS activo: <strong>{geo.coords.latitude.toFixed(4)}, {geo.coords.longitude.toFixed(4)}</strong></>
+              : geo.status === "denied" ? "Sin GPS: las fotos quedarán marcadas «sin GPS»" : "Buscando GPS…"}
+          </span>
+        </header>
 
-      <h3>Evidencia</h3>
-      <p className="page-subtitle">
-        GPS: {geo.status === "granted" && geo.coords
-          ? `${geo.coords.latitude.toFixed(5)}, ${geo.coords.longitude.toFixed(5)}`
-          : geo.status === "denied"
-            ? "no disponible / permiso denegado"
-            : "solicitando..."}
-        {" "}— la marca se incrusta sobre los píxeles del archivo: abre cualquier cuadro en “Ver en detalle” para verla en la franja inferior y comprobar GPS + fecha.
-      </p>
-      <form
-        className="inline-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (file) uploadMutation.mutate();
-        }}
-      >
-        <select aria-label="Categoría de la evidencia" value={category} onChange={(e) => setCategory(e.target.value)}>
-          {Object.entries(catalogs?.evidence_categories ?? {}).map(([code, label]) => (
-            <option key={code} value={code}>{label}</option>
-          ))}
-        </select>
-        <input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <button type="submit" disabled={!file || uploadMutation.isPending}>
-          Subir
-        </button>
-      </form>
-      <div className="evidence-gallery">{(evidence ?? []).map((ev) => <EvidenceCard key={ev.id} evidence={ev} onOpen={setSelectedEvidence} />)}</div>
-      {selectedEvidence && <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />}
-      {evidenceData && (
-        <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
-      )}
-
-      <h3>Atestación (firma digital)</h3>
-      <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
-        <div>
-          <p><strong>Técnico</strong> {attestation?.technician_signed_at ? "— firmado ✓" : ""}</p>
-          {!attestation?.technician_signed_at && (
-            <SignaturePad onCapture={(sig) => technicianSignMutation.mutate(sig)} />
-          )}
-        </div>
-        <div>
-          <p><strong>Cliente</strong> {attestation?.customer_signed_at ? "— firmado ✓" : "— pendiente"}</p>
-          {!attestation?.customer_signed_at && <button type="button" className="primary-button" onClick={() => requestSignatureMutation.mutate()} disabled={requestSignatureMutation.isPending}>{requestSignatureMutation.isPending ? "Enviando..." : "Enviar enlace de firma al cliente"}</button>}
-          {requestSignatureMutation.data && <p className="page-subtitle">Enlace enviado a {requestSignatureMutation.data.recipient_email}. Vence el {new Date(requestSignatureMutation.data.expires_at).toLocaleDateString("es-CO")}.</p>}
-          {requestSignatureMutation.isError && <p className="form-error">No se pudo enviar el enlace. Verifica que el cliente tenga correo.</p>}
-        </div>
-      </div>
-
-      {attestation?.is_fully_signed && (
-        <div style={{ marginTop: "1rem" }}>
-          <button
-            type="button"
-            onClick={async () => {
-              const url = await fetchAttestationPdfObjectUrl(attestation.id);
-              setPdfUrl(url);
-              window.open(url, "_blank");
+        <section className="annex-section" aria-labelledby="anexo-evidencias">
+          <div className="annex-section-head">
+            <h3 id="anexo-evidencias">Evidencias</h3>
+            <span className="annex-count">{evidenceData?.total ?? 0} archivos</span>
+          </div>
+          <p className="acta-lead">
+            Las fotos del checklist se toman desde su línea; aquí van las adicionales.
+          </p>
+          <form
+            className="annex-evidence"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (file) uploadMutation.mutate();
             }}
           >
-            Descargar acta firmada (PDF)
-          </button>
-          {pdfUrl && <span className="page-subtitle"> Listo.</span>}
-        </div>
-      )}
+            <label
+              className={`annex-drop ${dragging ? "is-over" : ""} ${file ? "has-file" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                const dropped = e.dataTransfer.files?.[0];
+                if (dropped) setFile(dropped);
+              }}
+            >
+              <input type="file" hidden accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <strong>{file ? file.name : "Arrastra y suelta o toca para subir"}</strong>
+              <span className="annex-drop-icons"><CameraIcon size={26} /> <span>o</span> <VideoIcon size={26} /></span>
+            </label>
+
+            <div className="annex-evidence-controls">
+              <label htmlFor="evidencia-categoria" className="visually-hidden">Categoría</label>
+              <select id="evidencia-categoria" value={category} onChange={(e) => setCategory(e.target.value)}>
+                {Object.entries(catalogs?.evidence_categories ?? {}).map(([code, label]) => (
+                  <option key={code} value={code}>{label}</option>
+                ))}
+              </select>
+              <button type="submit" className="acta-btn is-primary" disabled={!file || uploadMutation.isPending}>
+                {uploadMutation.isPending ? "Subiendo…" : "Subir evidencia"}
+              </button>
+            </div>
+          </form>
+          <p className="annex-note"><PinIcon size={14} /> Ubicación GPS y hora grabadas automáticamente en cada archivo.</p>
+            <div className="annex-thumbs">
+              {(evidence ?? []).length > 0
+                ? (evidence ?? []).map((ev) => <EvidenceCard key={ev.id} evidence={ev} onOpen={setSelectedEvidence} />)
+                : <p className="acta-empty">Todavía no hay evidencias.</p>}
+            </div>
+
+          {selectedEvidence && <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />}
+          {evidenceData && evidenceData.total > EVIDENCE_PAGE_SIZE && (
+            <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
+          )}
+        </section>
+
+        <section className="annex-section" aria-labelledby="anexo-firmas">
+          <div className="annex-section-head">
+            <h3 id="anexo-firmas">Firmas del acta</h3>
+            {attestation?.is_fully_signed && (
+              <button
+                type="button"
+                className="acta-btn is-primary"
+                onClick={async () => {
+                  const url = await fetchAttestationPdfObjectUrl(attestation.id);
+                  setPdfUrl(url);
+                  window.open(url, "_blank");
+                }}
+              >
+                Descargar acta firmada (PDF)
+              </button>
+            )}
+          </div>
+          <div className="annex-signatures">
+            <div className={`annex-signer ${attestation?.technician_signed_at ? "is-signed" : ""}`}>
+              <div className="annex-signer-head">
+                <strong>Técnico</strong>
+                {attestation?.technician_signed_at
+                  ? <span className="acta-chip is-done"><CheckCircleIcon size={16} /> Firmado</span>
+                  : <span className="acta-chip is-pending"><ClockIcon size={16} /> Pendiente</span>}
+              </div>
+              {attestation?.technician_signed_at ? (
+                <p className="acta-lead">
+                  Firmó el {new Date(attestation.technician_signed_at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.
+                </p>
+              ) : (
+                <>
+                  <p className="acta-lead">Firma con el dedo o el mouse dentro del recuadro.</p>
+                  <SignaturePad onCapture={(sig) => technicianSignMutation.mutate(sig)} />
+                </>
+              )}
+            </div>
+            <div className={`annex-signer ${attestation?.customer_signed_at ? "is-signed" : ""}`}>
+              <div className="annex-signer-head">
+                <strong>Cliente</strong>
+                {attestation?.customer_signed_at
+                  ? <span className="acta-chip is-done"><CheckCircleIcon size={16} /> Firmado</span>
+                  : requestSignatureMutation.data
+                    ? <span className="acta-chip is-current"><SendIcon size={14} /> Enlace enviado</span>
+                    : <span className="acta-chip is-pending"><ClockIcon size={16} /> Pendiente</span>}
+              </div>
+              {attestation?.customer_signed_at ? (
+                <p className="acta-lead">
+                  Firmó el {new Date(attestation.customer_signed_at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.
+                </p>
+              ) : (
+                <>
+                  <p className="acta-lead">Recibe un enlace por correo y firma desde su teléfono.</p>
+                  {requestSignatureMutation.data && (
+                    <ol className="annex-timeline">
+                      <li>
+                        <span>Enviado a {requestSignatureMutation.data.recipient_email}</span>
+                        <small>Vence el {new Date(requestSignatureMutation.data.expires_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</small>
+                      </li>
+                    </ol>
+                  )}
+                  <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
+                    <button type="button" className="acta-btn is-primary" onClick={() => requestSignatureMutation.mutate()}
+                      disabled={requestSignatureMutation.isPending}>
+                      {requestSignatureMutation.isPending ? "Enviando…" : requestSignatureMutation.data ? "Reenviar enlace" : "Enviar enlace de firma"}
+                    </button>
+                  </div>
+                  {requestSignatureMutation.isError && (
+                    <p className="form-error">No se pudo enviar el enlace. Verifica que el cliente tenga correo.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          {pdfUrl && <p className="acta-empty">El PDF se abrió en otra pestaña.</p>}
+        </section>
+
+        <TaskBoard projectId={project.id} />
+      </section>
     </div>
   );
 }

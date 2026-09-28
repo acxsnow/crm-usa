@@ -115,6 +115,16 @@ function ChecklistLine({ number, item, applies, conditionLabel, categoryLabel, d
   const estado = !applies ? "is-inactive" : item.is_complete ? "is-confirmed" : item.not_applicable ? "is-na" : "is-open";
   const actionable = !disabled && applies;
 
+  // Lo secundario (No aplica, confirmar sin foto, deshacer) va como enlaces
+  // bajo el texto; la columna derecha tiene siempre UNA acción, del mismo
+  // ancho en todas las líneas, para que el ojo la encuentre en el mismo lugar.
+  const links: { label: string; onClick: () => void }[] = [];
+  if (actionable && !askingReason) {
+    if (!resolved && item.allows_not_applicable) links.push({ label: "No aplica en esta casa", onClick: () => setAskingReason(true) });
+    if (!resolved && item.requires_evidence) links.push({ label: "Confirmar sin tomar foto", onClick: () => update.mutate({ is_complete: true }) });
+    if (resolved) links.push({ label: "Deshacer", onClick: () => update.mutate({ is_complete: false }) });
+  }
+
   return (
     <li className={`acta-item ${estado}`}>
       <span className="acta-item-num">{number}</span>
@@ -126,6 +136,15 @@ function ChecklistLine({ number, item, applies, conditionLabel, categoryLabel, d
         )}
         {item.is_complete && <p className="acta-stamp">Confirmado el {stampTime(item.completed_at)}</p>}
         {item.not_applicable && <p className="acta-stamp is-na">No aplica: {item.not_applicable_reason}</p>}
+        {links.length > 0 && (
+          <p className="acta-item-links">
+            {links.map((l) => (
+              <button key={l.label} type="button" className="acta-link" disabled={update.isPending} onClick={l.onClick}>
+                {l.label}
+              </button>
+            ))}
+          </p>
+        )}
 
         {askingReason && (
           <form className="acta-reason" onSubmit={(e) => { e.preventDefault(); update.mutate({ not_applicable: true, reason }); }}>
@@ -133,18 +152,19 @@ function ChecklistLine({ number, item, applies, conditionLabel, categoryLabel, d
             <input id={`motivo-${item.id}`} value={reason} onChange={(e) => setReason(e.target.value)}
               placeholder="La casa no tiene panel propio" autoFocus />
             <div className="acta-actions">
-              <button type="submit" className="acta-btn" disabled={update.isPending}>Guardar motivo</button>
+              <button type="submit" className="acta-btn is-primary" disabled={update.isPending}>Guardar motivo</button>
               <button type="button" className="acta-btn is-quiet" onClick={() => setAskingReason(false)}>Cancelar</button>
             </div>
           </form>
         )}
       </div>
 
-      {actionable && !askingReason && (
-        <div className="acta-actions">
-          {!resolved && item.requires_evidence && (
-            <label className="acta-btn is-primary">
-              {upload.isPending ? "Subiendo…" : "Tomar foto"}
+      <div className="acta-item-action">
+        {resolved && applies && <span className="acta-check" aria-label="Línea confirmada">✓</span>}
+        {actionable && !resolved && !askingReason && (
+          item.requires_evidence ? (
+            <label className="acta-btn is-line">
+              <span aria-hidden="true">📷</span> {upload.isPending ? "Subiendo…" : "Tomar foto"}
               <input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment" hidden
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -152,24 +172,14 @@ function ChecklistLine({ number, item, applies, conditionLabel, categoryLabel, d
                   e.target.value = "";
                 }} />
             </label>
-          )}
-          {!resolved && item.allows_not_applicable && (
-            <button type="button" className="acta-btn is-quiet" onClick={() => setAskingReason(true)}>No aplica</button>
-          )}
-          {!resolved && (
-            <button type="button" className={`acta-btn ${item.requires_evidence ? "is-quiet" : "is-primary"}`}
-              disabled={update.isPending} onClick={() => update.mutate({ is_complete: true })}>
+          ) : (
+            <button type="button" className="acta-btn is-line" disabled={update.isPending}
+              onClick={() => update.mutate({ is_complete: true })}>
               Confirmar
             </button>
-          )}
-          {resolved && (
-            <button type="button" className="acta-btn is-quiet" disabled={update.isPending}
-              onClick={() => update.mutate({ is_complete: false })}>
-              Deshacer
-            </button>
-          )}
-        </div>
-      )}
+          )
+        )}
+      </div>
     </li>
   );
 }

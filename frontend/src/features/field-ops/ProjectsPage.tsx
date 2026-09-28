@@ -86,7 +86,7 @@ export function ProjectsPage() {
       key: "actions",
       header: "",
       render: (p) => (
-        <Link className="link-button" to={`/projects/${p.id}`}>
+        <Link className="link-button" to={`/projects/${p.id}`} state={{ backTo: "/projects", backLabel: "Proyectos" }}>
           Ver
         </Link>
       ),

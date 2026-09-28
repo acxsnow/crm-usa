@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/AuthContext";
@@ -23,10 +22,22 @@ function thisWeek(): { from: string; to: string } {
 export function AgendaPage() {
   const { hasPermission } = useAuth();
   const esDespacho = hasPermission("dispatch.manage");
+  // Los filtros viven en la dirección de la página: al abrir una orden y
+  // pulsar "Volver", la agenda aparece con las mismas fechas y técnico.
   const semana = thisWeek();
-  const [desde, setDesde] = useState(semana.from);
-  const [hasta, setHasta] = useState(semana.to);
-  const [tecnico, setTecnico] = useState("");
+  const [params, setParams] = useSearchParams();
+  const desde = params.get("desde") ?? semana.from;
+  const hasta = params.get("hasta") ?? semana.to;
+  const tecnico = params.get("tecnico") ?? "";
+  const setFiltro = (clave: string, valor: string) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (valor) next.set(clave, valor); else next.delete(clave);
+      return next;
+    }, { replace: true });
+  const setDesde = (v: string) => setFiltro("desde", v);
+  const setHasta = (v: string) => setFiltro("hasta", v);
+  const setTecnico = (v: string) => setFiltro("tecnico", v);
 
   const { data: tecnicos } = useInstallers(esDespacho);
   const { data: filas, error, isLoading } = useQuery({
@@ -81,7 +92,9 @@ export function AgendaPage() {
           <ul className="plain-list">
             {lista.map((fila) => (
               <li key={fila.project_id}>
-                <Link to={`/projects/${fila.project_id}`}>{fila.title}</Link>
+                <Link to={`/projects/${fila.project_id}`} state={{ backTo: `/my-schedule?${params.toString()}`, backLabel: "Agenda" }}>
+                  {fila.title}
+                </Link>
                 {" · "}
                 {[fila.address_street, fila.address_unit, fila.address_city].filter(Boolean).join(", ")}
                 {esDespacho && <> · {nombre(fila.primary_technician_user_id)}</>}{" "}

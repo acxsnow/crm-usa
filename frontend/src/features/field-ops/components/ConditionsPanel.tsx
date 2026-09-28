@@ -43,12 +43,14 @@ export function ConditionsPanel({ project, canEdit }: { project: Project; canEdi
               <input
                 id={id}
                 type="checkbox"
+                className="visually-hidden"
                 checked={actuales.includes(code)}
                 disabled={bloqueado || save.isPending}
                 onChange={(e) =>
                   save.mutate(e.target.checked ? [...actuales, code] : actuales.filter((c) => c !== code))
                 }
               />
+              <span className="acta-box" aria-hidden="true">✓</span>
               {label}
             </label>
           );
