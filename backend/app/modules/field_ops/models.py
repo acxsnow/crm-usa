@@ -3,6 +3,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
@@ -38,14 +40,6 @@ class TaskStatus(str, enum.Enum):
     done = "done"
 
 
-class EvidenceCategory(str, enum.Enum):
-    before = "before"
-    during = "during"
-    after = "after"
-    damage = "damage"
-    other = "other"
-
-
 # ---------------------------------------------------------------------------
 # Project (one per property/space — confirmed domain model)
 # ---------------------------------------------------------------------------
@@ -68,6 +62,9 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     completed_date: Mapped[date | None] = mapped_column(Date)
     primary_technician_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
     notes: Mapped[str | None] = mapped_column(Text)
+    # Condiciones de ESTA casa que vuelven obligatorios ciertos ítems del
+    # checklist (catálogo `INSTALLATION_CONDITIONS`, requerimientos §8.3).
+    installation_conditions: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +76,11 @@ class ChecklistTemplate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     project_type: Mapped[str | None] = mapped_column(String(100))
+    # La plantilla de un programa concreto. Nula = la plantilla por defecto de
+    # la organización, que se usa cuando el programa no tiene la suya.
+    program_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("programs.id", ondelete="SET NULL"), index=True
+    )
 
     items: Mapped[list["ChecklistTemplateItem"]] = relationship(
         "ChecklistTemplateItem", back_populates="template", cascade="all, delete-orphan",
@@ -96,6 +98,12 @@ class ChecklistTemplateItem(UUIDPKMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     requires_evidence: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    section: Mapped[str | None] = mapped_column(String(120))
+    # Qué foto exige el ítem (catálogo `EVIDENCE_CATEGORIES`).
+    evidence_category: Mapped[str | None] = mapped_column(String(40))
+    # Solo es obligatorio si esta condición aplica a la instalación.
+    condition_code: Mapped[str | None] = mapped_column(String(40))
+    allows_not_applicable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     template: Mapped["ChecklistTemplate"] = relationship("ChecklistTemplate", back_populates="items")
 
@@ -115,9 +123,27 @@ class ProjectChecklistItem(UUIDPKMixin, TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     requires_evidence: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    section: Mapped[str | None] = mapped_column(String(120))
+    evidence_category: Mapped[str | None] = mapped_column(String(40))
+    condition_code: Mapped[str | None] = mapped_column(String(40))
+    allows_not_applicable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    # "No aplica" siempre con motivo: si el equipo no existe se deja constancia,
+    # no se deja el ítem en blanco (requerimientos §8.3).
+    not_applicable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    not_applicable_reason: Mapped[str | None] = mapped_column(Text)
+
+    def counts_as_required(self, conditions: list[str]) -> bool:
+        """Si este ítem bloquea el cierre de ESTA instalación."""
+        if not self.is_required:
+            return False
+        return self.condition_code is None or self.condition_code in conditions
+
+    @property
+    def is_resolved(self) -> bool:
+        return bool(self.is_complete or self.not_applicable)
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +197,9 @@ class Evidence(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     task_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("field_tasks.id"), index=True)
     checklist_item_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("project_checklist_items.id"))
-    category: Mapped[EvidenceCategory] = mapped_column(Enum(EvidenceCategory, name="evidence_category"), default=EvidenceCategory.other, nullable=False)
+    # Código del catálogo `EVIDENCE_CATEGORIES`. Texto y no enum de Postgres:
+    # agregar una categoría no debe exigir una migración.
+    category: Mapped[str] = mapped_column(String(40), default="additional_photo", nullable=False)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)  # storage-relative path
     original_filename: Mapped[str | None] = mapped_column(String(255))
     mime_type: Mapped[str | None] = mapped_column(String(100))
@@ -223,3 +251,96 @@ class CustomerSignatureToken(UUIDPKMixin, TimestampMixin, Base):
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# ---------------------------------------------------------------------------
+# Módulo 5 — permiso municipal, inspección, equipos y materiales
+# ---------------------------------------------------------------------------
+
+class Permit(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Permiso municipal de una instalación. Solo registro: el trámite se hace
+    en el portal de la ciudad. Puede haber varios por proyecto (eléctrico y
+    mecánico, por ejemplo)."""
+
+    __tablename__ = "permits"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    permit_number: Mapped[str | None] = mapped_column(String(100))
+    # Ciudad o condado que lo emite.
+    jurisdiction: Mapped[str] = mapped_column(String(150), nullable=False)
+    permit_type: Mapped[str | None] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="submitted")
+    filed_on: Mapped[date | None] = mapped_column(Date)
+    approved_on: Mapped[date | None] = mapped_column(Date)
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    not_required_reason: Mapped[str | None] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    @property
+    def is_expired(self) -> bool:
+        """Calculado, no guardado, como `Task.is_overdue`: un estado "vencido"
+        necesitaría una tarea que lo actualice y, si no corre, el dato miente."""
+        return self.expires_on is not None and self.expires_on < date.today()
+
+    @property
+    def is_cleared(self) -> bool:
+        """Si este permiso deja avanzar a "Listo para instalar"."""
+        from app.modules.field_ops.catalogs import PermitStatus
+
+        if self.status == PermitStatus.not_required:
+            return True
+        return self.status == PermitStatus.approved and not self.is_expired
+
+
+class Inspection(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un intento de inspección. Los fallidos se conservan: son el único dato
+    para medir cuántas inspecciones fallan."""
+
+    __tablename__ = "inspections"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    inspector_name: Mapped[str | None] = mapped_column(String(255))
+    result: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    result_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    observations: Mapped[str | None] = mapped_column(Text)
+
+
+class InstalledEquipment(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Equipo instalado como dato. El cobro al programa necesita marca, modelo y
+    serial, no solo la foto de la etiqueta."""
+
+    __tablename__ = "installed_equipment"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    equipment_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    brand: Mapped[str] = mapped_column(String(100), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    serial_number: Mapped[str | None] = mapped_column(String(100), index=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    # En qué unidad o espacio quedó (casa principal, espacio 14…).
+    unit_label: Mapped[str | None] = mapped_column(String(100))
+    notes: Mapped[str | None] = mapped_column(Text)
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
+class ProjectMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Lo que la orden necesita (PDF §5.1). No es inventario."""
+
+    __tablename__ = "project_materials"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    sku: Mapped[str | None] = mapped_column(String(100))
+    quantity: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    unit: Mapped[str | None] = mapped_column(String(30))
+    notes: Mapped[str | None] = mapped_column(Text)

@@ -17,7 +17,6 @@ from app.modules.field_ops.models import (
     ChecklistTemplate,
     ChecklistTemplateItem,
     Evidence,
-    EvidenceCategory,
     Project,
     ProjectChecklistItem,
     ProjectStatus,
@@ -436,7 +435,7 @@ async def list_project_evidence(
 async def upload_evidence(
     project_id: uuid.UUID,
     file: UploadFile = File(...),
-    category: EvidenceCategory = Form(EvidenceCategory.other),
+    category: str | None = Form(None),
     latitude: float | None = Form(None),
     longitude: float | None = Form(None),
     captured_at: datetime | None = Form(None),

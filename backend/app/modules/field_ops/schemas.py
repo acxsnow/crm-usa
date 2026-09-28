@@ -4,7 +4,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 from app.modules.crm.schemas import AddressSchema
-from app.modules.field_ops.models import EvidenceCategory, ProjectStatus, TaskStatus
+from app.modules.field_ops.models import ProjectStatus, TaskStatus
 
 
 # --- Technician monitor -------------------------------------------------
@@ -161,7 +161,7 @@ class EvidenceResponse(BaseModel):
     project_id: uuid.UUID
     task_id: uuid.UUID | None
     checklist_item_id: uuid.UUID | None
-    category: EvidenceCategory
+    category: str
     original_filename: str | None
     mime_type: str | None
     size_bytes: int | None

@@ -16,7 +16,6 @@ from app.modules.field_ops.models import (
     ChecklistTemplate,
     ChecklistTemplateItem,
     Evidence,
-    EvidenceCategory,
     Project,
     ProjectChecklistItem,
     Task,
@@ -216,7 +215,7 @@ async def complete_checklist_item(
 
 async def upload_evidence(
     db: AsyncSession, *, organization_id: uuid.UUID, actor_id: uuid.UUID, project_id: uuid.UUID,
-    file: UploadFile, category: EvidenceCategory, latitude: float | None, longitude: float | None,
+    file: UploadFile, category: str | None, latitude: float | None, longitude: float | None,
     captured_at: datetime | None, task_id: uuid.UUID | None, checklist_item_id: uuid.UUID | None,
 ) -> Evidence:
     project_result = await db.execute(
@@ -307,7 +306,7 @@ async def upload_evidence(
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=actor_id,
         action="evidence.uploaded", entity_type="Evidence",
-        after_data={"project_id": str(project_id), "category": category.value, "watermarked": watermarked},
+        after_data={"project_id": str(project_id), "category": category, "watermarked": watermarked},
     )
     await db.commit()
     await db.refresh(evidence)
