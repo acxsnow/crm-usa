@@ -4,12 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { listUsers } from "@/features/users/api";
-import { apiErrorMessage, listAgenda } from "./module5Api";
+import { apiErrorMessage, listAgenda, localISODate } from "./module5Api";
 import type { AgendaRow } from "@/types/fieldOps";
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function thisWeek(): { from: string; to: string } {
   const hoy = new Date();
@@ -17,7 +13,7 @@ function thisWeek(): { from: string; to: string } {
   lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
   const domingo = new Date(lunes);
   domingo.setDate(lunes.getDate() + 6);
-  return { from: isoDate(lunes), to: isoDate(domingo) };
+  return { from: localISODate(lunes), to: localISODate(domingo) };
 }
 
 /**

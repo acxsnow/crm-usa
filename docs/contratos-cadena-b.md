@@ -94,8 +94,10 @@ categoría, condición y "No aplica" en los ítems; `projects.installation_condi
 `evidence.category` de enum a texto (15 categorías del §7.1). Si integras antes
 otra `0014`, la renumero yo.
 
-**Validación:** SQL generado en modo offline (`alembic upgrade 0013:0014 --sql`)
-y revisado. **Contra Postgres: por verificar** (no había base local levantada).
+**Validación (27 sep, Postgres 16 en Docker):** sube, baja y vuelve a subir.
+Comparando modelos contra la base no aparece ninguna diferencia nueva; las
+únicas en estas tablas son las FK de organización que faltan desde `0003`
+(COD-06, anterior al módulo).
 
 ## 7. Pendientes conocidos
 
@@ -107,5 +109,22 @@ y revisado. **Contra Postgres: por verificar** (no había base local levantada).
   bloquear la instalación.
 - Qué pasa con la inspección fallida sigue provisional (tu mapa): vuelve a
   «Listo para instalar».
-- Pantallas sin verificar en navegador (sin base local); `tsc` y `vite build`
-  limpios.
+- Pantallas: `tsc`, `vite build` y el servidor de Vite sin errores; falta la
+  revisión visual en navegador.
+
+## 8. Lo que encontró el recorrido de punta a punta (27 sep)
+
+Recorrido completo por la API real con un usuario por rol (vendedor →
+Administración → técnico → inspección fallida → re-trabajo → aprobada). Destapó
+dos errores que las pruebas unitarias no veían, ya corregidos con su prueba:
+
+- **Zona horaria:** "hoy" se calculaba con el reloj del servidor (UTC). Desde
+  las 7 p. m. en Bogotá (5 p. m. en Phoenix), agendar la instalación del día
+  daba "fecha pasada" y el cierre quedaba con la fecha de mañana. Ahora las
+  fechas de negocio usan `organizations.timezone` (`field_ops/clock.py`), y el
+  frontend usa la fecha local del navegador. **Ojo, José:** el mismo patrón
+  (`date.today()`) está en `billing/service.py` (vencimiento de facturas); es
+  mío y lo corrijo en el módulo 6.
+- **Plantilla por defecto:** se busca por nombre, y las organizaciones que ya
+  tenían la plantilla anterior nunca recibían la del §8. La nueva tiene nombre
+  propio; los proyectos anteriores conservan su copia.

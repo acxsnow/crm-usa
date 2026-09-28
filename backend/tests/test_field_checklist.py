@@ -209,3 +209,23 @@ async def test_a_technician_cannot_upload_evidence_to_a_project_not_assigned(app
         data={}, headers=headers,
     )
     assert resp.status_code == 404
+
+
+async def test_an_organization_with_the_pre_module_5_template_gets_the_new_checklist(db, seeded_org):
+    """La plantilla por defecto anterior al módulo 5 (sin categorías, con la
+    firma de atestación) no debe seguir usándose para proyectos nuevos. Lo
+    destapó el recorrido contra la base real: la organización demo la tenía."""
+    from app.modules.field_ops.models import ChecklistTemplate, ChecklistTemplateItem
+
+    org_id = seeded_org["org"].id
+    vieja = ChecklistTemplate(organization_id=org_id, name="Instalación HVAC — Programa de Aires Gratis",
+                              project_type="hvac_install")
+    db.add(vieja)
+    await db.flush()
+    db.add(ChecklistTemplateItem(template_id=vieja.id, label="Firma de atestación (técnico y cliente)", sort_order=0))
+    await db.commit()
+
+    _, project = await approved_case_with_project(db, org_id)
+    items = await checklist_items(db, project.id)
+    assert not any("Firma de atestación" in i.label for i in items)
+    assert any(i.evidence_category == "outdoor_label" for i in items)

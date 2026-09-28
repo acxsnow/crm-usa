@@ -7,6 +7,7 @@ import {
   closeInstallation,
   fieldKeys,
   getInstallationGaps,
+  localISODate,
   scheduleInstallation,
   useRefreshProject,
 } from "@/features/field-ops/module5Api";
@@ -69,7 +70,7 @@ export function InstallationPanel({ project, canSchedule, canClose }: {
               <option key={u.id} value={u.id}>{u.full_name}</option>
             ))}
           </select>
-          <input aria-label="Fecha de instalación" type="date" required min={new Date().toISOString().slice(0, 10)}
+          <input aria-label="Fecha de instalación" type="date" required min={localISODate()}
             value={fecha} onChange={(e) => setFecha(e.target.value)} />
           <button type="submit" disabled={schedule.isPending}>Agendar y liberar orden</button>
         </form>

@@ -278,20 +278,20 @@ class Permit(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     not_required_reason: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
 
-    @property
-    def is_expired(self) -> bool:
+    def is_expired_on(self, day: date) -> bool:
         """Calculado, no guardado, como `Task.is_overdue`: un estado "vencido"
-        necesitaría una tarea que lo actualice y, si no corre, el dato miente."""
-        return self.expires_on is not None and self.expires_on < date.today()
+        necesitaría una tarea que lo actualice y, si no corre, el dato miente.
+        Recibe el día porque "hoy" es el de la organización, no el del
+        servidor (`field_ops/clock.py`)."""
+        return self.expires_on is not None and self.expires_on < day
 
-    @property
-    def is_cleared(self) -> bool:
+    def is_cleared_on(self, day: date) -> bool:
         """Si este permiso deja avanzar a "Listo para instalar"."""
         from app.modules.field_ops.catalogs import PermitStatus
 
         if self.status == PermitStatus.not_required:
             return True
-        return self.status == PermitStatus.approved and not self.is_expired
+        return self.status == PermitStatus.approved and not self.is_expired_on(day)
 
 
 class Inspection(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):

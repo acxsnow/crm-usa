@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case
+from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.catalogs import PERMIT_STATUS_LABELS, PermitStatus
 from app.modules.field_ops.models import Permit, Project
 from app.shared import events as domain_events
@@ -31,13 +32,26 @@ async def permits_of(db: AsyncSession, project_id: uuid.UUID) -> list[Permit]:
     )
 
 
-def all_cleared(permits: list[Permit]) -> bool:
-    return bool(permits) and all(p.is_cleared for p in permits)
+def all_cleared(permits: list[Permit], today: date) -> bool:
+    return bool(permits) and all(p.is_cleared_on(today) for p in permits)
 
 
-async def list_permits(db: AsyncSession, *, organization_id: uuid.UUID, user, project_id: uuid.UUID) -> list[Permit]:
+def as_response(permit: Permit, today: date) -> dict:
+    """La respuesta de la API, con vencido y despejado calculados al día de la
+    organización."""
+    from app.modules.field_ops.schemas import PermitResponse
+
+    datos = PermitResponse.model_validate(
+        {**{c.name: getattr(permit, c.name) for c in Permit.__table__.columns},
+         "is_expired": permit.is_expired_on(today), "is_cleared": permit.is_cleared_on(today)}
+    )
+    return datos.model_dump()
+
+
+async def list_permits(db: AsyncSession, *, organization_id: uuid.UUID, user, project_id: uuid.UUID) -> list[dict]:
     await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
-    return await permits_of(db, project_id)
+    today = await org_today(db, organization_id)
+    return [as_response(p, today) for p in await permits_of(db, project_id)]
 
 
 async def record_permit(
@@ -45,7 +59,7 @@ async def record_permit(
 ) -> Permit:
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
     permit = Permit(organization_id=organization_id, project_id=project.id, **data)
-    _validate(permit)
+    _validate(permit, await org_today(db, organization_id))
     db.add(permit)
     await db.flush()
     await record_audit_event(
@@ -72,7 +86,7 @@ async def update_permit(
     antes = _snapshot(permit)
     for campo, valor in changes.items():
         setattr(permit, campo, valor)
-    _validate(permit)
+    _validate(permit, await org_today(db, organization_id))
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=user.id,
         action="permits.updated", entity_type="Permit", entity_id=str(permit.id),
@@ -81,13 +95,14 @@ async def update_permit(
     return await _finish(db, project=project, permit=permit, user=user)
 
 
-async def _finish(db: AsyncSession, *, project: Project, permit: Permit, user) -> Permit:
+async def _finish(db: AsyncSession, *, project: Project, permit: Permit, user) -> dict:
     """Avanza el expediente hasta donde los permisos lo permitan y guarda todo
     junto. Pueden ser dos pasos si el permiso se registra ya aprobado."""
     permit_id, org_id, estado = permit.id, permit.organization_id, permit.status
     await advance_case(db, project=project, to_stage="permit_in_progress", user=user,
                        reason="Permiso municipal radicado")
-    if all_cleared(await permits_of(db, project.id)):
+    today = await org_today(db, org_id)
+    if all_cleared(await permits_of(db, project.id), today):
         await advance_case(db, project=project, to_stage="ready_to_install", user=user,
                            reason="Permisos municipales despejados")
     await db.commit()
@@ -97,12 +112,11 @@ async def _finish(db: AsyncSession, *, project: Project, permit: Permit, user) -
         {"permit_id": str(permit_id), "project_id": str(project.id),
          "organization_id": str(org_id), "status": str(estado)},
     )
-    return (
-        await db.execute(select(Permit).where(Permit.id == permit_id))
-    ).scalar_one()
+    guardado = (await db.execute(select(Permit).where(Permit.id == permit_id))).scalar_one()
+    return as_response(guardado, today)
 
 
-def _validate(permit: Permit) -> None:
+def _validate(permit: Permit, today: date) -> None:
     if permit.status not in PERMIT_STATUS_LABELS:
         raise InvalidInputError(f"El estado «{permit.status}» no existe.", code="unknown_permit_status")
     if not (permit.jurisdiction or "").strip():
@@ -119,7 +133,7 @@ def _validate(permit: Permit) -> None:
             "La fecha de vencimiento no puede ser anterior a la de aprobación.",
             code="permit_dates_inconsistent",
         )
-    if permit.filed_on and permit.filed_on > date.today():
+    if permit.filed_on and permit.filed_on > today:
         raise InvalidInputError("La fecha de radicación no puede estar en el futuro.", code="permit_filed_in_future")
 
 

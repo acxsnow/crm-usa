@@ -21,6 +21,7 @@ from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case, case_for_project, mark_substatus
 from app.modules.field_ops.catalogs import EQUIPMENT_TYPES
 from app.modules.field_ops.checklist import checklist_gaps, ensure_installation_open
+from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.models import InstalledEquipment, Project, ProjectMaterial, ProjectStatus
 from app.modules.users.models import User, UserRole, UserStatus
 from app.shared import events as domain_events
@@ -133,7 +134,7 @@ async def schedule_installation(
 ) -> Project:
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
-    if scheduled_date < date.today():
+    if scheduled_date < await org_today(db, organization_id):
         raise InvalidInputError("No se puede agendar una instalación en una fecha pasada.", code="schedule_in_past")
     await _require_installer(db, organization_id=organization_id, technician_id=technician_id)
 
@@ -200,9 +201,9 @@ async def installation_gaps(db: AsyncSession, *, project: Project) -> list[str]:
     return faltan
 
 
-def mark_project_completed(project: Project) -> None:
+def mark_project_completed(project: Project, today: date) -> None:
     project.status = ProjectStatus.completed
-    project.completed_date = project.completed_date or date.today()
+    project.completed_date = project.completed_date or today
 
 
 async def close_installation(db, *, organization_id, user, project_id, observations: str | None) -> Project:
@@ -233,7 +234,7 @@ async def close_installation(db, *, organization_id, user, project_id, observati
     )
     project_id_ = project.id
     if case is None:
-        mark_project_completed(project)  # proyecto heredado, sin expediente
+        mark_project_completed(project, await org_today(db, organization_id))  # heredado, sin expediente
     else:
         # El efecto de `installed` marca el proyecto como completado, así el
         # camino manual y este terminan igual.
@@ -254,7 +255,7 @@ async def on_installed(*, db, case, actor_id, reason=None) -> None:
         await db.execute(select(Project).where(Project.case_id == case.id))
     ).scalar_one_or_none()
     if project is not None:
-        mark_project_completed(project)
+        mark_project_completed(project, await org_today(db, case.organization_id))
 
 
 # ---------------------------------------------------------------------------

@@ -68,7 +68,8 @@ async def test_scheduling_someone_who_cannot_install_is_rejected(app_client, db,
     headers = await headers_for(app_client, active_admin_staff_user.email)
     resp = await app_client.patch(
         f"/api/v1/projects/{project.id}/schedule",
-        json={"technician_user_id": str(active_salesperson_user.id), "scheduled_date": str(date.today())},
+        json={"technician_user_id": str(active_salesperson_user.id),
+              "scheduled_date": str(date.today() + timedelta(days=2))},
         headers=headers,
     )
     assert resp.status_code == 400
@@ -80,7 +81,8 @@ async def test_scheduling_a_user_of_another_organization_is_rejected(app_client,
     headers = await headers_for(app_client, active_admin_staff_user.email)
     resp = await app_client.patch(
         f"/api/v1/projects/{project.id}/schedule",
-        json={"technician_user_id": str(second_org_admin_user.id), "scheduled_date": str(date.today())},
+        json={"technician_user_id": str(second_org_admin_user.id),
+              "scheduled_date": str(date.today() + timedelta(days=2))},
         headers=headers,
     )
     assert resp.status_code == 400
@@ -202,7 +204,9 @@ async def test_closing_moves_the_case_to_installed_and_freezes_the_order(app_cli
                                  json={"observations": "Cliente conforme"}, headers=headers)
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "completed"
-    assert resp.json()["completed_date"] == str(date.today())
+    from app.modules.field_ops.clock import org_today
+
+    assert resp.json()["completed_date"] == str(await org_today(db, seeded_org["org"].id))
     assert (await refreshed_case(db, case)).stage_code == "installed"
     assert ("installation.closed" in [n for n, _ in emitted])
 

@@ -158,3 +158,14 @@ export function useRefreshProject(projectId: string) {
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
 }
+
+/**
+ * La fecha local del navegador en formato AAAA-MM-DD. `toISOString()` da la
+ * fecha UTC: a partir de las 7 p. m. en Bogotá ya es "mañana" y la agenda
+ * ofrecía como mínimo el día siguiente.
+ */
+export function localISODate(d: Date = new Date()): string {
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}

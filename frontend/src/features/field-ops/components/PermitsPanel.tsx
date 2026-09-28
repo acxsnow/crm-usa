@@ -5,6 +5,7 @@ import {
   apiErrorMessage,
   fieldKeys,
   listPermits,
+  localISODate,
   recordPermit,
   updatePermit,
   useFieldCatalogs,
@@ -13,7 +14,7 @@ import {
 } from "@/features/field-ops/module5Api";
 import type { Permit, PermitStatus } from "@/types/fieldOps";
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => localISODate();
 
 /**
  * Permisos municipales (spec D5.5). Registrar el primero pasa el expediente a

@@ -15,8 +15,14 @@ el programa del expediente no tiene plantilla propia (spec D5.3).
 _GENERAL = "Requisitos generales"
 _CIERRE = "Instalación y cierre"
 
+# El nombre es la identidad de la plantilla (`get_or_create_default_checklist_template`
+# busca por nombre). Es distinto al de la plantilla anterior al módulo 5
+# ("Instalación HVAC — Programa de Aires Gratis") a propósito: las
+# organizaciones que ya la tenían reciben esta en su próximo proyecto, y los
+# proyectos anteriores conservan su copia. Cambiar el contenido sin cambiar el
+# nombre dejaría a esas organizaciones con la vieja para siempre.
 DEFAULT_CHECKLIST_TEMPLATE = {
-    "name": "Instalación HVAC — Programa de Aires Gratis",
+    "name": "Checklist técnico del instalador (requerimientos §8)",
     "project_type": "hvac_install",
     "items": [
         {"label": "Verificar orden y dirección", "section": _GENERAL,

@@ -51,22 +51,27 @@ def test_an_item_is_resolved_when_complete_or_not_applicable():
     assert _item().is_resolved is False
 
 
+HOY = date(2026, 9, 27)
+
+
 def _permit(status, expires_on=None):
     return Permit(status=status, jurisdiction="Phoenix", expires_on=expires_on)
 
 
 def test_an_approved_permit_in_force_is_cleared():
-    assert _permit(PermitStatus.approved, date.today() + timedelta(days=30)).is_cleared is True
-    assert _permit(PermitStatus.approved, None).is_cleared is True
+    assert _permit(PermitStatus.approved, HOY + timedelta(days=30)).is_cleared_on(HOY) is True
+    assert _permit(PermitStatus.approved, None).is_cleared_on(HOY) is True
+    # Vence HOY: sigue vigente todo el día.
+    assert _permit(PermitStatus.approved, HOY).is_cleared_on(HOY) is True
 
 
 def test_an_expired_permit_is_not_cleared():
-    vencido = _permit(PermitStatus.approved, date.today() - timedelta(days=1))
-    assert vencido.is_expired is True
-    assert vencido.is_cleared is False
+    vencido = _permit(PermitStatus.approved, HOY - timedelta(days=1))
+    assert vencido.is_expired_on(HOY) is True
+    assert vencido.is_cleared_on(HOY) is False
 
 
 def test_a_permit_not_required_is_cleared_and_a_submitted_one_is_not():
-    assert _permit(PermitStatus.not_required).is_cleared is True
-    assert _permit(PermitStatus.submitted).is_cleared is False
-    assert _permit(PermitStatus.rejected).is_cleared is False
+    assert _permit(PermitStatus.not_required).is_cleared_on(HOY) is True
+    assert _permit(PermitStatus.submitted).is_cleared_on(HOY) is False
+    assert _permit(PermitStatus.rejected).is_cleared_on(HOY) is False
