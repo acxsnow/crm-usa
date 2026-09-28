@@ -118,3 +118,15 @@ async def add_equipment_directly(db, project) -> None:
                               equipment_type="heat_pump_outdoor", brand="Carrier", model="25HCE4",
                               serial_number="SN-0001"))
     await db.commit()
+
+
+async def installed_case(db, org_id, *, technician_id=None):
+    """Expediente en `installed`: instalación cerrada con checklist y equipo."""
+    case, project = await ready_to_install_case(db, org_id, technician_id=technician_id)
+    await resolve_whole_checklist(db, project.id)
+    await add_equipment_directly(db, project)
+    case = await case_service.transition(
+        db, case=case, to_stage="installed", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR
+    )
+    await db.refresh(project)
+    return case, project

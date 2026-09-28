@@ -13,9 +13,19 @@ mecanismo (`register_effect`) y aquí se declara qué hacer.
 import structlog
 
 from app.modules.cases import stages
+from app.shared import events as domain_events
 from app.modules.field_ops.service import auto_create_project_from_case
 
 logger = structlog.get_logger(__name__)
+
+
+def _anunciar_proyecto(event_name, payload) -> None:
+    if payload.get("to_stage") == "approved":
+        domain_events.emit(
+            "project.created",
+            {"case_id": payload["case_id"], "case_number": payload.get("case_number"),
+             "organization_id": payload["organization_id"]},
+        )
 
 _registrado = False
 
@@ -52,6 +62,18 @@ def register() -> None:
 
     stages.register_guard("ready_to_install", "installed", guards.guard_installation_complete)
     stages.register_effect("ready_to_install", "installed", on_installed)
+
+    from app.modules.field_ops.inspections import on_inspection_failed
+
+    stages.register_guard("installed", "inspection_pending", guards.guard_inspection_scheduled)
+    stages.register_guard("inspection_pending", "billing_in_progress", guards.guard_inspection_passed)
+    stages.register_guard("inspection_pending", "ready_to_install", guards.guard_inspection_failed)
+    stages.register_effect("inspection_pending", "ready_to_install", on_inspection_failed)
+
+    # `project.created` sale tras el commit de la aprobación, no desde el
+    # efecto: el efecto corre antes del commit y anunciaría un proyecto que
+    # podría no llegar a existir (spec D5.10).
+    domain_events.subscribe("case.stage_changed", _anunciar_proyecto)
     _registrado = True
 
 

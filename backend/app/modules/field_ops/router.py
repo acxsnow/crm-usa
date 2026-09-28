@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, pagination_params
 from app.modules.field_ops import checklist as checklist_service
+from app.modules.field_ops import inspections as inspections_service
 from app.modules.field_ops import installation as installation_service
 from app.modules.field_ops import permits as permits_service
 from app.modules.field_ops import service as field_ops_service
@@ -33,6 +34,10 @@ from app.modules.field_ops.schemas import (
     AvailabilityUpdate,
     ChecklistItemUpdate,
     AgendaRow,
+    FieldCatalogsResponse,
+    InspectionCreate,
+    InspectionResponse,
+    InspectionResultRequest,
     CloseInstallationRequest,
     EquipmentCreate,
     EquipmentResponse,
@@ -775,4 +780,57 @@ async def close_project_installation(
     return await installation_service.close_installation(
         db, organization_id=organization_id, user=current_user, project_id=project_id,
         observations=payload.observations,
+    )
+
+
+# --- Módulo 5: inspección -----------------------------------------------------
+
+@router.get("/projects/{project_id}/inspections", response_model=list[InspectionResponse])
+async def list_project_inspections(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    return await inspections_service.list_inspections(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
+@router.post("/projects/{project_id}/inspections", response_model=InspectionResponse, status_code=201)
+async def schedule_project_inspection(
+    project_id: uuid.UUID, payload: InspectionCreate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("inspections.manage")),
+):
+    return await inspections_service.schedule_inspection(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        scheduled_for=payload.scheduled_for, inspector_name=payload.inspector_name,
+    )
+
+
+@router.post("/inspections/{inspection_id}/result", response_model=InspectionResponse)
+async def record_project_inspection_result(
+    inspection_id: uuid.UUID, payload: InspectionResultRequest, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("inspections.manage")),
+):
+    return await inspections_service.record_inspection_result(
+        db, organization_id=organization_id, user=current_user, inspection_id=inspection_id,
+        result=payload.result, observations=payload.observations, inspector_name=payload.inspector_name,
+    )
+
+
+@router.get("/field-ops/catalogs", response_model=FieldCatalogsResponse)
+async def field_catalogs(
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    """Los catálogos de campo con sus etiquetas, para que el frontend no los repita."""
+    from app.modules.field_ops import catalogs
+
+    return FieldCatalogsResponse(
+        evidence_categories=catalogs.EVIDENCE_CATEGORIES,
+        installation_conditions=catalogs.INSTALLATION_CONDITIONS,
+        equipment_types=catalogs.EQUIPMENT_TYPES,
+        permit_statuses={str(k): v for k, v in catalogs.PERMIT_STATUS_LABELS.items()},
+        inspection_results={str(k): v for k, v in catalogs.INSPECTION_RESULT_LABELS.items()},
     )

@@ -358,3 +358,37 @@ class AgendaRow(BaseModel):
 class InstallationGapsResponse(BaseModel):
     can_close: bool
     missing: list[str]
+
+
+# --- Módulo 5: inspección ----------------------------------------------------
+
+class InspectionCreate(BaseModel):
+    scheduled_for: datetime
+    inspector_name: str | None = Field(default=None, max_length=255)
+
+
+class InspectionResultRequest(BaseModel):
+    result: str
+    observations: str | None = Field(default=None, max_length=4000)
+    inspector_name: str | None = Field(default=None, max_length=255)
+
+
+class InspectionResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    scheduled_for: datetime
+    inspector_name: str | None
+    result: str
+    result_recorded_at: datetime | None
+    recorded_by_user_id: uuid.UUID | None
+    observations: str | None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class FieldCatalogsResponse(BaseModel):
+    evidence_categories: dict[str, str]
+    installation_conditions: dict[str, str]
+    equipment_types: dict[str, str]
+    permit_statuses: dict[str, str]
+    inspection_results: dict[str, str]

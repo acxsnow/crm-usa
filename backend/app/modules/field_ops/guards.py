@@ -42,3 +42,36 @@ async def guard_installation_complete(*, db, case, actor_id, reason):
             "No se puede pasar a «Instalado». Falta: " + "; ".join(faltan) + ".",
             code="installation_incomplete",
         )
+
+
+async def guard_inspection_scheduled(*, db, case, actor_id, reason):
+    from app.modules.field_ops.inspections import latest_result
+
+    project = await project_for_case(db, case)
+    if await latest_result(db, project.id) != "pending":
+        raise InvalidInputError(
+            "Agenda la inspección municipal antes de pasar a «Inspección pendiente».",
+            code="inspection_not_scheduled",
+        )
+
+
+async def guard_inspection_passed(*, db, case, actor_id, reason):
+    from app.modules.field_ops.inspections import latest_result
+
+    project = await project_for_case(db, case)
+    if await latest_result(db, project.id) != "passed":
+        raise InvalidInputError(
+            "La inspección municipal debe estar aprobada antes de pasar a cobro.",
+            code="inspection_not_passed",
+        )
+
+
+async def guard_inspection_failed(*, db, case, actor_id, reason):
+    from app.modules.field_ops.inspections import latest_result
+
+    project = await project_for_case(db, case)
+    if await latest_result(db, project.id) != "failed":
+        raise InvalidInputError(
+            "Solo una inspección fallida devuelve el expediente a «Listo para instalar».",
+            code="inspection_not_failed",
+        )
