@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { buildNavForUser } from "@/config/navigation";
 
@@ -6,9 +7,23 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const navGroups = buildNavForUser(user);
 
+  // Celular: la barra lateral se vuelve un menú que se abre con ☰ y se cierra
+  // al navegar, al tocar fuera o con Escape. En escritorio no cambia nada.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
   return (
     <div className="app-shell">
-      <aside className="app-sidebar">
+      {menuOpen && <div className="menu-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
+      <aside id="menu-principal" className={menuOpen ? "app-sidebar is-open" : "app-sidebar"}>
+        <button type="button" className="menu-close" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)}>×</button>
         <div className="app-brand"><span className="brand-mark">P</span><span>PAP<span className="brand-dot">.</span>CRM</span></div>
         <div className="sidebar-caption">GESTIÓN DE CAMPO</div>
         <nav aria-label="Navegación principal">
@@ -40,10 +55,25 @@ export function DashboardLayout() {
             </div>
           ))}
         </nav>
+        <div className="menu-account">
+          <strong>{user?.full_name}</strong>
+          {user?.role_names?.length ? <small>{user.role_names.join(", ")}</small> : null}
+          <button type="button" onClick={() => logout()}>Salir</button>
+        </div>
         <div className="sidebar-help"><span className="help-icon">?</span><div><strong>¿Necesitas ayuda?</strong><small>Visita el centro de soporte</small></div></div>
       </aside>
       <div className="app-main">
         <header className="app-topbar">
+          <button
+            type="button"
+            className="menu-toggle"
+            aria-label="Abrir menú"
+            aria-controls="menu-principal"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+          >
+            <span aria-hidden="true">☰</span> Menú
+          </button>
           <div className="topbar-search"><span>⌕</span><input aria-label="Buscar" placeholder="Buscar clientes, proyectos..." /></div>
           <button className="notification-button" aria-label="Notificaciones">♢<i /></button>
           <div className="user-menu">
