@@ -94,12 +94,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "◉",
         permission: "dashboards.operations",
       },
+      // El técnico ve la suya; Administración (`dispatch.manage`) la de todos.
       {
-        label: "Mi agenda",
+        label: "Agenda",
         to: "/my-schedule",
         icon: "◷",
-        permission: "dispatch.read_own",
-        disabled: true,
+        permission: ["dispatch.read_own", "dispatch.manage"],
       },
       {
         label: "Permisos e inspecciones",

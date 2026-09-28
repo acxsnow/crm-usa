@@ -5,7 +5,7 @@ export type ProjectStatus = "planning" | "scheduled" | "in_progress" | "complete
 export interface Project extends Address {
   id: string;
   customer_id: string;
-  opportunity_id?: string | null;
+  case_id?: string | null;
   title: string;
   project_type?: string | null;
   status: ProjectStatus;
@@ -13,6 +13,7 @@ export interface Project extends Address {
   completed_date?: string | null;
   primary_technician_user_id?: string | null;
   notes?: string | null;
+  installation_conditions: string[];
   created_at: string;
 }
 
@@ -37,7 +38,13 @@ export interface ProjectChecklistItem {
   sort_order: number;
   is_required: boolean;
   requires_evidence: boolean;
+  section: string | null;
+  evidence_category: string | null;
+  condition_code: string | null;
+  allows_not_applicable: boolean;
   is_complete: boolean;
+  not_applicable: boolean;
+  not_applicable_reason: string | null;
   completed_at?: string | null;
   completed_by_user_id?: string | null;
 }
@@ -65,7 +72,8 @@ export interface TaskComment {
   created_at: string;
 }
 
-export type EvidenceCategory = "before" | "during" | "after" | "damage" | "other";
+/** Código del catálogo de evidencias (15 categorías, `GET /field-ops/catalogs`). */
+export type EvidenceCategory = string;
 
 export interface Evidence {
   id: string;
@@ -94,4 +102,90 @@ export interface Attestation {
   pdf_path?: string | null;
   generated_at?: string | null;
   is_fully_signed: boolean;
+}
+
+// --- Módulo 5 ---------------------------------------------------------------
+
+/** Catálogos con etiquetas en español; el backend es la única fuente. */
+export interface FieldCatalogs {
+  evidence_categories: Record<string, string>;
+  installation_conditions: Record<string, string>;
+  equipment_types: Record<string, string>;
+  permit_statuses: Record<string, string>;
+  inspection_results: Record<string, string>;
+}
+
+export type PermitStatus = "submitted" | "approved" | "rejected" | "not_required";
+
+export interface Permit {
+  id: string;
+  project_id: string;
+  jurisdiction: string;
+  permit_number: string | null;
+  permit_type: string | null;
+  status: PermitStatus;
+  filed_on: string | null;
+  approved_on: string | null;
+  expires_on: string | null;
+  not_required_reason: string | null;
+  notes: string | null;
+  is_expired: boolean;
+  is_cleared: boolean;
+  created_at: string;
+}
+
+export type InspectionResult = "pending" | "passed" | "failed";
+
+export interface Inspection {
+  id: string;
+  project_id: string;
+  scheduled_for: string;
+  inspector_name: string | null;
+  result: InspectionResult;
+  result_recorded_at: string | null;
+  observations: string | null;
+  created_at: string;
+}
+
+export interface InstalledEquipment {
+  id: string;
+  project_id: string;
+  equipment_type: string;
+  brand: string;
+  model: string;
+  serial_number: string | null;
+  quantity: number;
+  unit_label: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ProjectMaterial {
+  id: string;
+  project_id: string;
+  description: string;
+  sku: string | null;
+  quantity: number;
+  unit: string | null;
+  notes: string | null;
+}
+
+export interface InstallationGaps {
+  can_close: boolean;
+  missing: string[];
+}
+
+export interface AgendaRow {
+  project_id: string;
+  title: string;
+  status: ProjectStatus;
+  scheduled_date: string | null;
+  primary_technician_user_id: string | null;
+  address_street: string | null;
+  address_unit: string | null;
+  address_city: string | null;
+  case_id: string | null;
+  case_number: string | null;
+  stage_code: string | null;
+  substatus_code: string | null;
 }

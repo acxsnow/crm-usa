@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  completeChecklistItem,
   createTask,
   createTaskComment,
   fetchAttestationPdfObjectUrl,
@@ -22,6 +21,15 @@ import { listUsers } from "@/features/users/api";
 import { SignaturePad } from "./SignaturePad";
 import { PaginationControls } from "@/components/PaginationControls";
 import type { Evidence, EvidenceCategory, FieldTask, TaskStatus } from "@/types/fieldOps";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useFieldCatalogs } from "./module5Api";
+import { ChecklistPanel } from "./components/ChecklistPanel";
+import { ConditionsPanel } from "./components/ConditionsPanel";
+import { EquipmentPanel } from "./components/EquipmentPanel";
+import { InspectionsPanel } from "./components/InspectionsPanel";
+import { InstallationPanel } from "./components/InstallationPanel";
+import { MaterialsPanel } from "./components/MaterialsPanel";
+import { PermitsPanel } from "./components/PermitsPanel";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
@@ -32,6 +40,7 @@ const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
 ];
 
 function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: () => void }) {
+  const { data: categoryLabels } = useFieldCatalogs();
   const [url, setUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const isVideo = evidence.mime_type?.startsWith("video/");
@@ -47,7 +56,7 @@ function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: ()
   return <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label="Vista ampliada de evidencia" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="evidence-viewer">
       <header className="evidence-viewer-header">
-        <div><strong>{evidence.original_filename ?? "Evidencia"}</strong><small>{evidence.category} · {evidence.watermarked ? "Marca visible aplicada" : "Sin marca"}</small></div>
+        <div><strong>{evidence.original_filename ?? "Evidencia"}</strong><small>{categoryLabels?.evidence_categories[evidence.category] ?? evidence.category} · {evidence.watermarked ? "Marca visible aplicada" : "Sin marca"}</small></div>
         <button type="button" className="evidence-viewer-close" onClick={onClose} aria-label="Cerrar vista ampliada">×</button>
       </header>
       <div className="evidence-viewer-stage">
@@ -65,10 +74,11 @@ function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: ()
 }
 
 function EvidenceCard({ evidence, onOpen }: { evidence: Evidence; onOpen: (evidence: Evidence) => void }) {
+  const { data: categoryLabels } = useFieldCatalogs();
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => { let active = true; fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined); return () => { active = false; }; }, [evidence.id]);
   const isVideo = evidence.mime_type?.startsWith("video/");
-  return <article className="evidence-card"><button type="button" className="evidence-preview-button" onClick={() => onOpen(evidence)} aria-label={`Abrir ${evidence.original_filename ?? "evidencia"}`}>{url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={evidence.original_filename ?? "Evidencia"} />) : <div className="evidence-placeholder">Cargando vista previa...</div>}<span className="evidence-open-hint">Ver en detalle ↗</span></button><div className="evidence-card-info"><strong>{evidence.original_filename ?? "Evidencia"}</strong><span>{evidence.category} · {evidence.watermarked ? "Marca visible ✓" : "Sin marca"}</span><small>{evidence.latitude != null && evidence.longitude != null ? `GPS ${evidence.latitude.toFixed(5)}, ${evidence.longitude.toFixed(5)}` : "GPS no disponible"}</small><small>{evidence.captured_at ? new Date(evidence.captured_at).toLocaleString("es-CO") : "Fecha no disponible"}</small></div></article>;
+  return <article className="evidence-card"><button type="button" className="evidence-preview-button" onClick={() => onOpen(evidence)} aria-label={`Abrir ${evidence.original_filename ?? "evidencia"}`}>{url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={evidence.original_filename ?? "Evidencia"} />) : <div className="evidence-placeholder">Cargando vista previa...</div>}<span className="evidence-open-hint">Ver en detalle ↗</span></button><div className="evidence-card-info"><strong>{evidence.original_filename ?? "Evidencia"}</strong><span>{categoryLabels?.evidence_categories[evidence.category] ?? evidence.category} · {evidence.watermarked ? "Marca visible ✓" : "Sin marca"}</span><small>{evidence.latitude != null && evidence.longitude != null ? `GPS ${evidence.latitude.toFixed(5)}, ${evidence.longitude.toFixed(5)}` : "GPS no disponible"}</small><small>{evidence.captured_at ? new Date(evidence.captured_at).toLocaleString("es-CO") : "Fecha no disponible"}</small></div></article>;
 }
 
 function TaskComments({ taskId }: { taskId: string }) {
@@ -291,15 +301,11 @@ export function ProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const [category, setCategory] = useState<EvidenceCategory>("during");
+  const { hasPermission } = useAuth();
+  const { data: catalogs } = useFieldCatalogs();
+  const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-
-  const completeMutation = useMutation({
-    mutationFn: ({ itemId, isComplete }: { itemId: string; isComplete: boolean }) => completeChecklistItem(itemId, isComplete),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-checklist", projectId] }),
-    onError: (err: any) => alert(err?.response?.data?.detail ?? "No se pudo actualizar."),
-  });
 
   const uploadMutation = useMutation({
     mutationFn: () =>
@@ -324,6 +330,7 @@ export function ProjectDetailPage() {
   });
 
   if (projectLoading || !project) return <p>Cargando...</p>;
+  const cerrada = project.status === "completed";
 
   return (
     <div>
@@ -333,26 +340,26 @@ export function ProjectDetailPage() {
         <span className={`status-pill status-${project.status}`}>{project.status}</span>
       </p>
 
-      <h3>Lista de verificación</h3>
-      <ul className="plain-list">
-        {(checklist ?? []).map((item) => (
-          <li key={item.id}>
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={item.is_complete}
-                onChange={(e) => completeMutation.mutate({ itemId: item.id, isComplete: e.target.checked })}
-              />
-              {item.label}
-              {item.requires_evidence && !item.is_complete && (
-                <span className="warning-banner" style={{ margin: 0, padding: "0.1rem 0.5rem" }}>
-                  requiere evidencia
-                </span>
-              )}
-            </label>
-          </li>
-        ))}
-      </ul>
+      <InstallationPanel
+        project={project}
+        canSchedule={hasPermission("dispatch.manage")}
+        canClose={hasPermission("checklists.complete")}
+      />
+      <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete")} />
+      <ChecklistPanel
+        project={project}
+        items={checklist ?? []}
+        canEdit={hasPermission("checklists.complete")}
+        coords={geo.coords}
+      />
+      <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada} />
+      <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update")} closed={cerrada} />
+      <PermitsPanel projectId={project.id} canManage={hasPermission("permits.manage")} />
+      <InspectionsPanel
+        projectId={project.id}
+        canManage={hasPermission("inspections.manage")}
+        installationClosed={cerrada}
+      />
 
       <TaskBoard projectId={project.id} />
 
@@ -372,12 +379,10 @@ export function ProjectDetailPage() {
           if (file) uploadMutation.mutate();
         }}
       >
-        <select value={category} onChange={(e) => setCategory(e.target.value as EvidenceCategory)}>
-          <option value="before">Antes</option>
-          <option value="during">Durante</option>
-          <option value="after">Después</option>
-          <option value="damage">Daño existente</option>
-          <option value="other">Otro</option>
+        <select aria-label="Categoría de la evidencia" value={category} onChange={(e) => setCategory(e.target.value)}>
+          {Object.entries(catalogs?.evidence_categories ?? {}).map(([code, label]) => (
+            <option key={code} value={code}>{label}</option>
+          ))}
         </select>
         <input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <button type="submit" disabled={!file || uploadMutation.isPending}>

@@ -12,6 +12,7 @@ import { CustomerDetailPage } from "@/features/crm/CustomerDetailPage";
 import { ProjectsPage } from "@/features/field-ops/ProjectsPage";
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
+import { AgendaPage } from "@/features/field-ops/AgendaPage";
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
@@ -87,6 +88,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["projects.read_all", "projects.read_assigned"]} moduleLabel="Proyectos e instalación">
             <ProjectDetailPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "my-schedule",
+        element: (
+          <RequireAccess permission={["dispatch.read_own", "dispatch.manage"]} moduleLabel="la agenda">
+            <AgendaPage />
           </RequireAccess>
         ),
       },

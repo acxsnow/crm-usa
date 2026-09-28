@@ -78,8 +78,11 @@ export async function getProjectChecklist(projectId: string): Promise<ProjectChe
   return res.data;
 }
 
-export async function completeChecklistItem(itemId: string, isComplete: boolean): Promise<ProjectChecklistItem> {
-  const res = await apiClient.patch<ProjectChecklistItem>(`/checklist-items/${itemId}`, { is_complete: isComplete });
+export async function updateChecklistItem(
+  itemId: string,
+  change: { is_complete?: boolean; not_applicable?: boolean; reason?: string }
+): Promise<ProjectChecklistItem> {
+  const res = await apiClient.patch<ProjectChecklistItem>(`/checklist-items/${itemId}`, change);
   return res.data;
 }
 
@@ -132,11 +135,12 @@ export async function listProjectEvidence(projectId: string): Promise<Evidence[]
 export async function uploadEvidence(
   projectId: string,
   file: File,
-  options: { category: string; latitude?: number; longitude?: number; checklistItemId?: string }
+  options: { category?: string; latitude?: number; longitude?: number; checklistItemId?: string }
 ): Promise<Evidence> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("category", options.category);
+  // Sin categoría, el backend usa la del ítem del checklist o la genérica.
+  if (options.category) formData.append("category", options.category);
   if (options.latitude !== undefined) formData.append("latitude", String(options.latitude));
   if (options.longitude !== undefined) formData.append("longitude", String(options.longitude));
   if (options.checklistItemId) formData.append("checklist_item_id", options.checklistItemId);
