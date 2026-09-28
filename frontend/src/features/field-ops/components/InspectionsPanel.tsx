@@ -40,12 +40,9 @@ export function InspectionsPanel({ projectId, canManage, installationClosed }: {
   });
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h3>Inspección municipal</h3>
-      </div>
+    <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {(intentos ?? []).length === 0 && <p className="empty-state">Sin inspecciones.</p>}
+      {(intentos ?? []).length === 0 && <p className="acta-empty">Sin inspecciones.</p>}
       <ol className="plain-list">
         {(intentos ?? []).map((i, n) => (
           <InspectionRow key={i.id} inspection={i} attempt={n + 1}
@@ -65,7 +62,7 @@ export function InspectionsPanel({ projectId, canManage, installationClosed }: {
       {canManage && !installationClosed && (
         <p className="info-banner">La inspección se agenda cuando la instalación esté cerrada.</p>
       )}
-    </section>
+    </div>
   );
 }
 

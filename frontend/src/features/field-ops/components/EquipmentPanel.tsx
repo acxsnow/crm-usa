@@ -46,10 +46,7 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
   });
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h3>Equipos instalados</h3>
-      </div>
+    <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
       {equipos && equipos.length > 0 ? (
         <div className="table-wrap">
@@ -77,7 +74,7 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
           </table>
         </div>
       ) : (
-        <p className="empty-state">Sin equipos registrados.</p>
+        <p className="acta-empty">Sin equipos registrados.</p>
       )}
 
       {editable && (
@@ -113,11 +110,11 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
             <input id="equipment-unit" placeholder="Casa principal, Spc 14…" value={form.unit_label ?? ""}
               onChange={(e) => setForm({ ...form, unit_label: e.target.value })} />
           </div>
-          <button type="submit" className="primary-button" disabled={add.isPending}>
+          <button type="submit" className="acta-btn is-primary" disabled={add.isPending}>
             {add.isPending ? "Guardando…" : "Agregar equipo"}
           </button>
         </form>
       )}
-    </section>
+    </div>
   );
 }

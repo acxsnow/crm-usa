@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/AuthContext";
-import { listUsers } from "@/features/users/api";
-import { apiErrorMessage, listAgenda, localISODate } from "./module5Api";
+import { apiErrorMessage, listAgenda, localISODate, useInstallers } from "./module5Api";
 import type { AgendaRow } from "@/types/fieldOps";
 
 function thisWeek(): { from: string; to: string } {
@@ -29,14 +28,14 @@ export function AgendaPage() {
   const [hasta, setHasta] = useState(semana.to);
   const [tecnico, setTecnico] = useState("");
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: listUsers, enabled: esDespacho, retry: false });
+  const { data: tecnicos } = useInstallers(esDespacho);
   const { data: filas, error, isLoading } = useQuery({
     queryKey: ["dispatch-agenda", desde, hasta, tecnico],
     queryFn: () => listAgenda({ date_from: desde, date_to: hasta, technician_id: tecnico || undefined }),
     enabled: Boolean(desde && hasta),
   });
 
-  const nombre = (id: string | null) => users?.items.find((u) => u.id === id)?.full_name ?? "Sin asignar";
+  const nombre = (id: string | null) => tecnicos?.find((t) => t.id === id)?.full_name ?? "Sin asignar";
   const porDia = new Map<string, AgendaRow[]>();
   for (const fila of filas ?? []) {
     const dia = fila.scheduled_date ?? "";
@@ -63,7 +62,7 @@ export function AgendaPage() {
               <label htmlFor="agenda-tecnico">Técnico</label>
               <select id="agenda-tecnico" value={tecnico} onChange={(e) => setTecnico(e.target.value)}>
                 <option value="">Todos</option>
-                {(users?.items ?? []).map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                {(tecnicos ?? []).map((t) => <option key={t.id} value={t.id}>{t.full_name}</option>)}
               </select>
             </div>
           )}

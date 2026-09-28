@@ -1312,6 +1312,11 @@ button {
     width: 66px;
     padding: 18px 8px;
   }
+  /* En la barra angosta solo caben los íconos: los títulos de grupo se
+     desbordaban sobre el contenido. */
+  .nav-group-label {
+    display: none;
+  }
   .app-brand span:not(.brand-mark),
   .sidebar-caption,
   .nav-link {
@@ -1738,4 +1743,471 @@ fieldset.field legend {
 
 .panel-form button {
   justify-self: start;
+}
+
+/* ---------------------------------------------------------------------------
+   Acta de instalación (módulo 5). Una sola hoja con los pasos del trabajo en
+   campo en orden; el riel numerado muestra dónde va la orden. La numeración
+   es información: el trabajo es una secuencia real.
+--------------------------------------------------------------------------- */
+:root {
+  --ok: #1f7a4d;
+  --ok-wash: #e6f2eb;
+}
+
+/* El acta y sus anexos comparten ancho: se leen como un solo documento. */
+.acta-page {
+  max-width: 920px;
+}
+
+.acta {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 2rem 2.25rem 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.acta-header {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.acta-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.acta-title {
+  font-family: var(--display-font);
+  /* Un acta es un documento: título en tipo oración, no en mayúsculas como
+     los encabezados de las pantallas de listado. */
+  text-transform: none;
+  font-size: 1.55rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.acta-stage {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--red-dark);
+  background: var(--red-wash);
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+}
+
+.acta-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem 1.5rem;
+  margin: 1.25rem 0 0;
+}
+
+.acta-meta dt {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.15rem;
+}
+
+.acta-meta dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.acta-data,
+.acta-stamp {
+  font-family: var(--mono-font);
+}
+
+/* --- Riel de pasos --------------------------------------------------------- */
+
+.acta-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.acta-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.25rem 1fr;
+  column-gap: 1rem;
+  padding-bottom: 1.35rem;
+}
+
+/* La línea que une los pasos. */
+.acta-step::before {
+  content: "";
+  position: absolute;
+  left: calc(1.125rem - 1px);
+  top: 2.4rem;
+  bottom: 0.2rem;
+  width: 2px;
+  background: var(--line);
+}
+
+.acta-step:last-child::before {
+  display: none;
+}
+
+.acta-step.is-done::before {
+  background: var(--ink);
+}
+
+.acta-step-marker {
+  grid-row: 1 / span 2;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--display-font);
+  font-size: 0.9rem;
+  border: 2px solid var(--line);
+  color: var(--ink-faint);
+  background: var(--surface);
+  position: relative;
+  z-index: 1;
+}
+
+.acta-step.is-done .acta-step-marker {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.acta-step.is-current .acta-step-marker {
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 0 4px var(--red-wash);
+}
+
+.acta-step-head {
+  all: unset;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  min-height: 2.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.acta-step-head:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+.acta-step-head:disabled {
+  cursor: default;
+}
+
+.acta-step-title {
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 2.25rem;
+}
+
+.acta-step.is-locked .acta-step-title,
+.acta-step.is-pending .acta-step-title {
+  color: var(--ink-soft);
+}
+
+.acta-step-summary {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.acta-step.is-done .acta-step-summary {
+  color: var(--ok);
+}
+
+.acta-step.is-current .acta-step-summary {
+  color: var(--red-dark);
+}
+
+.acta-step-body {
+  grid-column: 2;
+  padding-top: 0.75rem;
+}
+
+.acta-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.acta-lead,
+.acta-empty {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.acta-annex-title {
+  font-family: var(--display-font);
+  text-transform: none;
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+/* --- Condiciones ------------------------------------------------------------ */
+
+.acta-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.acta-condition {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.acta-condition:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--canvas);
+  font-weight: 600;
+}
+
+/* --- Líneas del checklist ----------------------------------------------------- */
+
+.acta-section {
+  margin-top: 0.5rem;
+}
+
+.acta-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.acta-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.acta-item {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.25rem 0.75rem;
+  align-items: start;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.acta-item-num {
+  font-family: var(--mono-font);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  padding-top: 0.15rem;
+}
+
+.acta-item-main {
+  min-width: 0;
+}
+
+.acta-item-label {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.acta-item-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.acta-item.is-inactive .acta-item-label {
+  color: var(--ink-faint);
+}
+
+.acta-item.is-confirmed .acta-item-num {
+  color: var(--ok);
+}
+
+.acta-stamp {
+  display: inline-block;
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ok);
+  background: var(--ok-wash);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.acta-stamp.is-na {
+  font-family: inherit;
+  color: var(--ink-soft);
+  background: var(--canvas);
+}
+
+.acta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.acta-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acta-btn:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+}
+
+.acta-btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.acta-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.acta-btn.is-primary {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.acta-btn.is-primary:hover:not(:disabled) {
+  background: var(--red-dark);
+  border-color: var(--red-dark);
+}
+
+.acta-btn.is-quiet {
+  border-color: transparent;
+  color: var(--ink-soft);
+}
+
+.acta-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  max-width: 520px;
+}
+
+.acta-reason label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.acta-reason input {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.acta-reason .acta-actions {
+  justify-content: flex-start;
+}
+
+.acta-missing {
+  border-left: 3px solid var(--red);
+  padding: 0.25rem 0 0.25rem 1rem;
+}
+
+.acta-missing p {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.acta-missing ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+/* Tablas y listas dentro del acta: sin tarjeta propia, son parte de la hoja. */
+.acta .table-wrap,
+.acta .plain-list {
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .acta {
+    padding: 1.25rem 1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .acta-step {
+    column-gap: 0.7rem;
+  }
+  .acta-item {
+    grid-template-columns: 1.6rem 1fr;
+  }
+  /* En el celular los botones van debajo de la línea, a todo el ancho del
+     pulgar. */
+  .acta-item .acta-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+  .acta-btn {
+    padding: 0.6rem 0.95rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .acta-step-marker {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+}
+
+/* Formularios en línea dentro del acta (materiales, inspección, aprobar
+   permiso): sin caja propia y con los botones del acta, para que la hoja no
+   mezcle dos estilos. */
+.acta .inline-form {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0.25rem 0 0;
+}
+
+.acta .inline-form button {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+}
+
+.acta .panel-form .acta-btn {
+  padding: 0.62rem 1rem;
 }

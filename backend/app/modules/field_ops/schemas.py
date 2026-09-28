@@ -396,3 +396,9 @@ class FieldCatalogsResponse(BaseModel):
     equipment_types: dict[str, str]
     permit_statuses: dict[str, str]
     inspection_results: dict[str, str]
+
+
+class InstallerResponse(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    model_config = {"from_attributes": True}

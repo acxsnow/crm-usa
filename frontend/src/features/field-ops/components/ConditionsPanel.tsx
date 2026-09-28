@@ -32,16 +32,14 @@ export function ConditionsPanel({ project, canEdit }: { project: Project; canEdi
 
   if (!catalogs) return null;
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h3>Condiciones de la instalación</h3>
-      </div>
+    <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+      <p className="acta-lead">Marca lo que aplica a esta casa. Cambia qué líneas del checklist se exigen.</p>
+      <div className="acta-conditions">
         {Object.entries(catalogs.installation_conditions).map(([code, label]) => {
           const id = `condicion-${code}`;
           return (
-            <label key={code} htmlFor={id} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+            <label key={code} htmlFor={id} className="acta-condition">
               <input
                 id={id}
                 type="checkbox"
@@ -56,6 +54,6 @@ export function ConditionsPanel({ project, canEdit }: { project: Project; canEdi
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

@@ -37,10 +37,7 @@ export function MaterialsPanel({ projectId, canManage, closed }: { projectId: st
 
   if (!editable && (materiales ?? []).length === 0) return null;
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h3>Materiales de la orden</h3>
-      </div>
+    <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
       {(materiales ?? []).length > 0 && (
         <ul className="plain-list">
@@ -67,6 +64,6 @@ export function MaterialsPanel({ projectId, canManage, closed }: { projectId: st
           <button type="submit" disabled={add.isPending}>Agregar</button>
         </form>
       )}
-    </section>
+    </div>
   );
 }

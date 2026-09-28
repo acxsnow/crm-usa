@@ -39,10 +39,7 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
   });
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h3>Permisos municipales</h3>
-      </div>
+    <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
       {permits && permits.length > 0 ? (
         <div className="table-wrap">
@@ -66,7 +63,7 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
           </table>
         </div>
       ) : (
-        <p className="empty-state">Sin permisos registrados.</p>
+        <p className="acta-empty">Sin permisos registrados.</p>
       )}
 
       {canManage && (
@@ -127,12 +124,12 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
                 onChange={(e) => setForm({ ...form, not_required_reason: e.target.value })} />
             </div>
           )}
-          <button type="submit" className="primary-button" disabled={record.isPending}>
+          <button type="submit" className="acta-btn is-primary" disabled={record.isPending}>
             {record.isPending ? "Guardando…" : "Registrar permiso"}
           </button>
         </form>
       )}
-    </section>
+    </div>
   );
 }
 

@@ -20,25 +20,20 @@ import {
 import { listUsers } from "@/features/users/api";
 import { SignaturePad } from "./SignaturePad";
 import { PaginationControls } from "@/components/PaginationControls";
-import { PROJECT_STATUS_LABELS, type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
+import { type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
 import { useAuth } from "@/features/auth/AuthContext";
-import { useFieldCatalogs } from "./module5Api";
+import { useFieldCatalogs, useInstallers } from "./module5Api";
 import { ChecklistPanel } from "./components/ChecklistPanel";
 import { ConditionsPanel } from "./components/ConditionsPanel";
 import { EquipmentPanel } from "./components/EquipmentPanel";
 import { InspectionsPanel } from "./components/InspectionsPanel";
-import { InstallationPanel } from "./components/InstallationPanel";
+import { CloseInstallationStep, ReleaseOrderStep } from "./components/InstallationPanel";
+import { InstallationRecord, deriveStates, useRecordData } from "./components/InstallationRecord";
 import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
-// Sub-estados del tramo de campo. Los demás (revisión, cobro) no llegan a un
-// expediente que ya tiene proyecto de instalación en curso.
-const SUBSTATUS_LABELS: Record<string, string> = {
-  install_scheduled: "Instalación programada",
-  inspection_approved: "Inspección aprobada",
-};
 
 const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "pending", label: "Pendiente" },
@@ -308,7 +303,7 @@ export function ProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const { data: catalogs } = useFieldCatalogs();
   const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
   const [file, setFile] = useState<File | null>(null);
@@ -336,44 +331,67 @@ export function ProjectDetailPage() {
     mutationFn: () => requestCustomerSignature(projectId!),
   });
 
+  const recordData = useRecordData(projectId!, project?.status === "completed");
+  const { data: installers } = useInstallers(hasPermission("dispatch.manage"));
+
   if (projectLoading || !project) return <p>Cargando...</p>;
   const cerrada = project.status === "completed";
+  const estados = deriveStates(project, recordData);
+  const technicianName = project.primary_technician_user_id
+    ? project.primary_technician_user_id === user?.id
+      ? user.full_name
+      : installers?.find((t) => t.id === project.primary_technician_user_id)?.full_name ?? "Asignado"
+    : null;
 
   return (
-    <div>
-      <h1>{project.title}</h1>
-      <p className="page-subtitle">
-        {[project.address_street, project.address_unit, project.address_city].filter(Boolean).join(", ")} ·{" "}
-        <span className={`status-pill status-${project.status}`}>{PROJECT_STATUS_LABELS[project.status]}</span>
-      </p>
-      {project.case_number && (
-        <p className="info-banner">
-          Expediente <strong>{project.case_number}</strong> · Etapa: <strong>{project.case_stage_label}</strong>
-          {project.case_substatus_code && ` · ${SUBSTATUS_LABELS[project.case_substatus_code] ?? project.case_substatus_code}`}
-        </p>
-      )}
-
-      <InstallationPanel
+    <div className="acta-page">
+      <InstallationRecord
         project={project}
-        canSchedule={hasPermission("dispatch.manage")}
-        canClose={hasPermission("checklists.complete")}
-      />
-      <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete")} />
-      <ChecklistPanel
-        project={project}
-        items={checklist ?? []}
-        canEdit={hasPermission("checklists.complete")}
-        coords={geo.coords}
-      />
-      <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada} />
-      <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update")} closed={cerrada} />
-      <PermitsPanel projectId={project.id} canManage={hasPermission("permits.manage")} />
-      <InspectionsPanel
-        projectId={project.id}
-        canManage={hasPermission("inspections.manage")}
-        installationClosed={cerrada}
+        technicianName={technicianName}
+        steps={[
+          {
+            key: "permit", title: "Permiso municipal", ...estados.permit,
+            body: <PermitsPanel projectId={project.id} canManage={hasPermission("permits.manage")} />,
+          },
+          {
+            key: "release", title: "Orden liberada", ...estados.release,
+            body: (
+              <>
+                <ReleaseOrderStep project={project} canSchedule={hasPermission("dispatch.manage")} />
+                <h4 className="acta-section-title">Materiales de la orden</h4>
+                <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update")} closed={cerrada} />
+              </>
+            ),
+          },
+          {
+            key: "checklist", title: "Checklist técnico", ...estados.checklist,
+            body: (
+              <>
+                <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete")} />
+                <ChecklistPanel project={project} items={checklist ?? []}
+                  canEdit={hasPermission("checklists.complete")} coords={geo.coords} />
+              </>
+            ),
+          },
+          {
+            key: "equipment", title: "Equipos instalados", ...estados.equipment,
+            body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada} />,
+          },
+          {
+            key: "close", title: "Cierre de la instalación", ...estados.close,
+            body: <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete")} />,
+          },
+          {
+            key: "inspection", title: "Inspección municipal", ...estados.inspection,
+            body: (
+              <InspectionsPanel projectId={project.id} canManage={hasPermission("inspections.manage")}
+                installationClosed={cerrada} />
+            ),
+          },
+        ]}
       />
 
+      <h2 className="acta-annex-title">Anexos</h2>
       <TaskBoard projectId={project.id} />
 
       <h3>Evidencia</h3>

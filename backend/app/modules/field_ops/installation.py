@@ -260,6 +260,27 @@ async def on_installed(*, db, case, actor_id, reason=None) -> None:
 
 # ---------------------------------------------------------------------------
 
+# Quién puede recibir una orden: marca el checklist en campo y tiene agenda
+# propia. Administración también marca checklists, pero no sale a instalar.
+INSTALLER_PERMISSIONS = {"checklists.complete", "dispatch.read_own"}
+
+
+def _can_install(user) -> bool:
+    return INSTALLER_PERMISSIONS <= get_effective_permissions(user)
+
+
+async def list_installers(db, *, organization_id) -> list[User]:
+    usuarios = (
+        await db.execute(
+            select(User)
+            .options(selectinload(User.roles).selectinload(UserRole.role))
+            .where(User.organization_id == organization_id, User.status == UserStatus.active)
+            .order_by(User.full_name)
+        )
+    ).scalars().all()
+    return [u for u in usuarios if _can_install(u)]
+
+
 async def _require_installer(db, *, organization_id, technician_id) -> None:
     tecnico = (
         await db.execute(
@@ -270,7 +291,7 @@ async def _require_installer(db, *, organization_id, technician_id) -> None:
     ).scalar_one_or_none()
     if tecnico is None or tecnico.status != UserStatus.active:
         raise InvalidInputError("El técnico no existe o no está activo.", code="technician_not_found")
-    if "checklists.complete" not in get_effective_permissions(tecnico):
+    if not _can_install(tecnico):
         raise InvalidInputError(
             f"{tecnico.full_name} no tiene un rol que pueda ejecutar instalaciones.",
             code="user_cannot_install",

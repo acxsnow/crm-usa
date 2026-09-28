@@ -169,3 +169,13 @@ export function localISODate(d: Date = new Date()): string {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
+
+/** A quién se le puede asignar una orden (solo con `dispatch.manage`). */
+export function useInstallers(enabled: boolean) {
+  return useQuery({
+    queryKey: ["dispatch-technicians"],
+    queryFn: async () => (await apiClient.get<{ id: string; full_name: string }[]>("/dispatch/technicians")).data,
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}

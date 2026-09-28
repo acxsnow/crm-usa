@@ -34,6 +34,7 @@ from app.modules.field_ops.schemas import (
     AvailabilityUpdate,
     ChecklistItemUpdate,
     AgendaRow,
+    InstallerResponse,
     FieldCatalogsResponse,
     InspectionCreate,
     InspectionResponse,
@@ -732,6 +733,17 @@ async def schedule_project_installation(
         db, organization_id=organization_id, user=current_user, project_id=project_id,
         technician_id=payload.technician_user_id, scheduled_date=payload.scheduled_date,
     )
+
+
+@router.get("/dispatch/technicians", response_model=list[InstallerResponse])
+async def dispatch_technicians(
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dispatch.manage")),
+):
+    """A quién se le puede asignar una orden. Existe aparte de `/users` porque
+    Administración despacha pero no administra usuarios (`users.manage`)."""
+    return await installation_service.list_installers(db, organization_id=organization_id)
 
 
 @router.get("/dispatch/agenda", response_model=list[AgendaRow])

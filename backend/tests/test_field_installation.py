@@ -260,3 +260,23 @@ async def test_the_project_shows_its_case_stage_to_the_technician(app_client, db
     assert cuerpo["case_stage_code"] == "ready_to_install"
     assert cuerpo["case_stage_label"] == "Listo para instalar"
     assert cuerpo["case_substatus_code"] is None
+
+
+async def test_administration_lists_only_the_people_who_can_install(
+    app_client, db, seeded_org, active_admin_staff_user, active_technician_user, active_salesperson_user
+):
+    """Administración no tiene `users.manage`, así que el listado general de
+    usuarios le respondía 403 y no podía elegir técnico al liberar la orden.
+    Este listado es solo de quien puede instalar: sin vendedores ni contadores."""
+    headers = await headers_for(app_client, active_admin_staff_user.email)
+    resp = await app_client.get("/api/v1/dispatch/technicians", headers=headers)
+    assert resp.status_code == 200, resp.text
+    ids = {t["id"] for t in resp.json()}
+    assert str(active_technician_user.id) in ids
+    assert str(active_salesperson_user.id) not in ids
+    assert all(t["full_name"] for t in resp.json())
+
+
+async def test_a_technician_cannot_list_the_dispatch_roster(app_client, active_technician_user):
+    headers = await headers_for(app_client, "tech@acme-demo.com")
+    assert (await app_client.get("/api/v1/dispatch/technicians", headers=headers)).status_code == 403
