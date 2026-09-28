@@ -33,6 +33,13 @@ import { PermitsPanel } from "./components/PermitsPanel";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
+// Sub-estados del tramo de campo. Los demás (revisión, cobro) no llegan a un
+// expediente que ya tiene proyecto de instalación en curso.
+const SUBSTATUS_LABELS: Record<string, string> = {
+  install_scheduled: "Instalación programada",
+  inspection_approved: "Inspección aprobada",
+};
+
 const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "pending", label: "Pendiente" },
   { status: "in_progress", label: "En progreso" },
@@ -339,6 +346,12 @@ export function ProjectDetailPage() {
         {[project.address_street, project.address_unit, project.address_city].filter(Boolean).join(", ")} ·{" "}
         <span className={`status-pill status-${project.status}`}>{project.status}</span>
       </p>
+      {project.case_number && (
+        <p className="info-banner">
+          Expediente <strong>{project.case_number}</strong> · Etapa: <strong>{project.case_stage_label}</strong>
+          {project.case_substatus_code && ` · ${SUBSTATUS_LABELS[project.case_substatus_code] ?? project.case_substatus_code}`}
+        </p>
+      )}
 
       <InstallationPanel
         project={project}

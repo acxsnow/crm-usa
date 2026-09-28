@@ -248,3 +248,15 @@ async def test_the_manual_path_also_completes_the_project(db, seeded_org):
     db.expire_all()
     proyecto = (await db.execute(select(Project).where(Project.id == project_id))).scalar_one()
     assert proyecto.status.value == "completed"
+
+
+async def test_the_project_shows_its_case_stage_to_the_technician(app_client, db, seeded_org, active_technician_user):
+    """El técnico no lee expedientes (`cases.*`), pero en su orden necesita ver
+    en qué etapa está: si ya está liberada o si volvió por inspección fallida."""
+    case, project = await ready_to_install_case(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    headers = await headers_for(app_client, "tech@acme-demo.com")
+    cuerpo = (await app_client.get(f"/api/v1/projects/{project.id}", headers=headers)).json()
+    assert cuerpo["case_number"] == case.case_number
+    assert cuerpo["case_stage_code"] == "ready_to_install"
+    assert cuerpo["case_stage_label"] == "Listo para instalar"
+    assert cuerpo["case_substatus_code"] is None

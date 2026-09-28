@@ -14,6 +14,11 @@ export interface Project extends Address {
   primary_technician_user_id?: string | null;
   notes?: string | null;
   installation_conditions: string[];
+  /** Etapa del expediente del que nace el proyecto (solo lectura). */
+  case_number?: string | null;
+  case_stage_code?: string | null;
+  case_stage_label?: string | null;
+  case_substatus_code?: string | null;
   created_at: string;
 }
 

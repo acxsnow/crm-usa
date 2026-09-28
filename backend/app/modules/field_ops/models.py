@@ -66,6 +66,28 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     # checklist (catálogo `INSTALLATION_CONDITIONS`, requerimientos §8.3).
     installation_conditions: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
 
+    # Solo lectura: la etapa del expediente viaja con el proyecto porque el
+    # técnico no puede leer expedientes (`cases.*`) y aun así necesita saber si
+    # su orden está liberada o volvió por inspección fallida. `selectin` para
+    # que la sesión asíncrona no intente una carga perezosa al serializar.
+    case: Mapped["Case | None"] = relationship("Case", lazy="selectin", viewonly=True)
+
+    @property
+    def case_number(self) -> str | None:
+        return self.case.case_number if self.case else None
+
+    @property
+    def case_stage_code(self) -> str | None:
+        return self.case.stage_code if self.case else None
+
+    @property
+    def case_stage_label(self) -> str | None:
+        return self.case.stage_label if self.case else None
+
+    @property
+    def case_substatus_code(self) -> str | None:
+        return self.case.substatus_code if self.case else None
+
 
 # ---------------------------------------------------------------------------
 # Checklists — template (org-configurable) and per-project snapshot

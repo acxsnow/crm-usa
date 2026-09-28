@@ -65,6 +65,10 @@ class ProjectResponse(AddressSchema):
     primary_technician_user_id: uuid.UUID | None
     notes: str | None
     installation_conditions: list[str] = []
+    case_number: str | None = None
+    case_stage_code: str | None = None
+    case_stage_label: str | None = None
+    case_substatus_code: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 
