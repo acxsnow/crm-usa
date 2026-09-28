@@ -20,7 +20,9 @@ Etapa: desarrollo. Fecha de salida a producción: **Por definir**. Plan por mód
 - **Frontend** (`frontend/`): React 18 + TypeScript + Vite, PWA. Menú por permiso en `src/config/navigation.ts`. Guía: `frontend/ARCHITECTURE.md`.
 - **Levantar en local:** `cp backend/.env.example backend/.env`, `cp frontend/.env.example frontend/.env` y `docker compose up --build`; datos demo con `docker compose exec api python -m scripts.seed --demo-org`. Detalle en `README.md`.
 - **Pruebas:** desde `backend/`, `.venv/bin/python -m pytest -q` (SQLite en memoria). Frontend: `npm run build` (incluye `tsc -b`). No hay pruebas de frontend ni integración continua.
-- **Expediente:** 15 etapas y transiciones en `backend/app/modules/cases/stages.py`. Solo `cases/service.py` escribe `stage_code`, a través de `transition()`; cada cadena registra sus guardas con `register_guard()`. Contrato: `docs/contratos/case.md`.
+- **Expediente:** 15 etapas y transiciones en `backend/app/modules/cases/stages.py`. Solo `cases/service.py` escribe `stage_code`, a través de `transition()`; cada cadena registra sus guardas (pueden ser `async`) y efectos con `register_guard()` / `register_effect()`. Contratos: `docs/contratos/case.md` (Cadena A) y `docs/contratos-cadena-b.md` (Cadena B).
+- **Tramo de campo** (`approved` → `inspection_pending`): el expediente avanza por hechos registrados en `field_ops` (permiso, cierre de instalación, inspección) a través de `field_ops/case_flow.py`, `advance_case()`, nunca llamando a `transition()` desde otro sitio de `field_ops`. Las guardas de `field_ops/guards.py` impiden saltarse esos hechos por la ruta manual.
+- **Archivos:** `app/shared/files/` (`storage.py`, `watermark.py`) es común a todos los módulos.
 - **Integraciones externas:** correo SMTP (Gmail en pruebas). SMS Masiv: Por verificar (módulo 7). Almacenamiento de archivos en disco local; paso a la nube Por verificar.
 
 ## Trabajo en paralelo
