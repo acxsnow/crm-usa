@@ -10,6 +10,14 @@ import {
   listPermits,
 } from "@/features/field-ops/module5Api";
 import type { Project } from "@/types/fieldOps";
+import { CheckCircleIcon, CheckIcon, ClockIcon, DotIcon, LockIcon } from "./icons";
+
+const STATE_CHIP: Record<StepState, { label: string; icon: ReactNode }> = {
+  done: { label: "Completado", icon: <CheckCircleIcon size={16} /> },
+  current: { label: "En curso", icon: <DotIcon size={14} /> },
+  pending: { label: "Pendiente", icon: <ClockIcon size={16} /> },
+  locked: { label: "Bloqueado", icon: <LockIcon size={15} /> },
+};
 
 export type StepState = "done" | "current" | "pending" | "locked";
 
@@ -183,7 +191,7 @@ export function InstallationRecord({ project, technicianName, steps }: {
           return (
             <li key={step.key} className={`acta-step is-${step.state}`}>
               <span className="acta-step-marker" aria-hidden="true">
-                {step.state === "done" ? "✓" : n + 1}
+                {step.state === "done" ? <CheckIcon size={16} strokeWidth={2.6} /> : n + 1}
               </span>
               <button
                 type="button"
@@ -192,14 +200,48 @@ export function InstallationRecord({ project, technicianName, steps }: {
                 disabled={step.state === "locked"}
                 onClick={() => toggle(step.key)}
               >
-                <span className="acta-step-title">{step.title}</span>
-                {step.summary && <span className="acta-step-summary">{step.summary}</span>}
+                <span className="acta-step-text">
+                  <span className="acta-step-title">{step.title}</span>
+                  {step.summary && <span className="acta-step-summary">{step.summary}</span>}
+                </span>
+                <span className={`acta-chip is-${step.state}`}>
+                  {STATE_CHIP[step.state].icon}
+                  {STATE_CHIP[step.state].label}
+                </span>
               </button>
-              {isOpen && <div className="acta-step-body">{step.body}</div>}
+              {isOpen && <div className="acta-step-body"><div className="acta-step-card">{step.body}</div></div>}
             </li>
           );
         })}
       </ol>
     </article>
   );
+}
+
+export interface Requirement {
+  label: string;
+  done: boolean;
+}
+
+/**
+ * Todo lo que exige el cierre, cumplido o no, en el orden del acta. Misma
+ * regla que el backend (`installation_gaps`): las líneas obligatorias que
+ * aplican a esta casa, más al menos un equipo registrado. El backend sigue
+ * siendo quien decide si se puede cerrar; esto es para ver el avance.
+ */
+export function closeRequirements(project: Project, data: ReturnType<typeof useRecordData>): Requirement[] {
+  const condiciones = project.installation_conditions ?? [];
+  const lineas = data.checklist
+    .filter((i) => i.is_required && (!i.condition_code || condiciones.includes(i.condition_code)))
+    .map((i) => ({ label: i.label, done: i.is_complete || i.not_applicable }));
+  const equipo = data.equipment[0];
+  return [
+    ...lineas,
+    {
+      label: equipo
+        ? `Equipo instalado registrado (${equipo.brand} ${equipo.model})`
+        : "Registrar al menos un equipo instalado (marca, modelo y serial)",
+      done: data.equipment.length > 0,
+    },
+  ];
 }

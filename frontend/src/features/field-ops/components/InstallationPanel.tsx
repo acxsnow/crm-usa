@@ -12,6 +12,7 @@ import {
   useRefreshProject,
 } from "@/features/field-ops/module5Api";
 import type { Project } from "@/types/fieldOps";
+import type { Requirement } from "./InstallationRecord";
 
 /** Paso "Orden liberada": técnico y fecha (spec D5.9). */
 export function ReleaseOrderStep({ project, canSchedule }: { project: Project; canSchedule: boolean }) {
@@ -58,10 +59,13 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
 }
 
 /**
- * Paso "Cierre": muestra lo que falta ANTES de intentarlo, para que el técnico
- * vea la lista en vez de un "no se puede" después de pulsar.
+ * Paso "Cierre": todos los requisitos del cierre, cada uno marcado en verde
+ * cuando se cumple, para ver el avance y no solo lo que falta. El botón se
+ * habilita cuando el backend confirma que no falta nada.
  */
-export function CloseInstallationStep({ project, canClose }: { project: Project; canClose: boolean }) {
+export function CloseInstallationStep({ project, canClose, requirements }: {
+  project: Project; canClose: boolean; requirements: Requirement[];
+}) {
   const refresh = useRefreshProject(project.id);
   const [error, setError] = useState<string | null>(null);
   const [observaciones, setObservaciones] = useState("");
@@ -81,19 +85,30 @@ export function CloseInstallationStep({ project, canClose }: { project: Project;
     onError: (err) => setError(apiErrorMessage(err)),
   });
 
-  if (cerrada) {
-    return <p className="acta-empty">Instalación cerrada. Lo registrado en el acta quedó congelado.</p>;
-  }
+  const cumplidos = requirements.filter((r) => r.done).length;
   return (
     <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {gaps && !gaps.can_close && (
-        <div className="acta-missing">
-          <p>Para cerrar falta:</p>
-          <ul>{gaps.missing.map((m) => <li key={m}>{m}</li>)}</ul>
+      <div className="acta-requirements">
+        <div className="acta-progress">
+          <span>{cumplidos} de {requirements.length} requisitos cumplidos</span>
+          <span className="acta-progress-bar" aria-hidden="true">
+            <span style={{ width: `${requirements.length ? (cumplidos / requirements.length) * 100 : 0}%` }} />
+          </span>
         </div>
-      )}
-      {canClose && (
+        <ul>
+          {requirements.map((r) => (
+            <li key={r.label} className={r.done ? "is-done" : undefined}>
+              <span className="acta-tick" aria-hidden="true">{r.done ? "✓" : ""}</span>
+              <span>{r.label}</span>
+              <span className="visually-hidden">{r.done ? "cumplido" : "pendiente"}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {cerrada ? (
+        <p className="acta-empty">Instalación cerrada. Lo registrado en el acta quedó congelado.</p>
+      ) : canClose && (
         <form className="acta-reason" onSubmit={(e) => { e.preventDefault(); close.mutate(); }}>
           <label htmlFor="cierre-observaciones">Observaciones del técnico</label>
           <input id="cierre-observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)}
