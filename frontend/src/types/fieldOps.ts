@@ -2,6 +2,14 @@ import type { Address } from "./crm";
 
 export type ProjectStatus = "planning" | "scheduled" | "in_progress" | "completed" | "cancelled";
 
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planning: "Por agendar",
+  scheduled: "Agendado",
+  in_progress: "En curso",
+  completed: "Cerrado",
+  cancelled: "Cancelado",
+};
+
 export interface Project extends Address {
   id: string;
   customer_id: string;

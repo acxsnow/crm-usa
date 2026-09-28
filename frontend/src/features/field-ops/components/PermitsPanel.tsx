@@ -71,7 +71,7 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
 
       {canManage && (
         <form
-          className="compact-form"
+          className="panel-form"
           onSubmit={(e) => {
             e.preventDefault();
             record.mutate();

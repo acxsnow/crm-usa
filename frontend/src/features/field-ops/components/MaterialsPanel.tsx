@@ -42,18 +42,20 @@ export function MaterialsPanel({ projectId, canManage, closed }: { projectId: st
         <h3>Materiales de la orden</h3>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <ul className="plain-list">
-        {(materiales ?? []).map((m) => (
-          <li key={m.id}>
-            {m.quantity} {m.unit ?? ""} · {m.description}
-            {editable && (
-              <button type="button" className="link-button" onClick={() => remove.mutate(m.id)} disabled={remove.isPending}>
-                Quitar
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+      {(materiales ?? []).length > 0 && (
+        <ul className="plain-list">
+          {(materiales ?? []).map((m) => (
+            <li key={m.id}>
+              {m.quantity} {m.unit ?? ""} · {m.description}
+              {editable && (
+                <button type="button" className="link-button" onClick={() => remove.mutate(m.id)} disabled={remove.isPending}>
+                  Quitar
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {editable && (
         <form className="inline-form" onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
           <input aria-label="Descripción del material" placeholder="Línea de refrigerante 3/8 x 3/4" required

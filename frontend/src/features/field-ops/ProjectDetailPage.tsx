@@ -20,7 +20,7 @@ import {
 import { listUsers } from "@/features/users/api";
 import { SignaturePad } from "./SignaturePad";
 import { PaginationControls } from "@/components/PaginationControls";
-import type { Evidence, EvidenceCategory, FieldTask, TaskStatus } from "@/types/fieldOps";
+import { PROJECT_STATUS_LABELS, type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useFieldCatalogs } from "./module5Api";
 import { ChecklistPanel } from "./components/ChecklistPanel";
@@ -344,7 +344,7 @@ export function ProjectDetailPage() {
       <h1>{project.title}</h1>
       <p className="page-subtitle">
         {[project.address_street, project.address_unit, project.address_city].filter(Boolean).join(", ")} ·{" "}
-        <span className={`status-pill status-${project.status}`}>{project.status}</span>
+        <span className={`status-pill status-${project.status}`}>{PROJECT_STATUS_LABELS[project.status]}</span>
       </p>
       {project.case_number && (
         <p className="info-banner">

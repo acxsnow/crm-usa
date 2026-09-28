@@ -81,7 +81,7 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
       )}
 
       {editable && (
-        <form className="compact-form" onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
+        <form className="panel-form" onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>
           <div className="field">
             <label htmlFor="equipment-type">Tipo</label>
             <select id="equipment-type" value={form.equipment_type}

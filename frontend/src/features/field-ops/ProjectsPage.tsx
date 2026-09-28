@@ -8,7 +8,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
-import type { Project } from "@/types/fieldOps";
+import { PROJECT_STATUS_LABELS, type Project } from "@/types/fieldOps";
 
 const PAGE_SIZE = 20;
 
@@ -80,7 +80,7 @@ export function ProjectsPage() {
   const columns: Column<Project>[] = [
     { key: "title", header: "Proyecto" },
     { key: "address", header: "Dirección", render: (p) => [p.address_street, p.address_unit].filter(Boolean).join(", ") || "—" },
-    { key: "status", header: "Estado", render: (p) => <span className={`status-pill status-${p.status}`}>{p.status}</span> },
+    { key: "status", header: "Estado", render: (p) => <span className={`status-pill status-${p.status}`}>{PROJECT_STATUS_LABELS[p.status]}</span> },
     { key: "scheduled_date", header: "Programado", render: (p) => p.scheduled_date ?? "—" },
     {
       key: "actions",

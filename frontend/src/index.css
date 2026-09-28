@@ -191,6 +191,14 @@ a {
 .app-sidebar {
   width: 250px;
   flex-shrink: 0;
+  /* Fijo al hacer scroll: en las páginas largas (detalle del proyecto) el
+     menú desaparecía. Si el menú no cabe en pantallas bajas, tiene su propio
+     scroll en vez de cortarse. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow-y: auto;
   background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-soft) 100%);
   color: white;
   display: flex;
@@ -1686,4 +1694,48 @@ fieldset.field legend {
 .row-actions {
   display: inline-flex;
   gap: 0.75rem;
+}
+
+/* Formularios dentro de un panel (módulo 5: equipos, permisos). Campos en
+   grilla que se apilan en el celular, con el mismo estilo de input que
+   `.inline-form` para que la página no mezcle dos lenguajes visuales. */
+.panel-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+  margin-top: 1rem;
+}
+
+.panel-form .field {
+  margin-bottom: 0;
+}
+
+.panel-form label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.panel-form input,
+.panel-form select {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid transparent;
+  background: var(--canvas);
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.panel-form input:focus,
+.panel-form select:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-wash);
+  background: var(--surface);
+}
+
+.panel-form button {
+  justify-self: start;
 }
