@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, pagination_params
 from app.modules.field_ops import checklist as checklist_service
+from app.modules.field_ops import permits as permits_service
 from app.modules.field_ops import service as field_ops_service
 from app.modules.field_ops.access import get_visible_project, scope_projects_stmt
 from app.shared.errors import InvalidInputError
@@ -30,6 +31,9 @@ from app.modules.field_ops.schemas import (
     AttestationResponse,
     AvailabilityUpdate,
     ChecklistItemUpdate,
+    PermitCreate,
+    PermitResponse,
+    PermitUpdate,
     InstallationConditionsUpdate,
     ChecklistTemplateCreate,
     ChecklistTemplateResponse,
@@ -585,3 +589,42 @@ async def public_customer_signature(
     return AttestationResponse.model_validate(await field_ops_service.public_customer_sign(
         db, raw_token=token, customer_name=payload.customer_name, signature_base64=payload.signature_base64
     ))
+
+
+# --- Módulo 5: permisos municipales ----------------------------------------
+
+@router.get("/projects/{project_id}/permits", response_model=list[PermitResponse])
+async def list_project_permits(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    return await permits_service.list_permits(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
+@router.post("/projects/{project_id}/permits", response_model=PermitResponse, status_code=201)
+async def record_project_permit(
+    project_id: uuid.UUID, payload: PermitCreate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("permits.manage")),
+):
+    """Registra un permiso. Si es el primero, el expediente pasa a «Permiso en
+    trámite»; si con él quedan todos despejados, a «Listo para instalar»."""
+    return await permits_service.record_permit(
+        db, organization_id=organization_id, user=current_user,
+        project_id=project_id, data=payload.model_dump(),
+    )
+
+
+@router.patch("/permits/{permit_id}", response_model=PermitResponse)
+async def update_project_permit(
+    permit_id: uuid.UUID, payload: PermitUpdate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("permits.manage")),
+):
+    return await permits_service.update_permit(
+        db, organization_id=organization_id, user=current_user,
+        permit_id=permit_id, changes=payload.model_dump(exclude_unset=True),
+    )

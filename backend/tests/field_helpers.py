@@ -83,9 +83,11 @@ async def resolve_whole_checklist(db, project_id) -> None:
 
 
 async def refreshed_case(db, case):
-    return await case_service.get_case_or_404(
-        db, organization_id=case.organization_id, case_id=case.id
-    )
+    """Relee el expediente de la base. La API corre en otra sesión, así que el
+    objeto que esta sesión tiene en memoria está desactualizado."""
+    org_id, case_id = case.organization_id, case.id
+    db.expire_all()
+    return await case_service.get_case_or_404(db, organization_id=org_id, case_id=case_id)
 
 
 def item_by_label(items, fragment: str):

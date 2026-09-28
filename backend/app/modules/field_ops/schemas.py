@@ -250,3 +250,47 @@ class PublicSignatureResponse(BaseModel):
 
 class PublicCustomerSignatureCapture(CustomerSignatureCapture):
     pass
+
+
+# --- Módulo 5: permisos municipales ---------------------------------------
+
+class PermitCreate(BaseModel):
+    jurisdiction: str = Field(min_length=1, max_length=150)
+    permit_number: str | None = Field(default=None, max_length=100)
+    permit_type: str | None = Field(default=None, max_length=100)
+    status: str = "submitted"
+    filed_on: date | None = None
+    approved_on: date | None = None
+    expires_on: date | None = None
+    not_required_reason: str | None = None
+    notes: str | None = None
+
+
+class PermitUpdate(BaseModel):
+    jurisdiction: str | None = Field(default=None, min_length=1, max_length=150)
+    permit_number: str | None = Field(default=None, max_length=100)
+    permit_type: str | None = Field(default=None, max_length=100)
+    status: str | None = None
+    filed_on: date | None = None
+    approved_on: date | None = None
+    expires_on: date | None = None
+    not_required_reason: str | None = None
+    notes: str | None = None
+
+
+class PermitResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    jurisdiction: str
+    permit_number: str | None
+    permit_type: str | None
+    status: str
+    filed_on: date | None
+    approved_on: date | None
+    expires_on: date | None
+    not_required_reason: str | None
+    notes: str | None
+    is_expired: bool
+    is_cleared: bool
+    created_at: datetime
+    model_config = {"from_attributes": True}
