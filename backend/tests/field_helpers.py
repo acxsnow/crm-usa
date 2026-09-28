@@ -92,3 +92,29 @@ async def refreshed_case(db, case):
 
 def item_by_label(items, fragment: str):
     return next(i for i in items if fragment in i.label)
+
+
+async def ready_to_install_case(db, org_id, *, technician_id=None):
+    """Expediente en `ready_to_install`: aprobado y con permiso despejado."""
+    from datetime import date
+
+    from app.modules.field_ops.models import Permit
+
+    case, project = await approved_case_with_project(db, org_id, technician_id=technician_id)
+    db.add(Permit(organization_id=org_id, project_id=project.id, jurisdiction="Phoenix",
+                  status="approved", approved_on=date.today()))
+    await db.flush()
+    for destino in ("permit_in_progress", "ready_to_install"):
+        case = await case_service.transition(
+            db, case=case, to_stage=destino, actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR
+        )
+    return case, project
+
+
+async def add_equipment_directly(db, project) -> None:
+    from app.modules.field_ops.models import InstalledEquipment
+
+    db.add(InstalledEquipment(organization_id=project.organization_id, project_id=project.id,
+                              equipment_type="heat_pump_outdoor", brand="Carrier", model="25HCE4",
+                              serial_number="SN-0001"))
+    await db.commit()

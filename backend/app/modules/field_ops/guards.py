@@ -30,3 +30,15 @@ async def guard_permits_cleared(*, db, case, actor_id, reason):
             "requeridos, antes de pasar a «Listo para instalar».",
             code="permits_not_cleared",
         )
+
+
+async def guard_installation_complete(*, db, case, actor_id, reason):
+    from app.modules.field_ops.installation import installation_gaps
+
+    project = await project_for_case(db, case)
+    faltan = await installation_gaps(db, project=project)
+    if faltan:
+        raise InvalidInputError(
+            "No se puede pasar a «Instalado». Falta: " + "; ".join(faltan) + ".",
+            code="installation_incomplete",
+        )

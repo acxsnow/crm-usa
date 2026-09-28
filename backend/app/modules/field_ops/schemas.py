@@ -294,3 +294,67 @@ class PermitResponse(BaseModel):
     is_cleared: bool
     created_at: datetime
     model_config = {"from_attributes": True}
+
+
+# --- Módulo 5: equipos, materiales, agenda y cierre ------------------------
+
+class EquipmentCreate(BaseModel):
+    equipment_type: str
+    brand: str = Field(min_length=1, max_length=100)
+    model: str = Field(min_length=1, max_length=100)
+    serial_number: str | None = Field(default=None, max_length=100)
+    quantity: int = Field(default=1, ge=1, le=50)
+    unit_label: str | None = Field(default=None, max_length=100)
+    notes: str | None = None
+
+
+class EquipmentResponse(EquipmentCreate):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    recorded_by_user_id: uuid.UUID | None
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class MaterialCreate(BaseModel):
+    description: str = Field(min_length=1, max_length=255)
+    sku: str | None = Field(default=None, max_length=100)
+    quantity: float = Field(gt=0, le=100000)
+    unit: str | None = Field(default=None, max_length=30)
+    notes: str | None = None
+
+
+class MaterialResponse(MaterialCreate):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class ScheduleInstallationRequest(BaseModel):
+    technician_user_id: uuid.UUID
+    scheduled_date: date
+
+
+class CloseInstallationRequest(BaseModel):
+    observations: str | None = Field(default=None, max_length=2000)
+
+
+class AgendaRow(BaseModel):
+    project_id: uuid.UUID
+    title: str
+    status: ProjectStatus
+    scheduled_date: date | None
+    primary_technician_user_id: uuid.UUID | None
+    address_street: str | None
+    address_unit: str | None
+    address_city: str | None
+    case_id: uuid.UUID | None
+    case_number: str | None
+    stage_code: str | None
+    substatus_code: str | None
+
+
+class InstallationGapsResponse(BaseModel):
+    can_close: bool
+    missing: list[str]

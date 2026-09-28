@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, pagination_params
 from app.modules.field_ops import checklist as checklist_service
+from app.modules.field_ops import installation as installation_service
 from app.modules.field_ops import permits as permits_service
 from app.modules.field_ops import service as field_ops_service
 from app.modules.field_ops.access import get_visible_project, scope_projects_stmt
@@ -31,7 +32,15 @@ from app.modules.field_ops.schemas import (
     AttestationResponse,
     AvailabilityUpdate,
     ChecklistItemUpdate,
+    AgendaRow,
+    CloseInstallationRequest,
+    EquipmentCreate,
+    EquipmentResponse,
+    InstallationGapsResponse,
+    MaterialCreate,
+    MaterialResponse,
     PermitCreate,
+    ScheduleInstallationRequest,
     PermitResponse,
     PermitUpdate,
     InstallationConditionsUpdate,
@@ -627,4 +636,143 @@ async def update_project_permit(
     return await permits_service.update_permit(
         db, organization_id=organization_id, user=current_user,
         permit_id=permit_id, changes=payload.model_dump(exclude_unset=True),
+    )
+
+
+# --- Módulo 5: equipos instalados -------------------------------------------
+
+@router.get("/projects/{project_id}/equipment", response_model=list[EquipmentResponse])
+async def list_project_equipment(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    return await installation_service.list_equipment(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
+@router.post("/projects/{project_id}/equipment", response_model=EquipmentResponse, status_code=201)
+async def add_project_equipment(
+    project_id: uuid.UUID, payload: EquipmentCreate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("equipment.manage")),
+):
+    return await installation_service.add_equipment(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        data=payload.model_dump(),
+    )
+
+
+@router.delete("/equipment/{equipment_id}", status_code=204)
+async def delete_project_equipment(
+    equipment_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("equipment.manage")),
+):
+    await installation_service.delete_equipment(
+        db, organization_id=organization_id, user=current_user, equipment_id=equipment_id
+    )
+    return Response(status_code=204)
+
+
+# --- Módulo 5: materiales de la orden ---------------------------------------
+
+@router.get("/projects/{project_id}/materials", response_model=list[MaterialResponse])
+async def list_project_materials(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    return await installation_service.list_materials(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
+@router.post("/projects/{project_id}/materials", response_model=MaterialResponse, status_code=201)
+async def add_project_material(
+    project_id: uuid.UUID, payload: MaterialCreate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("projects.update")),
+):
+    return await installation_service.add_material(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        data=payload.model_dump(),
+    )
+
+
+@router.delete("/materials/{material_id}", status_code=204)
+async def delete_project_material(
+    material_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("projects.update")),
+):
+    await installation_service.delete_material(
+        db, organization_id=organization_id, user=current_user, material_id=material_id
+    )
+    return Response(status_code=204)
+
+
+# --- Módulo 5: agenda y cierre ---------------------------------------------
+
+@router.patch("/projects/{project_id}/schedule", response_model=ProjectResponse)
+async def schedule_project_installation(
+    project_id: uuid.UUID, payload: ScheduleInstallationRequest, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dispatch.manage")),
+):
+    """Asigna técnico y fecha. Con el expediente en «Listo para instalar» marca
+    «Instalación programada» y libera la orden."""
+    return await installation_service.schedule_installation(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        technician_id=payload.technician_user_id, scheduled_date=payload.scheduled_date,
+    )
+
+
+@router.get("/dispatch/agenda", response_model=list[AgendaRow])
+async def dispatch_agenda(
+    date_from: date = Query(...), date_to: date = Query(...),
+    technician_id: uuid.UUID | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("dispatch.manage", "dispatch.read_own")),
+):
+    """Administración ve la agenda de todos; el técnico, solo la suya."""
+    filas = await installation_service.list_agenda(
+        db, organization_id=organization_id, user=current_user,
+        date_from=date_from, date_to=date_to, technician_id=technician_id,
+    )
+    return [
+        AgendaRow(
+            project_id=p.id, title=p.title, status=p.status, scheduled_date=p.scheduled_date,
+            primary_technician_user_id=p.primary_technician_user_id,
+            address_street=p.address_street, address_unit=p.address_unit, address_city=p.address_city,
+            case_id=c.id if c else None, case_number=c.case_number if c else None,
+            stage_code=c.stage_code if c else None, substatus_code=c.substatus_code if c else None,
+        )
+        for p, c in filas
+    ]
+
+
+@router.get("/projects/{project_id}/installation/gaps", response_model=InstallationGapsResponse)
+async def installation_gaps(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    """Lo que falta para cerrar, para mostrarlo antes de que el técnico lo intente."""
+    project = await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    faltan = await installation_service.installation_gaps(db, project=project)
+    return InstallationGapsResponse(can_close=not faltan, missing=faltan)
+
+
+@router.post("/projects/{project_id}/installation/close", response_model=ProjectResponse)
+async def close_project_installation(
+    project_id: uuid.UUID, payload: CloseInstallationRequest, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.complete")),
+):
+    return await installation_service.close_installation(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        observations=payload.observations,
     )

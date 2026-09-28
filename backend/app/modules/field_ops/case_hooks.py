@@ -47,6 +47,11 @@ def register() -> None:
 
     stages.register_guard("approved", "permit_in_progress", guards.guard_has_permit)
     stages.register_guard("permit_in_progress", "ready_to_install", guards.guard_permits_cleared)
+
+    from app.modules.field_ops.installation import on_installed
+
+    stages.register_guard("ready_to_install", "installed", guards.guard_installation_complete)
+    stages.register_effect("ready_to_install", "installed", on_installed)
     _registrado = True
 
 
