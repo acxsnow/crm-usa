@@ -1,10 +1,17 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.modules.crm.schemas import AddressSchema
+from app.modules.field_ops.catalogs import EVIDENCE_CATEGORIES, INSTALLATION_CONDITIONS
 from app.modules.field_ops.models import ProjectStatus, TaskStatus
+
+
+def _check_code(value: str | None, catalog: dict[str, str], what: str) -> str | None:
+    if value is not None and value not in catalog:
+        raise ValueError(f"{what} «{value}» no existe.")
+    return value
 
 
 # --- Technician monitor -------------------------------------------------
@@ -57,8 +64,13 @@ class ProjectResponse(AddressSchema):
     completed_date: date | None
     primary_technician_user_id: uuid.UUID | None
     notes: str | None
+    installation_conditions: list[str] = []
     created_at: datetime
     model_config = {"from_attributes": True}
+
+
+class InstallationConditionsUpdate(BaseModel):
+    conditions: list[str]
 
 
 # --- Checklists ----------------------------------------------------------
@@ -68,6 +80,20 @@ class ChecklistTemplateItemCreate(BaseModel):
     sort_order: int = 0
     is_required: bool = True
     requires_evidence: bool = False
+    section: str | None = Field(default=None, max_length=120)
+    evidence_category: str | None = None
+    condition_code: str | None = None
+    allows_not_applicable: bool = False
+
+    @field_validator("evidence_category")
+    @classmethod
+    def _evidence_category(cls, v):
+        return _check_code(v, EVIDENCE_CATEGORIES, "La categoría de evidencia")
+
+    @field_validator("condition_code")
+    @classmethod
+    def _condition(cls, v):
+        return _check_code(v, INSTALLATION_CONDITIONS, "La condición")
 
 
 class ChecklistTemplateItemResponse(ChecklistTemplateItemCreate):
@@ -78,6 +104,7 @@ class ChecklistTemplateItemResponse(ChecklistTemplateItemCreate):
 class ChecklistTemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     project_type: str | None = None
+    program_id: uuid.UUID | None = None
     items: list[ChecklistTemplateItemCreate] = []
 
 
@@ -85,6 +112,7 @@ class ChecklistTemplateResponse(BaseModel):
     id: uuid.UUID
     name: str
     project_type: str | None
+    program_id: uuid.UUID | None = None
     items: list[ChecklistTemplateItemResponse]
     model_config = {"from_attributes": True}
 
@@ -95,14 +123,24 @@ class ProjectChecklistItemResponse(BaseModel):
     sort_order: int
     is_required: bool
     requires_evidence: bool
+    section: str | None
+    evidence_category: str | None
+    condition_code: str | None
+    allows_not_applicable: bool
     is_complete: bool
+    not_applicable: bool
+    not_applicable_reason: str | None
     completed_at: datetime | None
     completed_by_user_id: uuid.UUID | None
     model_config = {"from_attributes": True}
 
 
-class ChecklistItemComplete(BaseModel):
-    is_complete: bool = True
+class ChecklistItemUpdate(BaseModel):
+    """`{"is_complete": true}` completa; `{"not_applicable": true, "reason": …}`
+    marca "No aplica"; `{"is_complete": false}` devuelve a pendiente."""
+    is_complete: bool | None = None
+    not_applicable: bool | None = None
+    reason: str | None = Field(default=None, max_length=1000)
 
 
 # --- Tasks ---------------------------------------------------------------

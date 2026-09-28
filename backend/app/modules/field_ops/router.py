@@ -10,7 +10,10 @@ from app.api.deps import get_effective_permissions, get_organization_id, require
 from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, pagination_params
+from app.modules.field_ops import checklist as checklist_service
 from app.modules.field_ops import service as field_ops_service
+from app.modules.field_ops.access import get_visible_project, scope_projects_stmt
+from app.shared.errors import InvalidInputError
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import (
     Attestation,
@@ -26,7 +29,8 @@ from app.modules.field_ops.models import (
 from app.modules.field_ops.schemas import (
     AttestationResponse,
     AvailabilityUpdate,
-    ChecklistItemComplete,
+    ChecklistItemUpdate,
+    InstallationConditionsUpdate,
     ChecklistTemplateCreate,
     ChecklistTemplateResponse,
     CustomerSignatureCapture,
@@ -70,7 +74,20 @@ async def create_checklist_template(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("checklists.manage")),
 ):
-    template = ChecklistTemplate(organization_id=organization_id, name=payload.name, project_type=payload.project_type)
+    if payload.program_id is not None:
+        from app.modules.cases.models import Program
+
+        programa = (
+            await db.execute(
+                select(Program.id).where(Program.id == payload.program_id, Program.organization_id == organization_id)
+            )
+        ).first()
+        if programa is None:
+            raise InvalidInputError("El programa no existe.", code="program_not_found")
+    template = ChecklistTemplate(
+        organization_id=organization_id, name=payload.name,
+        project_type=payload.project_type, program_id=payload.program_id,
+    )
     db.add(template)
     await db.flush()
     for item_data in payload.items:
@@ -198,10 +215,7 @@ async def update_technician_availability(
 # --- Projects ----------------------------------------------------------
 
 def _scope_projects_stmt(stmt, current_user: User):
-    perms = get_effective_permissions(current_user)
-    if "projects.read_all" not in perms:
-        stmt = stmt.where(Project.primary_technician_user_id == current_user.id)
-    return stmt
+    return scope_projects_stmt(stmt, current_user)
 
 
 @router.get("/projects", response_model=list[ProjectResponse])
@@ -240,13 +254,9 @@ async def create_project(
 
 
 async def _get_project_or_404(db: AsyncSession, *, organization_id: uuid.UUID, project_id: uuid.UUID, current_user: User) -> Project:
-    stmt = select(Project).where(Project.id == project_id, Project.organization_id == organization_id)
-    stmt = _scope_projects_stmt(stmt, current_user)
-    result = await db.execute(stmt)
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found.")
-    return project
+    return await get_visible_project(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
 
 
 @router.get("/projects/{project_id}", response_model=ProjectResponse)
@@ -302,13 +312,30 @@ async def apply_checklist_template_to_project(
 
 
 @router.patch("/checklist-items/{item_id}", response_model=ProjectChecklistItemResponse)
-async def complete_checklist_item(
-    item_id: uuid.UUID, payload: ChecklistItemComplete, db: AsyncSession = Depends(get_db),
+async def update_checklist_item(
+    item_id: uuid.UUID, payload: ChecklistItemUpdate, db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
-    current_user: User = Depends(require_permission("checklists.manage")),
+    current_user: User = Depends(require_permission("checklists.complete")),
 ):
-    return await field_ops_service.complete_checklist_item(
-        db, organization_id=organization_id, actor_id=current_user.id, item_id=item_id, is_complete=payload.is_complete,
+    """Lo usa el técnico en campo: `checklists.complete` y proyecto asignado.
+    Antes exigía `checklists.manage`, que es de Administración, y el técnico no
+    podía marcar su propio checklist."""
+    return await checklist_service.update_checklist_item(
+        db, organization_id=organization_id, user=current_user, item_id=item_id,
+        is_complete=payload.is_complete, not_applicable=payload.not_applicable, reason=payload.reason,
+    )
+
+
+@router.patch("/projects/{project_id}/conditions", response_model=ProjectResponse)
+async def set_installation_conditions(
+    project_id: uuid.UUID, payload: InstallationConditionsUpdate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.complete")),
+):
+    """Las condiciones de la casa que vuelven obligatorios ciertos ítems."""
+    return await checklist_service.set_installation_conditions(
+        db, organization_id=organization_id, user=current_user,
+        project_id=project_id, conditions=payload.conditions,
     )
 
 
@@ -448,6 +475,8 @@ async def upload_evidence(
     """Upload endpoint (spec 18 item 2/3: GPS mandatory when the browser
     allows it). Confirmed requirement: a visible GPS watermark is burned
     into the stored image — see shared/files/watermark.py."""
+    # El técnico solo sube evidencias a sus proyectos asignados.
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     return await field_ops_service.upload_evidence(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id, file=file,
         category=category, latitude=latitude, longitude=longitude, captured_at=captured_at,

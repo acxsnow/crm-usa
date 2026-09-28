@@ -64,6 +64,10 @@ async def apply_checklist_template(
             sort_order=template_item.sort_order,
             is_required=template_item.is_required,
             requires_evidence=template_item.requires_evidence,
+            section=template_item.section,
+            evidence_category=template_item.evidence_category,
+            condition_code=template_item.condition_code,
+            allows_not_applicable=template_item.allows_not_applicable,
         )
         db.add(item)
         items.append(item)
@@ -143,8 +147,12 @@ async def auto_create_project_from_case(db: AsyncSession, *, case, actor_id: uui
             code="case_without_customer",
         )
 
-    template = await get_or_create_default_checklist_template(
-        db, organization_id=case.organization_id
+    from app.modules.field_ops.checklist import select_template_for_case
+
+    # La plantilla del programa del expediente; si el programa no tiene la
+    # suya, la de la organización (spec D5.3).
+    template = await select_template_for_case(db, case=case) or (
+        await get_or_create_default_checklist_template(db, organization_id=case.organization_id)
     )
     project = Project(
         organization_id=case.organization_id,
@@ -179,39 +187,54 @@ async def auto_create_project_from_case(db: AsyncSession, *, case, actor_id: uui
     return project
 
 
-async def complete_checklist_item(
-    db: AsyncSession, *, organization_id: uuid.UUID, actor_id: uuid.UUID, item_id: uuid.UUID, is_complete: bool,
-) -> ProjectChecklistItem:
-    result = await db.execute(
-        select(ProjectChecklistItem).join(Project, Project.id == ProjectChecklistItem.project_id).where(
-            ProjectChecklistItem.id == item_id, Project.organization_id == organization_id,
-        )
-    )
-    item = result.scalar_one_or_none()
-    if not item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Checklist item not found.")
-
-    if is_complete and item.requires_evidence:
-        evidence_count = (
-            await db.execute(select(Evidence).where(Evidence.checklist_item_id == item.id, Evidence.deleted_at.is_(None)))
-        ).scalars().all()
-        if not evidence_count:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This checklist item requires at least one evidence upload before it can be marked complete.",
-            )
-
-    item.is_complete = is_complete
-    item.completed_at = datetime.now(timezone.utc) if is_complete else None
-    item.completed_by_user_id = actor_id if is_complete else None
-    await db.commit()
-    await db.refresh(item)
-    return item
-
-
 # ---------------------------------------------------------------------------
 # Evidence — GPS/date watermark burned into images and videos
 # ---------------------------------------------------------------------------
+
+async def _resolve_evidence_category(
+    db: AsyncSession, *, project_id: uuid.UUID, checklist_item_id: uuid.UUID | None,
+    category: str | None, mime_type: str,
+) -> str:
+    """La categoría con la que se guarda la evidencia (spec D5.4).
+
+    Si es para un ítem del checklist que exige una categoría, se usa esa; si
+    llega otra distinta se rechaza: la foto de la etiqueta exterior no puede
+    quedar guardada como fachada. Sin ítem ni categoría, la genérica del tipo
+    de archivo."""
+    from app.modules.field_ops.catalogs import EVIDENCE_CATEGORIES, default_evidence_category
+
+    if category is not None and category not in EVIDENCE_CATEGORIES:
+        raise InvalidInputError(
+            f"La categoría de evidencia «{category}» no existe.", code="unknown_evidence_category"
+        )
+
+    if checklist_item_id is not None:
+        item = (
+            await db.execute(
+                select(ProjectChecklistItem).where(
+                    ProjectChecklistItem.id == checklist_item_id,
+                    ProjectChecklistItem.project_id == project_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if item is None:
+            # Un ítem de otro proyecto (u otra organización) no se puede
+            # adjuntar a este: se responde como si no existiera.
+            raise InvalidInputError(
+                "El ítem del checklist no pertenece a este proyecto.",
+                code="checklist_item_not_in_project",
+            )
+        if item.evidence_category:
+            if category is not None and category != item.evidence_category:
+                raise InvalidInputError(
+                    f"La evidencia de «{item.label}» debe ser de la categoría "
+                    f"«{EVIDENCE_CATEGORIES[item.evidence_category]}».",
+                    code="evidence_category_mismatch",
+                )
+            return item.evidence_category
+
+    return category or default_evidence_category(mime_type)
+
 
 async def upload_evidence(
     db: AsyncSession, *, organization_id: uuid.UUID, actor_id: uuid.UUID, project_id: uuid.UUID,
@@ -230,6 +253,11 @@ async def upload_evidence(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported file type: {mime_type or 'unknown'}. Accepted: photos (JPEG, PNG, WEBP, HEIC) and videos (MP4, MOV, WEBM).",
         )
+
+    category = await _resolve_evidence_category(
+        db, project_id=project_id, checklist_item_id=checklist_item_id,
+        category=category, mime_type=mime_type,
+    )
 
     existing_count = len(
         (await db.execute(select(Evidence).where(Evidence.project_id == project_id, Evidence.deleted_at.is_(None)))).scalars().all()

@@ -58,7 +58,9 @@ async def test_project_creation_applies_checklist_template(app_client, active_ad
     resp = await app_client.get(f"/api/v1/projects/{project_id}/checklist", headers=headers)
     assert resp.status_code == 200
     items = resp.json()
-    assert len(items) == 8
+    from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
+
+    assert len(items) == len(DEFAULT_CHECKLIST_TEMPLATE["items"])
     assert any(item["requires_evidence"] for item in items)
 
 
@@ -73,7 +75,7 @@ async def test_checklist_item_requiring_evidence_blocks_completion_until_uploade
     assert resp.status_code == 400
 
     files = {"file": ("before.jpg", _png_bytes(), "image/jpeg")}
-    data = {"category": "before", "checklist_item_id": evidence_item["id"], "latitude": "33.7455", "longitude": "-117.8677"}
+    data = {"checklist_item_id": evidence_item["id"], "latitude": "33.7455", "longitude": "-117.8677"}
     upload_resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data=data, headers=headers)
     assert upload_resp.status_code == 201
     body = upload_resp.json()
@@ -90,7 +92,7 @@ async def test_evidence_download_returns_watermarked_file(app_client, active_adm
     _, project_id, _ = await _create_customer_and_project(app_client, headers)
 
     files = {"file": ("photo.jpg", _png_bytes(), "image/jpeg")}
-    data = {"category": "during"}
+    data = {"category": "additional_photo"}
     upload_resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data=data, headers=headers)
     evidence_id = upload_resp.json()["id"]
 
@@ -138,7 +140,7 @@ async def test_evidence_upload_rejects_unsupported_file_types(app_client, active
     _, project_id, _ = await _create_customer_and_project(app_client, headers)
 
     files = {"file": ("contrato.pdf", b"%PDF-1.4 fake", "application/pdf")}
-    resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "other"}, headers=headers)
+    resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "additional_photo"}, headers=headers)
     assert resp.status_code == 400
     assert "application/pdf" in resp.json()["detail"]
 
@@ -153,7 +155,7 @@ async def test_evidence_upload_rejects_a_corrupt_video_without_leaking_internals
     _, project_id, _ = await _create_customer_and_project(app_client, headers)
 
     files = {"file": ("clip.mp4", b"not-really-a-video", "video/mp4")}
-    resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "other"}, headers=headers)
+    resp = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files, data={"category": "additional_photo"}, headers=headers)
     assert resp.status_code == 400
     detail = resp.json()["detail"]
     assert "video" in detail.lower()

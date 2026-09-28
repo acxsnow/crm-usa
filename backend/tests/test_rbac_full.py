@@ -169,12 +169,15 @@ async def test_field_technician_forbidden_from_checklist_and_evidence_management
     token = await _login(app_client, "tech@acme-demo.com")
 
     # field_technician has evidence.create/read_assigned and tasks.manage,
-    # but not checklists.manage or projects.create.
+    # but not checklists.manage or projects.create. Completing checklist items
+    # is theirs (checklists.complete).
     resp = await app_client.post("/api/v1/checklist-templates", json={"name": "X", "items": []}, headers=_auth(token))
     assert resp.status_code == 403
 
+    # Marcar el checklist SÍ es del técnico (`checklists.complete`, módulo 5):
+    # pasa la puerta del permiso y un ítem que no existe responde 404.
     resp = await app_client.patch(f"/api/v1/checklist-items/{RANDOM_ID}", json={"is_complete": True}, headers=_auth(token))
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
     resp = await app_client.post("/api/v1/projects", json={"customer_id": RANDOM_ID, "title": "T"}, headers=_auth(token))
     assert resp.status_code == 403
