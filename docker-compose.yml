@@ -76,7 +76,9 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      # Ruta relativa: Vite la reenvía al servicio `api` (ver vite.config.ts).
+      VITE_API_BASE_URL: /api/v1
+      DEV_API_PROXY_TARGET: http://api:8000
     command: npm run dev -- --host
 
 volumes:

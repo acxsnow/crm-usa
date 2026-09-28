@@ -1856,8 +1856,10 @@ fieldset.field legend {
   display: none;
 }
 
+/* Paso cumplido: marcador y riel en verde, para leer el avance de un
+   vistazo. */
 .acta-step.is-done::before {
-  background: var(--ink);
+  background: var(--ok);
 }
 
 .acta-step-marker {
@@ -1877,9 +1879,15 @@ fieldset.field legend {
 }
 
 .acta-step.is-done .acta-step-marker {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--ok);
+  border-color: var(--ok);
   color: #fff;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.acta-step.is-done .acta-step-title {
+  color: var(--ok);
 }
 
 .acta-step.is-current .acta-step-marker {
@@ -1978,9 +1986,40 @@ fieldset.field legend {
 }
 
 .acta-condition:has(input:checked) {
-  border-color: var(--ink);
-  background: var(--canvas);
+  border-color: var(--ok);
+  background: var(--ok-wash);
+  color: var(--ok);
   font-weight: 600;
+}
+
+.acta-condition:has(input:focus-visible) {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.acta-condition:has(input:disabled) {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.acta-box {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink-faint);
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: transparent;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.acta-condition input:checked + .acta-box {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
 }
 
 /* --- Líneas del checklist ----------------------------------------------------- */
@@ -2004,7 +2043,9 @@ fieldset.field legend {
 
 .acta-item {
   display: grid;
-  grid-template-columns: 2rem 1fr auto;
+  /* Columna de acción de ancho fijo: la acción cae en el mismo lugar en
+     todas las líneas. */
+  grid-template-columns: 2rem 1fr 9.5rem;
   gap: 0.25rem 0.75rem;
   align-items: start;
   padding: 0.8rem 0;
@@ -2171,11 +2212,18 @@ fieldset.field legend {
   .acta-item {
     grid-template-columns: 1.6rem 1fr;
   }
-  /* En el celular los botones van debajo de la línea, a todo el ancho del
+  /* En el celular la acción va debajo de la línea, a todo el ancho del
      pulgar. */
-  .acta-item .acta-actions {
+  .acta-item-action {
     grid-column: 2;
-    justify-content: flex-start;
+    justify-content: stretch;
+  }
+  .acta-item-action .acta-btn {
+    width: 100%;
+    padding: 0.7rem 1rem;
+  }
+  .acta-check {
+    display: none;
   }
   .acta-btn {
     padding: 0.6rem 0.95rem;
@@ -2210,4 +2258,1150 @@ fieldset.field legend {
 
 .acta .panel-form .acta-btn {
   padding: 0.62rem 1rem;
+}
+
+/* --- Acción de cada línea del checklist ------------------------------------ */
+
+.acta-item-action {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.acta-item-action .acta-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Contorno sobrio: diez líneas con botón rojo gritaban a la vez. El rojo
+   queda para el paso actual del riel y los botones de envío. */
+.acta-btn.is-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.acta-btn.is-line:hover:not(:disabled) {
+  background: var(--ink);
+  color: #fff;
+}
+
+.acta-check {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ok-wash);
+  color: var(--ok);
+  font-weight: 700;
+  margin-right: 0.2rem;
+}
+
+.acta-item-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.4rem 0 0;
+}
+
+.acta-link {
+  all: unset;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+  cursor: pointer;
+}
+
+.acta-link:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.acta-link:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Requisitos del cierre ----------------------------------------------------- */
+
+.acta-requirements ul {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.acta-requirements li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.acta-requirements li.is-done {
+  color: var(--ink-soft);
+}
+
+.acta-tick {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.acta-requirements li.is-done .acta-tick {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.acta-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.acta-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+  max-width: 320px;
+}
+
+.acta-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .acta-progress-bar > span {
+    transition: width 0.3s ease;
+  }
+}
+
+/* --- Anexos ----------------------------------------------------------------------- */
+
+.annex-header {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.annex-header .acta-lead {
+  margin-top: 0.35rem;
+}
+
+.annex-section {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.annex-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0.5rem;
+}
+
+.annex-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.annex-section-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.annex-count {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.annex-gps {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+}
+
+.annex-gps.is-on {
+  color: var(--ok);
+  background: var(--ok-wash);
+}
+
+.annex-gps.is-off {
+  color: #8a5a05;
+  background: #fdf3e3;
+}
+
+.annex-upload {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+  padding: 1rem;
+  background: var(--canvas);
+  border-radius: var(--radius);
+}
+
+.annex-upload .field {
+  margin: 0;
+}
+
+.annex-upload label:not(.annex-file),
+.annex-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.annex-upload select {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.annex-file {
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.8rem;
+  border-style: dashed;
+  font-weight: 500;
+}
+
+.annex-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annex-signatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.annex-signer {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.annex-signer.is-signed {
+  border-color: var(--ok);
+  background: var(--ok-wash);
+}
+
+.annex-signer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.annex-signer-status {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.annex-signer.is-signed .annex-signer-status {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.annex-signer .inline-form {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.annex-task-form {
+  grid-template-columns: minmax(200px, 2fr) minmax(160px, 1fr) minmax(140px, 1fr) auto;
+  margin-top: 0;
+}
+
+.annex-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.annex-column {
+  background: var(--canvas);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 6rem;
+}
+
+.annex-column h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.annex-task {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
+}
+
+.annex-task-name {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.annex-task-meta {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.annex-task-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.annex-task-actions select {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+.annex-overdue {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--red-dark);
+  background: var(--red-wash);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .annex-upload,
+  .annex-task-form {
+    grid-template-columns: 1fr;
+  }
+  .annex-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* El pad de firma conserva `.inline-form` por la página pública del cliente;
+   dentro del acta, sus botones usan los del acta y no el rojo global. */
+.annex-signer .inline-form button.acta-btn.is-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-soft);
+}
+
+.annex-signer .inline-form button.acta-btn.is-quiet:disabled {
+  opacity: 0.45;
+}
+
+@media (max-width: 700px) {
+  .acta-progress {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .acta-progress-bar {
+    flex-basis: 100%;
+    max-width: none;
+  }
+}
+
+/* ===========================================================================
+   Acta — línea visual v2 (propuesta de Mateo, 28 sep): inputs blancos con
+   borde, chips de estado con ícono, tarjetas suaves por paso y anexos con
+   carga por arrastre, miniaturas con marca y tareas en columnas de color.
+   Los botones de acción conservan el rojo de la app.
+=========================================================================== */
+
+:root {
+  --warn: #b45309;
+  --warn-wash: #fdf1e3;
+  --card-soft: #f7f7f8;
+  --line-input: #d9d6d1;
+}
+
+/* --- Inputs dentro del acta ---------------------------------------------------- */
+
+.acta input:not([type="checkbox"]):not([type="file"]),
+.acta select {
+  background: var(--surface);
+  border: 1px solid var(--line-input);
+  border-radius: 6px;
+  padding: 0.58rem 0.7rem;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  min-height: 2.45rem;
+  box-sizing: border-box;
+}
+
+.acta input:not([type="checkbox"]):not([type="file"]):focus,
+.acta select:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-wash);
+}
+
+.acta .panel-form label,
+.acta .acta-reason label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* --- Chips de estado ------------------------------------------------------------- */
+
+.acta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.28rem 0.7rem 0.28rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.acta-chip.is-done { color: var(--ok); background: var(--ok-wash); }
+.acta-chip.is-current { color: var(--red-dark); background: var(--red-wash); }
+.acta-chip.is-pending { color: var(--ink-soft); background: var(--card-soft); }
+.acta-chip.is-locked { color: var(--ink-faint); background: var(--card-soft); }
+
+/* --- Pasos --------------------------------------------------------------------------- */
+
+.acta-step-head {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.acta-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.acta-step-title {
+  line-height: 1.35;
+}
+
+.acta-step-head {
+  min-height: 2.25rem;
+  padding-top: 0.1rem;
+}
+
+.acta-step-summary {
+  font-size: 0.82rem;
+}
+
+.acta-step.is-done .acta-step-summary { color: var(--ink-soft); }
+
+.acta-step-card {
+  background: var(--card-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+}
+
+.acta-step.is-current .acta-step-card {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 1px 3px rgba(23, 21, 20, 0.06);
+}
+
+.acta-step-card .acta-items {
+  border-top-color: var(--line);
+}
+
+.acta-step-card .acta-item {
+  border-bottom-color: var(--line);
+}
+
+.acta-step-card .table-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+/* --- Anexos --------------------------------------------------------------------------- */
+
+.annex-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1.1rem;
+}
+
+.annex-gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  background: none;
+  padding: 0;
+}
+
+.annex-gps.is-on { color: var(--ok); }
+.annex-gps.is-on strong { color: var(--ink); font-weight: 600; }
+.annex-gps.is-off { color: var(--warn); background: none; }
+
+.annex-section-head h3 {
+  font-size: 1.08rem;
+}
+
+.annex-evidence {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 13rem;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.annex-drop {
+  border: 1.5px dashed var(--line-input);
+  border-radius: var(--radius-lg);
+  background: var(--card-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  min-height: 8.5rem;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.annex-drop strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.annex-drop-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.annex-drop:hover,
+.annex-drop.is-over {
+  border-color: var(--red);
+  background: var(--red-wash);
+}
+
+.annex-drop.has-file {
+  border-style: solid;
+  border-color: var(--ok);
+  background: var(--ok-wash);
+}
+
+.annex-drop:focus-within {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.annex-thumbs {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.annex-thumbs .acta-empty {
+  align-self: center;
+}
+
+.annex-thumb {
+  margin: 0;
+  flex: 0 0 9.5rem;
+}
+
+.annex-thumb-img {
+  all: unset;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1c1917;
+  cursor: zoom-in;
+}
+
+.annex-thumb-img:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.annex-thumb-img img,
+.annex-thumb-img video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.annex-thumb-loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #cfcac4;
+  font-size: 0.72rem;
+}
+
+.annex-thumb-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(23, 21, 20, 0.7);
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.annex-thumb-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.45rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+  color: #fff;
+  font-family: var(--mono-font);
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
+.annex-thumb-overlay span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.annex-thumb figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annex-evidence-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.annex-evidence-controls select {
+  width: 100%;
+}
+
+.annex-evidence-controls .acta-btn {
+  width: 100%;
+  padding: 0.62rem 1rem;
+}
+
+.annex-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* Firmas */
+
+.annex-signer {
+  background: var(--card-soft);
+  border-color: var(--line);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.2rem;
+}
+
+.annex-signer.is-signed {
+  background: var(--surface);
+  border-color: var(--ok);
+}
+
+.annex-signer-head {
+  align-items: center;
+}
+
+.annex-signer-head strong {
+  font-size: 1rem;
+}
+
+.annex-signer canvas {
+  border-color: var(--line-input) !important;
+}
+
+.annex-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px dotted var(--line-input);
+}
+
+.annex-timeline li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+  padding: 0.15rem 0;
+}
+
+.annex-timeline li::before {
+  content: "";
+  position: absolute;
+  left: calc(-1rem - 5px);
+  top: 0.5rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
+.annex-timeline small {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+/* Tareas */
+
+.annex-task-form {
+  background: none;
+  padding: 0;
+}
+
+.annex-column {
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1rem;
+  gap: 0.35rem;
+}
+
+.annex-column.is-pending { background: var(--warn-wash); border-color: #f6dcb8; }
+.annex-column.is-in_progress { background: #faf7f2; border-color: var(--line); }
+.annex-column.is-done { background: var(--ok-wash); border-color: #c6e2d2; }
+
+.annex-column h4 {
+  align-items: center;
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+
+.annex-column-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.annex-column.is-pending .annex-column-title svg { color: var(--warn); }
+.annex-column.is-in_progress .annex-column-title svg { color: var(--ink-soft); }
+.annex-column.is-done .annex-column-title svg { color: var(--ok); }
+
+.annex-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.annex-task {
+  background: none;
+  border: none;
+  padding: 0.3rem 0;
+}
+
+.annex-task-row {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.annex-task-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--ok);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.annex-task-done {
+  color: var(--ok);
+  display: inline-flex;
+  margin-top: 0.1rem;
+}
+
+.annex-task-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.annex-task-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.annex-column.is-done .annex-task-name {
+  color: var(--ink-soft);
+}
+
+.annex-task-meta {
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.annex-task-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.annex-task-links .acta-link {
+  font-size: 0.74rem;
+}
+
+@media (max-width: 900px) {
+  .annex-evidence {
+    grid-template-columns: 1fr;
+  }
+  .annex-drop {
+    min-height: 6rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .acta-step-head {
+    flex-wrap: wrap;
+  }
+  .acta-step-card {
+    padding: 0.9rem;
+  }
+}
+
+/* Miniaturas en grilla (no en fila con scroll: la última quedaba cortada) y
+   la marca sobre la foto en una sola línea. */
+.annex-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  overflow: visible;
+}
+
+.annex-thumb {
+  flex: none;
+  min-width: 0;
+}
+
+.annex-thumb-overlay span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Evidencias v3: carga y controles arriba; galería a todo el ancho debajo. */
+.annex-evidence {
+  grid-template-columns: minmax(0, 1fr) 14rem;
+  align-items: stretch;
+}
+
+.annex-drop {
+  min-height: 7rem;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.annex-evidence-controls {
+  justify-content: center;
+}
+
+.annex-thumbs {
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 1rem 0.9rem;
+}
+
+.annex-thumb figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  white-space: normal;
+}
+
+.annex-thumb figcaption strong {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annex-thumb figcaption span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--mono-font);
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .annex-evidence {
+    grid-template-columns: 1fr;
+  }
+  .annex-drop {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .annex-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.acta-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 0.3rem 0.1rem;
+}
+
+.acta-back span {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.acta-back:hover {
+  color: var(--red);
+}
+
+.acta-back:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Menú en el celular: la barra lateral se vuelve un panel que se abre con ☰,
+   con los nombres completos. La barra de íconos sueltos no se entendía.
+   En escritorio estos elementos no se muestran.
+--------------------------------------------------------------------------- */
+.menu-toggle,
+.menu-close,
+.menu-backdrop,
+.menu-account {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: min(290px, 84vw);
+    height: 100dvh;
+    padding: 20px 14px calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-100%);
+    visibility: hidden;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .app-sidebar.is-open {
+    transform: none;
+    visibility: visible;
+  }
+
+  /* Dentro del panel sí caben los nombres: se deshace la barra de íconos. */
+  .app-brand span:not(.brand-mark),
+  .sidebar-caption,
+  .nav-link {
+    font-size: revert;
+  }
+  .app-brand span:not(.brand-mark) { font-size: 1.1rem; }
+  .sidebar-caption { font-size: 0.62rem; }
+  .nav-link {
+    font-size: 0.95rem;
+    justify-content: flex-start;
+    padding: 0.8rem 0.75rem;
+  }
+  .nav-group-label {
+    display: block;
+  }
+
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(18, 17, 16, 0.5);
+  }
+
+  .menu-close {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 14px;
+    right: 12px;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+
+  .menu-account {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-top: auto;
+    padding: 14px 10px 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+  .menu-account small {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.78rem;
+  }
+  .menu-account button {
+    margin-top: 0.6rem;
+    align-self: flex-start;
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    padding: 0.45rem 0.9rem;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-right: auto;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .menu-toggle span {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  /* La búsqueda no cabe junto al botón de menú; en el celular se prioriza
+     la navegación. */
+  .topbar-search {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+  .app-sidebar {
+    transition: transform 0.22s ease, visibility 0.22s;
+  }
 }
