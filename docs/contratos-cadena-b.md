@@ -2,9 +2,11 @@
 
 Lo que la Cadena B (Mateo: `field_ops`, `billing`, `notifications`) expone y
 lo que cambió fuera de su paquete. Se actualiza con cada entrega. Detalle de
-diseño: `docs/superpowers/specs/2026-09-27-modulo-5-campo-design.md`.
+diseño: `docs/superpowers/specs/2026-09-27-modulo-5-campo-design.md` (módulo 5)
+y `docs/superpowers/specs/2026-09-28-modulo-6-cobro-design.md` (módulo 6).
 
-Última actualización: 27 de septiembre de 2026 · módulo 5 (backend y pantallas).
+Última actualización: 28 de septiembre de 2026 · módulo 6 (facturación y cobro,
+backend y pantallas). Lo del módulo 6 está en la sección 9.
 
 ---
 
@@ -52,7 +54,7 @@ hice.
 | `permit_in_progress → ready_to_install` | Todos los permisos despejados | — |
 | `ready_to_install → installed` | Checklist completo y un equipo | Proyecto `completed` |
 | `installed → inspection_pending` | Inspección pendiente agendada | — |
-| `inspection_pending → billing_in_progress` | Última inspección aprobada | — |
+| `inspection_pending → billing_in_progress` | Acta confirmada por Administración (módulo 6; antes: inspección aprobada) | — |
 | `inspection_pending → ready_to_install` | Última inspección fallida | Reabre el proyecto |
 
 Por tu ruta manual (`POST /cases/{id}/transition`) pasan las mismas guardas: sin
@@ -124,7 +126,137 @@ dos errores que las pruebas unitarias no veían, ya corregidos con su prueba:
   fechas de negocio usan `organizations.timezone` (`field_ops/clock.py`), y el
   frontend usa la fecha local del navegador. **Ojo, José:** el mismo patrón
   (`date.today()`) está en `billing/service.py` (vencimiento de facturas); es
-  mío y lo corrijo en el módulo 6.
+  mío y lo corrijo en el módulo 6. **Corregido en el módulo 6** (COD-10).
 - **Plantilla por defecto:** se busca por nombre, y las organizaciones que ya
   tenían la plantilla anterior nunca recibían la del §8. La nueva tiene nombre
   propio; los proyectos anteriores conservan su copia.
+
+---
+
+## 9. Módulo 6 — facturación y cobro (28 sep)
+
+### 9.1 Pedido a José: dos transiciones en `cases/stages.py`
+
+Solo agregadas; el código de la Cadena B ya las usa en cuanto existan.
+
+1. **`approved → ready_to_install`**: instalar antes de tener el permiso, como se
+   trabaja en la práctica (el cliente lo confirmó). Permiso sugerido: el de
+   liberar la orden (`dispatch.manage`). `schedule_installation` ya intenta esa
+   transición; hoy no existe y el expediente sigue el camino por "Permiso en
+   trámite".
+2. **`installed → billing_in_progress`**: cobrar a un programa que no exige
+   inspección (TECH, este año solo pide el número de permiso). Hoy el cobro se
+   crea igual, pero el expediente se queda en "Instalado" hasta que la
+   transición exista. Las guardas para ese salto ya se registran solas si
+   `stages.is_allowed` la encuentra.
+
+### 9.2 Lo que toqué fuera de mi paquete
+
+- **`app/main.py`**: dos líneas nuevas que registran `billing/case_hooks.py`,
+  junto a las de campo.
+- **`shared/permissions.py`**: permisos nuevos `billing.configure` (Administrador
+  y Contabilidad) y `quotes.manage` (Administrador, Administración y
+  Contabilidad). La migración los agrega a los roles de cada organización.
+- **`api/v1/router.py`** y **`frontend/src/app/router.tsx`**: solo líneas nuevas.
+- **Programas**: la configuración de cobro apunta a tu `Program` y no lo
+  modifica. Mientras llega tu módulo 1, en local creé los programas demo
+  directo en la base.
+- **Cotizaciones en `/billing/quotes`**, no en `/quotes`: tu prueba de COD-01
+  exige que la ruta del CRM retirado no responda, y así se queda.
+
+### 9.3 Cómo mueve el cobro el expediente
+
+Mismo mecanismo que campo: los hechos del cobro llaman a `advance_case()` y
+`mark_substatus()` (`billing/claims.py`, `_sync_case`).
+
+| Hecho | Expediente |
+|---|---|
+| Primer cobro creado | → "En proceso de cobro", sub-estado `invoice_pending` |
+| Radicado | sub-estado `submitted` |
+| Rechazado por el programa | sub-estado `rejected_by_program` (manda sobre los demás) |
+| Todos los cobros vivos pagados | → "Pagado" (necesita `invoices.record_payment`) |
+| Cobro nuevo sobre un expediente "Pagado" | No retrocede |
+| Trabajo particular (cotización, factura, pagos) | Nunca mueve el expediente |
+
+Guardas nuevas (`billing/case_hooks.py`), también para tu ruta manual:
+
+| Transición | Guarda |
+|---|---|
+| `inspection_pending`/`installed → billing_in_progress` | Al menos un cobro de programa vivo (además del acta confirmada de campo) |
+| `billing_in_progress → paid` | Todos los cobros vivos pagados |
+
+El requisito automático "Aprobación del programa con código" lee
+`cases.approved_at` y `cases.approval_code`. Si tu flujo de aprobación no llena
+`approval_code`, ningún cobro se puede radicar (lo encontró el recorrido:
+los expedientes demo no lo tienen). T&C y documentos quedan como requisitos
+manuales hasta que termines los módulos 2 y 3; entonces pasan a automáticos.
+
+### 9.4 Eventos (después del commit)
+
+| Evento | Datos |
+|---|---|
+| `project.technician_info_confirmed` | `project_id`, `organization_id` |
+| `project.returned_to_technician` | `project_id`, `organization_id`, `reason` |
+| `claim.created` / `claim.submitted` / `claim.withdrawn` | `claim_id`, `project_id`, `program_id`, `organization_id` |
+| `claim.rejected` | lo anterior + `category` |
+| `claim.paid` | lo anterior + `amount` |
+| `quote.sent` / `quote.accepted` | `quote_id`, `quote_number`, `version`, `organization_id` (+ `invoice_id`) |
+
+### 9.5 API nueva
+
+| Método y ruta | Permiso |
+|---|---|
+| `POST /projects/{id}/review/confirm`, `/review/return`; `GET /projects/{id}/reviews` | `checklists.approve` / lectura |
+| `POST /inspections/{id}/signed-permit` | `inspections.manage` |
+| `GET/PUT /billing/programs/{id}/profile`, `…/rates`, `…/jurisdictions`, `…/requirements` | `invoices.read` / `billing.configure` |
+| `GET /projects/{id}/billing/eligibility` | `invoices.read` |
+| `POST /projects/{id}/claims`; `GET /claims`, `GET /claims/{id}` | `billing.submit` / `invoices.read` |
+| `POST/DELETE /claims/{id}/checks/{code}`; `POST /claims/{id}/submit`, `/reject`, `/withdraw`, `/invoice/reissue` | `billing.submit` |
+| `POST /claims/{id}/payment` | `invoices.record_payment` |
+| `GET /billing/dashboard` | `invoices.read` |
+| `GET /invoices/{id}/pdf`, `POST /invoices/preview` | `invoices.read` |
+| `PUT /invoices/{id}/lines` (borrador), `POST /invoices/{id}/issue`, `POST /invoices/{id}/void` | `invoices.update` / `invoices.create` |
+| `GET/POST /billing/quotes`, `GET/PATCH /billing/quotes/{id}`, `/send`, `/revise`, `/accept`, `/reject` | `quotes.manage` |
+
+Reglas de campo que cambiaron: agendar la inspección exige un permiso
+radicado; aprobarla exige el permiso firmado por el inspector (categoría de
+evidencia nueva `permit_signed`, ya son 16); un acta devuelta al técnico se
+vuelve a cerrar aunque el expediente esté más adelante.
+
+### 9.6 Esquema — migración `0015_billing_module6`
+
+`invoices`: `kind`, `case_id`, `claim_id`, `quote_id`, `replaces_invoice_id`,
+`document_status` (el enum `invoice_status` pasa a texto; el estado de pago se
+calcula de los pagos), `project_id` opcional, dinero en `Numeric`. Tablas
+nuevas: `invoice_lines`, `document_sequences`, `billing_program_profiles`,
+`program_rebate_rates`, `program_jurisdictions`, `program_claim_requirements`,
+`project_reviews`, `rebate_claims` (índice único parcial por proyecto y
+programa, salvo retirados), `rebate_claim_attempts`, `rebate_claim_checks`,
+`quotes`, `quote_lines`. Si integras antes otra `0015`, la renumero yo.
+
+**Validación (28 sep, Postgres 16 en Docker):** sube, baja y vuelve a subir;
+sin diferencias nuevas entre modelos y base (solo las FK de organización de
+COD-06).
+
+### 9.7 Recorrido de punta a punta (28 sep, API real)
+
+Instalación en Phoenix con dos programas: LADWP radicado; Eficiencia de Arizona
+rechazado por motivo técnico → acta devuelta al técnico (el expediente se
+quedó en cobro) → reintento bloqueado por el checklist → el técnico corrige y
+cierra → Administración confirma → se radica de nuevo (el rechazo queda en el
+historial) → Arizona pagado (el expediente sigue en cobro) → LADWP paga $150
+menos (diferencia visible) → expediente "Pagado". Trabajo particular:
+cotización v1, ajuste v2, aceptada, factura emitida `FAC-2026-0001`, pago
+parcial y saldo → pagada sin tocar el expediente. PDF de todas las facturas.
+
+### 9.8 Pendientes del módulo 6
+
+- Las dos transiciones de 9.1 (tuyas).
+- Catálogo de programas (tu módulo 1). Hasta entonces se crean en la base.
+- Confirmar con el cliente: qué entidad factura cada programa (Delta HVAC
+  Service Inc. o Desert Alliance Properties LLC) y si el PDF va en inglés (hoy
+  sí).
+- Plantillas propias por programa (GoZero/HousecallPro, pedestal/Charge Ready,
+  del cronograma): el spec las dejó en dos plantillas con los datos y el texto
+  legal por programa; si un programa exige su formato, se agrega como otra.
+- `PATCH /projects/{id}` heredado (sección 7) sigue abierto.
