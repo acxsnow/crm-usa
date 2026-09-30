@@ -2,7 +2,7 @@ import csv
 import io
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +16,17 @@ from app.modules.billing.schemas import (
     FinanceDashboardResponse,
     InvoiceAttachmentResponse,
     InvoiceCreate,
+    InvoiceIssue,
+    InvoiceLinesReplace,
     InvoicePaymentCreate,
+    InvoicePreview,
     InvoiceResponse,
     InvoiceUpdate,
+    InvoiceVoid,
+    invoice_response,
 )
+from app.modules.field_ops.clock import org_today
+from app.shared.errors import NotFoundError
 from app.shared.files.storage import absolute_path, save_bytes
 from app.modules.users.models import User
 
@@ -33,16 +40,18 @@ async def list_invoices(
     current_user: User = Depends(require_permission("invoices.read")),
     status_filter: str | None = Query(None, alias="status"),
     project_id: uuid.UUID | None = None,
+    kind: str | None = Query(None, description="rebate o particular"),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
-    # list_invoices applies the lazy overdue-status refresh and the status
-    # filter in Python (status is computed, not a plain column, so it can't
-    # be pushed into SQL) — page in Python too, over the already-filtered
-    # result, so X-Total-Count reflects the filtered count, not the raw one.
-    invoices = await billing_service.list_invoices(db, organization_id=organization_id, status_filter=status_filter, project_id=project_id)
+    # El estado de pago se calcula (no es una columna), así que el filtro y la
+    # paginación van en Python, sobre el resultado ya filtrado: X-Total-Count
+    # cuenta lo filtrado, no el total crudo.
+    invoices, hoy = await billing_service.list_invoices(
+        db, organization_id=organization_id, status_filter=status_filter, project_id=project_id, kind=kind,
+    )
     limit, offset = pagination
     response.headers["X-Total-Count"] = str(len(invoices))
-    return invoices[offset : offset + limit]
+    return [invoice_response(i, hoy) for i in invoices[offset : offset + limit]]
 
 
 @router.post("/invoices", response_model=InvoiceResponse, status_code=201)
@@ -51,9 +60,46 @@ async def create_invoice(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.create")),
 ):
-    return await billing_service.create_invoice(
+    invoice = await billing_service.create_invoice(
         db, organization_id=organization_id, actor_id=current_user.id, data=payload.model_dump(),
     )
+    return invoice_response(invoice, await org_today(db, organization_id))
+
+
+def _pdf(content: bytes, filename: str) -> Response:
+    return Response(content=content, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}.pdf"'})
+
+
+@router.post("/invoices/preview")
+async def preview_invoice_pdf(
+    payload: InvoicePreview, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("invoices.read")),
+):
+    """El PDF de la factura que se emitiría. No guarda nada ni consume número."""
+    from app.modules.billing.pdf import invoice_document, preview_invoice, render_invoice_pdf
+
+    invoice, program, project = await preview_invoice(
+        db, organization_id=organization_id, user=current_user, data=payload.model_dump(),
+    )
+    documento = await invoice_document(db, invoice, program=program, project=project)
+    # Sin commit: lo que se haya sembrado al leer (perfil del programa) se
+    # descarta al cerrar la sesión.
+    return _pdf(render_invoice_pdf(documento), "preview")
+
+
+@router.get("/invoices/{invoice_id}/pdf")
+async def invoice_pdf(
+    invoice_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("invoices.read")),
+):
+    from app.modules.billing.pdf import invoice_document, render_invoice_pdf
+
+    invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
+    documento = await invoice_document(db, invoice)
+    return _pdf(render_invoice_pdf(documento), invoice.invoice_number)
 
 
 @router.get("/invoices/{invoice_id}", response_model=InvoiceResponse)
@@ -62,7 +108,8 @@ async def get_invoice(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.read")),
 ):
-    return await billing_service.get_invoice(db, organization_id=organization_id, invoice_id=invoice_id)
+    invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
+    return invoice_response(invoice, await org_today(db, organization_id))
 
 
 @router.patch("/invoices/{invoice_id}", response_model=InvoiceResponse)
@@ -71,15 +118,53 @@ async def update_invoice(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.update")),
 ):
-    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == organization_id))
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found.")
+    invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
     await db.commit()
-    await db.refresh(invoice)
-    return invoice
+    invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
+    return invoice_response(invoice, await org_today(db, organization_id))
+
+
+@router.put("/invoices/{invoice_id}/lines", response_model=InvoiceResponse)
+async def replace_invoice_lines(
+    invoice_id: uuid.UUID, payload: InvoiceLinesReplace, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("invoices.update")),
+):
+    """Ajusta las líneas de un borrador antes de emitirlo."""
+    invoice = await billing_service.replace_draft_lines(
+        db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id,
+        lines=[l.model_dump() for l in payload.lines],
+    )
+    return invoice_response(invoice, await org_today(db, organization_id))
+
+
+@router.post("/invoices/{invoice_id}/issue", response_model=InvoiceResponse)
+async def issue_invoice(
+    invoice_id: uuid.UUID, payload: InvoiceIssue, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("invoices.create")),
+):
+    invoice = await billing_service.issue_invoice(
+        db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id,
+        due_date=payload.due_date,
+    )
+    return invoice_response(invoice, await org_today(db, organization_id))
+
+
+@router.post("/invoices/{invoice_id}/void", response_model=InvoiceResponse)
+async def void_invoice(
+    invoice_id: uuid.UUID, payload: InvoiceVoid, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("invoices.update")),
+):
+    """Anula una factura con motivo. Una emitida no se edita: se anula y se
+    emite otra."""
+    invoice = await billing_service.void_invoice(
+        db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id, reason=payload.reason,
+    )
+    return invoice_response(invoice, await org_today(db, organization_id))
 
 
 @router.post("/invoices/{invoice_id}/mark-sent", response_model=InvoiceResponse)
@@ -88,7 +173,8 @@ async def mark_invoice_sent(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.update")),
 ):
-    return await billing_service.mark_sent(db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id)
+    invoice = await billing_service.mark_sent(db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id)
+    return invoice_response(invoice, await org_today(db, organization_id))
 
 
 @router.post("/invoices/{invoice_id}/payments", response_model=InvoiceResponse, status_code=201)
@@ -97,9 +183,10 @@ async def record_invoice_payment(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.record_payment")),
 ):
-    return await billing_service.record_payment(
+    invoice = await billing_service.record_payment(
         db, organization_id=organization_id, actor_id=current_user.id, invoice_id=invoice_id, data=payload.model_dump(),
     )
+    return invoice_response(invoice, await org_today(db, organization_id))
 
 
 @router.post("/invoices/{invoice_id}/attachments", response_model=InvoiceAttachmentResponse, status_code=201)
@@ -108,10 +195,7 @@ async def upload_invoice_attachment(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.update")),
 ):
-    result = await db.execute(select(Invoice).where(Invoice.id == invoice_id, Invoice.organization_id == organization_id))
-    invoice = result.scalar_one_or_none()
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found.")
+    invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
 
     raw_bytes = await file.read()
     billing_service.validate_attachment(
@@ -144,7 +228,7 @@ async def download_invoice_attachment(
     )
     attachment = result.scalar_one_or_none()
     if not attachment:
-        raise HTTPException(status_code=404, detail="Attachment not found.")
+        raise NotFoundError("El adjunto no existe.", code="attachment_not_found")
     return FileResponse(str(absolute_path(attachment.file_path)), media_type=attachment.mime_type or "application/octet-stream")
 
 
@@ -164,15 +248,16 @@ async def export_invoices_csv(
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("invoices.export")),
 ):
-    invoices = await billing_service.list_invoices(db, organization_id=organization_id)
+    invoices, hoy = await billing_service.list_invoices(db, organization_id=organization_id)
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["invoice_number", "project_id", "funder_program", "amount", "paid_amount", "balance", "status", "issue_date", "due_date"])
+    writer.writerow(["invoice_number", "kind", "project_id", "funder_program", "amount", "paid_amount", "balance",
+                     "status", "issue_date", "due_date"])
     for inv in invoices:
         writer.writerow([
-            inv.invoice_number, str(inv.project_id), _csv_safe(inv.funder_program or ""), inv.amount, inv.paid_amount,
-            inv.balance, inv.status.value, inv.issue_date or "", inv.due_date or "",
+            inv.invoice_number, inv.kind, str(inv.project_id or ""), _csv_safe(inv.funder_program or ""), inv.amount,
+            inv.paid_amount, inv.balance, inv.payment_status_on(hoy), inv.issue_date or "", inv.due_date or "",
         ])
     buffer.seek(0)
     return StreamingResponse(

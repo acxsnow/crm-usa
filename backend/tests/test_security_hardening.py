@@ -77,7 +77,7 @@ async def test_invoice_attachment_rejects_disallowed_mime_type(app_client, db, a
         headers=_auth(token),
     )
     assert resp.status_code == 400
-    assert "photos, scans, or PDF" in resp.json()["detail"]
+    assert "fotos, escaneos o PDF" in resp.json()["detail"]
 
     ok_resp = await app_client.post(
         f"/api/v1/invoices/{invoice_id}/attachments",

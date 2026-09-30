@@ -7,24 +7,24 @@ import asyncio
 import structlog
 
 from app.db.session import AsyncSessionLocal
-from app.modules.billing.service import sweep_overdue_invoices
+from app.modules.billing.service import count_overdue_invoices
 from app.workers.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
 
-async def _sweep_overdue_invoices() -> int:
+async def _count_overdue_invoices() -> int:
     async with AsyncSessionLocal() as db:
-        return await sweep_overdue_invoices(db)
+        return await count_overdue_invoices(db)
 
 
 @celery_app.task(name="workers.sweep_overdue_invoices")
 def sweep_overdue_invoices_task() -> int:
-    """Daily sweep (see beat_schedule in celery_app.py): marks any
-    pending/sent invoice whose due date has passed as overdue, across every
-    organization — the same transition the API already applies lazily on
-    read, just proactive now instead of waiting for someone to open the
-    Invoices page (spec 17 phase 4)."""
-    changed = asyncio.run(_sweep_overdue_invoices())
-    logger.info("billing.overdue_sweep_completed", invoices_marked_overdue=changed)
-    return changed
+    """Revisión diaria (ver beat_schedule en celery_app.py). Desde el módulo 6
+    el estado "vencida" se calcula al leer con la fecha de cada organización,
+    así que ya no hay nada que cambiar: la tarea registra cuántas facturas
+    están vencidas. El nombre se conserva para no tocar la programación de
+    Celery Beat."""
+    vencidas = asyncio.run(_count_overdue_invoices())
+    logger.info("billing.overdue_sweep_completed", overdue_invoices=vencidas)
+    return vencidas

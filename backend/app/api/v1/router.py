@@ -2,6 +2,9 @@ from fastapi import APIRouter
 
 from app.modules.auth.router import router as auth_router
 from app.modules.billing.router import router as billing_router
+from app.modules.billing.program_router import router as billing_program_router
+from app.modules.billing.claims_router import router as billing_claims_router
+from app.modules.billing.quotes_router import router as billing_quotes_router
 from app.modules.cases.router import router as cases_router
 from app.modules.crm.router import router as crm_router
 from app.modules.field_ops.router import router as field_ops_router
@@ -19,4 +22,7 @@ api_router.include_router(audit_router)
 api_router.include_router(crm_router)
 api_router.include_router(field_ops_router)
 api_router.include_router(billing_router)
+api_router.include_router(billing_program_router)
+api_router.include_router(billing_claims_router)
+api_router.include_router(billing_quotes_router)
 api_router.include_router(cases_router)

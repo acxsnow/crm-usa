@@ -113,6 +113,10 @@ from app.modules.field_ops import case_hooks  # noqa: E402
 
 case_hooks.register()
 
+from app.modules.billing import case_hooks as billing_case_hooks  # noqa: E402
+
+billing_case_hooks.register()
+
 
 @app.get("/health")
 async def health():
