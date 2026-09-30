@@ -53,7 +53,12 @@ export function InvoicesTab() {
     queryKey: ["invoices", page, params],
     queryFn: () => listInvoicesPage(page, PAGE_SIZE, params),
   });
-  const { data: resumen } = useQuery({ queryKey: ["finance-dashboard"], queryFn: getFinanceDashboard });
+  // El tablero financiero exige `dashboards.finance` (Contabilidad, Gerencia):
+  // Administración ve la lista sin los totales en vez de recibir un 403 (QA-03).
+  const { hasPermission } = useAuth();
+  const { data: resumen } = useQuery({
+    queryKey: ["finance-dashboard"], queryFn: getFinanceDashboard, enabled: hasPermission("dashboards.finance"),
+  });
   const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
   const cliente = (id: string) => customers?.find((c) => c.id === id)?.legal_name ?? "Cliente";
   const filtrar = (fn: () => void) => { fn(); setPage(1); setAbierta(null); };
