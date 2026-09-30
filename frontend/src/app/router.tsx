@@ -14,6 +14,8 @@ import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
 import { AgendaPage } from "@/features/field-ops/AgendaPage";
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
+import { ClaimDetailPage } from "@/features/billing/ClaimDetailPage";
+import { QuoteDetailPage } from "@/features/billing/QuoteDetailPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { RolesPage } from "@/features/roles/RolesPage";
@@ -112,6 +114,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission="invoices.read" moduleLabel="Facturación y cobros">
             <InvoicesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "invoices/claims/:claimId",
+        element: (
+          <RequireAccess permission="invoices.read" moduleLabel="Facturación y cobros">
+            <ClaimDetailPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "invoices/quotes/:quoteId",
+        element: (
+          <RequireAccess permission="quotes.manage" moduleLabel="Cotizaciones">
+            <QuoteDetailPage />
           </RequireAccess>
         ),
       },

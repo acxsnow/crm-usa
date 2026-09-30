@@ -31,6 +31,8 @@ import { CloseInstallationStep, ReleaseOrderStep } from "./components/Installati
 import { InstallationRecord, closeRequirements, deriveStates, useRecordData } from "./components/InstallationRecord";
 import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
+import { ReviewStep } from "./components/ReviewStep";
+import { BillingStep } from "./components/BillingStep";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
@@ -449,10 +451,21 @@ export function ProjectDetailPage() {
             ),
           },
           {
+            key: "review", title: "Confirmación de Administración", ...estados.review,
+            body: <ReviewStep project={project} canReview={hasPermission("checklists.approve")} />,
+          },
+          {
             key: "inspection", title: "Inspección municipal", ...estados.inspection,
             body: (
               <InspectionsPanel projectId={project.id} canManage={hasPermission("inspections.manage")}
                 installationClosed={cerrada} />
+            ),
+          },
+          {
+            key: "billing", title: "Cobro al programa", ...estados.billing,
+            body: (
+              <BillingStep project={project} canCreate={hasPermission("billing.submit")}
+                canRead={hasPermission("invoices.read")} />
             ),
           },
         ]}

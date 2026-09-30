@@ -27,6 +27,8 @@ export interface RecordStep {
   state: StepState;
   /** Una línea: qué quedó hecho, o qué falta para habilitarlo. */
   summary?: string;
+  /** Texto del chip en vez del genérico del estado ("Pagado", "Rechazado"). */
+  chip?: string;
   body: ReactNode;
 }
 
@@ -92,9 +94,13 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     checklist: checklistDone || closed,
     equipment: data.equipment.length > 0,
     close: closed,
+    review: Boolean(project.technician_info_confirmed),
     inspection: inspectionPassed,
+    billing: stageAtLeast(project, "paid"),
   };
-  const order: (keyof typeof done)[] = ["permit", "release", "checklist", "equipment", "close", "inspection"];
+  const order: (keyof typeof done)[] = [
+    "permit", "release", "checklist", "equipment", "close", "review", "inspection", "billing",
+  ];
   const current = order.find((k) => !done[k]);
 
   const state = (k: keyof typeof done, lockedWhen = false): StepState =>
@@ -126,7 +132,14 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
       state: state("close"),
       summary: closed
         ? `Cerrada el ${shortDate(project.completed_date)}`
+        : project.returned_reason ? `Devuelta para corregir: ${project.returned_reason}`
         : data.gaps && !data.gaps.can_close ? `Faltan ${data.gaps.missing.length}` : "Lista para cerrar",
+    },
+    review: {
+      state: state("review", !closed),
+      summary: project.technician_info_confirmed
+        ? "Información técnica confirmada por Administración"
+        : closed ? "Esperando la revisión de Administración" : "Se habilita al cerrar la instalación",
     },
     inspection: {
       state: state("inspection", !closed && !lastInspection),
@@ -136,18 +149,32 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
         : lastInspection?.result === "failed" ? "Fallida: la orden volvió a campo"
         : "Se habilita al cerrar la instalación",
     },
+    billing: {
+      state: state("billing", !project.technician_info_confirmed),
+      summary: stageAtLeast(project, "paid") ? "Pagado por el programa"
+        : project.case_stage_code === "billing_in_progress"
+          ? (BILLING_SUBSTATUS[project.case_substatus_code ?? ""] ?? "En proceso de cobro")
+          : project.technician_info_confirmed ? "Listo para crear el cobro" : "Se habilita al confirmar el acta",
+    },
   };
 }
 
-export function InstallationRecord({ project, technicianName, steps }: {
-  project: Project;
-  technicianName: string | null;
-  steps: RecordStep[];
-}) {
+const BILLING_SUBSTATUS: Record<string, string> = {
+  invoice_pending: "En cobro: falta radicar",
+  submitted: "En cobro: radicado, esperando pago",
+  rejected_by_program: "En cobro: rechazado, en corrección",
+};
+
+/**
+ * La lista de pasos con riel numerado del acta. La usan el acta de instalación
+ * y las hojas del módulo 6 (cobro y cotización): el mismo lenguaje visual para
+ * todo lo que es un proceso en orden.
+ */
+export function ActaSteps({ steps }: { steps: RecordStep[] }) {
   // Abierto por defecto: el paso actual. Los demás se abren a mano.
   const [open, setOpen] = useState<Set<string>>(() => new Set(steps.filter((s) => s.state === "current").map((s) => s.key)));
-  // Al completarse un paso, el siguiente se abre solo: el acta guía al
-  // técnico sin que tenga que buscar dónde sigue.
+  // Al completarse un paso, el siguiente se abre solo: el acta guía sin que
+  // haya que buscar dónde sigue.
   const currentKey = steps.find((s) => s.state === "current")?.key;
   useEffect(() => {
     if (currentKey) setOpen((prev) => (prev.has(currentKey) ? prev : new Set(prev).add(currentKey)));
@@ -161,6 +188,44 @@ export function InstallationRecord({ project, technicianName, steps }: {
     });
 
   return (
+    <ol className="acta-steps">
+      {steps.map((step, n) => {
+        const isOpen = open.has(step.key) && step.state !== "locked";
+        return (
+          <li key={step.key} className={`acta-step is-${step.state}`}>
+            <span className="acta-step-marker" aria-hidden="true">
+              {step.state === "done" ? <CheckIcon size={16} strokeWidth={2.6} /> : n + 1}
+            </span>
+            <button
+              type="button"
+              className="acta-step-head"
+              aria-expanded={isOpen}
+              disabled={step.state === "locked"}
+              onClick={() => toggle(step.key)}
+            >
+              <span className="acta-step-text">
+                <span className="acta-step-title">{step.title}</span>
+                {step.summary && <span className="acta-step-summary">{step.summary}</span>}
+              </span>
+              <span className={`acta-chip is-${step.state}`}>
+                {STATE_CHIP[step.state].icon}
+                {step.chip ?? STATE_CHIP[step.state].label}
+              </span>
+            </button>
+            {isOpen && <div className="acta-step-body"><div className="acta-step-card">{step.body}</div></div>}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+export function InstallationRecord({ project, technicianName, steps }: {
+  project: Project;
+  technicianName: string | null;
+  steps: RecordStep[];
+}) {
+  return (
     <article className="acta" aria-label="Acta de instalación">
       <header className="acta-header">
         <div className="acta-title-row">
@@ -170,6 +235,8 @@ export function InstallationRecord({ project, technicianName, steps }: {
               {/* El sub-estado dice más que la etapa cuando existe. */}
               {project.case_substatus_code === "install_scheduled" ? "Orden liberada"
                 : project.case_substatus_code === "inspection_approved" ? "Inspección aprobada"
+                : project.case_substatus_code && BILLING_SUBSTATUS[project.case_substatus_code]
+                  ? BILLING_SUBSTATUS[project.case_substatus_code]
                 : project.case_stage_label}
             </span>
           )}
@@ -184,36 +251,7 @@ export function InstallationRecord({ project, technicianName, steps }: {
           <div><dt>Fecha</dt><dd>{project.scheduled_date ? shortDate(project.scheduled_date) : "Sin agendar"}</dd></div>
         </dl>
       </header>
-
-      <ol className="acta-steps">
-        {steps.map((step, n) => {
-          const isOpen = open.has(step.key) && step.state !== "locked";
-          return (
-            <li key={step.key} className={`acta-step is-${step.state}`}>
-              <span className="acta-step-marker" aria-hidden="true">
-                {step.state === "done" ? <CheckIcon size={16} strokeWidth={2.6} /> : n + 1}
-              </span>
-              <button
-                type="button"
-                className="acta-step-head"
-                aria-expanded={isOpen}
-                disabled={step.state === "locked"}
-                onClick={() => toggle(step.key)}
-              >
-                <span className="acta-step-text">
-                  <span className="acta-step-title">{step.title}</span>
-                  {step.summary && <span className="acta-step-summary">{step.summary}</span>}
-                </span>
-                <span className={`acta-chip is-${step.state}`}>
-                  {STATE_CHIP[step.state].icon}
-                  {STATE_CHIP[step.state].label}
-                </span>
-              </button>
-              {isOpen && <div className="acta-step-body"><div className="acta-step-card">{step.body}</div></div>}
-            </li>
-          );
-        })}
-      </ol>
+      <ActaSteps steps={steps} />
     </article>
   );
 }

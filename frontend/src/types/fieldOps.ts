@@ -27,6 +27,18 @@ export interface Project extends Address {
   case_stage_code?: string | null;
   case_stage_label?: string | null;
   case_substatus_code?: string | null;
+  /** Administración confirmó la información técnica del acta (módulo 6). */
+  technician_info_confirmed?: boolean;
+  /** Motivo de la última devolución al técnico, si el acta está devuelta. */
+  returned_reason?: string | null;
+  created_at: string;
+}
+
+export interface ProjectReview {
+  id: string;
+  action: "confirmed" | "returned" | "reopened";
+  reason: string | null;
+  actor_user_id: string | null;
   created_at: string;
 }
 

@@ -7,6 +7,7 @@ import {
   listInspections,
   recordInspectionResult,
   scheduleInspection,
+  uploadSignedPermit,
   useFieldCatalogs,
   useRefreshProject,
 } from "@/features/field-ops/module5Api";
@@ -26,6 +27,8 @@ export function InspectionsPanel({ projectId, canManage, installationClosed }: {
   const [inspector, setInspector] = useState("");
   const [error, setError] = useState<string | null>(null);
   const hayPendiente = (intentos ?? []).some((i) => i.result === "pending");
+  // Con la última aprobada no hay nada más que agendar.
+  const aprobada = (intentos ?? [])[(intentos ?? []).length - 1]?.result === "passed";
 
   const schedule = useMutation({
     mutationFn: () => scheduleInspection(projectId, {
@@ -50,7 +53,7 @@ export function InspectionsPanel({ projectId, canManage, installationClosed }: {
             canManage={canManage} onError={setError} onChanged={refresh} />
         ))}
       </ol>
-      {canManage && installationClosed && !hayPendiente && (
+      {canManage && installationClosed && !hayPendiente && !aprobada && (
         <form className="inline-form" onSubmit={(e) => { e.preventDefault(); schedule.mutate(); }}>
           <input aria-label="Fecha y hora de la inspección" type="datetime-local" required
             value={cuando} onChange={(e) => setCuando(e.target.value)} />
@@ -71,6 +74,15 @@ function InspectionRow({ inspection, attempt, resultLabel, canManage, onError, o
   onError: (m: string) => void; onChanged: () => Promise<unknown>;
 }) {
   const [observaciones, setObservaciones] = useState("");
+  const [permisoSubido, setPermisoSubido] = useState<string | null>(null);
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadSignedPermit(inspection.id, file),
+    onSuccess: (_, file) => {
+      setPermisoSubido(file.name);
+      return onChanged();
+    },
+    onError: (err) => onError(apiErrorMessage(err)),
+  });
   const record = useMutation({
     mutationFn: (result: "passed" | "failed") =>
       recordInspectionResult(inspection.id, { result, observations: observaciones || undefined }),
@@ -85,6 +97,18 @@ function InspectionRow({ inspection, attempt, resultLabel, canManage, onError, o
       {inspection.inspector_name ? ` · ${inspection.inspector_name}` : ""}{" "}
       <span className={`status-pill ${estilo}`}>{resultLabel}</span>
       {inspection.observations && <p className="page-subtitle">{inspection.observations}</p>}
+      {canManage && inspection.result === "pending" && (
+        <div className="acta-signed-permit">
+          <label className="acta-btn is-line">
+            <input type="file" accept="image/*,application/pdf" className="visually-hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); e.target.value = ""; }} />
+            {upload.isPending ? "Subiendo…" : permisoSubido ? "Cambiar permiso firmado" : "Subir permiso firmado por el inspector"}
+          </label>
+          <span className="acta-empty">
+            {permisoSubido ? `✓ ${permisoSubido}` : "Sin la firma del inspector en el permiso no se aprueba ni se cobra."}
+          </span>
+        </div>
+      )}
       {canManage && inspection.result === "pending" && (
         <div className="inline-form">
           <input aria-label="Observaciones del inspector" placeholder="Observaciones (obligatorias si falla)"

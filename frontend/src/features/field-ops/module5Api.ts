@@ -17,6 +17,7 @@ import type {
   Permit,
   Project,
   ProjectMaterial,
+  ProjectReview,
 } from "@/types/fieldOps";
 
 export function apiErrorMessage(err: unknown, fallback = "No se pudo completar la acción."): string {
@@ -33,6 +34,7 @@ export const fieldKeys = {
   materials: (id: string) => ["project-materials", id] as const,
   inspections: (id: string) => ["project-inspections", id] as const,
   gaps: (id: string) => ["project-installation-gaps", id] as const,
+  reviews: (id: string) => ["project-reviews", id] as const,
 };
 
 // --- Catálogos -------------------------------------------------------------
@@ -117,6 +119,29 @@ export async function recordInspectionResult(
   return (await apiClient.post<Inspection>(`/inspections/${inspectionId}/result`, input)).data;
 }
 
+/** Aprobar la inspección exige el permiso firmado por el inspector (módulo 6). */
+export async function uploadSignedPermit(inspectionId: string, file: File): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  await apiClient.post(`/inspections/${inspectionId}/signed-permit`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+// --- Confirmación del acta (módulo 6) ------------------------------------------------
+
+export async function listReviews(projectId: string): Promise<ProjectReview[]> {
+  return (await apiClient.get<ProjectReview[]>(`/projects/${projectId}/reviews`)).data;
+}
+
+export async function confirmTechnicianInfo(projectId: string): Promise<Project> {
+  return (await apiClient.post<Project>(`/projects/${projectId}/review/confirm`, {})).data;
+}
+
+export async function returnToTechnician(projectId: string, reason: string): Promise<Project> {
+  return (await apiClient.post<Project>(`/projects/${projectId}/review/return`, { reason })).data;
+}
+
 // --- Agenda y cierre --------------------------------------------------------------
 
 export async function scheduleInstallation(
@@ -154,7 +179,10 @@ export function useRefreshProject(projectId: string) {
         fieldKeys.materials(projectId),
         fieldKeys.inspections(projectId),
         fieldKeys.gaps(projectId),
+        fieldKeys.reviews(projectId),
         ["project-evidence", projectId],
+        ["project-billing", projectId],
+        ["project-claims", projectId],
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
 }
