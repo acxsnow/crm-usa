@@ -56,6 +56,19 @@ async def guard_inspection_scheduled(*, db, case, actor_id, reason):
         )
 
 
+async def guard_technician_info_confirmed(*, db, case, actor_id, reason):
+    """Entrada a cobro (módulo 6, spec D6.5): la información técnica tiene que
+    estar recibida y confirmada por Administración. La inspección dejó de ser
+    regla fija: es un requisito del cobro de cada programa (TECH puede ir solo
+    con el número de permiso)."""
+    project = await project_for_case(db, case)
+    if not project.technician_info_confirmed:
+        raise InvalidInputError(
+            "Falta que Administración confirme la información técnica del acta antes de pasar a cobro.",
+            code="technician_info_not_confirmed",
+        )
+
+
 async def guard_inspection_passed(*, db, case, actor_id, reason):
     from app.modules.field_ops.inspections import latest_result
 

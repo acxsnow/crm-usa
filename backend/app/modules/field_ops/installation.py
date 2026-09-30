@@ -23,6 +23,7 @@ from app.modules.field_ops.catalogs import EQUIPMENT_TYPES
 from app.modules.field_ops.checklist import checklist_gaps, ensure_installation_open
 from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.models import InstalledEquipment, Project, ProjectMaterial, ProjectStatus
+from app.modules.field_ops.reviews import was_reopened_for_correction
 from app.modules.users.models import User, UserRole, UserStatus
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
@@ -151,6 +152,12 @@ async def schedule_installation(
         after_data={"technician": str(technician_id), "scheduled_date": scheduled_date.isoformat()},
     )
     project_id_, org_ = project.id, project.organization_id
+    # Se puede instalar antes de tener el permiso (así se trabaja en la
+    # práctica, spec D6.4). Si el mapa de etapas ya tiene Aprobado → Listo
+    # para instalar (pedido a José), liberar la orden lleva el expediente ahí;
+    # si no, `advance_case` no hace nada y el permiso sigue siendo el camino.
+    await advance_case(db, project=project, to_stage="ready_to_install", user=user,
+                       reason="Orden liberada antes del permiso municipal")
     await mark_substatus(db, project=project, stage="ready_to_install", substatus="install_scheduled",
                          user=user, reason=f"Instalación agendada para el {scheduled_date.isoformat()}")
     await db.commit()
@@ -218,7 +225,11 @@ async def close_installation(db, *, organization_id, user, project_id, observati
         )
 
     case = await case_for_project(db, project)
-    if case is not None and case.stage_code != "ready_to_install":
+    # Un acta devuelta al técnico (o reabierta por una inspección fallida) se
+    # vuelve a cerrar aunque el expediente esté más adelante: se corrige el
+    # acta, no la etapa (módulo 6, spec D6.6).
+    corrigiendo = was_reopened_for_correction(project) and case is not None and case.stage_code != "ready_to_install"
+    if case is not None and case.stage_code != "ready_to_install" and not corrigiendo:
         raise ConflictError(
             f"El expediente está en «{STAGE_LABELS[case.stage_code]}»; la instalación se "
             "cierra cuando está en «Listo para instalar».",
@@ -233,8 +244,10 @@ async def close_installation(db, *, organization_id, user, project_id, observati
         after_data={"case_id": str(case.id) if case else None},
     )
     project_id_ = project.id
-    if case is None:
-        mark_project_completed(project, await org_today(db, organization_id))  # heredado, sin expediente
+    if case is None or corrigiendo:
+        # Proyecto heredado sin expediente, o corrección de un acta devuelta:
+        # el expediente no se mueve.
+        mark_project_completed(project, await org_today(db, organization_id))
     else:
         # El efecto de `installed` marca el proyecto como completado, así el
         # camino manual y este terminan igual.

@@ -54,6 +54,13 @@ async def schedule_inspection(
         raise ConflictError(
             "La inspección se agenda con la instalación cerrada.", code="installation_not_closed"
         )
+    # El permiso puede sacarse antes o después de instalar, pero la
+    # inspección se agenda contra él (spec D6.4).
+    if not await has_filed_permit(db, project.id):
+        raise ConflictError(
+            "Radica el permiso municipal antes de agendar la inspección: el inspector firma sobre ese permiso.",
+            code="permit_required_for_inspection",
+        )
     if any(i.result == InspectionResult.pending for i in await inspections_of(db, project.id)):
         raise ConflictError(
             "Este proyecto ya tiene una inspección pendiente; registra su resultado primero.",
@@ -103,6 +110,15 @@ async def record_inspection_result(
             code="inspection_observations_required",
         )
 
+    # La prueba de la inspección aprobada es el permiso con la firma del
+    # inspector; sin ese documento no se cobra (spec D6.4).
+    if result == InspectionResult.passed and not await has_signed_permit(db, project.id):
+        raise InvalidInputError(
+            "Adjunta el permiso firmado por el inspector (evidencia «Permiso firmado por el inspector») "
+            "antes de registrar la inspección como aprobada.",
+            code="signed_permit_required",
+        )
+
     inspeccion.result = result
     inspeccion.observations = (observations or "").strip() or None
     inspeccion.inspector_name = inspector_name or inspeccion.inspector_name
@@ -119,7 +135,8 @@ async def record_inspection_result(
         await mark_substatus(db, project=project, stage="inspection_pending",
                              substatus="inspection_approved", user=user, reason="Inspección aprobada")
     elif await case_for_project(db, project) is None:
-        reopen_project(project)  # proyecto heredado, sin expediente
+        reopen_project(project, reason=f"Inspección fallida: {inspeccion.observations}", actor_id=user.id,
+                       db=db)  # proyecto heredado, sin expediente
     else:
         # El efecto de la transición reabre el proyecto, así el camino manual y
         # este terminan igual.
@@ -135,10 +152,32 @@ async def record_inspection_result(
     return await _reload(db, inspeccion_id)
 
 
-def reopen_project(project: Project) -> None:
-    """Inspección fallida: la orden vuelve a campo para el re-trabajo."""
-    project.status = ProjectStatus.scheduled
-    project.completed_date = None
+def reopen_project(project: Project, *, reason: str | None, actor_id, db) -> None:
+    """Inspección fallida: la orden vuelve a campo para el re-trabajo, y queda
+    pendiente de que Administración confirme otra vez la información técnica."""
+    from app.modules.field_ops.reviews import add_review, reopen_for_correction
+
+    reopen_for_correction(project)
+    add_review(db, project=project, action="reopened", reason=reason, actor_id=actor_id)
+
+
+async def has_filed_permit(db, project_id) -> bool:
+    from app.modules.field_ops.catalogs import PermitStatus
+    from app.modules.field_ops.permits import permits_of
+
+    return any(p.status != PermitStatus.rejected for p in await permits_of(db, project_id))
+
+
+async def has_signed_permit(db, project_id) -> bool:
+    from app.modules.field_ops.models import Evidence
+
+    return (
+        await db.execute(
+            select(Evidence.id).where(
+                Evidence.project_id == project_id, Evidence.category == "permit_signed", Evidence.deleted_at.is_(None)
+            ).limit(1)
+        )
+    ).first() is not None
 
 
 async def on_inspection_failed(*, db, case, actor_id, reason=None) -> None:
@@ -146,7 +185,7 @@ async def on_inspection_failed(*, db, case, actor_id, reason=None) -> None:
         await db.execute(select(Project).where(Project.case_id == case.id))
     ).scalar_one_or_none()
     if project is not None:
-        reopen_project(project)
+        reopen_project(project, reason=reason, actor_id=actor_id, db=db)
 
 
 async def _reload(db, inspection_id) -> Inspection:

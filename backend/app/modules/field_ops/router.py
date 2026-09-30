@@ -14,6 +14,7 @@ from app.modules.field_ops import checklist as checklist_service
 from app.modules.field_ops import inspections as inspections_service
 from app.modules.field_ops import installation as installation_service
 from app.modules.field_ops import permits as permits_service
+from app.modules.field_ops import reviews as reviews_service
 from app.modules.field_ops import service as field_ops_service
 from app.modules.field_ops.access import get_visible_project, scope_projects_stmt
 from app.shared.errors import InvalidInputError
@@ -23,6 +24,7 @@ from app.modules.field_ops.models import (
     ChecklistTemplate,
     ChecklistTemplateItem,
     Evidence,
+    Inspection,
     Project,
     ProjectChecklistItem,
     ProjectStatus,
@@ -34,6 +36,8 @@ from app.modules.field_ops.schemas import (
     AvailabilityUpdate,
     ChecklistItemUpdate,
     AgendaRow,
+    ProjectReviewResponse,
+    ReturnToTechnicianRequest,
     InstallerResponse,
     FieldCatalogsResponse,
     InspectionCreate,
@@ -845,4 +849,68 @@ async def field_catalogs(
         equipment_types=catalogs.EQUIPMENT_TYPES,
         permit_statuses={str(k): v for k, v in catalogs.PERMIT_STATUS_LABELS.items()},
         inspection_results={str(k): v for k, v in catalogs.INSPECTION_RESULT_LABELS.items()},
+    )
+
+
+# --- Módulo 6: revisión administrativa del acta --------------------------------
+
+@router.post("/projects/{project_id}/review/confirm", response_model=ProjectResponse)
+async def confirm_technician_info(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.approve")),
+):
+    """Administración confirma la información técnica del acta cerrada."""
+    return await reviews_service.confirm_technician_info(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
+@router.post("/projects/{project_id}/review/return", response_model=ProjectResponse)
+async def return_to_technician(
+    project_id: uuid.UUID, payload: ReturnToTechnicianRequest, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.approve")),
+):
+    """Devuelve el acta al técnico con lo que debe corregir; se reabre."""
+    return await reviews_service.return_to_technician(
+        db, organization_id=organization_id, user=current_user, project_id=project_id, reason=payload.reason
+    )
+
+
+@router.get("/projects/{project_id}/reviews", response_model=list[ProjectReviewResponse])
+async def list_project_reviews(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+):
+    project = await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    return project.reviews
+
+
+
+@router.post("/inspections/{inspection_id}/signed-permit", response_model=EvidenceResponse, status_code=201)
+async def upload_signed_permit(
+    inspection_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("inspections.manage")),
+):
+    """El permiso con la firma del inspector: la prueba de la inspección
+    aprobada (módulo 6, spec D6.4). Lo sube quien registra la inspección
+    (Administración), que no tiene `evidence.create`; por eso tiene ruta propia
+    en vez de pasar por las evidencias de campo."""
+    inspeccion = (
+        await db.execute(
+            select(Inspection).where(Inspection.id == inspection_id, Inspection.organization_id == organization_id)
+        )
+    ).scalar_one_or_none()
+    if inspeccion is None:
+        raise NotFoundError("La inspección no existe.", code="inspection_not_found")
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=inspeccion.project_id)
+    return await field_ops_service.upload_evidence(
+        db, organization_id=organization_id, actor_id=current_user.id, project_id=inspeccion.project_id,
+        file=file, category="permit_signed", latitude=None, longitude=None, captured_at=None,
+        task_id=None, checklist_item_id=None,
     )

@@ -72,6 +72,22 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     # que la sesión asíncrona no intente una carga perezosa al serializar.
     case: Mapped["Case | None"] = relationship("Case", lazy="selectin", viewonly=True)
 
+    # Historial de confirmaciones y devoluciones del acta (módulo 6, D6.6).
+    reviews: Mapped[list["ProjectReview"]] = relationship(
+        "ProjectReview", lazy="selectin", order_by="ProjectReview.created_at", viewonly=True
+    )
+
+    @property
+    def technician_info_confirmed(self) -> bool:
+        """Confirmada si lo último que pasó con el acta fue una confirmación.
+        Una devolución o una reapertura (inspección fallida) la invalidan."""
+        return bool(self.reviews) and self.reviews[-1].action == "confirmed"
+
+    @property
+    def returned_reason(self) -> str | None:
+        ultima = self.reviews[-1] if self.reviews else None
+        return ultima.reason if ultima and ultima.action in ("returned", "reopened") else None
+
     @property
     def case_number(self) -> str | None:
         return self.case.case_number if self.case else None
@@ -366,3 +382,22 @@ class ProjectMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     quantity: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     unit: Mapped[str | None] = mapped_column(String(30))
     notes: Mapped[str | None] = mapped_column(Text)
+
+
+class ProjectReview(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Revisión administrativa del acta (módulo 6, spec D6.6).
+
+    - `confirmed`: Administración recibió y confirmó la información técnica.
+    - `returned`: la devolvió al técnico con motivo; el acta se reabre.
+    - `reopened`: el sistema la reabrió (inspección fallida o rechazo técnico
+      del programa); también exige confirmar de nuevo.
+    Nunca se borran: son el historial de la corrección."""
+
+    __tablename__ = "project_reviews"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())

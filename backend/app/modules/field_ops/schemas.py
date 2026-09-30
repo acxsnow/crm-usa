@@ -69,6 +69,9 @@ class ProjectResponse(AddressSchema):
     case_stage_code: str | None = None
     case_stage_label: str | None = None
     case_substatus_code: str | None = None
+    # Revisión administrativa del acta (módulo 6).
+    technician_info_confirmed: bool = False
+    returned_reason: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 
@@ -401,4 +404,19 @@ class FieldCatalogsResponse(BaseModel):
 class InstallerResponse(BaseModel):
     id: uuid.UUID
     full_name: str
+    model_config = {"from_attributes": True}
+
+
+# --- Módulo 6: revisión del acta ---------------------------------------------
+
+class ReturnToTechnicianRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class ProjectReviewResponse(BaseModel):
+    id: uuid.UUID
+    action: str
+    reason: str | None
+    actor_user_id: uuid.UUID | None
+    created_at: datetime
     model_config = {"from_attributes": True}

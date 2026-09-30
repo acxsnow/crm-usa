@@ -26,6 +26,9 @@ EVIDENCE_CATEGORIES: dict[str, str] = {
     "gas_removal": "Eliminación de equipo de gas",
     "additional_photo": "Fotos adicionales",
     "additional_video": "Video adicional",
+    # La prueba de la inspección aprobada: el permiso con la firma del
+    # inspector (módulo 6, spec D6.4). Sin esto no se cobra.
+    "permit_signed": "Permiso firmado por el inspector",
 }
 
 # Condiciones de una instalación que vuelven obligatorios ciertos ítems del

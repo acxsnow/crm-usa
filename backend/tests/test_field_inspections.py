@@ -13,6 +13,7 @@ from tests.field_helpers import (
     approved_case_with_project,
     headers_for,
     installed_case,
+    jpeg_bytes,
     refreshed_case,
 )
 
@@ -37,6 +38,15 @@ async def _agendar(app_client, headers, project_id):
     )
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+async def _subir_permiso_firmado(app_client, headers, inspection_id):
+    """Aprobar la inspección exige el permiso firmado por el inspector (módulo 6)."""
+    resp = await app_client.post(
+        f"/api/v1/inspections/{inspection_id}/signed-permit",
+        files={"file": ("permiso.jpg", jpeg_bytes(), "image/jpeg")}, headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
 
 
 async def test_scheduling_the_inspection_moves_the_case_to_inspection_pending(app_client, db, seeded_org, active_admin_staff_user):
@@ -69,8 +79,10 @@ async def test_a_passed_inspection_marks_the_substatus_and_unlocks_billing(app_c
     events = []
     domain_events.subscribe("inspection.recorded", lambda n, p: events.append(p["result"]))
     case, project = await installed_case(db, seeded_org["org"].id)
+    project_id = project.id
     headers = await headers_for(app_client, active_admin_staff_user.email)
-    inspeccion = await _agendar(app_client, headers, project.id)
+    inspeccion = await _agendar(app_client, headers, project_id)
+    await _subir_permiso_firmado(app_client, headers, inspeccion["id"])
 
     resp = await app_client.post(f"/api/v1/inspections/{inspeccion['id']}/result",
                                  json={"result": "passed"}, headers=headers)
@@ -79,7 +91,10 @@ async def test_a_passed_inspection_marks_the_substatus_and_unlocks_billing(app_c
     assert (case.stage_code, case.substatus_code) == ("inspection_pending", "inspection_approved")
     assert events == ["passed"]
 
-    # La guarda de cobro (módulo 6) ya deja pasar.
+    # Con el acta confirmada por Administración, la guarda de cobro deja pasar.
+    resp = await app_client.post(f"/api/v1/projects/{project_id}/review/confirm", json={}, headers=headers)
+    assert resp.status_code == 200, resp.text
+    case = await refreshed_case(db, case)
     case = await case_service.transition(
         db, case=case, to_stage="billing_in_progress", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR
     )
@@ -116,6 +131,7 @@ async def test_a_result_cannot_be_recorded_twice(app_client, db, seeded_org, act
     _, project = await installed_case(db, seeded_org["org"].id)
     headers = await headers_for(app_client, active_admin_staff_user.email)
     inspeccion = await _agendar(app_client, headers, project.id)
+    await _subir_permiso_firmado(app_client, headers, inspeccion["id"])
     url = f"/api/v1/inspections/{inspeccion['id']}/result"
     assert (await app_client.post(url, json={"result": "passed"}, headers=headers)).status_code == 200
     assert (await app_client.post(url, json={"result": "passed"}, headers=headers)).status_code == 409
@@ -129,12 +145,12 @@ async def test_the_manual_path_cannot_skip_scheduling_the_inspection(db, seeded_
         )
 
 
-async def test_billing_is_blocked_while_the_inspection_is_pending(app_client, db, seeded_org, active_admin_staff_user):
+async def test_billing_is_blocked_until_the_acta_is_confirmed(app_client, db, seeded_org, active_admin_staff_user):
     case, project = await installed_case(db, seeded_org["org"].id)
     headers = await headers_for(app_client, active_admin_staff_user.email)
     await _agendar(app_client, headers, project.id)
     case = await refreshed_case(db, case)
-    with pytest.raises(InvalidInputError, match="debe estar aprobada"):
+    with pytest.raises(InvalidInputError, match="confirme la información"):
         await case_service.transition(
             db, case=case, to_stage="billing_in_progress", actor_id=uuid.uuid4(), actor_permissions=stages.SYSTEM_ACTOR
         )
@@ -161,7 +177,7 @@ async def test_the_catalogs_are_exposed_with_labels(app_client, active_technicia
     resp = await app_client.get("/api/v1/field-ops/catalogs", headers=headers)
     assert resp.status_code == 200
     cuerpo = resp.json()
-    assert len(cuerpo["evidence_categories"]) == 15
+    assert len(cuerpo["evidence_categories"]) == 16
     assert cuerpo["permit_statuses"]["not_required"] == "No requerido"
 
 
@@ -181,6 +197,7 @@ async def test_the_full_retry_loop_after_a_failed_inspection(app_client, db, see
     assert resp.status_code == 200, resp.text
 
     segunda = await _agendar(app_client, headers, project_id)
+    await _subir_permiso_firmado(app_client, headers, segunda["id"])
     resp = await app_client.post(f"/api/v1/inspections/{segunda['id']}/result",
                                  json={"result": "passed"}, headers=headers)
     assert resp.status_code == 200, resp.text

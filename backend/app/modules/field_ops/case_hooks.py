@@ -66,7 +66,11 @@ def register() -> None:
     from app.modules.field_ops.inspections import on_inspection_failed
 
     stages.register_guard("installed", "inspection_pending", guards.guard_inspection_scheduled)
-    stages.register_guard("inspection_pending", "billing_in_progress", guards.guard_inspection_passed)
+    stages.register_guard("inspection_pending", "billing_in_progress", guards.guard_technician_info_confirmed)
+    # Programas sin inspección (TECH): Instalado → En proceso de cobro, si el
+    # mapa ya tiene esa transición (pedido a José, spec §9).
+    if stages.is_allowed("installed", "billing_in_progress"):
+        stages.register_guard("installed", "billing_in_progress", guards.guard_technician_info_confirmed)
     stages.register_guard("inspection_pending", "ready_to_install", guards.guard_inspection_failed)
     stages.register_effect("inspection_pending", "ready_to_install", on_inspection_failed)
 

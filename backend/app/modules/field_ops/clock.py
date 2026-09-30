@@ -25,15 +25,27 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def org_today(db: AsyncSession, organization_id: uuid.UUID) -> date:
+async def org_zone(db: AsyncSession, organization_id: uuid.UUID):
+    """La zona horaria de la organización (UTC si falta o está mal escrita)."""
     nombre = (
         await db.execute(select(Organization.timezone).where(Organization.id == organization_id))
     ).scalar_one_or_none() or "UTC"
     try:
-        zona = ZoneInfo(nombre)
+        return ZoneInfo(nombre)
     except (ZoneInfoNotFoundError, ValueError):
         # Un valor mal escrito en la configuración no debe tumbar la agenda;
         # se registra para corregirlo y se usa UTC.
         logger.warning("organization.invalid_timezone", organization_id=str(organization_id), timezone=nombre)
-        zona = timezone.utc
-    return _utcnow().astimezone(zona).date()
+        return timezone.utc
+
+
+async def org_today(db: AsyncSession, organization_id: uuid.UUID) -> date:
+    return _utcnow().astimezone(await org_zone(db, organization_id)).date()
+
+
+def local_date(moment: datetime, zone) -> date:
+    """El día local de un instante guardado en UTC (`created_at`…). Sin esto,
+    un cobro creado a las 6 p. m. en Phoenix cuenta como del día siguiente."""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(zone).date()

@@ -13,8 +13,10 @@ from app.modules.field_ops.catalogs import (
 from app.modules.field_ops.models import Permit, ProjectChecklistItem
 
 
-def test_the_fifteen_evidence_categories_of_the_requirements_exist():
-    assert len(EVIDENCE_CATEGORIES) == 15
+def test_the_evidence_categories_of_the_requirements_exist():
+    # Las 15 de los requerimientos más el permiso firmado por el inspector (módulo 6).
+    assert len(EVIDENCE_CATEGORIES) == 16
+    assert EVIDENCE_CATEGORIES["permit_signed"] == "Permiso firmado por el inspector"
     assert EVIDENCE_CATEGORIES["outdoor_label"] == "Etiqueta exterior"
     assert all(label for label in EVIDENCE_CATEGORIES.values())
 
