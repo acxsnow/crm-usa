@@ -169,6 +169,13 @@ async def transition_case(
     case = await case_service.get_case_or_404(
         db, organization_id=organization_id, case_id=case_id
     )
+    if payload.to_stage == "approved":
+        # Datos que entrega el programa al aprobar; se guardan con la misma
+        # transacción del cambio de etapa (`transition()` hace el commit).
+        if payload.approval_code:
+            case.approval_code = payload.approval_code.strip()
+        if payload.application_number:
+            case.application_number = payload.application_number.strip()
     case = await case_service.transition(
         db,
         case=case,

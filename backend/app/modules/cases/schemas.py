@@ -33,6 +33,10 @@ class CaseTransitionRequest(BaseModel):
     to_stage: str
     reason: str | None = Field(default=None, max_length=2000)
     substatus: str | None = None
+    # Al aprobar: lo que devuelve el programa. Sin código de aprobación el
+    # cobro no se puede radicar (requisito del módulo 6).
+    approval_code: str | None = Field(default=None, max_length=100)
+    application_number: str | None = Field(default=None, max_length=100)
 
 
 class CaseSubstatusRequest(BaseModel):

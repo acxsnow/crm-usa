@@ -158,10 +158,13 @@ def _build_transitions() -> dict[str, set[str]]:
         "on_hold": {"approved", "rejected"},
         "rejected": {"pending_approval"},
         # Campo (Mateo, módulo 5).
-        "approved": {"permit_in_progress"},
+        # Instalar antes de sacar el permiso es como se trabaja en la práctica
+        # (el permiso se saca antes o después; módulo 6, D6.4).
+        "approved": {"permit_in_progress", "ready_to_install"},
         "permit_in_progress": {"ready_to_install"},
         "ready_to_install": {"installed"},
-        "installed": {"inspection_pending"},
+        # Un programa que no exige inspección (TECH) pasa directo a cobro.
+        "installed": {"inspection_pending", "billing_in_progress"},
         "inspection_pending": {
             "billing_in_progress",
             # PROVISIONAL: qué pasa cuando la inspección falla está pendiente de
