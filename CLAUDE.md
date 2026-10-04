@@ -30,6 +30,7 @@ Etapa: desarrollo. Fecha de salida a producción: **Por definir**. Plan por mód
 
 - **Cadena A** (José Javier Miranda, rama `cadenaA`): `users`, `auth`, `organizations`, `crm`, `programs`, `cases`, `documents`.
 - **Cadena B** (Mateo Mazo, rama `CadenaB`): `field_ops`, `billing`, `notifications`.
+- **Desde el 4 de octubre de 2026 Mateo cubre también la Cadena A** (José no puede trabajar por ahora; acordado con él). Módulo 1 en `app/modules/programs/` (spec `docs/superpowers/specs/2026-10-04-modulo-1-programas-design.md`). Cuando José vuelva, retoma desde el estado anotado en el artefacto.
 - Nadie edita el paquete del otro sin avisar antes. Los archivos compartidos (`alembic/env.py`, `tests/conftest.py`, `api/v1/router.py`, `shared/permissions.py`, `app/router.tsx`, `DashboardLayout.tsx`) solo reciben líneas nuevas; no se reordenan ni se borran las del otro.
 - Ciclo de integración:
   1. Cada uno sube a su rama.
