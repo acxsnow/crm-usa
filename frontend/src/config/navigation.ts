@@ -146,7 +146,6 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/programs",
         icon: "⚙",
         permission: "programs.manage",
-        disabled: true,
       },
       { label: "Equipo", to: "/users", icon: "♧", permission: "users.manage" },
       { label: "Roles y permisos", to: "/roles", icon: "⚿", permission: "roles.manage" },

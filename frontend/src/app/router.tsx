@@ -16,6 +16,8 @@ import { AgendaPage } from "@/features/field-ops/AgendaPage";
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { ClaimDetailPage } from "@/features/billing/ClaimDetailPage";
 import { QuoteDetailPage } from "@/features/billing/QuoteDetailPage";
+import { ProgramsPage } from "@/features/programs/ProgramsPage";
+import { VersionEditorPage } from "@/features/programs/VersionEditorPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { RolesPage } from "@/features/roles/RolesPage";
@@ -114,6 +116,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission="invoices.read" moduleLabel="Facturación y cobros">
             <InvoicesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "programs",
+        element: (
+          <RequireAccess permission="programs.manage" moduleLabel="Configuración de programas">
+            <ProgramsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "programs/versions/:versionId",
+        element: (
+          <RequireAccess permission="programs.manage" moduleLabel="Configuración de programas">
+            <VersionEditorPage />
           </RequireAccess>
         ),
       },
