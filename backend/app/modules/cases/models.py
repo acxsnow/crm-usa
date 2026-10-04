@@ -45,6 +45,16 @@ class Program(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     # Plantilla compartida entre organizaciones, como los roles del sistema.
     is_system_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # --- Identidad frente al cliente (módulo 1, requerimientos §17.1) --------
+    # La organización que opera, el programa/funder y quien factura pueden ser
+    # entidades distintas (Arizona: Desert Alliance; TECH: Delta HVAC).
+    description: Mapped[str | None] = mapped_column(Text)
+    funder_name: Mapped[str | None] = mapped_column(String(255))
+    customer_facing_name: Mapped[str | None] = mapped_column(String(255))
+    logo_url: Mapped[str | None] = mapped_column(String(1024))
+    authorization_text: Mapped[str | None] = mapped_column(Text)
+    invoice_entity: Mapped[str | None] = mapped_column(String(255))
+
 
 class ProgramVersion(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     """Versión del formulario y del flujo de un programa.
@@ -62,6 +72,16 @@ class ProgramVersion(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     )
     version: Mapped[str] = mapped_column(String(50), nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Módulo 1: draft (se edita) · published (congelada, la usan los
+    # expedientes nuevos; una sola por programa) · archived (la usan solo los
+    # expedientes que nacieron con ella).
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft", server_default="draft")
+    published_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    notes: Mapped[str | None] = mapped_column(Text)
+    # Los T&C que acepta el cliente con esta versión del flujo.
+    terms_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("program_terms.id", ondelete="SET NULL", use_alter=True, name="fk_program_versions_terms")
+    )
 
 
 class ProgramZone(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
@@ -79,6 +99,11 @@ class ProgramZone(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     )
     code: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
+    # Módulo 1: dónde queda el parque o comunidad (CA, AZ, NV).
+    state: Mapped[str | None] = mapped_column(String(2))
+    city: Mapped[str | None] = mapped_column(String(120))
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default="true")
 
 
 class Case(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Base):

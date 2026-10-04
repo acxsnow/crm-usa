@@ -22,6 +22,7 @@ from app.modules.crm import models as crm_models  # noqa: F401
 from app.modules.field_ops import models as field_ops_models  # noqa: F401
 from app.modules.billing import models as billing_models  # noqa: F401
 from app.modules.cases import models as cases_models  # noqa: F401
+from app.modules.programs import models as programs_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

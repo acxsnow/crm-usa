@@ -21,6 +21,12 @@ from app.modules.crm.models import FunderStatus
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import ChecklistTemplate, ChecklistTemplateItem
 from app.modules.organizations.models import Organization, PlanLimit
+# Todos los modelos registrados antes de la primera consulta: `Project.case`
+# apunta a "Case" por nombre y, sin esto, el seed falla al configurar los mappers.
+from app.modules.billing import models as _billing_models  # noqa: F401
+from app.modules.cases import models as _cases_models  # noqa: F401
+from app.modules.programs import models as _programs_models  # noqa: F401
+from app.shared import audit_models as _audit_models  # noqa: F401
 from app.modules.users.models import (
     Permission,
     PermissionModule,
@@ -208,6 +214,18 @@ async def seed_demo_users(db) -> None:
     print(f"Usuarios de prueba: {creados} creados (contraseña {DEMO_USER_PASSWORD}).")
 
 
+async def seed_demo_programs(db) -> None:
+    """Catálogo de campos y programas de Arizona y TECH (módulo 1). Idempotente:
+    se puede correr sobre una base que ya los tenga."""
+    from app.modules.programs.service import install_defaults
+
+    org = (await db.execute(select(Organization).where(Organization.name == "Demo Organization"))).scalar_one_or_none()
+    if org is None:
+        return
+    resultado = await install_defaults(db, organization_id=org.id)
+    print(f"Programas: {resultado['fields_created']} campos y {resultado['programs_created'] or 'ningún'} programa nuevos.")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--demo-org", action="store_true", help="Also create a demo organization + admin user")
@@ -227,6 +245,8 @@ async def main() -> None:
         if args.demo_users:
             await seed_demo_users(db)
         await db.commit()
+        if args.demo_org:
+            await seed_demo_programs(db)
     print("Seed complete.")
 
 
