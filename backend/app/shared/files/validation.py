@@ -22,7 +22,7 @@ CHUNK = 1024 * 1024
 _FAMILY = {
     "image/jpeg": "jpeg", "image/jpg": "jpeg", "image/png": "png", "image/webp": "webp",
     "image/heic": "heic", "image/heif": "heic", "application/pdf": "pdf",
-    "video/mp4": "mp4", "video/quicktime": "mp4", "video/webm": "webm",
+    "video/mp4": "mp4", "video/quicktime": "mp4", "video/webm": "webm", "video/mpeg": "mpeg",
 }
 
 
@@ -54,6 +54,8 @@ def sniff_mime(data: bytes) -> str | None:
         return "webp"
     if cabeza.startswith(b"%PDF-"):
         return "pdf"
+    if cabeza[:4] in (b"\x00\x00\x01\xba", b"\x00\x00\x01\xb3") or (len(cabeza) > 0 and cabeza[0] == 0x47):
+        return "mpeg"  # MPEG-PS / MPEG-1 / transport stream
     if cabeza[:4] == b"\x1a\x45\xdf\xa3":
         return "webm"
     if cabeza[4:8] == b"ftyp":
@@ -70,8 +72,9 @@ def check_type(data: bytes, declared: str | None, allowed: set[str]) -> str:
     tipo = (declared or "").lower().strip()
     if tipo not in allowed:
         raise InvalidInputError("Tipo de archivo no permitido para este campo.", code="invalid_file_type")
+    # Falla cerrada: un tipo permitido sin firma conocida no pasa sin revisar.
     esperado = _FAMILY.get(tipo)
-    if esperado and sniff_mime(data) != esperado:
+    if esperado is None or sniff_mime(data) != esperado:
         raise InvalidInputError("El contenido del archivo no corresponde a su tipo. Sube una foto, video o PDF real.",
                                 code="file_content_mismatch")
     return tipo

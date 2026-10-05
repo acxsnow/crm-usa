@@ -62,8 +62,11 @@ async def _reviewer_names(db, ids: set) -> dict:
     return {u.id: u.full_name for u in (await db.execute(select(User).where(User.id.in_(ids)))).scalars().all()}
 
 
-async def list_documents(db: AsyncSession, case: Case) -> list[dict]:
+async def list_documents(db: AsyncSession, case: Case, user=None) -> list[dict]:
     archivos = await current_files(db, case)
+    if user is not None and not intake.sees_sensitive_files(user, case):
+        sensibles = await intake.sensitive_keys(db, case)
+        archivos = [f for f in archivos if f.field_key not in sensibles]
     etiquetas = await _labels(db, case)
     revisores = await _reviewer_names(db, {f.reviewed_by_user_id for f in archivos})
     salida = []

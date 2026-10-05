@@ -144,3 +144,15 @@ async def test_the_queue_lists_cases_with_documents_to_review(app_client, enviad
     assert (await app_client.get("/api/v1/documents/review-queue", headers=enviado["admin"])).json() == []
     r = await app_client.get("/api/v1/documents/review-queue", headers=enviado["vendedor"])
     assert r.status_code == 403
+
+
+async def test_sensitive_files_need_permission(app_client, enviado, active_management_user):
+    gerencia = await headers_for(app_client, "gerencia@acme-demo.com")
+    docs = await _docs(app_client, enviado)
+    id_foto = next(d for d in docs if d["field_key"] == "customer.id_photo")
+    # Quien revisa la ve; Gerencia (lee todo pero no revisa ni tiene el permiso) no.
+    assert (await app_client.get(f"/api/v1/case-files/{id_foto['id']}", headers=enviado["admin"])).status_code == 200
+    r = await app_client.get(f"/api/v1/cases/{enviado['id']}/documents", headers=gerencia)
+    if r.status_code == 200:
+        assert all(d["field_key"] != "customer.id_photo" for d in r.json())
+    assert (await app_client.get(f"/api/v1/case-files/{id_foto['id']}", headers=gerencia)).status_code in (403, 404)
