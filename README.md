@@ -327,6 +327,18 @@ usar un proveedor transaccional con dominio propio y trazabilidad de entrega.
 
 Frontend: http://localhost:5173 · API docs: http://localhost:8000/api/docs
 
+**Probar desde el celular con GPS real.** El navegador del teléfono solo entrega
+la ubicación por HTTPS. Genera un certificado de desarrollo y arranca el
+frontend con HTTPS (mismo Wi-Fi que el computador):
+
+```bash
+sh frontend/scripts/dev-cert.sh          # autofirmado, queda en frontend/.certs (fuera de git)
+DEV_HTTPS=1 docker compose up -d frontend
+# en el celular: https://<IP del computador>:5173 y acepta el aviso del certificado
+```
+
+Para volver a HTTP: `docker compose up -d frontend`.
+
 ### Running the backend test suite
 
 ```bash

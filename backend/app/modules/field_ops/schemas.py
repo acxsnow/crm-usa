@@ -45,11 +45,12 @@ class ProjectCreate(AddressSchema):
 
 
 class ProjectUpdate(BaseModel):
-    title: str | None = None
-    status: ProjectStatus | None = None
-    scheduled_date: date | None = None
-    completed_date: date | None = None
-    primary_technician_user_id: uuid.UUID | None = None
+    """Solo datos descriptivos. Estado, fechas y técnico se cambian por sus
+    comandos (agendar, cerrar instalación), que validan y mueven el expediente;
+    antes este PATCH permitía marcar `completed` sin cierre (contrato §7)."""
+    model_config = {"extra": "forbid"}
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
     notes: str | None = None
 
 

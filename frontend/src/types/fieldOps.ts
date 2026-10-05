@@ -48,12 +48,18 @@ export interface ChecklistTemplateItem {
   sort_order: number;
   is_required: boolean;
   requires_evidence: boolean;
+  section?: string | null;
+  evidence_category?: string | null;
+  condition_code?: string | null;
+  allows_not_applicable?: boolean;
 }
 
 export interface ChecklistTemplate {
   id: string;
   name: string;
   project_type?: string | null;
+  /** Nulo: la plantilla por defecto de la organización. */
+  program_id?: string | null;
   items: ChecklistTemplateItem[];
 }
 

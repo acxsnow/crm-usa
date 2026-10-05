@@ -201,7 +201,7 @@ async def test_releasing_the_order_without_a_permit_moves_the_case_to_ready_to_i
     case, project = await approved_case_with_project(db, seeded_org["org"].id)
     headers = await headers_for(app_client, active_admin_staff_user.email)
     resp = await app_client.patch(f"/api/v1/projects/{project.id}/schedule", json={
-        "technician_user_id": str(active_technician_user.id), "scheduled_date": _date.today().isoformat()},
-        headers=headers)
+        "technician_user_id": str(active_technician_user.id), "scheduled_date": (_date.today() + timedelta(days=2)).isoformat()},
+        headers=headers)  # futuro: la fecha local puede ir detrás de la de la organización
     assert resp.status_code == 200, resp.text
     assert (await refreshed_case(db, case)).stage_code == "ready_to_install"

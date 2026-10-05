@@ -251,12 +251,25 @@ parcial y saldo → pagada sin tocar el expediente. PDF de todas las facturas.
 
 ### 9.8 Pendientes del módulo 6
 
-- Las dos transiciones de 9.1 (tuyas).
-- Catálogo de programas (tu módulo 1). Hasta entonces se crean en la base.
+- ~~Las dos transiciones de 9.1 (tuyas).~~ **Cerrado el 4 oct 2026** (Mateo,
+  cubriendo la Cadena A): `approved → ready_to_install` e `installed →
+  billing_in_progress` están en `stages.py`; las guardas de campo se registran
+  solas y la prueba que se saltaba (`test_field_reviews.py`) ya corre.
+- ~~Catálogo de programas (tu módulo 1).~~ **Cerrado el 4 oct 2026**: pantalla
+  «Configuración de programas» (`/programs`), con entidad que factura por
+  programa (`Program.invoice_entity`, informativo; el emisor del PDF sigue en
+  la configuración de cobro del programa).
+- Checklist de instalación por programa (pendiente del módulo 5): **cerrado el
+  4 oct 2026**, pantalla `/checklists` y `PUT`/`DELETE /checklist-templates/{id}`;
+  un programa tiene a lo sumo una plantilla.
+- GPS real en el celular (pendiente del módulo 5): **habilitado el 4 oct 2026**
+  con HTTPS de desarrollo (`frontend/scripts/dev-cert.sh` + `DEV_HTTPS=1`, ver
+  README). Falta la prueba en campo con un teléfono.
 - Confirmar con el cliente: qué entidad factura cada programa (Delta HVAC
   Service Inc. o Desert Alliance Properties LLC) y si el PDF va en inglés (hoy
   sí).
 - Plantillas propias por programa (GoZero/HousecallPro, pedestal/Charge Ready,
   del cronograma): el spec las dejó en dos plantillas con los datos y el texto
   legal por programa; si un programa exige su formato, se agrega como otra.
-- `PATCH /projects/{id}` heredado (sección 7) sigue abierto.
+- ~~`PATCH /projects/{id}` heredado (sección 7).~~ **Cerrado el 4 oct 2026**:
+  solo edita título y notas; estado, fechas y técnico van por sus comandos.
