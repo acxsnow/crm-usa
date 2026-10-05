@@ -268,12 +268,11 @@ async def upload_evidence(
             detail=f"This project already has {existing_count} evidence files, the maximum allowed ({MAX_EVIDENCE_PER_PROJECT}).",
         )
 
-    raw_bytes = await file.read()
-    if len(raw_bytes) > MAX_EVIDENCE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File is too large ({len(raw_bytes) // (1024 * 1024)} MB). Max allowed is {MAX_EVIDENCE_SIZE_BYTES // (1024 * 1024)} MB.",
-        )
+    # Tamaño mientras se recibe y tipo real por contenido (SEG-01, SEG-02).
+    from app.shared.files.validation import check_type, read_limited
+
+    raw_bytes = await read_limited(file, MAX_EVIDENCE_SIZE_BYTES)
+    check_type(raw_bytes, mime_type, ALLOWED_EVIDENCE_MIME_TYPES)
     watermarked = False
 
     if mime_type in WATERMARKABLE_MIME_TYPES:
