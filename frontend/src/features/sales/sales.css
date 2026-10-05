@@ -1,0 +1,152 @@
+/* ==========================================================================
+   Módulo 2 — El vendedor en la puerta. Primero el celular: botones grandes,
+   una columna, se usa con una mano y al sol. Mismo lenguaje del acta.
+   ========================================================================== */
+
+.sales-page { max-width: 760px; }
+.sales-hello p { margin: 0; color: var(--ink-soft); }
+.sales-hello h1 { margin: 0.1rem 0 1rem; font-family: var(--display-font); font-size: 1.6rem; }
+
+.sales-knock { display: flex; align-items: center; gap: 1rem; padding: 1.2rem 1.3rem; margin-bottom: 1.25rem;
+  background: var(--red); color: #fff; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(207, 29, 43, 0.25); }
+.sales-knock:hover { background: var(--red-dark); }
+.sales-knock:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.sales-knock-icon { font-size: 2rem; line-height: 1; }
+.sales-knock strong { display: block; font-size: 1.15rem; }
+.sales-knock small { opacity: 0.85; }
+
+.sales-block { padding: 1.3rem 1.4rem; margin-bottom: 1rem; }
+.sales-block.is-alert { border-color: var(--red); box-shadow: inset 4px 0 0 var(--red); }
+.sales-block h2 { margin: 0; font-size: 1.05rem; }
+.sales-block-head { display: flex; justify-content: space-between; align-items: center; }
+.sales-block-head .billing-count { background: var(--card-soft); color: var(--ink-soft); }
+.sales-cases { list-style: none; margin: 0.6rem 0 0; padding: 0; }
+.sales-cases a { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line-soft); color: inherit; text-decoration: none; }
+.sales-cases a strong { display: block; }
+.sales-cases a small { color: var(--ink-soft); }
+.sales-programs { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.sales-programs li { border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
+.sales-programs strong { display: block; }
+.sales-programs span { font-size: 0.85rem; color: var(--ink-soft); }
+
+.sales-gps { margin: 0.4rem 0 0; font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); }
+.sales-gps.is-granted { color: var(--ok); }
+.sales-gps.is-denied { color: var(--warn); }
+.sales-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin: 1rem 0; }
+.sales-fields .is-wide { grid-column: 1 / -1; }
+.sales-question { font-size: 1rem; margin: 1.2rem 0 0.6rem; }
+.sales-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.6rem; }
+.sales-result { display: grid; gap: 0.2rem; text-align: left; padding: 1rem 1.1rem; min-height: 4.5rem; border-radius: 12px;
+  border: 1.5px solid var(--line-input); background: var(--surface); font: inherit; color: var(--ink); cursor: pointer; }
+.sales-result strong { font-size: 1rem; }
+.sales-result small { color: var(--ink-soft); font-size: 0.8rem; }
+.sales-result.is-opened { border-color: var(--red); background: var(--red-wash); grid-column: 1 / -1; }
+.sales-result.is-opened strong { color: var(--red-dark); }
+.sales-result:hover:not(:disabled) { border-color: var(--ink-soft); }
+.sales-result:disabled { opacity: 0.45; cursor: not-allowed; }
+.sales-result:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+.sales-form .acta { padding-bottom: 1.4rem; }
+.sales-steps { margin-top: 0.4rem; }
+.sales-nav { position: sticky; bottom: 0; display: flex; justify-content: space-between; gap: 0.6rem; margin-top: 1.4rem;
+  padding: 0.8rem 0; background: var(--surface); border-top: 1px solid var(--line); }
+.sales-nav .acta-btn { min-height: 2.9rem; padding-inline: 1.2rem; font-size: 0.95rem; }
+.sales-terms { border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.2rem; display: grid; gap: 0.8rem; }
+.sales-terms h2 { margin: 0; font-size: 1rem; }
+.sales-terms-body { max-height: 12rem; overflow-y: auto; background: var(--card-soft); border-radius: 8px; padding: 0.8rem 0.9rem; }
+.sales-terms-body p { margin: 0 0 0.4rem; white-space: pre-wrap; font-size: 0.9rem; }
+.sales-terms-body small { color: var(--ink-soft); }
+.sales-sign canvas { width: 100%; background: #fff; border: 1.5px dashed var(--line-input); border-radius: 10px; touch-action: none; }
+.sales-review h2 { font-size: 1.05rem; }
+.sales-submit { margin-top: 1rem; width: 100%; min-height: 3.1rem; font-size: 1rem; }
+.form-media-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.form-media.is-disabled { opacity: 0.6; cursor: default; }
+.form-field.is-missing .form-label::after { content: " · falta"; color: var(--red-dark); font-weight: 600; }
+
+/* --- Kanban ---------------------------------------------------------------- */
+.board-page { max-width: none; }
+.board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.board-head .acta-btn { text-decoration: none; }
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(15rem, 1fr); gap: 0.8rem; overflow-x: auto; padding-bottom: 1rem; }
+.board-col { background: #ebe6df; border-radius: 12px; padding: 0.7rem; min-height: 12rem; }
+.board-col h2 { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; margin: 0.1rem 0.2rem 0.6rem; }
+.board-col h2 .billing-count { background: var(--surface); color: var(--ink-soft); }
+.board-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.board-card { display: grid; gap: 0.2rem; background: var(--surface); border-radius: 9px; padding: 0.75rem 0.8rem; color: inherit;
+  text-decoration: none; box-shadow: 0 1px 2px rgba(23, 21, 20, 0.06); border: 1px solid transparent; }
+.board-card:hover { border-color: var(--ink-soft); }
+.board-card:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.board-card strong { font-size: 0.9rem; }
+.board-card small { color: var(--ink-soft); font-size: 0.78rem; }
+.board-card .billing-chip { justify-self: start; margin-top: 0.2rem; }
+
+@media (max-width: 640px) {
+  .sales-fields, .sales-results { grid-template-columns: 1fr; }
+  .board { grid-auto-flow: row; grid-auto-columns: auto; }
+}
+
+.sales-terms.is-signed { border-color: var(--ok); }
+.sales-signed { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 1rem; align-items: center;
+  background: var(--ok-wash); border-radius: 10px; padding: 0.9rem 1rem; }
+.sales-signed > div { display: grid; gap: 0.2rem; justify-items: start; }
+.sales-signed strong { color: var(--ok); }
+.sales-signed span { font-size: 0.85rem; color: var(--ink-soft); }
+.sales-signed-img { width: 100%; aspect-ratio: 3 / 1; object-fit: contain; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
+.sales-signed-img.is-loading { background: var(--card-soft); }
+@media (max-width: 640px) { .sales-signed { grid-template-columns: 1fr; } }
+
+.sales-rejected { margin-top: 0.8rem; padding: 0.8rem 1rem; border-radius: 10px; background: var(--red-wash); color: var(--red-dark); }
+.sales-rejected ul { margin: 0.4rem 0 0; padding-left: 1.1rem; color: var(--ink); }
+.sales-rejected .acta-link { font-weight: 600; }
+
+/* --- Revisión del expediente (módulos 3 y 4) ------------------------------ */
+.review-page { max-width: 1200px; }
+.review-grid { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 1.2rem; align-items: start; }
+.review-side { display: grid; gap: 1rem; position: sticky; top: 1rem; }
+.review-side .acta { padding: 1.2rem 1.3rem; margin: 0; }
+.review-side h2, .review-section h2 { margin: 0 0 0.6rem; font-size: 1.05rem; }
+.review-section { border-top: 1px solid var(--line-soft); padding-top: 1.2rem; margin-top: 1.2rem; }
+.review-section-head { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.review-tally { display: flex; gap: 0.4rem; }
+.review-doc-group { margin-top: 0.8rem; }
+.review-docs { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
+.review-doc { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.9rem; padding: 0.8rem; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); }
+.review-doc.is-rejected { border-color: var(--red); background: var(--red-wash); }
+.review-doc.is-accepted { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.review-doc-body { display: grid; gap: 0.3rem; align-content: start; }
+.review-doc-body small { color: var(--ink-soft); font-size: 0.8rem; }
+.review-doc-title { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.review-doc-note { margin: 0.1rem 0; font-size: 0.88rem; color: var(--red-dark); font-weight: 600; }
+.review-doc .acta-actions { margin-top: 0.3rem; }
+.review-thumb { width: 5.5rem; height: 5.5rem; border-radius: 9px; border: 1px solid var(--line); background: var(--card-soft); padding: 0;
+  overflow: hidden; cursor: zoom-in; display: grid; place-items: center; font-weight: 700; color: var(--ink-soft); font-size: 1.1rem; }
+.review-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.review-thumb .is-loading { width: 100%; height: 100%; background: var(--card-soft); }
+.review-thumb:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.review-reject, .review-extra, .review-form { display: grid; gap: 0.6rem; margin-top: 0.4rem; }
+.review-add { margin-top: 0.8rem; }
+.review-extra { border: 1px dashed var(--line-input); border-radius: 12px; padding: 0.9rem; margin-top: 0.8rem; }
+.review-progress { list-style: none; margin: 0.3rem 0 0.9rem; padding: 0; display: grid; gap: 0.45rem; }
+.review-progress li { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; color: var(--ink-soft); }
+.review-progress li > span { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.78rem;
+  font-weight: 700; border: 1.5px solid var(--line-input); background: var(--surface); flex: none; }
+.review-progress li.is-done { color: var(--ink); }
+.review-progress li.is-done > span { background: var(--ok); border-color: var(--ok); color: #fff; }
+.review-progress li.is-current { font-weight: 700; }
+.review-actions { display: grid; gap: 0.5rem; }
+.review-actions .acta-btn { width: 100%; justify-content: center; min-height: 2.7rem; }
+.review-hint { margin: 0; font-size: 0.82rem; color: var(--ink-soft); }
+.review-danger { color: var(--red-dark); }
+.review-history .acta-history { max-height: 22rem; overflow-y: auto; }
+.queue-list a { padding: 0.95rem 0.2rem; }
+.queue-counts { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 960px) {
+  .review-grid { grid-template-columns: 1fr; }
+  .review-side { position: static; order: -1; }
+}
+@media (max-width: 520px) {
+  .review-doc { grid-template-columns: 4rem minmax(0, 1fr); }
+  .review-thumb { width: 4rem; height: 4rem; }
+}

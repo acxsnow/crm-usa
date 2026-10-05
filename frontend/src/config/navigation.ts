@@ -55,11 +55,13 @@ const NAV_GROUPS: NavGroup[] = [
       // desde el primer toque, así que un prospecto y un caso eran la misma cosa
       // con dos nombres. Ver `docs/superpowers/specs/2026-09-25-esqueleto-case-design.md`.
       { label: "Clientes", to: "/customers", icon: "♙", permission: "customers.read" },
+      // Inicio del vendedor (módulo 2): sus programas, zonas y lo pendiente.
+      { label: "Mi día", to: "/sales", icon: "☀", permission: "cases.create" },
       {
-        // El centro del trabajo del vendedor. Apunta a `/applications` hasta que
-        // exista la pantalla de expedientes (módulo 2); el modelo ya es `Case`.
+        // El centro del trabajo del vendedor: kanban de expedientes por etapa
+        // (módulo 2). Reemplaza `/applications` del modelo anterior.
         label: "Expedientes",
-        to: "/applications",
+        to: "/cases",
         icon: "✓",
         permission: ["cases.read_own", "cases.read_all"],
       },
@@ -73,7 +75,6 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/documents",
         icon: "🗎",
         permission: "documents.review",
-        disabled: true,
       },
     ],
   },
@@ -101,6 +102,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "◷",
         permission: ["dispatch.read_own", "dispatch.manage"],
       },
+      // Plantillas de checklist por programa (módulo 5).
+      { label: "Checklists de instalación", to: "/checklists", icon: "☑", permission: "checklists.manage" },
       {
         label: "Permisos e inspecciones",
         to: "/permits",

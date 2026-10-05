@@ -79,6 +79,7 @@ def _require_stage_permission(
     actor_id: uuid.UUID | None,
     actor_permissions: frozenset[str] | set[str],
     case: Case,
+    required: str | None = None,
 ) -> None:
     """Dos controles, y los dos faltaban (SEG-07).
 
@@ -101,7 +102,7 @@ def _require_stage_permission(
     if actor_permissions == stages.SYSTEM_ACTOR:
         return
 
-    requerido = stages.permission_for(to_stage)
+    requerido = required or stages.permission_for(to_stage)
     if requerido not in actor_permissions:
         raise ForbiddenError(
             f"No tienes permiso para pasar un expediente a "
@@ -315,6 +316,8 @@ async def set_substatus(
         actor_id=actor_id,
         actor_permissions=actor_permissions,
         case=case,
+        required=stages.substatus_permission(case.stage_code, substatus)
+        if substatus in stages.SUBSTATUSES.get(case.stage_code, set()) else None,
     )
     permitidos = stages.SUBSTATUSES.get(case.stage_code, set())
     if substatus not in permitidos:

@@ -75,7 +75,7 @@ export function DashboardHome() {
 
   return (
     <div className="dashboard-page">
-      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.toUpperCase()}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div><Link className="primary-button" to="/applications">+ Nuevo expediente</Link></div>
+      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.toUpperCase()}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div>{hasPermission("cases.create") && <Link className="primary-button" to="/sales/visit">+ Tocar una puerta</Link>}</div>
       <section className="metric-grid" aria-label="Resumen de operación">
         <article className="metric-card"><div className="metric-icon coral">✦</div><div><span>Expedientes activos</span><strong>{activeCases ?? "—"}</strong><small className="neutral">• En prospecto, revisión o aprobados</small></div></article>
         <article className="metric-card"><div className="metric-icon purple">♙</div><div><span>Clientes registrados</span><strong>{customers?.total ?? "—"}</strong><small className="neutral">• Total en tu cartera</small></div></article>
