@@ -61,6 +61,23 @@ def _require_owner(user, case: Case) -> None:
         raise NotFoundError("El expediente no existe.", code="case_not_found")
 
 
+def sees_sensitive(user, case: Case) -> bool:
+    """Respuestas sensibles (§17.3): quien tiene el permiso o el vendedor que las captura."""
+    return "fields.view_sensitive" in _perms(user) or case.assigned_salesperson_id == user.id
+
+
+def sees_sensitive_files(user, case: Case) -> bool:
+    """Archivos de campos sensibles (p. ej. foto del ID): además, quien revisa documentos."""
+    return sees_sensitive(user, case) or "documents.review" in _perms(user)
+
+
+async def sensitive_keys(db, case: Case) -> set[str]:
+    if case.program_version_id is None:
+        return set()
+    definicion = await _definition(db, case)
+    return {c["key"] for s in definicion["steps"] for c in s["fields"] if c.get("sensitive")}
+
+
 def is_editable(case: Case) -> bool:
     return case.stage_code == "new_prospect" or (
         case.stage_code == "pending_approval" and case.substatus_code == "returned"
@@ -233,9 +250,10 @@ async def form_state(db, *, user, case: Case) -> dict:
         terminos = {"id": str(t.id), "version": t.version, "language": t.language, "title": t.title, "body": t.body}
     # Lo sensible solo lo ve quien tiene permiso (§17.3); el vendedor que lo
     # captura sí lo ve porque lo está escribiendo.
-    ver_sensible = "fields.view_sensitive" in _perms(user) or case.assigned_salesperson_id == user.id
-    if not ver_sensible:
-        sensibles = {c["key"] for s in definicion["steps"] for c in s["fields"] if c.get("sensitive")}
+    sensibles = {c["key"] for s in definicion["steps"] for c in s["fields"] if c.get("sensitive")}
+    if not sees_sensitive_files(user, case):
+        archivos = [f for f in archivos if f.field_key not in sensibles]
+    if not sees_sensitive(user, case):
         respuestas = {k: ("•••" if k in sensibles and v not in engine.EMPTY else v) for k, v in respuestas.items()}
     return {
         "definition": definicion,
@@ -326,8 +344,17 @@ async def _apply_bindings(db, case: Case, campos: dict, respuestas: dict) -> Non
         return
     if case.customer_id:
         cliente = await db.get(Customer, case.customer_id)
+        # Al cliente que nació con este expediente se le corrige todo. A uno
+        # que ya existía (enlazado por teléfono u otro expediente) solo se le
+        # completan datos vacíos: escribir un número ajeno no le cambia los
+        # datos a otro cliente.
+        otros = (await db.execute(select(Case.id).where(Case.customer_id == cliente.id, Case.id != case.id)
+                                  .limit(1))).first()
+        propio = otros is None and cliente.created_at is not None and case.created_at is not None \
+            and cliente.created_at >= case.created_at
         for columna, valor in cliente_datos.items():
-            setattr(cliente, columna, valor)
+            if propio or getattr(cliente, columna) in (None, ""):
+                setattr(cliente, columna, valor)
         return
     if not cliente_datos.get("legal_name"):
         return
@@ -400,6 +427,8 @@ async def get_file(db, *, organization_id, user, file_id) -> CaseFile:
         raise NotFoundError("El archivo no existe.", code="file_not_found")
     case = await _get_case(db, organization_id, f.case_id)
     _require_owner(user, case)
+    if not sees_sensitive_files(user, case) and f.field_key in await sensitive_keys(db, case):
+        raise NotFoundError("El archivo no existe.", code="file_not_found")
     return f
 
 

@@ -43,6 +43,12 @@ def test_a_renamed_executable_is_not_a_photo():
     with pytest.raises(InvalidInputError, match="no permitido"):
         check_type(jpeg_bytes(), "application/x-msdownload", {"image/jpeg"})
     assert check_type(jpeg_bytes(), "IMAGE/JPEG", {"image/jpeg"}) == "image/jpeg"
+    # Un tipo permitido sin firma conocida no pasa sin revisar el contenido.
+    with pytest.raises(InvalidInputError, match="no corresponde"):
+        check_type(b"MZ\x90\x00", "video/mpeg", {"video/mpeg"})
+    with pytest.raises(InvalidInputError, match="no corresponde"):
+        check_type(b"GIF89a", "image/gif", {"image/gif"})
+    assert check_type(b"\x00\x00\x01\xba\x44", "video/mpeg", {"video/mpeg"}) == "video/mpeg"
 
 
 async def test_evidence_rejects_a_disguised_file(app_client, active_admin_user, seeded_org):

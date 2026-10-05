@@ -315,3 +315,20 @@ async def test_my_day_shows_only_my_cases_even_for_an_admin(app_client, db, seed
     todos = {c["code"]: c["count"] for c in (await app_client.get("/api/v1/case-board", headers=admin)).json()}
     mios = {c["code"]: c["count"] for c in (await app_client.get("/api/v1/case-board?mine=true", headers=admin)).json()}
     assert (todos["new_prospect"], mios["new_prospect"]) == (1, 0)
+
+
+async def test_a_phone_alone_does_not_overwrite_another_customer(app_client, db, seeded_org, active_salesperson_user):
+    org_id = seeded_org["org"].id
+    ajeno = Customer(organization_id=org_id, legal_name="Ned Flanders", main_phone="(818) 555-0101")
+    db.add(ajeno)
+    await db.commit()
+    tech = await _tech(db, org_id)
+    headers = await headers_for(app_client, "vendedor@acme-demo.com")
+    caso = (await _abrir(app_client, headers, tech.id))["case"]
+    r = await app_client.put(f"/api/v1/cases/{caso['id']}/steps/customer", headers=headers, json={"answers": {
+        "customer.full_name": "Marge Simpson", "customer.phone": "(818) 555-0101"}})
+    assert r.status_code == 200, r.text
+    # Se enlaza por teléfono (no duplica), pero no le cambia el nombre.
+    assert r.json()["case"]["customer_id"] == str(ajeno.id)
+    await db.refresh(ajeno)
+    assert ajeno.legal_name == "Ned Flanders"

@@ -210,7 +210,7 @@ async def case_documents(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 
     case = await intake._get_case(db, organization_id, case_id)
     intake._require_owner(current_user, case)
-    return await documents.list_documents(db, case)
+    return await documents.list_documents(db, case, current_user)
 
 
 @router.post("/cases/{case_id}/documents", status_code=201)
