@@ -10,6 +10,7 @@ import { DashboardHome } from "@/app/DashboardHome";
 import { CustomersPage } from "@/features/crm/CustomersPage";
 import { CustomerDetailPage } from "@/features/crm/CustomerDetailPage";
 import { ProjectsPage } from "@/features/field-ops/ProjectsPage";
+import { ChecklistTemplatesPage } from "@/features/field-ops/ChecklistTemplatesPage";
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
 import { AgendaPage } from "@/features/field-ops/AgendaPage";
@@ -18,12 +19,16 @@ import { ClaimDetailPage } from "@/features/billing/ClaimDetailPage";
 import { QuoteDetailPage } from "@/features/billing/QuoteDetailPage";
 import { ProgramsPage } from "@/features/programs/ProgramsPage";
 import { VersionEditorPage } from "@/features/programs/VersionEditorPage";
+import { SalesHomePage } from "@/features/sales/SalesHomePage";
+import { VisitPage } from "@/features/sales/VisitPage";
+import { CaseFormPage } from "@/features/sales/CaseFormPage";
+import { CasesBoardPage } from "@/features/sales/CasesBoardPage";
+import { CaseReviewPage } from "@/features/sales/CaseReviewPage";
+import { DocumentsQueuePage } from "@/features/sales/DocumentsQueuePage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { RolesPage } from "@/features/roles/RolesPage";
 import { CustomerSignaturePage } from "@/features/field-ops/CustomerSignaturePage";
-import { ApplicationPage } from "@/features/crm/ApplicationPage";
-import { ApplicationsAdminPage } from "@/features/crm/ApplicationsAdminPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -64,22 +69,6 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "applications/new",
-        element: (
-          <RequireAccess permission="cases.create" moduleLabel="la creación de expedientes">
-            <ApplicationPage />
-          </RequireAccess>
-        ),
-      },
-      {
-        path: "applications",
-        element: (
-          <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
-            <ApplicationsAdminPage />
-          </RequireAccess>
-        ),
-      },
-      {
         path: "projects",
         element: (
           <RequireAccess permission={["projects.read_all", "projects.read_assigned"]} moduleLabel="Proyectos e instalación">
@@ -116,6 +105,62 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission="invoices.read" moduleLabel="Facturación y cobros">
             <InvoicesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "sales",
+        element: (
+          <RequireAccess permission="cases.create" moduleLabel="Mi día">
+            <SalesHomePage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "sales/visit",
+        element: (
+          <RequireAccess permission="cases.create" moduleLabel="las visitas">
+            <VisitPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "cases",
+        element: (
+          <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
+            <CasesBoardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "checklists",
+        element: (
+          <RequireAccess permission="checklists.manage" moduleLabel="Checklists de instalación">
+            <ChecklistTemplatesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "cases/:caseId/review",
+        element: (
+          <RequireAccess permission={["cases.review", "cases.approve", "documents.review"]} moduleLabel="la revisión de expedientes">
+            <CaseReviewPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "documents",
+        element: (
+          <RequireAccess permission="documents.review" moduleLabel="Documentos por revisar">
+            <DocumentsQueuePage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "cases/:caseId/form",
+        element: (
+          <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
+            <CaseFormPage />
           </RequireAccess>
         ),
       },

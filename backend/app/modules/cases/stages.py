@@ -133,6 +133,23 @@ STAGE_PERMISSION: dict[str, str] = {
     "closed": "cases.close_admin",
 }
 
+# Algunos sub-estados los mueve otro rol que el de la etapa (separación de
+# funciones, SEG-07): en "Pendiente aprobación" el vendedor reenvía
+# (`pending_review`, con `cases.submit`), pero devolver o marcar el avance con
+# el programa es de Administración (`cases.review`). Sin esto Administración
+# no podía devolver un expediente (lo encontró el módulo 2).
+SUBSTATUS_PERMISSION: dict[tuple[str, str], str] = {
+    ("pending_approval", "returned"): "cases.review",
+    ("pending_approval", "ready_to_submit"): "cases.review",
+    ("pending_approval", "submitted_to_program"): "cases.review",
+    ("pending_approval", "program_review"): "cases.review",
+}
+
+
+def substatus_permission(stage: str, substatus: str) -> str:
+    return SUBSTATUS_PERMISSION.get((stage, substatus), STAGE_PERMISSION[stage])
+
+
 # Quien tiene esto puede hacer cualquier transición sin pasar por el mapa de
 # permisos: migraciones y tareas del sistema, que no actúan en nombre de nadie.
 SYSTEM_ACTOR = frozenset({"__system__"})

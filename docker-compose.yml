@@ -79,6 +79,9 @@ services:
       # Ruta relativa: Vite la reenvía al servicio `api` (ver vite.config.ts).
       VITE_API_BASE_URL: /api/v1
       DEV_API_PROXY_TARGET: http://api:8000
+      # DEV_HTTPS=1 sirve por HTTPS para probar el GPS en el celular
+      # (requiere `sh frontend/scripts/dev-cert.sh`; ver README).
+      DEV_HTTPS: ${DEV_HTTPS:-0}
     command: npm run dev -- --host
 
 volumes:

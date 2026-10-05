@@ -97,16 +97,7 @@ async def create_checklist_template(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("checklists.manage")),
 ):
-    if payload.program_id is not None:
-        from app.modules.cases.models import Program
-
-        programa = (
-            await db.execute(
-                select(Program.id).where(Program.id == payload.program_id, Program.organization_id == organization_id)
-            )
-        ).first()
-        if programa is None:
-            raise InvalidInputError("El programa no existe.", code="program_not_found")
+    await _check_template_program(db, organization_id, payload.program_id)
     template = ChecklistTemplate(
         organization_id=organization_id, name=payload.name,
         project_type=payload.project_type, program_id=payload.program_id,
@@ -118,6 +109,84 @@ async def create_checklist_template(
     await db.commit()
     await db.refresh(template)
     return template
+
+
+async def _check_template_program(db, organization_id, program_id, template_id=None) -> None:
+    """El programa es de la organización y no tiene ya otra plantilla: con
+    dos, cuál se aplica a la instalación dependería de cuál se creó último."""
+    if program_id is None:
+        return
+    from app.modules.cases.models import Program
+    from app.shared.errors import ConflictError
+
+    programa = (
+        await db.execute(select(Program.id).where(Program.id == program_id, Program.organization_id == organization_id))
+    ).first()
+    if programa is None:
+        raise InvalidInputError("El programa no existe.", code="program_not_found")
+    stmt = select(ChecklistTemplate.id).where(
+        ChecklistTemplate.organization_id == organization_id, ChecklistTemplate.program_id == program_id
+    )
+    if template_id is not None:
+        stmt = stmt.where(ChecklistTemplate.id != template_id)
+    otra = (await db.execute(stmt)).first()
+    if otra is not None:
+        raise ConflictError("Ese programa ya tiene su plantilla de checklist; edítala en vez de crear otra.",
+                            code="program_template_exists")
+
+
+async def _get_template(db, organization_id, template_id) -> ChecklistTemplate:
+    from app.shared.errors import NotFoundError
+
+    t = await db.get(ChecklistTemplate, template_id)
+    if t is None or t.organization_id != organization_id:
+        raise NotFoundError("La plantilla no existe.", code="checklist_template_not_found")
+    return t
+
+
+@router.put("/checklist-templates/{template_id}", response_model=ChecklistTemplateResponse)
+async def update_checklist_template(
+    template_id: uuid.UUID, payload: ChecklistTemplateCreate, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.manage")),
+):
+    """Reemplaza nombre, programa e ítems. Las instalaciones que ya la usaron
+    no cambian: al aplicarse, cada ítem se copió al proyecto."""
+    from app.shared.audit import record_audit_event
+
+    template = await _get_template(db, organization_id, template_id)
+    await _check_template_program(db, organization_id, payload.program_id, template.id)
+    antes = {"name": template.name, "program_id": str(template.program_id) if template.program_id else None,
+             "items": len(template.items)}
+    template.name, template.project_type, template.program_id = payload.name, payload.project_type, payload.program_id
+    template.items.clear()
+    await db.flush()
+    for item_data in payload.items:
+        template.items.append(ChecklistTemplateItem(**item_data.model_dump()))
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=current_user.id,
+                             action="checklist_templates.updated", entity_type="checklist_template",
+                             entity_id=str(template.id), before_data=antes,
+                             after_data={"name": payload.name, "items": len(payload.items)})
+    await db.commit()
+    await db.refresh(template)
+    return template
+
+
+@router.delete("/checklist-templates/{template_id}", status_code=204)
+async def delete_checklist_template(
+    template_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.manage")),
+):
+    from app.shared.audit import record_audit_event
+
+    template = await _get_template(db, organization_id, template_id)
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=current_user.id,
+                             action="checklist_templates.deleted", entity_type="checklist_template",
+                             entity_id=str(template.id), before_data={"name": template.name})
+    await db.delete(template)
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/checklist-templates/seed-default", response_model=ChecklistTemplateResponse, status_code=201)

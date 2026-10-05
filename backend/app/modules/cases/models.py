@@ -21,7 +21,7 @@ Lo que NO vive en `Case` y dónde está, para no duplicarlo:
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
@@ -212,3 +212,97 @@ class CaseStageEvent(UUIDPKMixin, OrgScopedMixin, Base):
     # Nulo si lo hizo el sistema (una migración, una tarea programada).
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+
+# ---------------------------------------------------------------------------
+# Módulo 2: lo que el vendedor captura en la puerta (spec
+# `2026-10-04-modulo-2-vendedor-design.md`).
+# ---------------------------------------------------------------------------
+
+VISIT_STEP = "__visit__"
+VISIT_RESULTS = {
+    "no_contact": "No abrió",
+    "not_interested": "No le interesa",
+    "not_eligible": "No califica",
+    "opened": "Abrió y sigue",
+}
+
+
+class CaseStepSubmission(UUIDPKMixin, OrgScopedMixin, Base):
+    """Las respuestas de un paso, tal como se guardaron (D2.2). No se edita:
+    una corrección es otro registro y el anterior queda como historial (§13).
+    La visita a la puerta también es uno, con `step_code = "__visit__"`."""
+
+    __tablename__ = "case_step_submissions"
+    __table_args__ = (Index("ix_case_step_submission_case_step", "case_id", "step_code", "submitted_at"),)
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("program_versions.id", ondelete="SET NULL")
+    )
+    step_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    answers: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    submitted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+
+
+class CaseFile(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Foto, documento, video o firma de un campo del formulario (D2.5). La
+    respuesta del paso guarda el `id`. Es la base del módulo 3."""
+
+    __tablename__ = "case_files"
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    field_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    original_filename: Mapped[str | None] = mapped_column(String(255))
+    mime_type: Mapped[str | None] = mapped_column(String(100))
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    watermarked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    uploaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    # Revisión de Administración (módulo 3). Un documento rechazado no se
+    # borra: el vendedor sube otro y el nuevo entra como pendiente.
+    label: Mapped[str | None] = mapped_column(String(255))  # solo documentos adicionales
+    review_status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending",
+                                               nullable=False)
+    review_notes: Mapped[str | None] = mapped_column(Text)
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+EXTRA_DOCUMENT_KEY = "__extra__"
+DOCUMENT_REVIEW_STATUSES = {"pending": "Por revisar", "accepted": "Aceptado", "rejected": "Rechazado"}
+
+
+class CaseTermsAcceptance(UUIDPKMixin, OrgScopedMixin, Base):
+    """Qué términos aceptó el cliente y su firma (D2.6, §3.5). Separado de la
+    identidad del vendedor que lo acompañó. Inmutable."""
+
+    __tablename__ = "case_terms_acceptances"
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    terms_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("program_terms.id", ondelete="SET NULL")
+    )
+    terms_version: Mapped[str | None] = mapped_column(String(30))
+    terms_language: Mapped[str | None] = mapped_column(String(5))
+    customer_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    signature_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    salesperson_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(500))

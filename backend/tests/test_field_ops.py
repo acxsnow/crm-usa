@@ -271,3 +271,12 @@ async def test_field_technician_cannot_touch_task_on_unassigned_project(
         f"/api/v1/tasks/{task_id}/comments", json={"body": "intento"}, headers=tech_headers
     )
     assert comment_resp.status_code == 404
+
+
+async def test_legacy_project_patch_only_edits_descriptive_data(app_client, active_admin_user, seeded_org):
+    headers = await _admin_headers(app_client, active_admin_user)
+    _, project_id, _ = await _create_customer_and_project(app_client, headers)
+    url = f"/api/v1/projects/{project_id}"
+    assert (await app_client.patch(url, json={"status": "completed"}, headers=headers)).status_code == 422
+    r = await app_client.patch(url, json={"notes": "Portón azul"}, headers=headers)
+    assert r.status_code == 200 and r.json()["notes"] == "Portón azul" and r.json()["status"] != "completed"

@@ -197,10 +197,14 @@ async def upload_invoice_attachment(
 ):
     invoice = await billing_service.get_invoice_or_404(db, organization_id=organization_id, invoice_id=invoice_id)
 
-    raw_bytes = await file.read()
+    from app.shared.files.validation import check_type, read_limited
+
     billing_service.validate_attachment(
-        content_type=file.content_type, size_bytes=len(raw_bytes), existing_count=len(invoice.attachments)
+        content_type=file.content_type, size_bytes=0, existing_count=len(invoice.attachments)
     )
+    # Tamaño mientras se recibe y tipo real por contenido (SEG-01, SEG-02).
+    raw_bytes = await read_limited(file, billing_service.MAX_ATTACHMENT_SIZE_BYTES)
+    check_type(raw_bytes, file.content_type, billing_service.ALLOWED_ATTACHMENT_MIME_TYPES)
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"invoices/{invoice_id}/attachments",
         filename=file.filename or "attachment", data=raw_bytes,

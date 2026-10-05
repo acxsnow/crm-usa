@@ -3,6 +3,7 @@ import { fetchPage, type Page } from "@/lib/pagination";
 import type {
   Attestation,
   ChecklistTemplate,
+  ChecklistTemplateItem,
   Evidence,
   FieldTask,
   Project,
@@ -41,6 +42,21 @@ export async function seedDefaultChecklistTemplate(): Promise<ChecklistTemplate>
 export async function listChecklistTemplates(): Promise<ChecklistTemplate[]> {
   const res = await apiClient.get<ChecklistTemplate[]>("/checklist-templates");
   return res.data;
+}
+
+export type ChecklistTemplateInput = { name: string; program_id: string | null;
+  items: Omit<ChecklistTemplateItem, "id">[] };
+
+export async function createChecklistTemplate(body: ChecklistTemplateInput): Promise<ChecklistTemplate> {
+  return (await apiClient.post<ChecklistTemplate>("/checklist-templates", body)).data;
+}
+
+export async function updateChecklistTemplate(id: string, body: ChecklistTemplateInput): Promise<ChecklistTemplate> {
+  return (await apiClient.put<ChecklistTemplate>(`/checklist-templates/${id}`, body)).data;
+}
+
+export async function deleteChecklistTemplate(id: string): Promise<void> {
+  await apiClient.delete(`/checklist-templates/${id}`);
 }
 
 // --- Projects ----------------------------------------------------------

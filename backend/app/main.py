@@ -117,6 +117,11 @@ from app.modules.billing import case_hooks as billing_case_hooks  # noqa: E402
 
 billing_case_hooks.register()
 
+from app.modules.cases import documents as case_documents  # noqa: E402
+
+# Módulo 3: no se aprueba un expediente con documentos sin revisar o rechazados.
+case_documents.register()
+
 
 @app.get("/health")
 async def health():
