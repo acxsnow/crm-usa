@@ -45,3 +45,15 @@ def daily_alerts_task() -> int:
     total = asyncio.run(_daily())
     logger.info("notifications.daily_alerts_done", created=total)
     return total
+
+
+async def _campaigns() -> int:
+    from app.modules.notifications import campaigns
+
+    async with AsyncSessionLocal() as db:
+        return await campaigns.send_due(db)
+
+
+@celery_app.task(name="campaigns.send_due")
+def campaigns_send_due_task() -> int:
+    return asyncio.run(_campaigns())

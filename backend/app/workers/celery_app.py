@@ -32,6 +32,11 @@ celery_app.conf.beat_schedule = {
         "task": "notifications.deliver_pending",
         "schedule": 60.0,
     },
+    # Campañas de SMS: envía lo que toca (respeta el horario de cada cliente).
+    "campaigns-send-due": {
+        "task": "campaigns.send_due",
+        "schedule": 60.0,
+    },
     # Alertas de aprobación demorada y permisos por vencer (7 a. m. en Arizona).
     "notifications-daily-alerts": {
         "task": "notifications.daily_alerts",

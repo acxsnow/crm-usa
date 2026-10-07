@@ -12,7 +12,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
@@ -91,3 +91,76 @@ class NotificationSettings(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     permit_expiry_alert_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
     # SMS al cliente final: apagado hasta registrar su consentimiento.
     customer_sms_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+# ---------------------------------------------------------------------------
+# Campañas de SMS (spec `2026-10-07-campanas-sms-design.md`)
+# ---------------------------------------------------------------------------
+
+CAMPAIGN_STATUSES = ("draft", "scheduled", "sending", "sent", "cancelled")
+RECIPIENT_STATUSES = ("pending", "sent", "failed", "skipped")
+
+
+class Product(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Lo que se ofrece en una campaña. Catálogo libre de la organización."""
+
+    __tablename__ = "products"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    price: Mapped[str | None] = mapped_column(String(50))  # texto libre: "$99", "desde $1,200"
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class MarketingConsent(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Permiso de un número para recibir promociones por SMS (TCPA). Una fila
+    por número: si responde STOP queda revocado y no se le vuelve a escribir
+    aunque alguien lo registre de nuevo sin una nueva fuente."""
+
+    __tablename__ = "marketing_consents"
+    __table_args__ = (UniqueConstraint("organization_id", "phone", name="uq_marketing_consent_phone"),)
+
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
+    status: Mapped[str] = mapped_column(String(10), nullable=False)  # granted | revoked
+    source: Mapped[str | None] = mapped_column(String(255))
+    granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    granted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_reason: Mapped[str | None] = mapped_column(String(255))
+
+
+class Campaign(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    __tablename__ = "campaigns"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("products.id", ondelete="SET NULL"))
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    audience: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="draft")
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
+class CampaignRecipient(UUIDPKMixin, OrgScopedMixin, Base):
+    __tablename__ = "campaign_recipients"
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "phone", name="uq_campaign_recipient_phone"),
+        Index("ix_campaign_recipients_queue", "status", "next_attempt_at"),
+    )
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    name: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    timezone: Mapped[str] = mapped_column(String(40), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(500))
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

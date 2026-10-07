@@ -42,3 +42,32 @@
 @media (max-width: 640px) {
   .notice-panel { position: fixed; top: 4.2rem; left: 1rem; right: 1rem; width: auto; }
 }
+
+/* --- Campañas SMS ------------------------------------------------------------ */
+.campaigns-page { max-width: 1100px; }
+.campaigns-list { list-style: none; margin: 0; padding: 0; }
+.campaigns-list button { display: flex; justify-content: space-between; align-items: center; gap: 1rem; width: 100%; padding: 0.95rem 0.3rem;
+  border: 0; border-bottom: 1px solid var(--line-soft); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.campaigns-list button > span:first-child { display: grid; gap: 0.15rem; min-width: 0; }
+.campaigns-list small { color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campaign-form { display: grid; gap: 0.9rem; margin-top: 0.6rem; }
+.campaign-preview { background: var(--card-soft); border-radius: 14px 14px 14px 4px; padding: 0.8rem 1rem; max-width: 26rem; }
+.campaign-preview small { color: var(--ink-soft); font-size: 0.75rem; }
+.campaign-preview p { margin: 0.2rem 0 0; white-space: pre-wrap; }
+.campaign-audience { border: 1px solid var(--line); border-radius: 12px; padding: 0.9rem 1rem 1rem; display: grid; gap: 0.6rem; min-width: 0; }
+.campaign-audience legend { font-weight: 700; padding: 0 0.3rem; }
+.campaign-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.campaign-filters input, .campaign-filters select { flex: 1 1 12rem; }
+.campaign-contacts { max-height: 22rem; overflow: auto; }
+.campaign-contacts td small { display: block; color: var(--ink-soft); font-size: 0.78rem; }
+.campaign-consent { background: var(--warn-wash); border-radius: 10px; padding: 0.9rem 1rem; display: grid; gap: 0.6rem; }
+.campaign-consent p { margin: 0; font-size: 0.88rem; }
+.campaign-launch { border-top: 1px solid var(--line-soft); padding-top: 1rem; display: grid; gap: 0.7rem; }
+.campaign-result { display: grid; gap: 0.9rem; margin-top: 0.6rem; }
+.campaign-product { display: grid; gap: 0.15rem; width: 100%; text-align: left; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.campaign-product-form { max-width: 32rem; margin-bottom: 1rem; }
+.sales-programs li.is-inactive { opacity: 0.6; }
+.campaigns-page button.acta-back { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; }
+.campaigns-page table { width: 100%; border-collapse: collapse; }
+.campaigns-page th { text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); padding: 0.4rem 0.5rem; }
+.campaigns-page td { padding: 0.55rem 0.5rem; border-top: 1px solid var(--line-soft); vertical-align: middle; }
