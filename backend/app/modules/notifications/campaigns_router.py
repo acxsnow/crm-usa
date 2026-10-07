@@ -369,11 +369,26 @@ _BAJA_HTML = """<!doctype html><html lang="es"><head><meta charset="utf-8">
 <h1 style="font-size:22px">{titulo}</h1><p>{texto}</p></body></html>"""
 
 
-@router.api_route("/unsubscribe/{token}", methods=["GET", "POST"], response_class=HTMLResponse)
+_CONFIRMAR_HTML = """<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Darme de baja</title></head>
+<body style="font-family:Arial,sans-serif;max-width:480px;margin:15vh auto;padding:0 16px;color:#171514">
+<h1 style="font-size:22px">¿No quieres recibir más promociones por correo?</h1>
+<form method="post"><button type="submit" style="font:inherit;padding:12px 20px;border:0;border-radius:8px;
+background:#cf1d2b;color:#fff;cursor:pointer">Sí, darme de baja</button></form></body></html>"""
+
+
+@router.get("/unsubscribe/{token}", response_class=HTMLResponse)
+async def unsubscribe_page(token: str):
+    """Abrir el enlace NO da de baja: los escáneres de enlaces del correo
+    (Outlook, antivirus) lo abren solos. Muestra un botón que hace el POST."""
+    return HTMLResponse(_CONFIRMAR_HTML)
+
+
+@router.post("/unsubscribe/{token}", response_class=HTMLResponse)
 async def unsubscribe(token: str, db: AsyncSession = Depends(get_db)):
-    """El enlace de cada correo de campaña. Público (lo abre quien recibió el
-    correo); el token es aleatorio y solo da de baja ese correo. POST sirve la
-    baja con un clic de Gmail y Outlook (List-Unsubscribe-Post)."""
+    """Da de baja ese correo. Público: lo usa quien recibió el correo (botón de
+    la página o baja con un clic de Gmail/Outlook, List-Unsubscribe-Post). El
+    token es aleatorio y solo da de baja ese correo."""
     ok = len(token) >= 20 and await svc.unsubscribe_by_token(db, token)
     if not ok:
         return HTMLResponse(_BAJA_HTML.format(titulo="Enlace no válido",

@@ -78,9 +78,9 @@ async def send_marketing_email(*, to: str, subject: str, body: str, unsubscribe_
     s = get_settings()
     mensaje = build_message(to=to, subject=subject, body=body, unsubscribe_token=unsubscribe_token)
     if s.MARKETING_EMAIL_PROVIDER != "smtp":
-        logger.info("marketing_email.test_mode", subject=subject)
+        logger.info("marketing_email.test_mode", length=len(body))  # sin asunto ni destinatario: llevan datos personales
         return "test"
     check_ready()
     await asyncio.to_thread(_smtp_send, mensaje)
-    logger.info("marketing_email.sent", subject=subject)
+    logger.info("marketing_email.sent", length=len(body))
     return "sent"

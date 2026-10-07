@@ -168,7 +168,12 @@ async def test_the_email_unsubscribe_link_works_without_login(app_client, db, se
     await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
                           json={"text": "ana@example.com", "source": "Formulario web", "confirm": True})
     token = (await db.execute(select(EmailMarketingConsent))).scalars().one().unsubscribe_token
-    assert (await app_client.get("/api/v1/unsubscribe/no-existe-este-token-xx")).status_code == 404
+    assert (await app_client.post("/api/v1/unsubscribe/no-existe-este-token-xx")).status_code == 404
+    # Abrir el enlace (lo hacen los escáneres de correo) no da de baja.
+    r = await app_client.get(f"/api/v1/unsubscribe/{token}")
+    assert r.status_code == 200 and "method=\"post\"" in r.text
+    permiso = (await db.execute(select(EmailMarketingConsent))).scalars().one()
+    assert permiso.status == "granted"
     r = await app_client.post(f"/api/v1/unsubscribe/{token}")
     assert r.status_code == 200 and "baja" in r.text
     permiso = (await db.execute(select(EmailMarketingConsent))).scalars().one()
