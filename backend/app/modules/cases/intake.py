@@ -79,7 +79,10 @@ async def sensitive_keys(db, case: Case) -> set[str]:
 
 
 def is_editable(case: Case) -> bool:
-    return case.stage_code == "new_prospect" or (
+    """El vendedor edita mientras arma el expediente, cuando se lo devuelven y
+    cuando se lo rechazan (puede corregir y volver a enviarlo: el motor
+    permite `rejected → pending_approval`)."""
+    return case.stage_code in ("new_prospect", "rejected") or (
         case.stage_code == "pending_approval" and case.substatus_code == "returned"
     )
 
@@ -88,7 +91,7 @@ def _require_editable(case: Case) -> None:
     if not is_editable(case):
         raise ConflictError(
             f"El expediente está en «{case.stage_label}»: el formulario ya no se edita "
-            "(se corrige cuando Administración lo devuelve).",
+            "(se corrige cuando Administración lo devuelve o lo rechaza).",
             code="case_not_editable",
         )
 

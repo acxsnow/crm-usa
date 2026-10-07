@@ -169,6 +169,17 @@ async def transition_case(
     case = await case_service.get_case_or_404(
         db, organization_id=organization_id, case_id=case_id
     )
+    # Primero el permiso (lo valida `transition()` con 403); el motivo solo se
+    # le pide a quien sí puede cerrar o rechazar.
+    from app.modules.cases import stages as _stages
+
+    puede = _stages.STAGE_PERMISSION.get(payload.to_stage) in get_effective_permissions(current_user)
+    if puede and payload.to_stage in ("closed", "rejected") and not (payload.reason or "").strip():
+        # Cerrar o rechazar sin motivo deja el historial sin explicación: es lo
+        # primero que se pregunta en un reclamo o en el reporte de rechazos.
+        from app.shared.errors import InvalidInputError
+
+        raise InvalidInputError("Escribe el motivo.", code="reason_required")
     if payload.to_stage == "approved":
         # Datos que entrega el programa al aprobar; se guardan con la misma
         # transacción del cambio de etapa (`transition()` hace el commit).

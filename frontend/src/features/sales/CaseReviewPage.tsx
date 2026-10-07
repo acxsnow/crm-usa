@@ -127,6 +127,9 @@ export function CaseReviewPage() {
         <aside className="review-side">
           <Decision caseId={caseId!} stage={c.stage_code} substatus={c.substatus_code} pendientes={pendientes}
             rechazados={rechazados} onDone={refrescar} />
+          {hasPermission("cases.close_admin") && c.stage_code !== "closed" && (
+            <CloseCase caseId={caseId!} onDone={refrescar} />
+          )}
           <article className="acta review-history">
             <h2>Historial</h2>
             <ol className="acta-history">
@@ -313,7 +316,10 @@ function Decision({ caseId, stage, substatus, pendientes, rechazados, onDone }: 
     return (
       <article className="acta review-decision">
         <h2>Decisión</h2>
-        <p className="acta-empty">{stage === "new_prospect" ? "El vendedor todavía no lo envía a revisión." : "Este expediente ya pasó la revisión."}</p>
+        <p className="acta-empty">{stage === "new_prospect" ? "El vendedor todavía no lo envía a revisión."
+          : stage === "rejected" ? "Rechazado. El vendedor puede corregirlo y volver a enviarlo a revisión."
+          : stage === "closed" ? "Cerrado. Ya no sigue en el flujo."
+          : "Este expediente ya pasó la revisión."}</p>
       </article>
     );
   }
@@ -396,6 +402,42 @@ function Decision({ caseId, stage, substatus, pendientes, rechazados, onDone }: 
               {decidir.isPending ? "Guardando…" : "Confirmar"}
             </button>
             <button type="button" className="acta-btn is-quiet" onClick={() => { setAccion(null); setError(null); }}>Cancelar</button>
+          </div>
+        </form>
+      )}
+    </article>
+  );
+}
+
+/** Cierre administrativo (desde cualquier etapa, con `cases.close_admin`). Pide motivo. */
+function CloseCase({ caseId, onDone }: { caseId: string; onDone: () => void }) {
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const cerrar = useMutation({
+    mutationFn: () => transitionCase(caseId, { to_stage: "closed", reason: motivo }),
+    onSuccess: () => { setAbierto(false); setMotivo(""); setError(null); onDone(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  return (
+    <article className="acta review-close">
+      <h2>Cerrar expediente</h2>
+      {!abierto ? (
+        <>
+          <p className="review-hint">Lo saca del flujo en cualquier etapa (cliente se mudó, duplicado, desistió…). Queda en el historial con su motivo.</p>
+          <button type="button" className="acta-btn is-quiet review-danger" onClick={() => setAbierto(true)}>Cerrar expediente…</button>
+        </>
+      ) : (
+        <form className="review-form" onSubmit={(e) => { e.preventDefault(); cerrar.mutate(); }}>
+          <div className="form-field">
+            <label className="form-label" htmlFor="close-motivo">Motivo del cierre</label>
+            <textarea id="close-motivo" rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus />
+          </div>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <div className="acta-actions">
+            <button type="submit" className="acta-btn is-line review-danger" disabled={!motivo.trim() || cerrar.isPending}>
+              {cerrar.isPending ? "Cerrando…" : "Confirmar cierre"}</button>
+            <button type="button" className="acta-btn is-quiet" onClick={() => setAbierto(false)}>Cancelar</button>
           </div>
         </form>
       )}
