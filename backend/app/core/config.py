@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     MASIV_USERNAME: str = ""
     MASIV_PASSWORD: str = ""
     MASIV_SENDER: str = "PAPCRM"
+    # Token secreto del webhook de respuestas (STOP). Vacío = webhook apagado.
+    MASIV_WEBHOOK_TOKEN: str = ""
 
     # S3 (evidence/report storage). When S3_BUCKET is empty, the evidence
     # module falls back to local disk storage under STORAGE_DIR — fine for

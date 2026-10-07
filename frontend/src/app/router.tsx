@@ -25,6 +25,7 @@ import { CaseFormPage } from "@/features/sales/CaseFormPage";
 import { CasesBoardPage } from "@/features/sales/CasesBoardPage";
 import { CaseReviewPage } from "@/features/sales/CaseReviewPage";
 import { NotificationsPage } from "@/features/notifications/NotificationsPage";
+import { CampaignsPage } from "@/features/notifications/CampaignsPage";
 import { DocumentsQueuePage } from "@/features/sales/DocumentsQueuePage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
@@ -130,6 +131,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
             <CasesBoardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "campaigns",
+        element: (
+          <RequireAccess permission="notifications.manage" moduleLabel="Campañas SMS">
+            <CampaignsPage />
           </RequireAccess>
         ),
       },

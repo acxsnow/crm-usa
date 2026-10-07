@@ -57,6 +57,8 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Clientes", to: "/customers", icon: "♙", permission: "customers.read" },
       // Inicio del vendedor (módulo 2): sus programas, zonas y lo pendiente.
       { label: "Mi día", to: "/sales", icon: "☀", permission: "cases.create" },
+      // Campañas de SMS de productos a clientes con permiso de mercadeo.
+      { label: "Campañas SMS", to: "/campaigns", icon: "✉", permission: "notifications.manage" },
       {
         // El centro del trabajo del vendedor: kanban de expedientes por etapa
         // (módulo 2). Reemplaza `/applications` del modelo anterior.
