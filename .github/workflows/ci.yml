@@ -40,4 +40,6 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Hooks después de un return temprano rompen la pantalla en ejecución (no lo ve tsc).
+      - run: python3 scripts/check_hooks.py
       - run: npm run build

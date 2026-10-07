@@ -12,16 +12,30 @@ export function CustomerDetailPage() {
     enabled: Boolean(customerId),
   });
 
+  // Los hooks van antes de cualquier `return`: si se llaman después del
+  // "Cargando…", React ve menos hooks en el primer render que en el segundo
+  // y la página revienta («Rendered more hooks than during the previous render»).
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ legal_name: "", main_phone: "", email: "", billing_address: "", notes: "" });
+  const updateMutation = useMutation({
+    mutationFn: () => updateCustomer(customerId!, form),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] }); setEditing(false); },
+  });
+
   if (isLoading || !data) return <p>Cargando...</p>;
 
   const { customer, cases, activities } = data;
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ legal_name: customer.legal_name, main_phone: customer.main_phone ?? "", email: customer.email ?? "", billing_address: customer.billing_address ?? "", notes: customer.notes ?? "" });
-  const updateMutation = useMutation({ mutationFn: () => updateCustomer(customer.id, form), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] }); setEditing(false); } });
+  const alternarEdicion = () => {
+    if (!editing) {
+      setForm({ legal_name: customer.legal_name, main_phone: customer.main_phone ?? "", email: customer.email ?? "",
+        billing_address: customer.billing_address ?? "", notes: customer.notes ?? "" });
+    }
+    setEditing(!editing);
+  };
 
   return (
     <div className="customer-detail-page">
-      <div className="page-heading"><div><p className="eyebrow">PERFIL DEL CLIENTE</p><h1>{customer.legal_name}</h1><p className="page-subtitle">Información de contacto, aplicaciones y trazabilidad.</p></div><button className="primary-button" onClick={() => setEditing(!editing)}>{editing ? "Cancelar" : "Editar cliente"}</button></div>
+      <div className="page-heading"><div><p className="eyebrow">PERFIL DEL CLIENTE</p><h1>{customer.legal_name}</h1><p className="page-subtitle">Información de contacto, aplicaciones y trazabilidad.</p></div><button className="primary-button" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button></div>
       {editing && <form className="edit-card" onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }}><div className="edit-grid"><label>Nombre completo<input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} required /></label><label>Teléfono<input value={form.main_phone} onChange={(e) => setForm({ ...form, main_phone: e.target.value })} /></label><label>Correo<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Dirección de facturación<input value={form.billing_address} onChange={(e) => setForm({ ...form, billing_address: e.target.value })} /></label><label className="wide-field">Notas<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div><button className="primary-button" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</button>{updateMutation.isError && <p className="form-error">No se pudieron guardar los cambios.</p>}</form>}
       <p className="page-subtitle">
         {customer.main_phone} · {customer.email}
