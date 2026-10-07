@@ -156,3 +156,30 @@ async def test_sensitive_files_need_permission(app_client, enviado, active_manag
     if r.status_code == 200:
         assert all(d["field_key"] != "customer.id_photo" for d in r.json())
     assert (await app_client.get(f"/api/v1/case-files/{id_foto['id']}", headers=gerencia)).status_code in (403, 404)
+
+
+async def test_closing_or_rejecting_needs_a_reason_and_the_right_permission(app_client, enviado):
+    url = f"/api/v1/cases/{enviado['id']}/transition"
+    r = await app_client.post(url, json={"to_stage": "closed"}, headers=enviado["admin"])
+    assert r.status_code == 400 and r.json()["code"] == "reason_required"
+    r = await app_client.post(url, json={"to_stage": "closed", "reason": "Cliente se mudó"}, headers=enviado["vendedor"])
+    assert r.status_code in (403, 404)
+    r = await app_client.post(url, json={"to_stage": "closed", "reason": "Cliente se mudó"}, headers=enviado["admin"])
+    assert r.status_code == 200 and r.json()["stage_code"] == "closed"
+
+
+async def test_a_rejected_case_can_be_corrected_and_resubmitted(app_client, enviado):
+    e = enviado
+    for d in await _docs(app_client, e):
+        await _revisar(app_client, e, d["id"], "accepted")
+    r = await app_client.post(f"/api/v1/cases/{e['id']}/transition", json={"to_stage": "rejected", "reason": "Ingresos"},
+                              headers=e["admin"])
+    assert r.status_code == 200, r.text
+    form = (await app_client.get(f"/api/v1/cases/{e['id']}/form", headers=e["vendedor"])).json()
+    assert form["editable"] is True
+    r = await app_client.put(f"/api/v1/cases/{e['id']}/steps/home", headers=e["vendedor"],
+                             json={"answers": {"home.is_homeowner": "yes"}})
+    assert r.status_code == 200, r.text
+    r = await app_client.post(f"/api/v1/cases/{e['id']}/submit", headers=e["vendedor"])
+    assert r.status_code == 200, r.text
+    assert (r.json()["stage_code"], r.json()["substatus_code"]) == ("pending_approval", "pending_review")

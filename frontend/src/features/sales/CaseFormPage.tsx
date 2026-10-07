@@ -124,6 +124,7 @@ export function CaseFormPage() {
   const siguiente = actual === REVIEW ? null : idx >= 0 && idx < pasos.length - 1 ? pasos[idx + 1].code : REVIEW;
   const esAutorizacion = pasos.find((s) => s.code === actual)?.fields.some((f) => f.type === "terms_checkbox");
   const devuelto = c.stage_code === "pending_approval" && c.substatus_code === "returned";
+  const rechazado = c.stage_code === "rejected";
   // Lo que Administración rechazó y sigue vigente: el vendedor lo reemplaza
   // en su paso y el nuevo archivo entra como pendiente (módulo 3).
   const vigentes = new Set(Object.values(answers).filter((v): v is string => typeof v === "string"));
@@ -149,6 +150,7 @@ export function CaseFormPage() {
             <div><dt>Avance</dt><dd>{evaluacion.steps.filter((s) => s.complete).length} de {evaluacion.steps.length} pasos</dd></div>
           </dl>
           {devuelto && <p className="acta-note">Administración lo devolvió: {c.stage_reason ?? "revisa y corrige"}. Al terminar, vuelve a enviarlo.</p>}
+          {rechazado && <p className="acta-note">Administración lo rechazó: {c.stage_reason ?? "sin motivo"}. Si se puede corregir, ajústalo y vuelve a enviarlo a revisión.</p>}
           {rechazados.length > 0 && (
             <div className="sales-rejected" role="alert">
               <strong>Documentos rechazados: súbelos de nuevo</strong>
@@ -177,7 +179,7 @@ export function CaseFormPage() {
         {aviso && <p className="info-banner" role="status">{aviso}</p>}
 
         {actual === REVIEW ? (
-          <Review caseId={caseId!} evaluation={evaluacion} editable={form.editable} resubmit={devuelto}
+          <Review caseId={caseId!} evaluation={evaluacion} editable={form.editable} resubmit={devuelto || rechazado}
             onGo={(code) => setPaso(code)} onSent={async () => { setAviso("Enviado a revisión. Administración lo revisa y te avisa si hay que corregir."); await refrescar(); }}
             onError={setError} />
         ) : (
