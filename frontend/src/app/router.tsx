@@ -137,7 +137,7 @@ export const router = createBrowserRouter([
       {
         path: "campaigns",
         element: (
-          <RequireAccess permission="notifications.manage" moduleLabel="Campañas SMS">
+          <RequireAccess permission="notifications.manage" moduleLabel="Campañas">
             <CampaignsPage />
           </RequireAccess>
         ),

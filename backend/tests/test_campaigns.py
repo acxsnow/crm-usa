@@ -26,7 +26,7 @@ async def _clientes(db, org_id):
 async def test_audience_lists_people_with_phone_and_their_consent(app_client, db, seeded_org, admin):
     marge, ned, _ = await _clientes(db, seeded_org["org"].id)
     r = (await app_client.post("/api/v1/campaigns/audience", json={}, headers=admin)).json()
-    assert r["summary"] == {"total": 2, "with_consent": 0, "without_consent": 2, "opted_out": 0}
+    assert r["summary"] == {"total": 2, "with_consent": 0, "without_consent": 2, "opted_out": 0, "no_address": 0}
     r = await app_client.post("/api/v1/campaigns/consents", headers=admin,
                               json={"customer_ids": [str(marge.id)], "source": "Firmó en la visita", "confirm": False})
     assert r.status_code == 400
@@ -139,3 +139,63 @@ async def test_start_does_not_reactivate_manual_opt_outs_or_new_numbers(app_clie
     for p in permisos:
         await db.refresh(p)
     assert {p.status for p in permisos} == {"revoked"}
+
+
+
+async def test_own_contacts_can_be_imported_and_receive_campaigns(app_client, db, seeded_org, admin):
+    texto = "Homer Simpson, (818) 555-0300, homer@example.com\nsolo-correo@example.com\nlinea sin datos\n7025550400; Lenny"
+    r = await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
+                              json={"text": texto, "source": "Lista de la feria de Phoenix", "confirm": True})
+    assert r.status_code == 200, r.text
+    assert (r.json()["created"], r.json()["invalid"]) == (3, ["linea sin datos"])
+    contactos = (await app_client.get("/api/v1/campaigns/contacts", headers=admin)).json()
+    assert {c["name"] for c in contactos} == {"Homer Simpson", None, "Lenny"}
+    a = (await app_client.post("/api/v1/campaigns/audience", json={}, headers=admin)).json()
+    assert a["summary"]["with_consent"] == 2 and a["email_summary"]["with_consent"] == 2
+    c = (await app_client.post("/api/v1/campaigns", headers=admin, json={
+        "name": "Feria", "channel": "both", "subject": "Oferta para {{nombre}}", "message": "Hola {{nombre}}"})).json()
+    r = await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
+    assert r.status_code == 200, r.text
+    assert r.json()["summary"]["queued"] == 4
+    envios = (await db.execute(select(CampaignRecipient).where(CampaignRecipient.channel == "email"))).scalars().all()
+    homer = next(e for e in envios if e.address == "homer@example.com")
+    assert (homer.subject, homer.body) == ("Oferta para Homer", "Hola Homer")  # el correo no lleva el STOP
+
+
+async def test_the_email_unsubscribe_link_works_without_login(app_client, db, seeded_org, admin):
+    from app.modules.notifications.models import EmailMarketingConsent
+
+    await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
+                          json={"text": "ana@example.com", "source": "Formulario web", "confirm": True})
+    token = (await db.execute(select(EmailMarketingConsent))).scalars().one().unsubscribe_token
+    assert (await app_client.get("/api/v1/unsubscribe/no-existe-este-token-xx")).status_code == 404
+    r = await app_client.post(f"/api/v1/unsubscribe/{token}")
+    assert r.status_code == 200 and "baja" in r.text
+    permiso = (await db.execute(select(EmailMarketingConsent))).scalars().one()
+    await db.refresh(permiso)
+    assert permiso.status == "revoked"
+    # Volver a importarlo no lo reactiva.
+    await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
+                          json={"text": "ana@example.com", "source": "Formulario web", "confirm": True})
+    await db.refresh(permiso)
+    assert permiso.status == "revoked"
+
+
+async def test_an_email_campaign_needs_a_subject(app_client, db, seeded_org, admin):
+    await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
+                          json={"text": "ana@example.com", "source": "Formulario web", "confirm": True})
+    c = (await app_client.post("/api/v1/campaigns", headers=admin,
+                               json={"name": "X", "channel": "email", "message": "Hola"})).json()
+    r = await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
+    assert r.status_code == 400 and r.json()["code"] == "campaign_subject_required"
+
+
+def test_masiv_payload_and_marketing_email_footer():
+    from app.modules.notifications import marketing_email
+    from app.modules.notifications.sms import masiv_payload
+
+    p = masiv_payload(to="(818) 555-0101", message="x" * 200)
+    assert (p["to"], p["text"], p["isLongmessage"]) == ("18185550101", "x" * 200, True)
+    m = marketing_email.build_message(to="ana@example.com", subject="Hola", body="Oferta", unsubscribe_token="tok123")
+    assert m["List-Unsubscribe"].endswith("/api/v1/unsubscribe/tok123>")
+    assert "Darme de baja" in m.get_body(("html",)).get_content()
