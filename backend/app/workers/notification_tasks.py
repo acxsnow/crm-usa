@@ -3,7 +3,7 @@ import asyncio
 
 import structlog
 
-from app.db.session import AsyncSessionLocal
+from app.db.session import worker_session
 from app.modules.notifications import service
 from app.workers.celery_app import celery_app
 
@@ -11,7 +11,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def _process(event: str, payload: dict) -> int:
-    async with AsyncSessionLocal() as db:
+    async with worker_session() as db:
         creados = await service.process_event(db, event, payload)
         if creados:
             await service.deliver_pending(db)
@@ -19,12 +19,12 @@ async def _process(event: str, payload: dict) -> int:
 
 
 async def _deliver() -> int:
-    async with AsyncSessionLocal() as db:
+    async with worker_session() as db:
         return await service.deliver_pending(db)
 
 
 async def _daily() -> int:
-    async with AsyncSessionLocal() as db:
+    async with worker_session() as db:
         total = await service.daily_alerts_all(db)
         await service.deliver_pending(db, limit=500)
         return total
@@ -50,7 +50,7 @@ def daily_alerts_task() -> int:
 async def _campaigns() -> int:
     from app.modules.notifications import campaigns
 
-    async with AsyncSessionLocal() as db:
+    async with worker_session() as db:
         return await campaigns.send_due(db)
 
 

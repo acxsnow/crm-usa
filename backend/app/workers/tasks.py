@@ -6,7 +6,7 @@ import asyncio
 
 import structlog
 
-from app.db.session import AsyncSessionLocal
+from app.db.session import worker_session
 from app.modules.billing.service import count_overdue_invoices
 from app.workers.celery_app import celery_app
 
@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def _count_overdue_invoices() -> int:
-    async with AsyncSessionLocal() as db:
+    async with worker_session() as db:
         return await count_overdue_invoices(db)
 
 

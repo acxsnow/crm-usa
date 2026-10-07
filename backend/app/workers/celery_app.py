@@ -9,6 +9,7 @@ from celery import Celery
 from celery.schedules import crontab
 
 from app.core.config import get_settings
+from app.db import all_models as _all_models  # noqa: F401  (el worker no carga las rutas)
 
 settings = get_settings()
 
