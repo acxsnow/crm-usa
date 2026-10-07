@@ -102,3 +102,26 @@ async def test_campaigns_need_notifications_manage(app_client, db, seeded_org, a
     vendedor = await headers_for(app_client, "vendedor@acme-demo.com")
     assert (await app_client.get("/api/v1/campaigns", headers=vendedor)).status_code == 403
     assert (await app_client.post("/api/v1/campaigns/audience", json={}, headers=vendedor)).status_code == 403
+
+
+async def test_office_cannot_undo_a_stop_only_the_customer_can(app_client, db, seeded_org, admin):
+    marge, _, _ = await _clientes(db, seeded_org["org"].id)
+    body = {"customer_ids": [str(marge.id)], "source": "Formulario firmado", "confirm": True}
+    await app_client.post("/api/v1/campaigns/consents", headers=admin, json=body)
+    await svc.handle_inbound(db, phone="8185550101", text="STOP")
+    r = await app_client.post("/api/v1/campaigns/consents", headers=admin, json=body)
+    assert r.json()["granted"] == 0
+    await svc.handle_inbound(db, phone="+1 818 555 0101", text="START")
+    permiso = (await db.execute(select(MarketingConsent))).scalars().one()
+    await db.refresh(permiso)
+    assert permiso.status == "granted" and "START" in permiso.source
+
+
+async def test_test_send_only_goes_to_your_own_phone(app_client, db, seeded_org, admin):
+    c = (await app_client.post("/api/v1/campaigns", headers=admin, json={"name": "X", "message": "Oferta"})).json()
+    r = await app_client.post(f"/api/v1/campaigns/{c['id']}/test", json={"phone": "8185550199"}, headers=admin)
+    assert r.status_code == 400 and r.json()["code"] == "test_phone_not_own"
+    await app_client.put("/api/v1/notifications/preferences", headers=admin,
+                         json={"email_enabled": False, "sms_enabled": True, "sms_phone": "(818) 555-0199"})
+    r = await app_client.post(f"/api/v1/campaigns/{c['id']}/test", json={"phone": "8185550199"}, headers=admin)
+    assert r.status_code == 200 and r.json()["result"] == "test"
