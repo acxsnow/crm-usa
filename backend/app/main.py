@@ -145,3 +145,8 @@ async def serve_frontend(full_path: str):
     if full_path and requested.exists() and requested.is_file() and frontend_dist in requested.parents:
         return FileResponse(requested)
     return FileResponse(frontend_index)
+
+from app.modules.notifications import dispatch as notifications_dispatch  # noqa: E402
+
+# Módulo 7: los eventos de dominio llegan a la cola de notificaciones.
+notifications_dispatch.register()

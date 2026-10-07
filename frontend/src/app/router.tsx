@@ -24,6 +24,7 @@ import { VisitPage } from "@/features/sales/VisitPage";
 import { CaseFormPage } from "@/features/sales/CaseFormPage";
 import { CasesBoardPage } from "@/features/sales/CasesBoardPage";
 import { CaseReviewPage } from "@/features/sales/CaseReviewPage";
+import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { DocumentsQueuePage } from "@/features/sales/DocumentsQueuePage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
@@ -129,6 +130,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
             <CasesBoardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "notifications",
+        element: (
+          <RequireAccess permission={["notifications.read_own", "notifications.manage"]} moduleLabel="Notificaciones">
+            <NotificationsPage />
           </RequireAccess>
         ),
       },

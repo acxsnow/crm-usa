@@ -14,6 +14,7 @@ from app.modules.users.roles_router import router as roles_router
 from app.modules.users.router import router as users_router
 from app.modules.programs.router import router as programs_router
 from app.modules.cases.intake_router import router as cases_intake_router
+from app.modules.notifications.router import router as notifications_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
@@ -30,3 +31,4 @@ api_router.include_router(billing_quotes_router)
 api_router.include_router(cases_router)
 api_router.include_router(programs_router)
 api_router.include_router(cases_intake_router)
+api_router.include_router(notifications_router)

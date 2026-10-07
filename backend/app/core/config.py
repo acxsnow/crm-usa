@@ -55,6 +55,8 @@ class Settings(BaseSettings):
 
     # SMS (Masiv). Keep disabled until Masiv assigns endpoint/credentials.
     SMS_PROVIDER: str = "console"  # console | masiv
+    # Módulo 7: "celery" encola los eventos para el worker; "off" no avisa (pruebas, scripts).
+    NOTIFICATIONS_DISPATCH: str = "celery"
     MASIV_SMS_URL: str = ""
     MASIV_USERNAME: str = ""
     MASIV_PASSWORD: str = ""
