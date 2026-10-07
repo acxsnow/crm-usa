@@ -221,10 +221,16 @@ async def test_send(campaign_id: uuid.UUID, payload: TestIn, db: AsyncSession = 
     """Prueba al número de quien arma la campaña (no pasa por el público)."""
     from app.shared.normalize import normalize_phone
 
+    from app.modules.notifications.service import preference_for
+
     c = await svc.get_campaign(db, organization_id, campaign_id)
     tel = normalize_phone(payload.phone)
-    if not tel or len(tel) != 10:
-        raise InvalidInputError("Escribe un celular de EE. UU. de 10 dígitos.", code="invalid_phone")
+    # Solo a tu propio celular registrado: si no, la prueba serviría para
+    # escribirle a cualquiera sin su permiso.
+    propio = normalize_phone((await preference_for(db, current_user)).sms_phone)
+    if not tel or tel != propio:
+        raise InvalidInputError("La prueba solo va a tu celular registrado en Notificaciones → «Cómo me avisan».",
+                                code="test_phone_not_own")
     texto = await svc.preview_text(db, c, current_user.full_name)
     resultado = await svc._sms(tel, texto)
     return {"result": resultado, "text": texto}

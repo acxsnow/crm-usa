@@ -252,7 +252,7 @@ function Launch({ id, beforeLaunch, onDone }: { id: string; beforeLaunch: () => 
     <div className="campaign-launch">
       <h3 className="acta-section-title">Probar y lanzar</h3>
       <div className="campaign-filters">
-        <input aria-label="Tu celular para la prueba" type="tel" placeholder="Tu celular para la prueba" value={tel} onChange={(e) => setTel(e.target.value)} />
+        <input aria-label="Tu celular para la prueba" type="tel" placeholder="Tu celular (el de Notificaciones → Cómo me avisan)" value={tel} onChange={(e) => setTel(e.target.value)} />
         <button type="button" className="acta-btn is-quiet" disabled={tel.length < 7 || probar.isPending} onClick={() => probar.mutate()}>Enviarme una prueba</button>
       </div>
       <div className="form-field">

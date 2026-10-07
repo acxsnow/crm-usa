@@ -37,6 +37,7 @@ from app.shared.normalize import normalize_phone
 logger = structlog.get_logger(__name__)
 
 OPT_OUT_FOOTER = "Responde STOP para no recibir más."
+START_WORDS = {"START", "UNSTOP", "YES", "SI", "ALTA"}
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "ALTO", "PARAR", "BAJA", "CANCELAR"}
 START_HOUR, END_HOUR = 8, 21
 STATE_ZONES = {"AZ": "America/Phoenix", "CA": "America/Los_Angeles", "NV": "America/Los_Angeles"}
@@ -168,6 +169,10 @@ async def grant_consent(db: AsyncSession, *, organization_id, user, customer_ids
         if not tel:
             continue
         c = permisos.get(tel) or MarketingConsent(organization_id=organization_id, phone=tel)
+        if c.status == "revoked":
+            # Quien se dio de baja solo vuelve si él mismo responde START: nadie
+            # en la oficina puede deshacer su STOP (TCPA).
+            continue
         c.customer_id, c.status, c.source = cl.id, "granted", fuente[:255]
         c.granted_at, c.granted_by_user_id, c.revoked_at, c.revoked_reason = _now(), user.id, None, None
         if tel not in permisos:
@@ -208,6 +213,9 @@ async def opt_out(db: AsyncSession, *, phone: str, reason: str, organization_id=
 
 async def handle_inbound(db: AsyncSession, *, phone: str, text: str) -> bool:
     palabra = re.sub(r"[^A-Z]", "", (text or "").strip().upper().split(" ")[0] if text else "")
+    if palabra in START_WORDS:
+        await opt_in_again(db, phone=phone, word=palabra)
+        return False
     if palabra not in STOP_WORDS:
         return False
     await opt_out(db, phone=phone, reason=f"Respondió {palabra}")
@@ -343,3 +351,17 @@ async def stats(db, campaign: Campaign) -> dict:
     cuenta = {k: 0 for k in ("pending", "sent", "failed", "skipped")}
     cuenta.update({s: n for s, n in filas})
     return cuenta
+
+
+async def opt_in_again(db: AsyncSession, *, phone: str, word: str) -> int:
+    """El cliente responde START: vuelve a quedar con permiso donde se había dado de baja."""
+    tel = normalize_phone(phone)
+    if not tel:
+        return 0
+    filas = (await db.execute(select(MarketingConsent).where(MarketingConsent.phone == tel,
+                                                             MarketingConsent.status == "revoked"))).scalars().all()
+    for c in filas:
+        c.status, c.source, c.granted_at = "granted", f"El cliente respondió {word}", _now()
+        c.revoked_at, c.revoked_reason, c.granted_by_user_id = None, None, None
+    await db.commit()
+    return len(filas)
