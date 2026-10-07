@@ -120,3 +120,14 @@ def _send_smtp(to: str, subject: str, body: str) -> None:
             smtp.ehlo()
         smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
         smtp.send_message(message)
+
+
+async def send_text_email(*, to: str, subject: str, body: str) -> None:
+    """Correo de un aviso (módulo 7). A diferencia de `send_email`, **sí lanza**
+    si falla: lo llama la cola, que lleva la cuenta de intentos y reintenta."""
+    if settings.EMAIL_PROVIDER != "smtp":
+        logger.info("email.send", to=to, subject=subject, provider=settings.EMAIL_PROVIDER)
+        return
+    check_smtp_credentials()
+    await asyncio.to_thread(_send_smtp, to, subject, body)
+    logger.info("email.sent", to=to, subject=subject, provider="smtp")

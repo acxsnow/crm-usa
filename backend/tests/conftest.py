@@ -23,6 +23,7 @@ from app.modules.field_ops import models as field_ops_models  # noqa: F401
 from app.modules.billing import models as billing_models  # noqa: F401
 from app.modules.cases import models as cases_models  # noqa: F401
 from app.modules.programs import models as programs_models  # noqa: F401
+from app.modules.notifications import models as notifications_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -326,3 +327,12 @@ async def active_roleless_user(db: AsyncSession, seeded_org):
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@pytest.fixture(autouse=True)
+def _notifications_off(monkeypatch):
+    """Las pruebas no encolan avisos en Redis; las del módulo 7 llaman al
+    servicio directamente."""
+    from app.modules.notifications import dispatch
+
+    monkeypatch.setattr(dispatch, "get_settings", lambda: type("S", (), {"NOTIFICATIONS_DISPATCH": "off"})())

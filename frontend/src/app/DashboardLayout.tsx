@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useAuth } from "@/features/auth/AuthContext";
 import { buildNavForUser } from "@/config/navigation";
 
@@ -75,7 +76,7 @@ export function DashboardLayout() {
             <span aria-hidden="true">☰</span> Menú
           </button>
           <div className="topbar-search"><span>⌕</span><input aria-label="Buscar" placeholder="Buscar clientes, proyectos..." /></div>
-          <button className="notification-button" aria-label="Notificaciones">♢<i /></button>
+          <NotificationBell />
           <div className="user-menu">
             <span className="user-avatar">{user?.full_name?.charAt(0).toUpperCase() ?? "U"}</span>
             <div className="user-identity">

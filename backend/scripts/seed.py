@@ -26,6 +26,7 @@ from app.modules.organizations.models import Organization, PlanLimit
 from app.modules.billing import models as _billing_models  # noqa: F401
 from app.modules.cases import models as _cases_models  # noqa: F401
 from app.modules.programs import models as _programs_models  # noqa: F401
+from app.modules.notifications import models as _notifications_models  # noqa: F401
 from app.shared import audit_models as _audit_models  # noqa: F401
 from app.modules.users.models import (
     Permission,

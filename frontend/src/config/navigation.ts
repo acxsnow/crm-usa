@@ -158,7 +158,6 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/notifications",
         icon: "♢",
         permission: ["notifications.read_own", "notifications.manage"],
-        disabled: true,
       },
     ],
   },

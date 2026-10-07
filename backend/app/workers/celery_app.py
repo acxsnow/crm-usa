@@ -27,6 +27,16 @@ celery_app.conf.update(
 )
 
 celery_app.conf.beat_schedule = {
+    # Módulo 7: envía la cola de correos/SMS pendientes y reintenta los fallidos.
+    "notifications-deliver-pending": {
+        "task": "notifications.deliver_pending",
+        "schedule": 60.0,
+    },
+    # Alertas de aprobación demorada y permisos por vencer (7 a. m. en Arizona).
+    "notifications-daily-alerts": {
+        "task": "notifications.daily_alerts",
+        "schedule": crontab(hour=14, minute=0),
+    },
     "sweep-overdue-invoices-daily": {
         "task": "workers.sweep_overdue_invoices",
         "schedule": crontab(hour=6, minute=0),  # once a day, 06:00 UTC
@@ -37,6 +47,7 @@ celery_app.conf.beat_schedule = {
 # app — imported for the side effect of the @celery_app.task decorator
 # running, not for anything used directly here.
 from app.workers import tasks as _tasks  # noqa: E402,F401
+from app.workers import notification_tasks as _notification_tasks  # noqa: E402,F401
 
 
 @celery_app.task(name="workers.health_check")
