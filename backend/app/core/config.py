@@ -57,12 +57,29 @@ class Settings(BaseSettings):
     SMS_PROVIDER: str = "console"  # console | masiv
     # Módulo 7: "celery" encola los eventos para el worker; "off" no avisa (pruebas, scripts).
     NOTIFICATIONS_DISPATCH: str = "celery"
-    MASIV_SMS_URL: str = ""
+    # API de SMS de Masiv (masivapp). Con SMS_PROVIDER=masiv solo faltan usuario y contraseña.
+    MASIV_SMS_URL: str = "https://api-sms.masivapp.com/send-message"
     MASIV_USERNAME: str = ""
     MASIV_PASSWORD: str = ""
     MASIV_SENDER: str = "PAPCRM"
+    MASIV_TIMEOUT_SECONDS: int = 20
     # Token secreto del webhook de respuestas (STOP). Vacío = webhook apagado.
     MASIV_WEBHOOK_TOKEN: str = ""
+
+    # Correo de campañas (mercadeo). Buzón y servidor PROPIOS, separados del
+    # correo de avisos (EMAIL_*): un envío masivo desde Gmail bloquea la cuenta.
+    MARKETING_EMAIL_PROVIDER: str = "console"  # console | smtp
+    MARKETING_EMAIL_FROM: str = ""  # "Delta HVAC <promociones@tu-dominio.com>"
+    MARKETING_EMAIL_REPLY_TO: str = ""
+    MARKETING_SMTP_HOST: str = "email-smtp.us-west-2.amazonaws.com"
+    MARKETING_SMTP_PORT: int = 587
+    MARKETING_SMTP_USERNAME: str = ""
+    MARKETING_SMTP_PASSWORD: str = ""
+    MARKETING_SMTP_USE_TLS: bool = True
+    # Dirección postal física de la empresa: la ley CAN-SPAM la exige en cada correo.
+    MARKETING_POSTAL_ADDRESS: str = ""
+    # URL pública de la API para el enlace de baja; vacío = FRONTEND_APP_URL (mismo dominio con /api).
+    PUBLIC_API_URL: str = ""
 
     # S3 (evidence/report storage). When S3_BUCKET is empty, the evidence
     # module falls back to local disk storage under STORAGE_DIR — fine for

@@ -135,6 +135,9 @@ class Campaign(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     product_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("products.id", ondelete="SET NULL"))
+    # sms | email | both. El correo usa `subject` y el mismo `message` como cuerpo.
+    channel: Mapped[str] = mapped_column(String(10), nullable=False, default="sms", server_default="sms")
+    subject: Mapped[str | None] = mapped_column(String(255))
     message: Mapped[str] = mapped_column(Text, nullable=False)
     audience: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="draft")
@@ -147,7 +150,7 @@ class Campaign(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 class CampaignRecipient(UUIDPKMixin, OrgScopedMixin, Base):
     __tablename__ = "campaign_recipients"
     __table_args__ = (
-        UniqueConstraint("campaign_id", "phone", name="uq_campaign_recipient_phone"),
+        UniqueConstraint("campaign_id", "channel", "address", name="uq_campaign_recipient_address"),
         Index("ix_campaign_recipients_queue", "status", "next_attempt_at"),
     )
 
@@ -155,12 +158,49 @@ class CampaignRecipient(UUIDPKMixin, OrgScopedMixin, Base):
         GUID(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    contact_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
     name: Mapped[str | None] = mapped_column(String(255))
-    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    # El número o correo al que va: evita mandar dos veces lo mismo a la misma dirección.
+    address: Mapped[str] = mapped_column(String(255), nullable=False)
+    channel: Mapped[str] = mapped_column(String(10), nullable=False, default="sms", server_default="sms")
+    phone: Mapped[str | None] = mapped_column(String(20))
+    email: Mapped[str | None] = mapped_column(String(255))
     timezone: Mapped[str] = mapped_column(String(40), nullable=False)
+    subject: Mapped[str | None] = mapped_column(String(255))
     body: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(String(500))
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailMarketingConsent(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Permiso de un correo para recibir promociones (CAN-SPAM). Cada fila
+    tiene un enlace de baja propio (`unsubscribe_token`) que va en cada correo."""
+
+    __tablename__ = "email_marketing_consents"
+    __table_args__ = (UniqueConstraint("organization_id", "email", name="uq_email_consent"),)
+
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
+    status: Mapped[str] = mapped_column(String(10), nullable=False)  # granted | revoked
+    source: Mapped[str | None] = mapped_column(String(255))
+    granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    granted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_reason: Mapped[str | None] = mapped_column(String(255))
+    unsubscribe_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+
+
+class MarketingContact(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Número o correo que no es cliente del sistema (lista propia del dueño)
+    y que puede recibir campañas. Su permiso se registra al cargarlo."""
+
+    __tablename__ = "marketing_contacts"
+
+    name: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(20), index=True)
+    email: Mapped[str | None] = mapped_column(String(255), index=True)
+    notes: Mapped[str | None] = mapped_column(String(255))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())

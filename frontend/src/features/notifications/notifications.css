@@ -71,3 +71,9 @@
 .campaigns-page table { width: 100%; border-collapse: collapse; }
 .campaigns-page th { text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); padding: 0.4rem 0.5rem; }
 .campaigns-page td { padding: 0.55rem 0.5rem; border-top: 1px solid var(--line-soft); vertical-align: middle; }
+.campaign-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.campaign-previews { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-start; }
+.campaign-preview.is-email { border-radius: 10px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 0.3rem; }
+.campaign-contacts td .billing-chip { margin-left: 0.4rem; }
+@media (max-width: 640px) { .campaign-row { grid-template-columns: 1fr; } }
+.campaign-result .campaign-preview { display: grid; gap: 0.25rem; }
