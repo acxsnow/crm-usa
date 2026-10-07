@@ -125,3 +125,17 @@ async def test_test_send_only_goes_to_your_own_phone(app_client, db, seeded_org,
                          json={"email_enabled": False, "sms_enabled": True, "sms_phone": "(818) 555-0199"})
     r = await app_client.post(f"/api/v1/campaigns/{c['id']}/test", json={"phone": "8185550199"}, headers=admin)
     assert r.status_code == 200 and r.json()["result"] == "test"
+
+
+async def test_start_does_not_reactivate_manual_opt_outs_or_new_numbers(app_client, db, seeded_org, admin):
+    marge, ned, _ = await _clientes(db, seeded_org["org"].id)
+    await app_client.post("/api/v1/campaigns/consents", headers=admin,
+                          json={"customer_ids": [str(marge.id)], "source": "Formulario firmado", "confirm": True})
+    await app_client.post("/api/v1/campaigns/opt-outs", headers=admin, json={"phone": "8185550101"})
+    await app_client.post("/api/v1/campaigns/opt-outs", headers=admin, json={"phone": "8185550102"})
+    for tel, palabra in (("8185550101", "START"), ("8185550102", "START"), ("8185550101", "YES")):
+        await svc.handle_inbound(db, phone=tel, text=palabra)
+    permisos = (await db.execute(select(MarketingConsent))).scalars().all()
+    for p in permisos:
+        await db.refresh(p)
+    assert {p.status for p in permisos} == {"revoked"}

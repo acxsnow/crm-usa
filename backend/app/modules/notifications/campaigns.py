@@ -37,7 +37,8 @@ from app.shared.normalize import normalize_phone
 logger = structlog.get_logger(__name__)
 
 OPT_OUT_FOOTER = "Responde STOP para no recibir más."
-START_WORDS = {"START", "UNSTOP", "YES", "SI", "ALTA"}
+# Solo palabras inequívocas: un "sí" puede ser respuesta a otra cosa.
+START_WORDS = {"START", "UNSTOP"}
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "ALTO", "PARAR", "BAJA", "CANCELAR"}
 START_HOUR, END_HOUR = 8, 21
 STATE_ZONES = {"AZ": "America/Phoenix", "CA": "America/Los_Angeles", "NV": "America/Los_Angeles"}
@@ -358,8 +359,12 @@ async def opt_in_again(db: AsyncSession, *, phone: str, word: str) -> int:
     tel = normalize_phone(phone)
     if not tel:
         return 0
-    filas = (await db.execute(select(MarketingConsent).where(MarketingConsent.phone == tel,
-                                                             MarketingConsent.status == "revoked"))).scalars().all()
+    # Solo donde ya había dado permiso y se dio de baja por SMS. Una baja pedida
+    # por otro medio (registro manual) o una organización donde nunca dio
+    # permiso no se reactivan con un START.
+    filas = (await db.execute(select(MarketingConsent).where(
+        MarketingConsent.phone == tel, MarketingConsent.status == "revoked",
+        MarketingConsent.granted_at.is_not(None), MarketingConsent.revoked_reason.like("Respondió %")))).scalars().all()
     for c in filas:
         c.status, c.source, c.granted_at = "granted", f"El cliente respondió {word}", _now()
         c.revoked_at, c.revoked_reason, c.granted_by_user_id = None, None, None
