@@ -114,7 +114,9 @@
 .form-choice input { width: auto !important; min-height: 0 !important; margin: 0; accent-color: var(--red); }
 .form-choice.is-on { border-color: var(--red); background: var(--red-wash); color: var(--red-dark); font-weight: 600; }
 .form-choice:focus-within { outline: 2px solid var(--red); outline-offset: 1px; }
-.form-media { display: grid; justify-items: start; gap: 0.15rem; border: 1.5px dashed var(--line-input); border-radius: 10px;
+/* `position: relative` ancla el input de archivo oculto (`.visually-hidden`, en posición absoluta) a su
+   etiqueta; sin esto quedaba fuera de la pantalla y la revisión se desbordaba 343 px (QA-REG-09). */
+.form-media { position: relative; display: grid; justify-items: start; gap: 0.15rem; border: 1.5px dashed var(--line-input); border-radius: 10px;
   padding: 0.8rem 1rem; background: var(--card-soft); font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; text-align: left; }
 .form-media small { font-weight: 500; color: var(--ink-soft); font-size: 0.76rem; }
 .form-media.is-on { border-style: solid; border-color: var(--ok); background: var(--ok-wash); color: var(--ok); }

@@ -412,3 +412,62 @@ async def test_users_read_lists_people_but_cannot_manage_them(
 async def test_a_technician_cannot_list_users(app_client, active_technician_user):
     headers = await _login(app_client, "tech@acme-demo.com")
     assert (await app_client.get("/api/v1/users", headers=headers)).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Ficha de solo lectura en Equipo
+# ---------------------------------------------------------------------------
+
+async def test_profile_shows_programs_and_zones_of_a_salesperson(
+    app_client, active_admin_user, active_salesperson_user
+):
+    from tests.field_helpers import headers_for
+
+    admin = await headers_for(app_client, "admin@acme-demo.com")
+    assert (await app_client.post("/api/v1/programs/install-defaults", headers=admin)).status_code == 200
+    az = next(p for p in (await app_client.get("/api/v1/programs", headers=admin)).json() if p["code"] == "AZ_EFFICIENCY")
+    zona = (await app_client.post(f"/api/v1/programs/{az['id']}/zones", headers=admin,
+                                  json={"name": "Parque Luna Roja", "state": "AZ", "city": "Phoenix"})).json()
+    await app_client.put(f"/api/v1/zones/{zona['id']}/salespeople", headers=admin,
+                         json={"user_ids": [str(active_salesperson_user.id)]})
+
+    ficha = (await app_client.get(f"/api/v1/users/{active_salesperson_user.id}/profile", headers=admin)).json()
+    assert ficha["role_names"] == ["Vendedor"]
+    assert ficha["zones"] == [{"program_code": "AZ_EFFICIENCY", "program_name": az["name"],
+                               "zone_name": "Parque Luna Roja", "city": "Phoenix", "state": "AZ", "active": True}]
+    assert ficha["invited_at"]
+    assert ficha["has_invitation"] is False  # lo creó la prueba directamente, sin invitación
+
+
+async def test_profile_shows_who_invited_and_when_the_person_joined(app_client, active_admin_user, monkeypatch):
+    tokens = {}
+
+    async def falso(*, to, template, context):
+        tokens[to] = context["invite_link"].split("token=")[1]
+
+    monkeypatch.setattr(user_service, "send_email", falso)
+    admin = await _login(app_client, "admin@acme-demo.com")
+    nuevo = (await app_client.post("/api/v1/users", headers=admin, json={
+        "email": "nueva@acme-demo.com", "full_name": "Nueva Persona", "role_codes": ["salesperson"]})).json()
+
+    ficha = (await app_client.get(f"/api/v1/users/{nuevo['id']}/profile", headers=admin)).json()
+    assert ficha["invited_by"] == active_admin_user.full_name
+    assert ficha["joined_at"] is None  # todavía no acepta
+    assert ficha["has_invitation"] is True
+
+    r = await app_client.post("/api/v1/auth/invitations/accept",
+                              json={"token": tokens["nueva@acme-demo.com"], "password": "UnaClaveLarga123!"})
+    assert r.status_code == 200, r.text
+    ficha = (await app_client.get(f"/api/v1/users/{nuevo['id']}/profile", headers=admin)).json()
+    assert ficha["joined_at"] is not None
+
+
+async def test_profile_needs_permission_and_stays_in_the_organization(
+    app_client, active_technician_user, active_admin_user, second_org_admin_user
+):
+    tecnico = await _login(app_client, "tech@acme-demo.com")
+    assert (await app_client.get(f"/api/v1/users/{active_admin_user.id}/profile",
+                                 headers=tecnico)).status_code == 403
+    ajeno = await _login(app_client, second_org_admin_user.email)
+    assert (await app_client.get(f"/api/v1/users/{active_admin_user.id}/profile",
+                                 headers=ajeno)).status_code == 404

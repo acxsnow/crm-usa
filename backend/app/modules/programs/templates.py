@@ -107,7 +107,11 @@ CATALOG: list[tuple] = [
     ("docs.mobile_home_decal", "Decal de la mobile home", "photo", "Documentos", {}),
     ("docs.additional_photos", "Fotos adicionales para el instalador", "photo", "Documentos", {}),
     # --- Autorización (§3.5) ------------------------------------------------
-    ("authorization.customer_name", "Nombre del cliente", "text", "Autorización", {}),
+    # «Nombre de quien firma» y no «Nombre del cliente»: con esa etiqueta se
+    # confundía con «Nombre completo» (customer.full_name), que es el que crea
+    # al cliente; este solo se escribe al firmar los términos.
+    ("authorization.customer_name", "Nombre de quien firma", "text", "Autorización",
+     {"help": "Lo escribe el cliente al firmar. No crea al cliente: para eso va «Nombre completo» en la sección Cliente."}),
     ("authorization.terms_accepted", "Acepto la autorización y los términos y condiciones", "terms_checkbox",
      "Autorización", {}),
     ("authorization.signature", "Firma del cliente", "signature", "Autorización", {}),

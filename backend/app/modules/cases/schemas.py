@@ -2,7 +2,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.modules.cases import stages
 
@@ -92,6 +92,21 @@ class CaseStageEventResponse(BaseModel):
     occurred_at: datetime
 
     model_config = {"from_attributes": True}
+
+    # Las etiquetas viajan con el evento, como `stage_label` en el expediente:
+    # el historial mostraba códigos internos («install_scheduled») cuando el
+    # diccionario del frontend no conocía un sub-estado (QA-REG-08).
+    @computed_field
+    @property
+    def to_stage_label(self) -> str:
+        return stages.STAGE_LABELS.get(self.to_stage_code, self.to_stage_code)
+
+    @computed_field
+    @property
+    def to_substatus_label(self) -> str | None:
+        if not self.to_substatus_code:
+            return None
+        return stages.SUBSTATUS_LABELS.get(self.to_substatus_code, self.to_substatus_code)
 
 
 class CaseActivityItem(BaseModel):

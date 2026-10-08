@@ -4,14 +4,17 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_organization_id, require_any_permission, require_permission
+from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
+from app.shared.errors import NotFoundError
 from app.shared.pagination import paginate, pagination_params
 from app.modules.users import service as users_service
-from app.modules.users.models import Role, User, UserRole, UserStatus
+from app.modules.users.models import Invitation, Role, User, UserRole, UserStatus
 from app.modules.users.schemas import (
     UserInviteRequest,
     UserListResponse,
+    UserProfileResponse,
+    UserZoneInfo,
     UserResponse,
     UserRolesUpdate,
     UserUpdate,
@@ -125,6 +128,72 @@ async def deactivate_user(
     return UserResponse(
         id=user.id, email=user.email_display, full_name=user.full_name, status=user.status,
         roles=[ur.role.code for ur in user.roles], last_login_at=user.last_login_at,
+    )
+
+
+@router.get("/{user_id}/profile", response_model=UserProfileResponse)
+async def user_profile(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("users.read", "users.manage")),
+):
+    """Ficha de solo lectura: quién es, cuándo entró al equipo y, si es
+    vendedor, en qué programas y zonas trabaja. Nada aquí se edita."""
+    user = (
+        await db.execute(select(User).where(User.id == user_id, User.organization_id == organization_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
+
+    invitacion = (
+        await db.execute(
+            select(Invitation)
+            .where(Invitation.organization_id == organization_id, Invitation.email == user.email)
+            .order_by(Invitation.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    invito = None
+    if invitacion and invitacion.invited_by_user_id:
+        invito = (await db.execute(select(User.full_name).where(User.id == invitacion.invited_by_user_id))).scalar()
+
+    # Las zonas son datos de Configuración de programas: solo se muestran a
+    # quien puede ver programas, para que la ficha no abra una puerta trasera.
+    zonas = None
+    permisos = get_effective_permissions(current_user)
+    if permisos & {"programs.read", "programs.manage", "zones.manage"}:
+        from app.modules.cases.models import Program, ProgramZone
+        from app.modules.programs.models import ZoneAssignment
+
+        filas = (
+            await db.execute(
+                select(Program.code, Program.name, ProgramZone.name, ProgramZone.city, ProgramZone.state, ProgramZone.active)
+                .select_from(ZoneAssignment)
+                .join(ProgramZone, ProgramZone.id == ZoneAssignment.zone_id)
+                .join(Program, Program.id == ProgramZone.program_id)
+                .where(ZoneAssignment.organization_id == organization_id, ZoneAssignment.user_id == user.id)
+                .order_by(Program.name, ProgramZone.name)
+            )
+        ).all()
+        zonas = [
+            UserZoneInfo(program_code=pc, program_name=pn, zone_name=zn, city=ci, state=st, active=ac)
+            for pc, pn, zn, ci, st, ac in filas
+        ]
+
+    return UserProfileResponse(
+        id=user.id,
+        email=user.email_display,
+        full_name=user.full_name,
+        status=user.status,
+        roles=[ur.role.code for ur in user.roles],
+        role_names=[ur.role.name for ur in user.roles],
+        invited_at=user.created_at,
+        invited_by=invito,
+        joined_at=invitacion.accepted_at if invitacion else None,
+        has_invitation=invitacion is not None,
+        last_login_at=user.last_login_at,
+        zones=zonas,
     )
 
 

@@ -163,7 +163,7 @@ Las claves deben permanecer estables aunque cambie la etiqueta o el idioma. Así
 | `home.notes` | Hogar | Notas del hogar | `textarea` |
 | `eligibility.programs` | Elegibilidad | Programas de beneficio en los que participa el hogar | `multi_select` |
 | `eligibility.other_program` | Elegibilidad | Otro programa/documento aceptado | `text` |
-| `authorization.customer_name` | Autorización | Nombre del cliente | `text` |
+| `authorization.customer_name` | Autorización | Nombre de quien firma | `text` |
 | `authorization.terms_accepted` | Autorización | Acepto la autorización y los T&C | `terms_checkbox` |
 | `authorization.signature` | Autorización | Firma del cliente | `signature` |
 | `authorization.signed_at` | Autorización | Fecha y hora de firma | `system_datetime` |
@@ -292,7 +292,7 @@ Las siguientes matrices son el mapa de implementación de las dos imágenes reci
 | `home.notes` | Notas | Texto largo | Opcional | — |
 | `eligibility.programs` | Programas del hogar | Selección múltiple | Obligatorio | Usar catálogo Arizona |
 | `eligibility.other_program` | Otro programa/documento | Texto | Condicional | Visible si selecciona otro |
-| `authorization.customer_name` | Nombre del cliente | Texto | Obligatorio | Puede autocompletarse desde cliente |
+| `authorization.customer_name` | Nombre de quien firma | Texto | Obligatorio | Puede autocompletarse desde cliente |
 | `authorization.terms_accepted` | Autorización/T&C | Casilla | Obligatorio | Debe aceptarse antes de firmar |
 | `authorization.signature` | Firma del cliente | Firma | Obligatorio | Firma presencial con vendedor |
 | `authorization.signed_at` | Fecha/hora de firma | Sistema | Automático | No editable por el usuario |
@@ -313,7 +313,7 @@ Las siguientes matrices son el mapa de implementación de las dos imágenes reci
 | `home.is_homeowner` | ¿Es propietario de la vivienda? | Sí/No | Obligatorio | — |
 | `home.residence_type` | Tipo de vivienda | Selección única | Obligatorio | Casa, mobile home, condominio, dúplex |
 | `eligibility.programs` | Programas del hogar | Selección múltiple | Obligatorio | CARE, FERA, Medi-Cal, CalFresh, WIC, CalWORKS, SSI, ninguno |
-| `authorization.customer_name` | Nombre del cliente | Texto | Obligatorio | Puede autocompletarse desde cliente |
+| `authorization.customer_name` | Nombre de quien firma | Texto | Obligatorio | Puede autocompletarse desde cliente |
 | `authorization.terms_accepted` | Autorización/T&C | Casilla | Obligatorio | Texto específico de TECH Clean |
 | `authorization.signature` | Firma del cliente | Firma | Obligatorio | Firma presencial con vendedor |
 | `authorization.signed_at` | Fecha/hora de firma | Sistema | Automático | La plantilla muestra fecha |

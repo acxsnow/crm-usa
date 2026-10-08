@@ -26,6 +26,38 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UserZoneInfo(BaseModel):
+    program_code: str
+    program_name: str
+    zone_name: str
+    city: str | None
+    state: str | None
+    active: bool
+
+
+class UserProfileResponse(BaseModel):
+    """Ficha de solo lectura de una persona del equipo (pantalla Equipo)."""
+
+    id: uuid.UUID
+    email: str
+    full_name: str
+    status: UserStatus
+    roles: list[str]
+    role_names: list[str]
+    # Cuándo se le envió la invitación (alta en el sistema) y quién la envió.
+    invited_at: datetime
+    invited_by: str | None
+    # Cuándo aceptó la invitación y creó su clave: su ingreso real al equipo.
+    joined_at: datetime | None
+    # Falso si se creó sin invitación (carga inicial o alta directa): entonces
+    # `joined_at` no aplica, no es que esté pendiente.
+    has_invitation: bool
+    last_login_at: datetime | None
+    # Programas y zonas de venta donde está asignado. `None` si quien consulta
+    # no puede ver programas; lista vacía si no tiene zonas.
+    zones: list[UserZoneInfo] | None
+
+
 class UserListResponse(BaseModel):
     items: list[UserResponse]
     total: int

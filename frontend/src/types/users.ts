@@ -43,3 +43,23 @@ export interface PermissionCatalog {
   modules: PermissionModule[];
   permissions: Permission[];
 }
+
+/** Ficha de solo lectura de una persona del equipo. */
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  status: UserStatus;
+  roles: string[];
+  role_names: string[];
+  /** Cuándo se le envió la invitación y quién. */
+  invited_at: string;
+  invited_by: string | null;
+  /** Cuándo aceptó la invitación y creó su clave. */
+  joined_at: string | null;
+  /** Falso si se creó sin invitación (carga inicial o alta directa). */
+  has_invitation: boolean;
+  last_login_at: string | null;
+  /** Programas y zonas de venta. `null` si quien consulta no puede ver programas. */
+  zones: { program_code: string; program_name: string; zone_name: string; city: string | null; state: string | null; active: boolean }[] | null;
+}

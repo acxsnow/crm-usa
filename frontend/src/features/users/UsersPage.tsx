@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { useTableFilters } from "@/lib/useTableFilters";
 import { UserEditPanel, rolesAsignables } from "./components/UserEditPanel";
+import { UserProfilePanel } from "./components/UserProfilePanel";
 import { useAuth } from "@/features/auth/AuthContext";
 import type { OrgUser } from "@/types/users";
 
@@ -26,6 +27,7 @@ export function UsersPage() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<OrgUser | null>(null);
+  const [viendo, setViendo] = useState<OrgUser | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: inviteUser,
@@ -114,7 +116,10 @@ export function UsersPage() {
       header: "",
       render: (u) => (
         <span className="row-actions">
-          <button className="link-button" onClick={() => setEditando(u)}>
+          <button className="link-button" onClick={() => { setEditando(null); setViendo(u); }}>
+            Ver ficha
+          </button>
+          <button className="link-button" onClick={() => { setViendo(null); setEditando(u); }}>
             Editar
           </button>
           {u.status === "active" ? (
@@ -188,6 +193,8 @@ export function UsersPage() {
           onClose={() => setEditando(null)}
         />
       )}
+
+      {viendo && <UserProfilePanel key={viendo.id} user={viendo} onClose={() => setViendo(null)} />}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar." />

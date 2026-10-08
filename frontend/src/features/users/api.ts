@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import type { OrgUser, Role, UserListResponse } from "@/types/users";
+import type { OrgUser, Role, UserListResponse, UserProfile } from "@/types/users";
 
 export async function listUsers(): Promise<UserListResponse> {
   const res = await apiClient.get<UserListResponse>("/users");
@@ -44,5 +44,10 @@ export async function updateUserRoles(userId: string, roleCodes: string[]): Prom
 
 export async function updateUser(userId: string, fullName: string): Promise<OrgUser> {
   const res = await apiClient.patch<OrgUser>(`/users/${userId}`, { full_name: fullName });
+  return res.data;
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfile> {
+  const res = await apiClient.get<UserProfile>(`/users/${userId}/profile`);
   return res.data;
 }

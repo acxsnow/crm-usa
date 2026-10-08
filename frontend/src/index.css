@@ -3419,3 +3419,42 @@ fieldset.field legend {
 .activity-panel .ghost-button {
   text-decoration: none;
 }
+
+/* Ficha de solo lectura de Equipo (UserProfilePanel). */
+.user-profile-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.user-profile-data dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+.user-profile-data dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+}
+
+.user-profile-zones h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.user-profile-zones ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+
+.user-profile-zones li {
+  margin: 0.3rem 0;
+}
+
+.user-profile-zones .status-pill {
+  margin-left: 0.5rem;
+}
