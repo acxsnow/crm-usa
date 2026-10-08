@@ -1,7 +1,8 @@
 __pycache__/
 *.pyc
-.env
-.venv/
+# Se comentan mientras se finaliza el proceso de desarrollo
+# .env
+# .venv/
 venv/
 node_modules/
 dist/
@@ -14,8 +15,12 @@ backend/storage/
 # Superpowers subagent-driven-development workspace (scratch, per-plan)
 .superpowers/
 
-# Claude Code (config local, skills y memoria de sesión)
-.claude/
+# Claude Code: se comparte la configuración del equipo (settings.json, skills,
+# agents); lo personal (settings.local.json, copia local del artefacto) queda fuera
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+!.claude/agents/
 skills-lock.json
 .vscode/
 
