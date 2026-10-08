@@ -128,6 +128,10 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("organization.manage", "Administrar la organización"),
     # Usuarios y roles
     ("users.manage", "Administrar usuarios"),
+    # Solo listar: lo necesitan pantallas que eligen o muestran personas
+    # (vendedores de una zona, filtros de Proyectos y Auditoría) sin que eso
+    # permita invitar, desactivar o cambiar el rol de nadie.
+    ("users.read", "Ver la lista de usuarios"),
     ("roles.manage", "Administrar roles y permisos"),
     # Auditoría
     ("audit.read", "Ver la auditoría"),
@@ -276,7 +280,7 @@ DEFAULT_MODULES: dict[str, Module] = {
     ),
     "team": Module(
         "Usuarios y roles",
-        ["users.manage", "roles.manage"],
+        ["users.manage", "users.read", "roles.manage"],
     ),
     "audit": Module(
         "Auditoría",
@@ -357,6 +361,16 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "quotes.manage",
         "reports.view",
         "programs.read",
+        # Configuración de programas completa, incluido publicar versiones, y
+        # las respuestas sensibles del formulario para revisar la elegibilidad.
+        "programs.manage",
+        "fields.manage",
+        "fields.view_sensitive",
+        "workflows.manage",
+        "workflows.publish",
+        "zones.manage",
+        # Para asignar vendedores a las zonas y filtrar por persona.
+        "users.read",
         "audit.read",
         "notifications.manage",
         "profile.manage",
@@ -398,6 +412,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "reports.generate",
         "reports.export",
         "audit.read",
+        "users.read",
         "notifications.read_own",
         "profile.manage",
     ],
@@ -415,6 +430,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "reports.generate",
         "reports.export",
         "audit.read",
+        "users.read",
         "notifications.read_own",
         "profile.manage",
     ],

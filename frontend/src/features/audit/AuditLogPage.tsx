@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { listAuditEventsPage } from "./api";
 import { listUsers } from "@/features/users/api";
+import { useAuth } from "@/features/auth/AuthContext";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -15,9 +16,12 @@ export function AuditLogPage() {
     queryKey: ["audit-events", page, extraParams],
     queryFn: () => listAuditEventsPage(page, PAGE_SIZE, extraParams),
   });
-  // Best-effort actor lookup/filter: only org admins reach this page, and they
-  // also carry users.manage, but fall back gracefully to the raw id if not.
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: listUsers, retry: false, throwOnError: false });
+  // Nombre y filtro por persona: con `users.read` (Administración, Contabilidad,
+  // Gerencia) o `users.manage`. Sin ninguno se muestra el identificador.
+  const { hasPermission } = useAuth();
+  const canListUsers = hasPermission("users.read") || hasPermission("users.manage");
+  const { data: users } = useQuery({ queryKey: ["users"], queryFn: listUsers, enabled: canListUsers,
+                                     retry: false, throwOnError: false });
 
   const actorName = (actorUserId: string | null) => {
     if (!actorUserId) return "Sistema";

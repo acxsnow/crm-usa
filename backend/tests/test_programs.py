@@ -326,3 +326,30 @@ def test_the_two_transitions_requested_by_billing_exist():
 async def test_install_defaults_can_run_from_the_service(db, seeded_org):
     r = await svc.install_defaults(db, organization_id=seeded_org["org"].id)
     assert r["programs_created"] == ["AZ_EFFICIENCY", "TECH_CLEAN_CA"]
+
+
+async def test_administration_configures_programs_and_assigns_salespeople(
+    app_client, active_admin_user, active_admin_staff_user, active_salesperson_user
+):
+    """Administración maneja la configuración de programas completa: campos,
+    formularios, publicar versiones y zonas con sus vendedores. Para asignar
+    vendedores le basta `users.read`; no puede administrar usuarios."""
+    await _instalar(app_client, await _admin(app_client))
+    adm = await headers_for(app_client, "admin-staff@acme-demo.com")
+    az = await _programa(app_client, adm, "AZ_EFFICIENCY")
+
+    r = await app_client.post("/api/v1/fields", headers=adm,
+                              json={"key": "qa.admin_staff", "label": "Campo de Administración", "field_type": "text"})
+    assert r.status_code == 201, r.text
+
+    zona = await app_client.post(f"/api/v1/programs/{az['id']}/zones", headers=adm,
+                                 json={"name": "Desert Palms", "state": "AZ", "city": "Phoenix"})
+    assert zona.status_code == 201, zona.text
+    usuarios = (await app_client.get("/api/v1/users", headers=adm)).json()["items"]
+    vendedor = next(u for u in usuarios if "salesperson" in u["roles"])
+    r = await app_client.put(f"/api/v1/zones/{zona.json()['id']}/salespeople", headers=adm,
+                             json={"user_ids": [vendedor["id"]]})
+    assert r.status_code == 200, r.text
+
+    assert (await app_client.post("/api/v1/users", headers=adm, json={
+        "email": "x@acme-demo.com", "full_name": "X", "role_codes": ["salesperson"]})).status_code == 403

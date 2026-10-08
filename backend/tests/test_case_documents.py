@@ -183,3 +183,14 @@ async def test_a_rejected_case_can_be_corrected_and_resubmitted(app_client, envi
     r = await app_client.post(f"/api/v1/cases/{e['id']}/submit", headers=e["vendedor"])
     assert r.status_code == 200, r.text
     assert (r.json()["stage_code"], r.json()["substatus_code"]) == ("pending_approval", "pending_review")
+
+
+async def test_administration_sees_sensitive_answers_to_check_eligibility(app_client, enviado, active_management_user):
+    """Para revisar la elegibilidad, Administración ve las respuestas sensibles
+    (programa de beneficio, discapacidad). Gerencia, que solo consulta, no."""
+    adm = (await app_client.get(f"/api/v1/cases/{enviado['id']}/form", headers=enviado["admin"])).json()
+    assert "•••" not in adm["answers"].values()
+    gerencia = await headers_for(app_client, "gerencia@acme-demo.com")
+    r = await app_client.get(f"/api/v1/cases/{enviado['id']}/form", headers=gerencia)
+    assert r.status_code == 200, r.text
+    assert "•••" in r.json()["answers"].values()

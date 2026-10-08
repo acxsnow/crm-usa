@@ -262,7 +262,9 @@ function Zones({ program, onError }: P) {
   const puede = hasPermission("zones.manage");
   const key = programKeys.part(program.id, "zones");
   const { data } = useQuery({ queryKey: key, queryFn: () => listZones(program.id) });
-  const { data: usuarios } = useQuery({ queryKey: ["users-all"], queryFn: listUsers, enabled: hasPermission("users.manage") });
+  // Basta con ver la lista (`users.read`): asignar vendedores no es administrar usuarios.
+  const { data: usuarios } = useQuery({ queryKey: ["users-all"], queryFn: listUsers,
+                                        enabled: hasPermission("users.read") || hasPermission("users.manage") });
   const vendedores = (usuarios?.items ?? []).filter((u) => u.roles.includes("salesperson") && u.status === "active");
   const nombre = (id: string) => usuarios?.items.find((u) => u.id === id)?.full_name ?? "Vendedor";
   const [nueva, setNueva] = useState(false);

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_organization_id, require_permission
+from app.api.deps import get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
 from app.shared.pagination import paginate, pagination_params
 from app.modules.users import service as users_service
@@ -25,7 +25,10 @@ async def list_users(
     response: Response,
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
-    current_user: User = Depends(require_permission("users.manage")),
+    # Listar no es administrar: `users.read` basta para ver quién es quién
+    # (asignar vendedores a una zona, filtros por persona). Invitar, activar,
+    # desactivar, cambiar rol y editar siguen exigiendo `users.manage`.
+    current_user: User = Depends(require_any_permission("users.read", "users.manage")),
     q: str | None = Query(None),
     status_filter: UserStatus | None = Query(None, alias="status"),
     role: str | None = Query(None),

@@ -138,7 +138,11 @@ Administración:
   `fields.manage`, `fields.view_sensitive`, `workflows.manage`,
   `workflows.publish`, `zones.manage`, `settings.manage`,
   `organization.manage`.
-- `team` — Usuarios y roles: `users.manage`, `roles.manage`.
+- `team` — Usuarios y roles: `users.manage`, `users.read`, `roles.manage`.
+  `users.read` solo deja **ver** la lista de usuarios (`GET /users`): lo usan
+  la asignación de vendedores a zonas y los filtros por persona de Proyectos y
+  Auditoría. Invitar, activar, desactivar, cambiar rol y editar siguen
+  exigiendo `users.manage`.
 - `audit` — Auditoría: `audit.read`.
 - `notifications` — Notificaciones: `notifications.manage`,
   `notifications.read_own`.
@@ -173,7 +177,11 @@ Administración; `finance_user` → Contabilidad; `read_only` → Gerencia.
 
 Esa migración es la **línea base**: sincronizó `role_permissions` con la
 matriz del catálogo. De ahí en adelante la matriz se administra desde la
-aplicación y **ninguna migración vuelve a sobrescribirla**.
+aplicación y **ninguna migración vuelve a sobrescribirla**. Las migraciones
+posteriores solo **agregan** permisos nuevos a los roles que corresponden
+(`0015`: `billing.configure` y `quotes.manage`; `0023`: `users.read` y la
+configuración de programas para Administración); nunca quitan lo que el
+Administrador ajustó.
 
 Su `downgrade()` restaura la estructura anterior, no las asignaciones exactas:
 un usuario que estaba en `supervisor` y pasó a Administración vuelve a

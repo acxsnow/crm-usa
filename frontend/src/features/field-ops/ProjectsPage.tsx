@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProject, listProjectsPage, seedDefaultChecklistTemplate } from "./api";
 import { listCustomers } from "@/features/crm/api";
 import { listUsers } from "@/features/users/api";
+import { useAuth } from "@/features/auth/AuthContext";
 import { PaginationControls } from "@/components/PaginationControls";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -24,10 +25,13 @@ export function ProjectsPage() {
   // a page of it — listCustomers() (unpaginated call, capped at the API's
   // 100-row default) is the right fit here, separate from listCustomersPage.
   const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
-  // Best-effort: only users with users.manage (org admins) can list users, so
-  // technicians reading their own assigned projects simply won't get this
-  // filter option — same graceful-degradation pattern as AuditLogPage.
-  const { data: allUsers } = useQuery({ queryKey: ["users"], queryFn: listUsers, retry: false, throwOnError: false });
+  // Solo quien puede ver la lista de usuarios (`users.read` o `users.manage`)
+  // la pide; el técnico, que ve solo sus proyectos, se queda sin este filtro en
+  // vez de recibir un 403 en cada visita.
+  const { hasPermission } = useAuth();
+  const canListUsers = hasPermission("users.read") || hasPermission("users.manage");
+  const { data: allUsers } = useQuery({ queryKey: ["users"], queryFn: listUsers, enabled: canListUsers,
+                                        retry: false, throwOnError: false });
 
   const [customerId, setCustomerId] = useState("");
   const [title, setTitle] = useState("");

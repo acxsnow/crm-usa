@@ -382,3 +382,33 @@ async def test_me_says_whether_the_person_can_grant_the_admin_role(
 
     otro = await _login(app_client, "admin-staff@acme-demo.com")
     assert (await app_client.get("/api/v1/auth/me", headers=otro)).json()["can_grant_admin"] is False
+
+
+# ---------------------------------------------------------------------------
+# users.read: ver la lista sin administrar a nadie
+# ---------------------------------------------------------------------------
+
+async def test_users_read_lists_people_but_cannot_manage_them(
+    app_client, active_admin_staff_user, active_salesperson_user
+):
+    """Administración necesita la lista para asignar vendedores a una zona y
+    filtrar por persona, pero no debe poder invitar, desactivar ni cambiar el
+    rol de nadie: eso sigue siendo `users.manage`."""
+    headers = await _login(app_client, "admin-staff@acme-demo.com")
+    r = await app_client.get("/api/v1/users", headers=headers)
+    assert r.status_code == 200, r.text
+    assert "vendedor@acme-demo.com" in {u["email"] for u in r.json()["items"]}
+
+    vid = str(active_salesperson_user.id)
+    assert (await app_client.post("/api/v1/users", headers=headers, json={
+        "email": "nuevo@acme-demo.com", "full_name": "Nuevo", "role_codes": ["salesperson"]})).status_code == 403
+    assert (await app_client.post(f"/api/v1/users/{vid}/deactivate", headers=headers)).status_code == 403
+    assert (await app_client.patch(f"/api/v1/users/{vid}/roles", headers=headers,
+                                   json={"role_codes": ["accounting"]})).status_code == 403
+    assert (await app_client.patch(f"/api/v1/users/{vid}", headers=headers,
+                                   json={"full_name": "Otro nombre"})).status_code == 403
+
+
+async def test_a_technician_cannot_list_users(app_client, active_technician_user):
+    headers = await _login(app_client, "tech@acme-demo.com")
+    assert (await app_client.get("/api/v1/users", headers=headers)).status_code == 403
