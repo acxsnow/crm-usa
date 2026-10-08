@@ -1,0 +1,211 @@
+/usr/local/lib/python3.12/site-packages/pytest_asyncio/plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+........................................................................ [ 15%]
+..............................F......................................... [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 76%]
+........................................................................ [ 91%]
+.........................................                                [100%]
+=================================== FAILURES ===================================
+___________________ test_sending_in_test_mode_marks_not_sent ___________________
+
+app_client = <httpx.AsyncClient object at 0x7645db5c7770>
+db = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x7645ded09c70>
+seeded_org = {'funder_statuses': {'approved': <app.modules.crm.models.FunderStatus object at 0x7645dc025610>, 'installed': <app.mod...rs.models.Role object at 0x7645dbfa7bc0>, 'management': <app.modules.users.models.Role object at 0x7645de0e80b0>, ...}}
+admin = {'Authorization': 'Bearer <token de prueba omitido>'}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7645ddfdb590>
+
+    async def test_sending_in_test_mode_marks_not_sent(app_client, db, seeded_org, admin, monkeypatch):
+        marge, _, _ = await _clientes(db, seeded_org["org"].id)
+        await app_client.post("/api/v1/campaigns/consents", headers=admin,
+                              json={"customer_ids": [str(marge.id)], "source": "Formulario firmado", "confirm": True})
+        c = (await app_client.post("/api/v1/campaigns", headers=admin, json={"name": "X", "message": "Oferta"})).json()
+        await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
+        monkeypatch.setattr(svc, "next_allowed", lambda moment, zone: moment)  # siempre de día
+>       assert await svc.send_due(db) == 1
+E       assert 0 == 1
+
+tests/test_campaigns.py:96: AssertionError
+=============================== warnings summary ===============================
+../usr/local/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /usr/local/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+../usr/local/lib/python3.12/site-packages/reportlab/lib/rl_safe_eval.py:12
+  /usr/local/lib/python3.12/site-packages/reportlab/lib/rl_safe_eval.py:12: DeprecationWarning: ast.NameConstant is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    haveNameConstant = hasattr(ast,'NameConstant')
+
+tests/test_audit_context.py::test_audit_events_record_the_request_context
+  /usr/local/lib/python3.12/site-packages/passlib/handlers/argon2.py:716: DeprecationWarning: Accessing argon2.__version__ is deprecated and will be removed in a future release. Use importlib.metadata directly to query for structlog's packaging metadata.
+    _argon2_cffi.__version__, max_version)
+
+tests/test_audit_context.py: 4 warnings
+tests/test_auth.py: 6 warnings
+tests/test_billing.py: 54 warnings
+tests/test_billing_claims.py: 82 warnings
+tests/test_billing_dashboard.py: 47 warnings
+tests/test_billing_pdf.py: 18 warnings
+tests/test_billing_program_config.py: 25 warnings
+tests/test_billing_quotes.py: 53 warnings
+tests/test_campaigns.py: 37 warnings
+tests/test_case_documents.py: 241 warnings
+tests/test_cases_api.py: 41 warnings
+tests/test_cases_intake.py: 82 warnings
+tests/test_checklist_templates.py: 14 warnings
+tests/test_crm.py: 12 warnings
+tests/test_customer_remote_signature.py: 16 warnings
+tests/test_email_resilience.py: 2 warnings
+tests/test_field_checklist.py: 12 warnings
+tests/test_field_clock.py: 1 warning
+tests/test_field_inspections.py: 27 warnings
+tests/test_field_installation.py: 21 warnings
+tests/test_field_ops.py: 67 warnings
+tests/test_field_permits.py: 17 warnings
+tests/test_field_reviews.py: 23 warnings
+tests/test_file_validation.py: 4 warnings
+tests/test_list_filters.py: 13 warnings
+tests/test_notifications.py: 9 warnings
+tests/test_programs.py: 81 warnings
+tests/test_rbac.py: 5 warnings
+tests/test_rbac_full.py: 66 warnings
+tests/test_roles.py: 27 warnings
+tests/test_security_hardening.py: 11 warnings
+tests/test_technician_monitor.py: 8 warnings
+tests/test_users_roles.py: 24 warnings
+  /usr/local/lib/python3.12/site-packages/jose/jwt.py:311: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = timegm(datetime.utcnow().utctimetuple())
+
+tests/test_field_checklist.py::test_evidence_for_an_item_takes_the_item_category
+tests/test_field_inspections.py::test_a_passed_inspection_marks_the_substatus_and_unlocks_billing
+tests/test_field_inspections.py::test_a_result_cannot_be_recorded_twice
+tests/test_field_inspections.py::test_the_full_retry_loop_after_a_failed_inspection
+tests/test_field_ops.py::test_checklist_item_requiring_evidence_blocks_completion_until_uploaded
+tests/test_field_ops.py::test_evidence_download_returns_watermarked_file
+tests/test_field_reviews.py::test_passing_the_inspection_needs_the_permit_signed_by_the_inspector
+tests/test_field_reviews.py::test_billing_entry_needs_the_confirmed_acta
+  /app/app/shared/files/watermark.py:51: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp_str = (captured_at or datetime.utcnow()).strftime("%Y-%m-%d %H:%M UTC")
+
+tests/test_field_ops.py::test_attestation_requires_both_signatures_before_pdf_generated
+  /app/app/modules/field_ops/pdf.py:102: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    f"Documento generado el {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}.",
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform linux, python 3.12.15-final-0 ----------
+Name                                            Stmts   Miss  Cover
+-------------------------------------------------------------------
+app/api/deps.py                                    64     17    73%
+app/api/v1/router.py                               34      0   100%
+app/boom_router.py                                  5      5     0%
+app/core/config.py                                 56      0   100%
+app/core/logging.py                                 5      0   100%
+app/core/rate_limit.py                             39      2    95%
+app/core/redis_client.py                           32     20    38%
+app/core/security.py                               34      2    94%
+app/core/token_denylist.py                         33      0   100%
+app/db/base.py                                     14      0   100%
+app/db/session.py                                  20     12    40%
+app/db/types.py                                    24      3    88%
+app/main.py                                        71      9    87%
+app/modules/auth/router.py                         63     13    79%
+app/modules/auth/schemas.py                        34      0   100%
+app/modules/auth/service.py                       116     70    40%
+app/modules/billing/case_hooks.py                  24      0   100%
+app/modules/billing/claims.py                     289    205    29%
+app/modules/billing/claims_router.py              214     15    93%
+app/modules/billing/dashboard.py                  103     38    63%
+app/modules/billing/models.py                     249      1    99%
+app/modules/billing/money.py                       13      0   100%
+app/modules/billing/numbering.py                   15      0   100%
+app/modules/billing/pdf.py                        183     47    74%
+app/modules/billing/program_config.py             172     91    47%
+app/modules/billing/program_router.py             123      9    93%
+app/modules/billing/quotes.py                     149     94    37%
+app/modules/billing/quotes_router.py               96      7    93%
+app/modules/billing/requirements.py                31     17    45%
+app/modules/billing/router.py                     111     43    61%
+app/modules/billing/schemas.py                    108      0   100%
+app/modules/billing/service.py                    166     83    50%
+app/modules/cases/__init__.py                       0      0   100%
+app/modules/cases/documents.py                    125     61    51%
+app/modules/cases/intake.py                       332    210    37%
+app/modules/cases/intake_router.py                127     20    84%
+app/modules/cases/models.py                       126      0   100%
+app/modules/cases/router.py                        71     24    66%
+app/modules/cases/schemas.py                       71      0   100%
+app/modules/cases/service.py                       89      2    98%
+app/modules/cases/stages.py                        43      1    98%
+app/modules/crm/defaults.py                         1      0   100%
+app/modules/crm/models.py                          67      0   100%
+app/modules/crm/router.py                         105     54    49%
+app/modules/crm/schemas.py                         94      0   100%
+app/modules/crm/service.py                          8      3    62%
+app/modules/field_ops/access.py                    16      3    81%
+app/modules/field_ops/case_flow.py                 35     11    69%
+app/modules/field_ops/case_hooks.py                34      0   100%
+app/modules/field_ops/catalogs.py                  19      0   100%
+app/modules/field_ops/checklist.py                 70     43    39%
+app/modules/field_ops/clock.py                     23      0   100%
+app/modules/field_ops/defaults.py                   5      0   100%
+app/modules/field_ops/guards.py                    37      7    81%
+app/modules/field_ops/inspections.py               81     42    48%
+app/modules/field_ops/installation.py             142     76    46%
+app/modules/field_ops/models.py                   206      0   100%
+app/modules/field_ops/pdf.py                       53      1    98%
+app/modules/field_ops/permits.py                   68     27    60%
+app/modules/field_ops/reviews.py                   45     23    49%
+app/modules/field_ops/router.py                   354    134    62%
+app/modules/field_ops/schemas.py                  303      0   100%
+app/modules/field_ops/service.py                  230    136    41%
+app/modules/notifications/__init__.py               0      0   100%
+app/modules/notifications/campaigns.py            395    206    48%
+app/modules/notifications/campaigns_router.py     211     67    68%
+app/modules/notifications/catalog.py                7      0   100%
+app/modules/notifications/dispatch.py              22      7    68%
+app/modules/notifications/email.py                 61     25    59%
+app/modules/notifications/marketing_email.py       52     22    58%
+app/modules/notifications/models.py               127      0   100%
+app/modules/notifications/router.py               133     61    54%
+app/modules/notifications/service.py              218     34    84%
+app/modules/notifications/sms.py                   31     18    42%
+app/modules/organizations/audit_router.py          19      1    95%
+app/modules/organizations/models.py                20      0   100%
+app/modules/organizations/router.py                26     11    58%
+app/modules/organizations/schemas.py               28      0   100%
+app/modules/programs/__init__.py                    0      0   100%
+app/modules/programs/engine.py                    108     18    83%
+app/modules/programs/models.py                     69      0   100%
+app/modules/programs/router.py                    297     31    90%
+app/modules/programs/service.py                   470    294    37%
+app/modules/programs/templates.py                  10      0   100%
+app/modules/users/models.py                        78      0   100%
+app/modules/users/roles_router.py                  35      7    80%
+app/modules/users/router.py                        49      9    82%
+app/modules/users/schemas.py                       49      0   100%
+app/modules/users/selectors.py                     40     17    58%
+app/modules/users/service.py                      164     89    46%
+app/shared/audit.py                                16      0   100%
+app/shared/audit_models.py                         18      0   100%
+app/shared/datetime_utils.py                        5      1    80%
+app/shared/error_handlers.py                       57      4    93%
+app/shared/errors.py                               18      0   100%
+app/shared/events.py                               16      0   100%
+app/shared/files/__init__.py                        0      0   100%
+app/shared/files/storage.py                        32      3    91%
+app/shared/files/validation.py                     45      4    91%
+app/shared/files/watermark.py                      49     16    67%
+app/shared/normalize.py                            20      4    80%
+app/shared/pagination.py                           16      3    81%
+app/shared/permissions.py                          19      3    84%
+app/shared/request_context.py                      13      0   100%
+-------------------------------------------------------------------
+TOTAL                                            8713   2636    70%
+
+FAIL Required test coverage of 70% not reached. Total coverage: 69.75%
+=========================== short test summary info ============================
+FAILED tests/test_campaigns.py::test_sending_in_test_mode_marks_not_sent - as...
+1 failed, 472 passed, 1162 warnings in 1435.89s (0:23:55)

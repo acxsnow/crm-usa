@@ -53,6 +53,45 @@ async def test_a_wrong_token_does_not_sign(app_client):
     assert r.status_code == 404
 
 
+async def test_public_signature_without_token_returns_404(app_client):
+    r = await app_client.post("/api/v1/public/customer-signature",
+                              json={"customer_name": "X", "signature_base64": firma_png()})
+    assert r.status_code == 404
+
+
+async def test_public_signature_keeps_query_token_compatibility(app_client, active_admin_user, correo):
+    headers = await headers_for(app_client, "admin@acme-demo.com")
+    pid = await _proyecto(app_client, headers)
+    r = await app_client.post(f"/api/v1/projects/{pid}/attestation/customer-signature-request", headers=headers)
+    assert r.status_code == 200, r.text
+    token = correo[0]["signing_link"].split("token=")[1]
+    r = await app_client.post(f"/api/v1/public/customer-signature?token={token}",
+                              json={"customer_name": "Cliente Firma", "signature_base64": firma_png()})
+    assert r.status_code == 200, r.text
+    assert r.json()["customer_signed_at"]
+
+
+async def test_asking_for_a_new_link_rotates_the_pending_token(app_client, active_admin_user, correo):
+    headers = await headers_for(app_client, "admin@acme-demo.com")
+    pid = await _proyecto(app_client, headers)
+    primera = await app_client.post(f"/api/v1/projects/{pid}/attestation/customer-signature-request", headers=headers)
+    assert primera.status_code == 200, primera.text
+    token_viejo = correo[-1]["signing_link"].split("token=")[1]
+    segunda = await app_client.post(f"/api/v1/projects/{pid}/attestation/customer-signature-request", headers=headers)
+    assert segunda.status_code == 200, segunda.text
+    token_nuevo = correo[-1]["signing_link"].split("token=")[1]
+    assert token_viejo != token_nuevo
+    assert (await app_client.get("/api/v1/public/customer-signature", params={"token": token_viejo})).status_code == 404
+    assert (await app_client.get("/api/v1/public/customer-signature", params={"token": token_nuevo})).status_code == 200
+
+
+async def test_requesting_signature_requires_customer_email(app_client, active_admin_user):
+    headers = await headers_for(app_client, "admin@acme-demo.com")
+    pid = await _proyecto(app_client, headers, email=None)
+    r = await app_client.post(f"/api/v1/projects/{pid}/attestation/customer-signature-request", headers=headers)
+    assert r.status_code == 400
+
+
 async def test_if_the_email_fails_the_api_says_so(app_client, active_admin_user, monkeypatch):
     async def cae(**kw):
         return False
