@@ -669,6 +669,26 @@ async def my_assignments(db, *, organization_id, user) -> list[dict]:
     return resultado
 
 
+async def program_options(db, *, organization_id, user) -> tuple[list[dict], bool]:
+    """Los programas que se pueden elegir para un expediente: los de las zonas
+    de la persona; si no tiene ninguna zona, todos los activos con formulario
+    publicado (vendedor recién llegado, Administrador). Devuelve (opciones,
+    son_las_suyas)."""
+    propias = await my_assignments(db, organization_id=organization_id, user=user)
+    if propias:
+        return propias, True
+    todas = []
+    for programa in await list_programs(db, organization_id=organization_id):
+        if not programa.active:
+            continue
+        version = await published_version(db, organization_id=organization_id, program_id=programa.id)
+        if version is None:
+            continue
+        zonas = [z for z in await list_zones(db, organization_id=organization_id, program_id=programa.id) if z.active]
+        todas.append({"program": programa, "zones": zonas, "version": version})
+    return todas, False
+
+
 # ---------------------------------------------------------------------------
 # Plantillas del sistema (D1.7)
 # ---------------------------------------------------------------------------

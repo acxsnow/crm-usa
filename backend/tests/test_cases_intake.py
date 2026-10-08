@@ -332,3 +332,12 @@ async def test_a_phone_alone_does_not_overwrite_another_customer(app_client, db,
     assert r.json()["case"]["customer_id"] == str(ajeno.id)
     await db.refresh(ajeno)
     assert ajeno.legal_name == "Ned Flanders"
+
+
+async def test_without_zones_every_published_program_is_an_option(app_client, db, seeded_org, active_salesperson_user,
+                                                                   active_admin_user):
+    await _tech(db, seeded_org["org"].id)
+    for email in ("vendedor@acme-demo.com", "admin@acme-demo.com"):
+        r = (await app_client.get("/api/v1/me/program-options", headers=await headers_for(app_client, email))).json()
+        assert r["assigned"] is False
+        assert {o["program"]["code"] for o in r["options"]} >= {"TECH_CLEAN_CA", "AZ_EFFICIENCY"}

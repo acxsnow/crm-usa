@@ -12,7 +12,10 @@ import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
 import {
   caseEvents,
+  caseProject,
   docKeys,
+  errorCode,
+  getCase,
   fileBlobUrl,
   getCaseForm,
   listDocuments,
@@ -45,6 +48,13 @@ export function CaseReviewPage() {
   const { data: docs } = useQuery({ queryKey: docKeys.list(caseId!), queryFn: () => listDocuments(caseId!) });
   const { data: eventos } = useQuery({ queryKey: docKeys.events(caseId!), queryFn: () => caseEvents(caseId!) });
   const { data: etapas } = useQuery({ queryKey: ["case-stages"], queryFn: listStages, staleTime: Infinity });
+  // Un expediente creado sin programa (antes del módulo 2 o por otra vía) no
+  // tiene formulario: igual se revisa, se decide y se cierra.
+  const sinFormulario = errorCode(error) === "program_required";
+  const { data: caseData } = useQuery({ queryKey: ["case", caseId], queryFn: () => getCase(caseId!), enabled: sinFormulario });
+  const veProyectos = hasPermission("projects.read_all") || hasPermission("projects.read_assigned");
+  const { data: proyecto } = useQuery({ queryKey: ["case-project", caseId], queryFn: () => caseProject(caseId!),
+    enabled: veProyectos, retry: false });
   const refrescar = () => Promise.all([
     qc.invalidateQueries({ queryKey: salesKeys.form(caseId!) }),
     qc.invalidateQueries({ queryKey: docKeys.list(caseId!) }),
@@ -54,14 +64,15 @@ export function CaseReviewPage() {
   ]);
 
   if (isLoading) return <p>Cargando…</p>;
-  if (error || !form) return <p className="form-error">{apiErrorMessage(error)}</p>;
-  const c = form.case;
+  if (!form && !sinFormulario) return <p className="form-error">{apiErrorMessage(error)}</p>;
+  const c = form?.case ?? caseData;
+  if (!c) return <p>Cargando…</p>;
   const etiqueta = (code: string) => etapas?.find((e) => e.code === code)?.label ?? code;
   const lista = docs ?? [];
   const pendientes = lista.filter((d) => d.review_status === "pending").length;
   const rechazados = lista.filter((d) => d.review_status === "rejected").length;
   const enRevision = ["pending_approval", "on_hold"].includes(c.stage_code);
-  const nombre = (form.answers["customer.full_name"] as string) || c.address_street || "Expediente";
+  const nombre = (form?.answers["customer.full_name"] as string) || c.address_street || "Expediente";
 
   return (
     <div className="review-page">
@@ -80,7 +91,8 @@ export function CaseReviewPage() {
                 <div><dt>Expediente</dt><dd className="acta-data">{c.case_number}</dd></div>
                 <div><dt>Dirección</dt><dd>{[c.address_street, c.address_unit, c.address_city, c.address_state].filter(Boolean).join(", ")}</dd></div>
                 <div><dt>Enviado</dt><dd>{c.submitted_at ? fecha(c.submitted_at) : "—"}</dd></div>
-                <div><dt>Formulario</dt><dd>versión {form.definition.version}</dd></div>
+                <div><dt>Formulario</dt><dd>{form ? `versión ${form.definition.version}` : "sin formulario"}</dd></div>
+                {proyecto && <div><dt>Instalación</dt><dd><Link to={`/projects/${proyecto.id}`} className="acta-link">{proyecto.title} ›</Link></dd></div>}
                 {c.approval_code && <div><dt>Código de aprobación</dt><dd className="acta-data">{c.approval_code}</dd></div>}
                 {c.application_number && <div><dt>N.º de solicitud</dt><dd className="acta-data">{c.application_number}</dd></div>}
               </dl>
@@ -102,7 +114,12 @@ export function CaseReviewPage() {
               {hasPermission("documents.manage") && !["closed"].includes(c.stage_code) && <ExtraDocument caseId={caseId!} onDone={refrescar} />}
             </section>
 
-            {form.acceptance && (
+            {sinFormulario && (
+              <p className="acta-note">Este expediente no tiene programa ni formulario: se creó antes del formulario por programa o por otra vía.
+                Se puede revisar su historial, decidir y cerrar{proyecto ? ", y su instalación está en el enlace de arriba" : ""}.</p>
+            )}
+
+            {form?.acceptance && (
               <section className="review-section">
                 <h2>Términos y firma</h2>
                 <div className="sales-signed">
@@ -115,12 +132,12 @@ export function CaseReviewPage() {
               </section>
             )}
 
-            <section className="review-section">
+            {form && <section className="review-section">
               <h2>Lo que respondió el cliente</h2>
               <FormRenderer evaluation={form.evaluation} answers={form.answers} onChange={() => undefined} disabled
                 media={{ upload: async () => "", open: openCaseFile,
                   fileName: (id) => form.files.find((f) => f.id === id)?.original_filename ?? undefined }} />
-            </section>
+            </section>}
           </article>
         </div>
 
