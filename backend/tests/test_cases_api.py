@@ -390,3 +390,11 @@ async def test_activity_hides_other_salespeople_and_other_organizations(
 async def test_a_technician_has_no_case_activity(app_client, active_technician_user):
     headers = await _login(app_client, "tech@acme-demo.com")
     assert (await app_client.get("/api/v1/cases/activity", headers=headers)).status_code == 403
+
+
+async def test_the_history_brings_spanish_labels(app_client, active_admin_user):
+    headers = await _login(app_client, "admin@acme-demo.com")
+    creado = (await app_client.post("/api/v1/cases", json=_puerta(stage_code="new_prospect"), headers=headers)).json()
+    evento = (await app_client.get(f"/api/v1/cases/{creado['id']}/events", headers=headers)).json()[0]
+    assert evento["to_stage_label"] == "Nuevo prospecto"
+    assert evento["to_substatus_label"] is None

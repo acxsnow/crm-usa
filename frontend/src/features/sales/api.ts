@@ -109,6 +109,8 @@ export interface QueueRow {
 export interface StageEvent {
   id: string; from_stage_code: string | null; to_stage_code: string; from_substatus_code: string | null;
   to_substatus_code: string | null; reason: string | null; actor_user_id: string | null; occurred_at: string;
+  /** Etiquetas en español que manda el backend (QA-REG-08). */
+  to_stage_label: string; to_substatus_label: string | null;
 }
 
 export const docKeys = {

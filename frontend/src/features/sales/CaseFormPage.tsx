@@ -37,6 +37,10 @@ const REVIEW = "__review__";
 export function CaseFormPage() {
   const { caseId } = useParams<{ caseId: string }>();
   const qc = useQueryClient();
+  // La evaluación en vivo exige `programs.read`. Contabilidad y Gerencia solo
+  // consultan el formulario: les basta la evaluación que trae el servidor, y
+  // pedirla en vivo les daba 403 (QA-REG-10).
+  const evaluaEnVivo = useAuth().hasPermission("programs.read");
   const geo = useGeolocation();
   useEffect(() => { geo.request(); }, [geo.request]);
   // Sin recargar al volver a la ventana: abrir la cámara o el selector de
@@ -70,7 +74,7 @@ export function CaseFormPage() {
   const firma = useMemo(() => JSON.stringify(answers), [answers]);
   // Evaluación en vivo con el mismo motor: una condición aparece al marcarla.
   useEffect(() => {
-    if (!versionId) return;
+    if (!versionId || !evaluaEnVivo) return;
     let vivo = true;
     const t = setTimeout(() => previewVersion(versionId, answers).then((r) => vivo && setEvaluacion(r)).catch(() => undefined), 300);
     return () => { vivo = false; clearTimeout(t); };

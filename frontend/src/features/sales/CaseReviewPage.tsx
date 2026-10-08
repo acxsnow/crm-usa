@@ -6,7 +6,6 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
-import { listStages } from "@/features/cases/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
@@ -47,7 +46,6 @@ export function CaseReviewPage() {
   const { data: form, isLoading, error } = useQuery({ queryKey: salesKeys.form(caseId!), queryFn: () => getCaseForm(caseId!), retry: false });
   const { data: docs } = useQuery({ queryKey: docKeys.list(caseId!), queryFn: () => listDocuments(caseId!) });
   const { data: eventos } = useQuery({ queryKey: docKeys.events(caseId!), queryFn: () => caseEvents(caseId!) });
-  const { data: etapas } = useQuery({ queryKey: ["case-stages"], queryFn: listStages, staleTime: Infinity });
   // Un expediente creado sin programa (antes del módulo 2 o por otra vía) no
   // tiene formulario: igual se revisa, se decide y se cierra.
   const sinFormulario = errorCode(error) === "program_required";
@@ -67,7 +65,6 @@ export function CaseReviewPage() {
   if (!form && !sinFormulario) return <p className="form-error">{apiErrorMessage(error)}</p>;
   const c = form?.case ?? caseData;
   if (!c) return <p>Cargando…</p>;
-  const etiqueta = (code: string) => etapas?.find((e) => e.code === code)?.label ?? code;
   const lista = docs ?? [];
   const pendientes = lista.filter((d) => d.review_status === "pending").length;
   const rechazados = lista.filter((d) => d.review_status === "rejected").length;
@@ -153,9 +150,9 @@ export function CaseReviewPage() {
               {[...(eventos ?? [])].reverse().map((e) => (
                 <li key={e.id} className={e.to_substatus_code === "returned" || e.to_stage_code === "rejected" ? "is-returned"
                   : e.to_stage_code === "approved" ? "is-confirmed" : ""}>
-                  {e.from_stage_code === e.to_stage_code && e.to_substatus_code
-                    ? SUBSTATUS_LABELS[e.to_substatus_code] ?? e.to_substatus_code
-                    : etiqueta(e.to_stage_code)}
+                  {e.from_stage_code === e.to_stage_code && e.to_substatus_label
+                    ? e.to_substatus_label
+                    : e.to_stage_label}
                   <span>{fecha(e.occurred_at)}</span>
                   {e.reason && <p>{e.reason}</p>}
                 </li>
@@ -168,8 +165,12 @@ export function CaseReviewPage() {
   );
 }
 
+/** «8 oct 2026, 5:33 a. m.»: con el mes en letras no se confunde día y mes,
+ *  que en EE. UU. se leen al revés («8/10/2026» es 10 de agosto allá). QA-REG-08. */
 function fecha(iso: string) {
-  return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(iso).toLocaleString("es-US", {
+    day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit",
+  });
 }
 
 // ---------------------------------------------------------------------------

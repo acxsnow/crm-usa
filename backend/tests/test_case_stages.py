@@ -180,3 +180,15 @@ def test_the_salesperson_matrix_cannot_approve():
     assert stages.STAGE_PERMISSION["pending_approval"] in vendedor
     for etapa in ("approved", "rejected", "on_hold", "permit_in_progress", "installed", "paid", "closed"):
         assert stages.STAGE_PERMISSION[etapa] not in vendedor, f"el vendedor puede entrar a {etapa}"
+
+
+def test_every_substatus_has_a_spanish_label():
+    """Un sub-estado sin etiqueta salía como código interno en el historial
+    («install_scheduled», QA-REG-08). Si se agrega uno nuevo, esto lo exige."""
+    todos = {s for subs in stages.SUBSTATUSES.values() for s in subs}
+    assert todos <= set(stages.SUBSTATUS_LABELS), todos - set(stages.SUBSTATUS_LABELS)
+
+
+def test_event_label_joins_stage_and_substatus():
+    assert stages.event_label("approved", None) == "Aprobado"
+    assert stages.event_label("ready_to_install", "install_scheduled") == "Listo para instalar · Instalación agendada"

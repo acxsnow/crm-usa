@@ -16,19 +16,21 @@ Análisis de QA sobre `main` (commit `39e30c4`), en local con `docker compose`. 
 
 ## Hallazgos
 
-| ID | Severidad | Hallazgo |
-|---|---|---|
-| QA-REG-01 | Alta | La integración continua de `main` queda en rojo: cobertura bajo el mínimo y una prueba que depende de la hora |
-| QA-REG-02 | Media | Vendedor y Técnico ven el directorio completo de clientes con sus datos personales |
-| QA-REG-03 | Media | La pantalla de inicio muestra actividad inventada, fija en el código |
-| QA-REG-04 | Media | La página pública de firma y los correos llevan la marca «PAP.CRM» |
-| QA-REG-05 | Media | El ingreso está en inglés y siempre dice «Invalid email or password.» |
-| QA-REG-06 | Media | La zona de venta y la jurisdicción de cobro se configuran por separado; la carga demo no deja la app lista para cobrar |
-| QA-REG-07 | Media | Una dirección inexistente muestra la pantalla de error técnico de React |
-| QA-REG-08 | Baja | El historial del expediente muestra un código interno |
-| QA-REG-09 | Baja | La revisión del expediente se desborda 343 px a lo ancho |
-| QA-REG-10 | Baja | Varias pantallas piden datos que el rol no puede ver (403/409 en consola) |
-| QA-REG-11 | Baja | El paquete del frontend pesa 620 KB en un solo archivo |
+| ID | Severidad | Hallazgo | Estado |
+|---|---|---|---|
+| QA-REG-01 | Alta | La integración continua de `main` queda en rojo: cobertura bajo el mínimo y una prueba que depende de la hora | En parte: la prueba que dependía de la hora la corrigió Mateo (`fffd2d4`); falta la cobertura |
+| QA-REG-02 | Media | Vendedor y Técnico ven el directorio completo de clientes con sus datos personales | Abierto |
+| QA-REG-03 | Media | La pantalla de inicio muestra actividad inventada, fija en el código | Resuelto el 8 oct en `devjj`, sin integrar a `main` |
+| QA-REG-04 | Media | La página pública de firma y los correos llevan la marca «PAP.CRM» | Abierto |
+| QA-REG-05 | Media | El ingreso está en inglés y siempre dice «Invalid email or password.» | Abierto |
+| QA-REG-06 | Media | La zona de venta y la jurisdicción de cobro se configuran por separado; la carga demo no deja la app lista para cobrar | Abierto |
+| QA-REG-07 | Media | Una dirección inexistente muestra la pantalla de error técnico de React | Abierto |
+| QA-REG-08 | Baja | El historial del expediente muestra un código interno | Resuelto el 8 oct en `devjj`, sin integrar a `main`: el backend manda las etiquetas de cada evento y las fechas llevan el mes en letras |
+| QA-REG-09 | Baja | La revisión del expediente se desborda 343 px a lo ancho | Resuelto el 8 oct en `devjj`, sin integrar a `main`: el input de archivo oculto se ancla a su etiqueta |
+| QA-REG-10 | Baja | Varias pantallas piden datos que el rol no puede ver (403/409 en consola) | Resuelto el 8 oct en `devjj`, sin integrar a `main`. El 409 del formulario sin programa se deja: es la respuesta prevista que muestra el selector de programa |
+| QA-REG-11 | Baja | El paquete del frontend pesa 620 KB en un solo archivo | Abierto |
+| QA-REG-12 | Baja | «Proyectos en curso» del Inicio marca 0 aunque hay proyectos | Abierto (encontrado el 8 oct al arreglar QA-REG-03) |
+| QA-REG-13 | Baja | Dos pruebas del backend fallan según el orden en que se corran | Abierto (encontrado el 8 oct al arreglar QA-REG-03) |
 
 ### QA-REG-01 · Alta · La integración continua de `main` queda en rojo
 
@@ -143,6 +145,22 @@ Con señal débil, cada petición que sobra cuesta.
 **Qué pasa:** `vite build` avisa que el archivo principal pesa 620 KB (177 KB comprimido). En un parque con señal débil, la primera carga del vendedor tarda.
 
 **Recomendación:** dividir por ruta con `import()`.
+
+### QA-REG-12 · Baja · «Proyectos en curso» del Inicio marca 0 aunque hay proyectos
+
+**Qué pasa:** la tarjeta cuenta los proyectos con estado `planning`, `scheduled` o `in_progress` ([DashboardHome.tsx](../../frontend/src/app/DashboardHome.tsx)), pero los proyectos que nacen de un expediente aprobado no usan esos estados. Con proyectos instalados y en cobro en la base, la tarjeta muestra 0.
+
+**Cómo se reproduce:** entrar como `admin@demo-org.com` después de correr el QA de punta a punta y mirar la tarjeta «Proyectos en curso».
+
+**Recomendación:** contar por la etapa del expediente (aprobado a inspección pendiente) o alinear los estados del proyecto, y que la tarjeta diga qué cuenta.
+
+### QA-REG-13 · Baja · Dos pruebas del backend fallan según el orden en que se corran
+
+**Qué pasa:** si `tests/test_cases_api.py` corre justo antes que `tests/test_cases_service.py`, fallan `test_a_guard_can_block_a_transition` y `test_changing_the_stage_clears_the_previous_substatus`: quedan registrados los efectos de campo (crear el proyecto al aprobar) y el expediente de la prueba no tiene cliente. Solas pasan. En la corrida completa no aparece porque `test_cases_intake.py` corre en medio y limpia los registros. Ya pasaba antes de los cambios del 8 de octubre.
+
+**Cómo se reproduce:** `python -m pytest tests/test_cases_api.py tests/test_cases_service.py`.
+
+**Recomendación:** que `test_cases_api.py` limpie guardas y efectos al terminar, como ya lo hacen `test_programs.py` y `test_case_documents.py` con su fixture `_clean_registries`.
 
 ## Lo que se verificó y está bien
 

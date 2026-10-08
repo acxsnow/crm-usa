@@ -328,6 +328,10 @@ function useGeolocation() {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { hasPermission, user } = useAuth();
+  // Contabilidad abre el acta para cobrar pero no ve evidencias: sin esto la
+  // pantalla las pedía igual y recibía 403 (QA-REG-10).
+  const puedeVerEvidencias = hasPermission("evidence.read_all") || hasPermission("evidence.read_assigned");
   // De dónde se llegó (la Agenda o la lista de proyectos lo pasan al abrir).
   // Sin eso, por ejemplo con un enlace directo, se vuelve a Proyectos.
   const volver = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? {};
@@ -350,7 +354,7 @@ export function ProjectDetailPage() {
   const { data: evidenceData } = useQuery({
     queryKey: ["project-evidence", projectId, evidencePage],
     queryFn: () => listProjectEvidencePage(projectId!, evidencePage, EVIDENCE_PAGE_SIZE),
-    enabled: !!projectId,
+    enabled: !!projectId && puedeVerEvidencias,
   });
   const evidence = evidenceData?.items;
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
@@ -365,7 +369,6 @@ export function ProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const { hasPermission, user } = useAuth();
   const { data: catalogs } = useFieldCatalogs();
   const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
   const [file, setFile] = useState<File | null>(null);
@@ -485,6 +488,7 @@ export function ProjectDetailPage() {
           </span>
         </header>
 
+        {puedeVerEvidencias && (
         <section className="annex-section" aria-labelledby="anexo-evidencias">
           <div className="annex-section-head">
             <h3 id="anexo-evidencias">Evidencias</h3>
@@ -541,6 +545,7 @@ export function ProjectDetailPage() {
             <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
           )}
         </section>
+        )}
 
         <section className="annex-section" aria-labelledby="anexo-firmas">
           <div className="annex-section-head">
