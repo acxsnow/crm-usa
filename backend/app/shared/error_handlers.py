@@ -24,6 +24,7 @@ from app.shared.errors import (
     AuthenticationError,
     ConflictError,
     DomainError,
+    ExternalServiceError,
     ForbiddenError,
     InvalidInputError,
     NotFoundError,
@@ -32,6 +33,7 @@ from app.shared.errors import (
 logger = structlog.get_logger(__name__)
 
 DOMAIN_ERROR_STATUS: dict[type[DomainError], int] = {
+    ExternalServiceError: 502,
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,
     NotFoundError: status.HTTP_404_NOT_FOUND,
     ConflictError: status.HTTP_409_CONFLICT,

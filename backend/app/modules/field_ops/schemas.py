@@ -257,7 +257,9 @@ class PublicSignatureResponse(BaseModel):
 
 
 class PublicCustomerSignatureCapture(CustomerSignatureCapture):
-    pass
+    # La página pública manda el token en el cuerpo (no queda en registros de
+    # URL); se sigue aceptando en la URL por compatibilidad.
+    token: str | None = Field(default=None, max_length=200)
 
 
 # --- Módulo 5: permisos municipales ---------------------------------------

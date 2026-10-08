@@ -77,3 +77,10 @@ class ForbiddenError(DomainError):
     "puedes ver expedientes, pero no este"."""
 
     default_code = "forbidden"
+
+
+class ExternalServiceError(DomainError):
+    """Un servicio externo (correo, SMS) no respondió: lo que se pidió no se
+    pudo completar y hay que decirlo, no responder como si hubiera salido."""
+
+    default_code = "external_service_error"
