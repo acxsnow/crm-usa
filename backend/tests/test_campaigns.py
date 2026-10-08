@@ -88,11 +88,11 @@ async def test_stop_removes_the_number_even_from_queued_campaigns(app_client, db
 
 async def test_sending_in_test_mode_marks_not_sent(app_client, db, seeded_org, admin, monkeypatch):
     marge, _, _ = await _clientes(db, seeded_org["org"].id)
+    monkeypatch.setattr(svc, "next_allowed", lambda moment, zone: moment)  # siempre de día
     await app_client.post("/api/v1/campaigns/consents", headers=admin,
                           json={"customer_ids": [str(marge.id)], "source": "Formulario firmado", "confirm": True})
     c = (await app_client.post("/api/v1/campaigns", headers=admin, json={"name": "X", "message": "Oferta"})).json()
     await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
-    monkeypatch.setattr(svc, "next_allowed", lambda moment, zone: moment)  # siempre de día
     assert await svc.send_due(db) == 1
     r = (await app_client.get(f"/api/v1/campaigns/{c['id']}", headers=admin)).json()
     assert r["status"] == "sent" and r["stats"]["skipped"] == 1
