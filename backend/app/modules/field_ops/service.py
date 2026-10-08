@@ -23,6 +23,7 @@ from app.modules.field_ops.models import (
 )
 from app.modules.field_ops.pdf import build_attestation_pdf, decode_signature_png
 from app.shared.files.storage import save_bytes
+from app.shared.datetime_utils import as_utc
 from app.shared.files.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError
@@ -470,14 +471,21 @@ async def create_customer_signature_request(
     await db.commit()
     await db.refresh(token)
     link = f"{settings.FRONTEND_APP_URL}/customer-signature?token={raw_token}"
-    await send_email(to=customer.email, template="customer_signature_request", context={"signing_link": link, "project_title": project.title, "expires_at": token.expires_at.isoformat()})
+    enviado = await send_email(to=customer.email, template="customer_signature_request", context={"signing_link": link, "project_title": project.title, "expires_at": token.expires_at.isoformat()})
+    if not enviado:
+        # El enlace quedó creado; pedirlo de nuevo genera otro. Decir «enviado»
+        # aquí dejaba al cliente esperando un correo que nunca llegó.
+        from app.shared.errors import ExternalServiceError
+
+        raise ExternalServiceError(f"No se pudo enviar el correo a {customer.email}. Revisa la configuración de correo "
+                                   "e inténtalo de nuevo.", code="email_not_sent")
     return token
 
 
 async def get_public_signature_request(db: AsyncSession, *, raw_token: str) -> tuple[CustomerSignatureToken, Attestation, Project]:
     token = (await db.execute(select(CustomerSignatureToken).where(CustomerSignatureToken.token_hash == hash_token(raw_token)))).scalar_one_or_none()
     invalid = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El enlace no es válido o ya expiró.")
-    if not token or token.revoked_at or token.signed_at or token.expires_at < datetime.now(timezone.utc):
+    if not token or token.revoked_at or token.signed_at or as_utc(token.expires_at) < datetime.now(timezone.utc):
         raise invalid
     attestation = (await db.execute(select(Attestation).where(Attestation.id == token.attestation_id))).scalar_one()
     project = (await db.execute(select(Project).where(Project.id == attestation.project_id))).scalar_one()
