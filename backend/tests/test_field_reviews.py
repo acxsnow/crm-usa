@@ -205,3 +205,14 @@ async def test_releasing_the_order_without_a_permit_moves_the_case_to_ready_to_i
         headers=headers)  # futuro: la fecha local puede ir detrás de la de la organización
     assert resp.status_code == 200, resp.text
     assert (await refreshed_case(db, case)).stage_code == "ready_to_install"
+
+
+async def test_a_case_links_to_its_project(app_client, db, seeded_org, active_admin_staff_user, active_salesperson_user):
+    from tests.field_helpers import approved_case_with_project
+
+    case, project = await approved_case_with_project(db, seeded_org["org"].id)
+    admin = await headers_for(app_client, active_admin_staff_user.email)
+    r = await app_client.get(f"/api/v1/cases/{case.id}/project", headers=admin)
+    assert r.status_code == 200 and r.json()["id"] == str(project.id)
+    vendedor = await headers_for(app_client, active_salesperson_user.email)
+    assert (await app_client.get(f"/api/v1/cases/{case.id}/project", headers=vendedor)).status_code == 403

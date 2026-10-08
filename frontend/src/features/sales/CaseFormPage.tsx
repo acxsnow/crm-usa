@@ -16,7 +16,8 @@ import type { Evaluation } from "@/types/programs";
 import {
   acceptTerms,
   getCaseForm,
-  myPrograms,
+  getCase,
+  programOptions,
   openCaseFile,
   saveStep,
   salesKeys,
@@ -209,25 +210,60 @@ export function CaseFormPage() {
 }
 
 function ChooseProgram({ caseId, onDone }: { caseId: string; onDone: () => void }) {
-  const { data: mios } = useQuery({ queryKey: salesKeys.mine, queryFn: myPrograms });
+  const { hasPermission } = useAuth();
+  const puedeElegir = hasPermission("cases.create");
+  const { data: c } = useQuery({ queryKey: ["case", caseId], queryFn: () => getCase(caseId) });
+  const { data: opciones } = useQuery({ queryKey: ["program-options"], queryFn: programOptions, enabled: puedeElegir });
   const [error, setError] = useState<string | null>(null);
   const elegir = useMutation({
     mutationFn: ({ p, z }: { p: string; z?: string }) => setCaseProgram(caseId, p, z),
     onSuccess: onDone, onError: (e) => setError(apiErrorMessage(e)),
   });
+  const atras = <Link to={puedeElegir ? "/sales" : "/cases"} className="acta-back"><span aria-hidden="true">‹</span> {puedeElegir ? "Mi día" : "Expedientes"}</Link>;
+  if (!c) return <p>Cargando…</p>;
+  // Un expediente que ya avanzó sin programa (creado antes del formulario por
+  // programa o por otra vía) no tiene formulario que llenar.
+  if (c.stage_code !== "new_prospect") {
+    return (
+      <div className="sales-page">{atras}
+        <article className="acta">
+          <h1 className="acta-title">{c.address_street ?? c.case_number}</h1>
+          <p className="acta-lead">{c.case_number} · {c.stage_label}</p>
+          <p className="acta-note">Este expediente no tiene programa ni formulario: se creó antes del formulario por programa o por otra vía.</p>
+          {(hasPermission("cases.review") || hasPermission("cases.approve")) && (
+            <Link to={`/cases/${caseId}/review`} className="acta-btn is-line">Ver revisión e historial</Link>
+          )}
+        </article>
+      </div>
+    );
+  }
+  if (!puedeElegir) {
+    return (
+      <div className="sales-page">{atras}
+        <article className="acta">
+          <h1 className="acta-title">{c.address_street ?? c.case_number}</h1>
+          <p className="acta-lead">{c.case_number} · Nuevo prospecto</p>
+          <p className="acta-empty">El vendedor todavía no elige el programa ni llena el formulario de este expediente.</p>
+        </article>
+      </div>
+    );
+  }
+  const lista = opciones?.options ?? [];
   return (
-    <div className="sales-page">
-      <Link to="/sales" className="acta-back"><span aria-hidden="true">‹</span> Mi día</Link>
+    <div className="sales-page">{atras}
       <article className="acta">
         <h1 className="acta-title">¿Para qué programa es?</h1>
         <p className="acta-lead">El formulario depende del programa. Una vez que guardes respuestas, ya no se cambia.</p>
+        {opciones && !opciones.assigned && lista.length > 0 && (
+          <p className="acta-note">No tienes zona asignada: se muestran todos los programas. Pídele a Administración que te asigne la tuya.</p>
+        )}
         {error && <p className="form-error">{error}</p>}
-        {mios && mios.length === 0 && <p className="acta-empty">No tienes programas asignados. Pídele a Administración que te asigne una zona.</p>}
+        {opciones && lista.length === 0 && <p className="acta-empty">No hay programas activos con formulario publicado. Pídele a Administración que publique uno.</p>}
         <div className="sales-results">
-          {(mios ?? []).map((m) => (
-            <button key={m.program.id} type="button" className="sales-result is-opened"
+          {lista.map((m) => (
+            <button key={m.program.id} type="button" className="sales-result is-opened" disabled={elegir.isPending}
               onClick={() => elegir.mutate({ p: m.program.id, z: m.zones.length === 1 ? m.zones[0].id : undefined })}>
-              <strong>{m.program.name}</strong><small>{m.zones.map((z) => z.name).join(" · ")}</small>
+              <strong>{m.program.name}</strong><small>{m.zones.map((z) => z.name).join(" · ") || "Sin zonas"}</small>
             </button>
           ))}
         </div>

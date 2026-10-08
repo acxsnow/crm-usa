@@ -147,3 +147,15 @@ export async function fileBlobUrl(fileId: string): Promise<string> {
   const r = await apiClient.get(`/case-files/${fileId}`, { responseType: "blob" });
   return URL.createObjectURL(r.data);
 }
+
+// ---------------------------------------------------------------------------
+// Expediente sin formulario y su proyecto
+// ---------------------------------------------------------------------------
+
+export interface ProgramOptions { assigned: boolean; options: MyProgram[] }
+export const programOptions = async () => (await apiClient.get<ProgramOptions>("/me/program-options")).data;
+export const getCase = async (caseId: string) => (await apiClient.get<Case>(`/cases/${caseId}`)).data;
+export const caseProject = async (caseId: string) =>
+  (await apiClient.get<{ id: string; title: string; status: string }>(`/cases/${caseId}/project`)).data;
+/** El código de error de la API (p. ej. "program_required"), si lo hay. */
+export const errorCode = (e: unknown) => (e as { response?: { data?: { code?: string } } })?.response?.data?.code;

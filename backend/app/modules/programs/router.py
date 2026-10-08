@@ -542,3 +542,16 @@ async def my_programs(db: AsyncSession = Depends(get_db), organization_id: uuid.
              "zones": [{"id": str(z.id), "code": z.code, "name": z.name, "state": z.state, "city": z.city}
                        for z in i["zones"]]}
             for i in await svc.my_assignments(db, organization_id=organization_id, user=current_user)]
+
+
+@router.get("/me/program-options")
+async def my_program_options(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                             current_user: User = Depends(get_current_user)) -> dict:
+    """Programas para elegir en un expediente: los de mis zonas o, si no tengo
+    zona, todos los activos con formulario publicado."""
+    opciones, propias = await svc.program_options(db, organization_id=organization_id, user=current_user)
+    return {"assigned": propias, "options": [
+        {"program": {"id": str(i["program"].id), "code": i["program"].code, "name": i["program"].name},
+         "version_id": str(i["version"].id), "version": i["version"].version,
+         "zones": [{"id": str(z.id), "code": z.code, "name": z.name, "state": z.state, "city": z.city}
+                   for z in i["zones"]]} for i in opciones]}

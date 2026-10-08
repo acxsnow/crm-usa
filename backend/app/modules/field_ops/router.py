@@ -983,3 +983,19 @@ async def upload_signed_permit(
         file=file, category="permit_signed", latitude=None, longitude=None, captured_at=None,
         task_id=None, checklist_item_id=None,
     )
+
+
+@router.get("/cases/{case_id}/project")
+async def project_of_case(
+    case_id: uuid.UUID, db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+) -> dict:
+    """El proyecto de instalación de un expediente (para enlazarlo desde la revisión)."""
+    from app.shared.errors import NotFoundError
+
+    stmt = select(Project).where(Project.organization_id == organization_id, Project.case_id == case_id)
+    stmt = _scope_projects_stmt(stmt, current_user)
+    project = (await db.execute(stmt)).scalars().first()
+    if project is None:
+        raise NotFoundError("Este expediente no tiene proyecto.", code="project_not_found")
+    return {"id": str(project.id), "title": project.title, "status": project.status}
