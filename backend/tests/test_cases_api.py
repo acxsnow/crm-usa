@@ -335,3 +335,58 @@ async def test_a_salesperson_cannot_move_someone_elses_case(
         headers=del_vendedor,
     )
     assert resp.status_code == 404, resp.text
+
+
+# ---------------------------------------------------------------------------
+# Actividad reciente (Inicio, QA-REG-03)
+# ---------------------------------------------------------------------------
+
+async def test_recent_activity_comes_from_the_stage_history_newest_first(app_client, active_admin_user):
+    """El panel del Inicio estaba escrito a mano; ahora sale del historial."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    caso = (await app_client.post("/api/v1/cases", json=_puerta(), headers=headers)).json()
+    r = await app_client.post(f"/api/v1/cases/{caso['id']}/transition",
+                              json={"to_stage": "new_prospect"}, headers=headers)
+    assert r.status_code == 200, r.text
+
+    actividad = (await app_client.get("/api/v1/cases/activity", headers=headers)).json()
+    assert [a["to_stage_code"] for a in actividad] == ["new_prospect", "no_contact"]
+    primero = actividad[0]
+    assert primero["case_number"] == caso["case_number"]
+    assert primero["label"] == "Nuevo prospecto"
+    assert primero["address"] == "123 Main St, Spc 14"
+    assert primero["customer_name"] is None  # nadie ha dado sus datos todavía
+    assert primero["actor_name"]
+
+
+async def test_administration_sees_the_activity_of_every_salesperson(
+    app_client, active_salesperson_user, active_admin_staff_user
+):
+    vendedor = await _login(app_client, "vendedor@acme-demo.com")
+    await app_client.post("/api/v1/cases", json=_puerta(), headers=vendedor)
+    administracion = await _login(app_client, "admin-staff@acme-demo.com")
+    actividad = (await app_client.get("/api/v1/cases/activity", headers=administracion)).json()
+    assert len(actividad) == 1
+    assert actividad[0]["actor_name"] == active_salesperson_user.full_name
+
+
+async def test_activity_hides_other_salespeople_and_other_organizations(
+    app_client, db, seeded_org, active_salesperson_user, active_admin_user, second_org_admin_user
+):
+    from tests.conftest import _make_role_user
+
+    await _make_role_user(db, seeded_org, role_code="salesperson", email="vendedor2@acme-demo.com", full_name="Otro")
+    otro = await _login(app_client, "vendedor2@acme-demo.com")
+    await app_client.post("/api/v1/cases", json=_puerta(address_unit="Spc 77"), headers=otro)
+
+    vendedor = await _login(app_client, "vendedor@acme-demo.com")
+    assert (await app_client.get("/api/v1/cases/activity", headers=vendedor)).json() == []
+    admin = await _login(app_client, "admin@acme-demo.com")
+    assert len((await app_client.get("/api/v1/cases/activity", headers=admin)).json()) == 1
+    ajeno = await _login(app_client, "admin@otra-demo.com")
+    assert (await app_client.get("/api/v1/cases/activity", headers=ajeno)).json() == []
+
+
+async def test_a_technician_has_no_case_activity(app_client, active_technician_user):
+    headers = await _login(app_client, "tech@acme-demo.com")
+    assert (await app_client.get("/api/v1/cases/activity", headers=headers)).status_code == 403

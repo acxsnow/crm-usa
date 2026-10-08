@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listOverdueTasks } from "@/features/field-ops/api";
-import { listCasesPage } from "@/features/cases/api";
+import { listCaseActivity, listCasesPage, type CaseActivityItem } from "@/features/cases/api";
 import { listCustomersPage } from "@/features/crm/api";
 import { listProjectsPage } from "@/features/field-ops/api";
 import { listInvoicesPage } from "@/features/billing/api";
@@ -19,6 +19,30 @@ async function loadAllPages<T>(fetchPage: (page: number, pageSize: number) => Pr
   return pages.flat();
 }
 
+/** «hace 12 min», «hace 3 h», «hace 2 días». */
+function haceCuanto(iso: string): string {
+  const segundos = (new Date(iso).getTime() - Date.now()) / 1000;
+  const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  const pasos: [Intl.RelativeTimeFormatUnit, number][] = [["day", 86400], ["hour", 3600], ["minute", 60]];
+  for (const [unidad, s] of pasos) {
+    if (Math.abs(segundos) >= s) return rtf.format(Math.round(segundos / s), unidad);
+  }
+  return "hace un momento";
+}
+
+/** Color del avatar según hacia dónde se movió el expediente. */
+function colorDeEtapa(stage: string): string {
+  if (["approved", "paid", "installed"].includes(stage)) return "green-bg";
+  if (["rejected", "closed", "not_interested", "not_eligible"].includes(stage)) return "coral-bg";
+  if (["permit_in_progress", "ready_to_install", "inspection_pending", "billing_in_progress"].includes(stage)) return "blue-bg";
+  return "purple-bg";
+}
+
+function iniciales(nombre: string | null): string {
+  if (!nombre) return "SIS";
+  return nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+}
+
 export function DashboardHome() {
   const { user, hasPermission } = useAuth();
   const canSeeTasks = hasPermission("projects.read_all") || hasPermission("projects.read_assigned");
@@ -26,6 +50,23 @@ export function DashboardHome() {
     hasPermission("cases.read_own") || hasPermission("cases.read_all");
   const canSeeCustomers = hasPermission("customers.read");
   const canSeeFinance = hasPermission("invoices.read");
+  // Quien revisa abre el expediente en la revisión; el vendedor, en su formulario.
+  const abreRevision = hasPermission("cases.review") || hasPermission("cases.approve") || hasPermission("documents.review");
+
+  // Actividad real (QA-REG-03): los últimos cambios de etapa que este usuario
+  // puede ver, sacados del historial del expediente. Antes eran filas fijas.
+  const { data: actividad } = useQuery({
+    queryKey: ["dashboard-case-activity"],
+    queryFn: () => listCaseActivity(8),
+    enabled: canSeeCases,
+  });
+
+  const accionesRapidas = [
+    { show: hasPermission("cases.create"), to: "/sales/visit", icon: "+", color: "coral", title: "Tocar una puerta", hint: "Abre el expediente de una visita" },
+    { show: canSeeCases, to: "/cases", icon: "✓", color: "purple", title: "Ver expedientes", hint: "El tablero por etapa" },
+    { show: canSeeTasks, to: "/projects", icon: "▣", color: "blue", title: "Ver proyectos", hint: "Instalaciones en curso" },
+    { show: canSeeCustomers, to: "/customers", icon: "♙", color: "green", title: "Ver clientes", hint: "Consulta tu cartera" },
+  ].filter((a) => a.show);
 
   // Expedientes que siguen en juego: los que ya abrieron la puerta y todavía
   // no se cerraron. Reemplaza el conteo de prospectos del modelo anterior.
@@ -83,8 +124,43 @@ export function DashboardHome() {
         <article className="metric-card"><div className="metric-icon green">$</div><div><span>Cobrado este mes</span><strong>{canSeeFinance ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(monthlyCollected) : "—"}</strong><small className="neutral">• Pagos registrados en {monthName}</small></div></article>
       </section>
       <div className="dashboard-columns">
-        <section className="panel activity-panel"><div className="panel-heading"><div><h2>Actividad reciente</h2><p>El pulso de tu equipo en campo</p></div><button className="ghost-button">Ver todo →</button></div><div className="activity-list"><div className="activity-item"><span className="activity-avatar coral-bg">MC</span><div><strong>María convirtió un prospecto</strong><p>James Wilson · Programa CARE</p></div><time>Hace 12 min</time></div><div className="activity-item"><span className="activity-avatar blue-bg">JR</span><div><strong>Nuevo proyecto creado</strong><p>Instalación · 2847 Mission St.</p></div><time>Hace 38 min</time></div><div className="activity-item"><span className="activity-avatar purple-bg">AL</span><div><strong>Factura marcada como pagada</strong><p>INV-2026-0042 · $2,450.00</p></div><time>Hace 1 h</time></div><div className="activity-item"><span className="activity-avatar green-bg">DP</span><div><strong>Visita de campo completada</strong><p>Robert Chen · San Francisco</p></div><time>Hace 2 h</time></div></div></section>
-        <section className="panel quick-panel"><div className="panel-heading"><div><h2>Acciones rápidas</h2><p>Lo que puedes hacer ahora</p></div></div><Link to="/leads" className="quick-action"><span className="quick-icon coral">+</span><span><strong>Agregar prospecto</strong><small>Registra un nuevo contacto</small></span><b>→</b></Link><Link to="/projects" className="quick-action"><span className="quick-icon blue">▣</span><span><strong>Crear proyecto</strong><small>Inicia una nueva instalación</small></span><b>→</b></Link><Link to="/customers" className="quick-action"><span className="quick-icon purple">♙</span><span><strong>Ver clientes</strong><small>Consulta tu cartera</small></span><b>→</b></Link></section>
+        {canSeeCases && (
+          <section className="panel activity-panel">
+            <div className="panel-heading">
+              <div><h2>Actividad reciente</h2><p>Los últimos movimientos de los expedientes</p></div>
+              <Link className="ghost-button" to="/cases">Ver todo →</Link>
+            </div>
+            <div className="activity-list">
+              {actividad && actividad.length === 0 && <p className="page-subtitle">Todavía no hay movimientos.</p>}
+              {(actividad ?? []).map((a: CaseActivityItem) => (
+                <Link
+                  key={`${a.case_id}-${a.occurred_at}-${a.to_stage_code}`}
+                  className="activity-item activity-link"
+                  to={abreRevision ? `/cases/${a.case_id}/review` : `/cases/${a.case_id}/form`}
+                >
+                  <span className={`activity-avatar ${colorDeEtapa(a.to_stage_code)}`}>{iniciales(a.actor_name)}</span>
+                  <div>
+                    <strong>{a.case_number} · {a.label}</strong>
+                    <p>{a.customer_name ?? a.address ?? "Sin dirección"} · por {a.actor_name ?? "el sistema"}</p>
+                  </div>
+                  <time dateTime={a.occurred_at}>{haceCuanto(a.occurred_at)}</time>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+        {accionesRapidas.length > 0 && (
+          <section className="panel quick-panel">
+            <div className="panel-heading"><div><h2>Acciones rápidas</h2><p>Lo que puedes hacer ahora</p></div></div>
+            {accionesRapidas.map((a) => (
+              <Link key={a.to} to={a.to} className="quick-action">
+                <span className={`quick-icon ${a.color}`}>{a.icon}</span>
+                <span><strong>{a.title}</strong><small>{a.hint}</small></span>
+                <b>→</b>
+              </Link>
+            ))}
+          </section>
+        )}
       </div>
 
       {canSeeTasks && (

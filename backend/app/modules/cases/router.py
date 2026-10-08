@@ -22,6 +22,7 @@ from app.modules.cases import service as case_service
 from app.modules.cases import stages
 from app.modules.cases.models import Case
 from app.modules.cases.schemas import (
+    CaseActivityItem,
     CaseCreateRequest,
     CaseResponse,
     CaseStageEventResponse,
@@ -60,6 +61,22 @@ async def stage_catalog(
             )
             for code in stages.STAGES
         ]
+    )
+
+
+# `/activity` también va antes de `/{case_id}`, por la misma razón que `/stages`.
+@router.get("/activity", response_model=list[CaseActivityItem])
+async def case_activity(
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("cases.read_own", "cases.read_all")),
+    limit: int = Query(8, ge=1, le=50),
+):
+    """Actividad reciente para el Inicio: los últimos cambios de etapa que el
+    usuario puede ver (el vendedor, los de sus expedientes)."""
+    propios = None if "cases.read_all" in get_effective_permissions(current_user) else current_user.id
+    return await case_service.recent_activity(
+        db, organization_id=organization_id, only_salesperson_id=propios, limit=limit
     )
 
 

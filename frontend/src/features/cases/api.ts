@@ -53,3 +53,25 @@ export async function listCasesPage(
 ): Promise<Page<Case>> {
   return fetchPage<Case>("/cases", page, pageSize, extraParams);
 }
+
+/** Un cambio de etapa reciente, para el panel de actividad del Inicio. */
+export interface CaseActivityItem {
+  case_id: string;
+  case_number: string;
+  /** Nulo mientras nadie abrió la puerta; entonces se muestra la dirección. */
+  customer_name: string | null;
+  address: string | null;
+  to_stage_code: string;
+  /** «Aprobado» o «Pendiente de aprobación · Devuelto al vendedor». */
+  label: string;
+  reason: string | null;
+  /** Nulo si lo hizo el sistema. */
+  actor_name: string | null;
+  occurred_at: string;
+}
+
+/** Los últimos cambios de etapa que el usuario puede ver (el vendedor, los suyos). */
+export async function listCaseActivity(limit = 8): Promise<CaseActivityItem[]> {
+  const res = await apiClient.get<CaseActivityItem[]>("/cases/activity", { params: { limit } });
+  return res.data;
+}

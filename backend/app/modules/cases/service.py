@@ -382,6 +382,45 @@ async def get_case_or_404(
     return case
 
 
+async def recent_activity(
+    db: AsyncSession, *, organization_id: uuid.UUID, only_salesperson_id: uuid.UUID | None, limit: int
+) -> list[dict]:
+    """Los últimos cambios de etapa de la organización, para el Inicio.
+
+    Sale del historial (`case_stage_events`), el mismo que alimenta los
+    reportes. `only_salesperson_id` deja solo los expedientes de ese vendedor:
+    quien no tiene `cases.read_all` ve su actividad, no la de los demás."""
+    from app.modules.crm.models import Customer
+    from app.modules.users.models import User
+
+    stmt = (
+        select(CaseStageEvent, Case, Customer.legal_name, User.full_name)
+        .join(Case, Case.id == CaseStageEvent.case_id)
+        .outerjoin(Customer, Customer.id == Case.customer_id)
+        .outerjoin(User, User.id == CaseStageEvent.actor_user_id)
+        .where(CaseStageEvent.organization_id == organization_id, Case.organization_id == organization_id)
+        .order_by(CaseStageEvent.occurred_at.desc(), CaseStageEvent.id.desc())
+        .limit(limit)
+    )
+    if only_salesperson_id is not None:
+        stmt = stmt.where(Case.assigned_salesperson_id == only_salesperson_id)
+    filas = (await db.execute(stmt)).all()
+    return [
+        {
+            "case_id": case.id,
+            "case_number": case.case_number,
+            "customer_name": cliente,
+            "address": ", ".join(p for p in (case.address_street, case.address_unit) if p) or None,
+            "to_stage_code": evento.to_stage_code,
+            "label": stages.event_label(evento.to_stage_code, evento.to_substatus_code),
+            "reason": evento.reason,
+            "actor_name": actor,
+            "occurred_at": evento.occurred_at,
+        }
+        for evento, case, cliente, actor in filas
+    ]
+
+
 async def list_stage_events(
     db: AsyncSession, *, organization_id: uuid.UUID, case_id: uuid.UUID
 ) -> list[CaseStageEvent]:

@@ -94,6 +94,22 @@ class CaseStageEventResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CaseActivityItem(BaseModel):
+    """Un cambio de etapa reciente, listo para mostrar en el Inicio."""
+
+    case_id: uuid.UUID
+    case_number: str
+    # Nulo mientras nadie abrió la puerta; entonces se muestra la dirección.
+    customer_name: str | None
+    address: str | None
+    to_stage_code: str
+    label: str
+    reason: str | None
+    # Nulo si lo hizo el sistema.
+    actor_name: str | None
+    occurred_at: datetime
+
+
 class StageInfo(BaseModel):
     code: str
     label: str

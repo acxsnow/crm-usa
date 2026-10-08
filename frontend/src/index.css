@@ -3405,3 +3405,17 @@ fieldset.field legend {
     transition: transform 0.22s ease, visibility 0.22s;
   }
 }
+
+/* Actividad reciente del Inicio: cada fila abre su expediente (QA-REG-03). */
+.activity-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.activity-link:hover strong {
+  text-decoration: underline;
+}
+
+.activity-panel .ghost-button {
+  text-decoration: none;
+}

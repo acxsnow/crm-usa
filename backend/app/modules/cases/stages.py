@@ -87,6 +87,28 @@ SUBSTATUSES: dict[str, set[str]] = {
     "billing_in_progress": {"invoice_pending", "submitted", "rejected_by_program"},
 }
 
+SUBSTATUS_LABELS: dict[str, str] = {
+    "pending_review": "En revisión",
+    "returned": "Devuelto al vendedor",
+    "ready_to_submit": "Listo para el programa",
+    "submitted_to_program": "Sometido al programa",
+    "program_review": "En revisión del programa",
+    "install_scheduled": "Instalación agendada",
+    "inspection_approved": "Inspección aprobada",
+    "invoice_pending": "Factura pendiente",
+    "submitted": "Radicado al programa",
+    "rejected_by_program": "Rechazado por el programa",
+}
+
+
+def event_label(stage_code: str, substatus_code: str | None) -> str:
+    """«Aprobado» o «Pendiente de aprobación · Devuelto al vendedor»."""
+    etapa = STAGE_LABELS.get(stage_code, stage_code)
+    if substatus_code:
+        return f"{etapa} · {SUBSTATUS_LABELS.get(substatus_code, substatus_code)}"
+    return etapa
+
+
 # La fecha hito que escribe la ENTRADA a cada etapa. Una etapa escribe como
 # máximo una, y ninguna fecha la escriben dos etapas: si no, el valor
 # dependería del orden en que se pasó por ellas y nadie sabría cuál ganó.
