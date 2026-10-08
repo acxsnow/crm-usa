@@ -98,6 +98,8 @@ las del bloque 1 bloquean la configuración del formulario del vendedor.
   qué información llega cuando el programa rechaza una factura y si se
   reabre el mismo invoice o se emite uno nuevo; facturación a clientes
   particulares fuera de programa.
+- Proveedores y cuentas por pagar: el detalle está en
+  `cuestionario-proveedores-y-pagos.md` (8 de octubre de 2026).
 
 ## 9. Roles
 
