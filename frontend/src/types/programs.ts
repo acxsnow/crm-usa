@@ -119,4 +119,6 @@ export interface ProgramCatalogs {
   requirements: Record<string, string>;
   phase_roles: Record<string, string>;
   languages: Record<string, string>;
+  /** Estados donde opera Delta HVAC (backend, tabla `geo_states`). */
+  states: Record<string, string>;
 }

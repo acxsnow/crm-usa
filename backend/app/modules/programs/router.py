@@ -16,6 +16,7 @@ from app.modules.programs import engine
 from app.modules.programs import service as svc
 from app.modules.programs.models import BINDINGS, FIELD_TYPES, PHASE_ROLES, REQUIREMENT_LEVELS
 from app.modules.users.models import User
+from app.shared.pagination import paginate, pagination_params
 
 router = APIRouter(tags=["programs"])
 
@@ -245,9 +246,22 @@ async def _program_out(db, organization_id, programa) -> ProgramOut:
 # ---------------------------------------------------------------------------
 
 @router.get("/programs/catalogs")
-async def catalogs(current_user: User = Depends(_read)) -> dict:
+async def catalogs(db: AsyncSession = Depends(get_db), current_user: User = Depends(_read)) -> dict:
     return {"field_types": FIELD_TYPES, "bindings": BINDINGS, "requirements": REQUIREMENT_LEVELS,
-            "phase_roles": PHASE_ROLES, "languages": svc.LANGUAGES}
+            "phase_roles": PHASE_ROLES, "languages": svc.LANGUAGES,
+            # Estados donde opera Delta HVAC (tabla `geo_states`).
+            "states": await svc.list_states(db)}
+
+
+@router.get("/geo/cities", response_model=list[str])
+async def geo_cities(response: Response, state: str, q: str | None = None, db: AsyncSession = Depends(get_db),
+                     pagination: tuple[int, int] = Depends(pagination_params),
+                     current_user: User = Depends(_read)):
+    """Ciudades y comunidades del censo de ese estado que contienen `q`, para
+    sugerir mientras se escribe. Paginado (`limit`/`offset`, total en
+    `X-Total-Count`); primero las que empiezan por `q`."""
+    limit, offset = pagination
+    return await paginate(db, svc.cities_query(state=state, q=q), limit=limit, offset=offset, response=response)
 
 
 @router.post("/programs/install-defaults")

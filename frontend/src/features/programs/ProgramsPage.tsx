@@ -25,8 +25,10 @@ import {
   setZoneSalespeople,
   updateProgram,
   updateZone,
+  useStates,
 } from "./api";
 import { FieldsCatalog } from "./FieldsCatalog";
+import { CitySuggestions } from "@/components/CitySuggestions";
 
 /**
  * Configuración de programas (módulo 1). Pestaña Programas: a la izquierda la
@@ -269,6 +271,7 @@ function Zones({ program, onError }: P) {
   const nombre = (id: string) => usuarios?.items.find((u) => u.id === id)?.full_name ?? "Vendedor";
   const [nueva, setNueva] = useState(false);
   const [form, setForm] = useState({ name: "", state: "AZ", city: "" });
+  const estados = useStates();
   const [asignando, setAsignando] = useState<string | null>(null);
   const after = { onSuccess: () => { onError(null); return qc.invalidateQueries({ queryKey: key }); },
                   onError: (e: unknown) => onError(apiErrorMessage(e)) };
@@ -320,13 +323,15 @@ function Zones({ program, onError }: P) {
       </ul>
       {nueva && (
         <form className="program-inline-form" onSubmit={(e) => { e.preventDefault(); crear.mutate(); }}>
-          <div className="field"><label htmlFor="z-name">Parque o comunidad</label>
-            <input id="z-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sunrise Mobile Park" autoFocus /></div>
-          <div className="field"><label htmlFor="z-city">Ciudad</label>
-            <input id="z-city" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Phoenix" /></div>
+          {/* Estado → ciudad → parque: las ciudades sugeridas dependen del estado. */}
           <div className="field"><label htmlFor="z-state">Estado</label>
-            <select id="z-state" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}>
-              <option value="CA">California</option><option value="AZ">Arizona</option><option value="NV">Nevada</option></select></div>
+            <select id="z-state" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} autoFocus>
+              {estados.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></div>
+          <div className="field"><label htmlFor="z-city">Ciudad</label>
+            <input id="z-city" list="z-city-options" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Phoenix" />
+            <CitySuggestions id="z-city-options" state={form.state} value={form.city} /></div>
+          <div className="field"><label htmlFor="z-name">Parque o comunidad</label>
+            <input id="z-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sunrise Mobile Park" /></div>
           <div className="acta-actions">
             <button type="button" className="acta-btn is-quiet" onClick={() => setNueva(false)}>Cancelar</button>
             <button type="submit" className="acta-btn is-primary" disabled={crear.isPending}>Guardar zona</button>

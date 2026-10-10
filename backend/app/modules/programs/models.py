@@ -192,3 +192,31 @@ class ZoneAssignment(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+
+
+# ---------------------------------------------------------------------------
+# Estados y ciudades: datos de referencia del sistema (no por organización).
+# ---------------------------------------------------------------------------
+# Los carga la migración 0024 con el censo de EE. UU. (Gazetteer 2023: ciudades,
+# pueblos y comunidades no incorporadas, CDP). Sirven para validar el estado y
+# sugerir la ciudad; las direcciones de expedientes y zonas se siguen guardando
+# como texto, tal como se capturaron.
+
+
+class GeoState(Base):
+    __tablename__ = "geo_states"
+
+    code: Mapped[str] = mapped_column(String(2), primary_key=True)
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
+    # Para respetar el horario del cliente (Arizona no cambia de hora en verano).
+    timezone: Mapped[str] = mapped_column(String(60), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class GeoCity(Base):
+    __tablename__ = "geo_cities"
+    __table_args__ = (UniqueConstraint("state_code", "name", name="uq_geo_city_state_name"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    state_code: Mapped[str] = mapped_column(String(2), ForeignKey("geo_states.code"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)

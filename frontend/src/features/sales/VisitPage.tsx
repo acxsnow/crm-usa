@@ -8,6 +8,8 @@ import "./sales.css";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { useGeolocation } from "@/lib/useGeolocation";
 import { VISIT_RESULTS, myPrograms, recordVisit, salesKeys } from "./api";
+import { useStates } from "@/features/programs/api";
+import { CitySuggestions } from "@/components/CitySuggestions";
 
 const MENSAJE: Record<string, string> = {
   created: "Visita registrada.",
@@ -29,6 +31,7 @@ export function VisitPage() {
   const [programa, setPrograma] = useState("");
   const [zona, setZona] = useState("");
   const [dir, setDir] = useState({ address_street: "", address_unit: "", address_city: "", address_state: "", address_zip: "" });
+  const estados = useStates();
   const [notas, setNotas] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState<string | null>(null);
@@ -105,12 +108,15 @@ export function VisitPage() {
               onChange={(e) => setDir({ ...dir, address_street: e.target.value })} /></div>
           <div className="form-field"><label className="form-label" htmlFor="v-unidad">Espacio o unidad</label>
             <input id="v-unidad" value={dir.address_unit} placeholder="Spc 14" onChange={(e) => setDir({ ...dir, address_unit: e.target.value })} /></div>
-          <div className="form-field"><label className="form-label" htmlFor="v-ciudad">Ciudad</label>
-            <input id="v-ciudad" value={dir.address_city} onChange={(e) => setDir({ ...dir, address_city: e.target.value })} /></div>
+          {/* El estado va primero: las ciudades sugeridas dependen de él. */}
           <div className="form-field"><label className="form-label" htmlFor="v-estado">Estado</label>
             <select id="v-estado" value={dir.address_state} onChange={(e) => setDir({ ...dir, address_state: e.target.value })}>
-              <option value="">—</option><option value="CA">California</option><option value="AZ">Arizona</option><option value="NV">Nevada</option>
+              <option value="">—</option>
+              {estados.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
             </select></div>
+          <div className="form-field"><label className="form-label" htmlFor="v-ciudad">Ciudad</label>
+            <input id="v-ciudad" list="v-ciudad-options" value={dir.address_city} onChange={(e) => setDir({ ...dir, address_city: e.target.value })} />
+            <CitySuggestions id="v-ciudad-options" state={dir.address_state || undefined} value={dir.address_city} /></div>
           <div className="form-field"><label className="form-label" htmlFor="v-zip">ZIP</label>
             <input id="v-zip" inputMode="numeric" value={dir.address_zip} onChange={(e) => setDir({ ...dir, address_zip: e.target.value })} /></div>
           <div className="form-field is-wide"><label className="form-label" htmlFor="v-notas">Notas (opcional)</label>

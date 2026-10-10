@@ -353,3 +353,52 @@ async def test_administration_configures_programs_and_assigns_salespeople(
 
     assert (await app_client.post("/api/v1/users", headers=adm, json={
         "email": "x@acme-demo.com", "full_name": "X", "role_codes": ["salesperson"]})).status_code == 403
+
+# ---------------------------------------------------------------------------
+# Estados y ciudades de referencia (geo_states, geo_cities)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+async def geo(db):
+    """Una muestra de las ciudades que carga la migración 0024 (los estados ya
+    los carga `conftest.py`)."""
+    from app.modules.programs.models import GeoCity
+
+    for state, name in [("AZ", "Tucson"), ("AZ", "Phoenix"), ("CA", "Los Angeles"), ("CA", "San Fernando"),
+                        ("CA", "Anaheim"), ("NV", "Las Vegas")]:
+        db.add(GeoCity(state_code=state, name=name))
+    await db.commit()
+
+
+async def test_the_catalog_lists_the_states_from_the_table(app_client, active_admin_user, geo):
+    cat = (await app_client.get("/api/v1/programs/catalogs", headers=await _admin(app_client))).json()
+    assert cat["states"] == {"CA": "California", "AZ": "Arizona", "NV": "Nevada"}
+
+
+async def test_cities_are_searched_and_paginated(app_client, active_admin_user, geo):
+    """La ciudad se busca en el servidor mientras se escribe, y pagina como el
+    resto de listados: `limit`/`offset` y el total en X-Total-Count."""
+    headers = await _admin(app_client)
+    r = await app_client.get("/api/v1/geo/cities?state=AZ", headers=headers)
+    assert r.json() == ["Phoenix", "Tucson"] and r.headers["X-Total-Count"] == "2"
+    r = await app_client.get("/api/v1/geo/cities?state=AZ&q=pho", headers=headers)
+    assert r.json() == ["Phoenix"] and r.headers["X-Total-Count"] == "1"
+    r = await app_client.get("/api/v1/geo/cities?state=AZ&limit=1&offset=1", headers=headers)
+    assert r.json() == ["Tucson"] and r.headers["X-Total-Count"] == "2"
+    # Primero las que empiezan por el texto; luego las que solo lo contienen.
+    r = await app_client.get("/api/v1/geo/cities?state=CA&q=an", headers=headers)
+    assert r.json() == ["Anaheim", "Los Angeles", "San Fernando"]
+    assert (await app_client.get("/api/v1/geo/cities?state=CO", headers=headers)).json() == []
+
+
+async def test_a_zone_only_takes_known_states_when_created_or_edited(app_client, active_admin_user, geo):
+    headers = await _admin(app_client)
+    await _instalar(app_client, headers)
+    az = await _programa(app_client, headers, "AZ_EFFICIENCY")
+    r = await app_client.post(f"/api/v1/programs/{az['id']}/zones", headers=headers,
+                              json={"name": "Parque Colorado", "state": "CO", "city": "Denver"})
+    assert r.status_code == 400 and r.json()["code"] == "invalid_state"
+    zona = (await app_client.post(f"/api/v1/programs/{az['id']}/zones", headers=headers,
+                                  json={"name": "Parque Sol", "state": "AZ", "city": "Phoenix"})).json()
+    r = await app_client.patch(f"/api/v1/zones/{zona['id']}", headers=headers, json={"state": "CO"})
+    assert r.status_code == 400 and r.json()["code"] == "invalid_state"

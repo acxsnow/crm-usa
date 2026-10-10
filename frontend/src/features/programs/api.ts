@@ -29,6 +29,29 @@ export function useProgramCatalogs() {
   });
 }
 
+/** Estados donde opera Delta HVAC, del catálogo (se pide una vez por sesión). */
+export function useStates(): [string, string][] {
+  const { data } = useProgramCatalogs();
+  return Object.entries(data?.states ?? {});
+}
+
+/**
+ * Ciudades del censo de ese estado que contienen `q` (tabla `geo_cities`):
+ * búsqueda en el servidor, paginada, las primeras `limit`. Quien la usa debe
+ * esperar a que se deje de escribir (ver `CitySuggestions`) para no consultar
+ * por cada tecla. Cada búsqueda queda guardada: repetirla no vuelve a pedir.
+ */
+export function useCitySuggestions(state: string | undefined, q: string, limit = 20) {
+  return useQuery({
+    queryKey: ["geo-cities", state, q, limit],
+    queryFn: async () =>
+      (await apiClient.get<string[]>("/geo/cities", { params: { state, q: q || undefined, limit } })).data,
+    enabled: !!state,
+    staleTime: Infinity,
+    placeholderData: (anterior) => anterior,
+  });
+}
+
 export const listPrograms = async () => (await apiClient.get<Program[]>("/programs")).data;
 export const createProgram = async (body: Partial<Program>) => (await apiClient.post<Program>("/programs", body)).data;
 export const updateProgram = async (id: string, body: Partial<Program>) =>

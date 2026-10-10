@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.rate_limit import clear_all_buckets
@@ -63,6 +64,12 @@ async def db_engine():
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=__import__("sqlalchemy.pool", fromlist=["StaticPool"]).StaticPool, connect_args={"check_same_thread": False})
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Datos de referencia que en la base real carga la migración 0024.
+        await conn.execute(text(
+            "INSERT INTO geo_states (code, name, timezone, sort_order) VALUES "
+            "('CA', 'California', 'America/Los_Angeles', 0), ('AZ', 'Arizona', 'America/Phoenix', 1), "
+            "('NV', 'Nevada', 'America/Los_Angeles', 2)"
+        ))
     yield engine
     await engine.dispose()
 

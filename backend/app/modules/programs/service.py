@@ -8,7 +8,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cases.models import Program, ProgramVersion, ProgramZone
@@ -20,6 +20,8 @@ from app.modules.programs.models import (
     REQUIREMENT_LEVELS,
     SELECT_TYPES,
     FieldDefinition,
+    GeoCity,
+    GeoState,
     ProgramTerms,
     WorkflowPhase,
     WorkflowStep,
@@ -586,14 +588,40 @@ async def list_zones(db, *, organization_id, program_id) -> list[ProgramZone]:
     )).scalars().all())
 
 
+async def list_states(db) -> dict[str, str]:
+    """Estados donde opera Delta HVAC (`geo_states`), en su orden: {"CA": "California", …}."""
+    filas = (await db.execute(select(GeoState.code, GeoState.name).order_by(GeoState.sort_order))).all()
+    return {code: name for code, name in filas}
+
+
+def cities_query(*, state: str, q: str | None):
+    """Ciudades del censo de ese estado (`geo_cities`) que contienen `q`, sin
+    importar mayúsculas: primero las que empiezan por `q` y luego el resto, en
+    orden alfabético. Se pagina en el router."""
+    stmt = select(GeoCity.name).where(GeoCity.state_code == state)
+    texto = (q or "").strip()
+    if not texto:
+        return stmt.order_by(GeoCity.name)
+    patron = texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    empieza = GeoCity.name.ilike(f"{patron}%", escape="\\")
+    return stmt.where(GeoCity.name.ilike(f"%{patron}%", escape="\\")).order_by(
+        case((empieza, 0), else_=1), GeoCity.name
+    )
+
+
+async def _require_state(db, state: str | None) -> None:
+    if state and await db.get(GeoState, state) is None:
+        validos = ", ".join(await list_states(db))
+        raise InvalidInputError(f"El estado es uno de: {validos}.", code="invalid_state")
+
+
 async def create_zone(db, *, organization_id, user, program_id, data) -> ProgramZone:
     await get_program(db, organization_id=organization_id, program_id=program_id)
     code = _slug(data.get("code") or data["name"]).upper()
     if (await db.execute(select(ProgramZone.id).where(ProgramZone.organization_id == organization_id,
                                                       ProgramZone.code == code))).first():
         raise ConflictError(f"Ya existe una zona con el código {code}.", code="zone_code_taken")
-    if data.get("state") and data["state"] not in ("CA", "AZ", "NV"):
-        raise InvalidInputError("El estado es CA, AZ o NV.", code="invalid_state")
+    await _require_state(db, data.get("state"))
     zona = ProgramZone(organization_id=organization_id, program_id=program_id, code=code, name=data["name"],
                        state=data.get("state"), city=data.get("city"), notes=data.get("notes"))
     db.add(zona)
@@ -606,6 +634,8 @@ async def create_zone(db, *, organization_id, user, program_id, data) -> Program
 
 async def update_zone(db, *, organization_id, user, zone_id, changes) -> ProgramZone:
     zona = await _owned(db, ProgramZone, zone_id, organization_id, "La zona no existe.", "zone_not_found")
+    # Al editar se valida igual que al crear: antes se podía poner cualquier estado.
+    await _require_state(db, changes.get("state"))
     for k in ("name", "state", "city", "notes", "active"):
         if k in changes:
             setattr(zona, k, changes[k])
