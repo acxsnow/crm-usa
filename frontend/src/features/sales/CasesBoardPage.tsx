@@ -132,6 +132,15 @@ function ColumnaPaginada({ col, tempranos, filtros, revisa }: {
   // Para que la tarjeta que se estaba viendo no salte al agregar o soltar páginas.
   const ancla = useRef<{ id: string; desde: number } | null>(null);
 
+  // Cuando el tablero se vuelve a pedir (por ejemplo, al volver de aprobar un
+  // expediente) llega la primera página nueva de cada columna. Si la columna
+  // está al comienzo, se toman esas tarjetas: antes se quedaba con las de
+  // antes y mostraba el total nuevo con tarjetas viejas («Aprobado 1» y vacío).
+  useEffect(() => {
+    if (primera === 0) setPaginas([col.cases]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [col.cases]);
+
   const tarjetas = paginas.flat();
   const desde = primera * PAGINA;
   const hayDespues = desde + tarjetas.length < col.count;
