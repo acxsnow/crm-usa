@@ -1418,39 +1418,6 @@ button {
   opacity: 0.65;
 }
 
-/* --- Pantalla "sin acceso" (components/NoAccess.tsx) --- */
-.no-access {
-  max-width: 34rem;
-  margin: 4rem auto;
-  padding: 2.5rem;
-  text-align: center;
-  background: var(--surface, #fff);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-}
-
-.no-access-icon {
-  font-size: 2.5rem;
-  opacity: 0.4;
-}
-
-.no-access h1 {
-  margin: 0.75rem 0 0.5rem;
-  font-size: 1.25rem;
-}
-
-.no-access p {
-  margin: 0 0 1.5rem;
-  opacity: 0.75;
-}
-
-@media (max-width: 640px) {
-  .no-access {
-    margin: 2rem 1rem;
-    padding: 1.5rem;
-  }
-}
-
 /* --- Roles y permisos (features/roles) --- */
 .roles-layout {
   display: grid;

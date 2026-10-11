@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/features/auth/ResetPasswordPage";
@@ -238,6 +239,8 @@ export const router = createBrowserRouter([
           </RequireAccess>
         ),
       },
+      // Cualquier dirección que no existe (o una entrada del menú aún sin pantalla) vuelve al inicio.
+      { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
 ]);
