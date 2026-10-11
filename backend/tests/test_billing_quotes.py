@@ -237,3 +237,34 @@ async def test_quotes_of_another_organization_are_invisible(app_client, db, seed
     r = await app_client.post("/api/v1/billing/quotes", json={"customer_id": str(cliente.id), "lines": LINEAS},
                               headers=ajeno)
     assert r.status_code == 404
+
+
+async def test_quotes_are_paginated(app_client, db, seeded_org, active_admin_staff_user):
+    cliente = await _cliente(db, seeded_org["org"].id)
+    headers = await headers_for(app_client, active_admin_staff_user.email)
+    for _ in range(3):
+        await app_client.post("/api/v1/billing/quotes", json={"customer_id": str(cliente.id), "lines": LINEAS},
+                              headers=headers)
+    r = await app_client.get("/api/v1/billing/quotes?limit=2", headers=headers)
+    assert r.headers["X-Total-Count"] == "3" and len(r.json()) == 2
+    r = await app_client.get("/api/v1/billing/quotes?limit=2&offset=2", headers=headers)
+    assert len(r.json()) == 1
+    # Con el filtro de estado (calculado con la fecha de hoy) también pagina.
+    r = await app_client.get("/api/v1/billing/quotes?status=draft&limit=1", headers=headers)
+    assert r.headers["X-Total-Count"] == "3" and len(r.json()) == 1
+
+
+async def test_the_summary_counts_and_adds_up_by_status_and_several_statuses_can_be_filtered(
+    app_client, db, seeded_org, active_admin_staff_user
+):
+    cliente = await _cliente(db, seeded_org["org"].id)
+    headers = await headers_for(app_client, active_admin_staff_user.email)
+    for _ in range(2):
+        await app_client.post("/api/v1/billing/quotes", json={"customer_id": str(cliente.id), "lines": LINEAS},
+                              headers=headers)
+    await _cotizacion_enviada(app_client, headers, cliente.id)
+    resumen = (await app_client.get("/api/v1/billing/quotes/summary", headers=headers)).json()
+    assert resumen["draft"] == {"count": 2, "total": 779.0}
+    assert resumen["sent"]["count"] == 1
+    r = await app_client.get("/api/v1/billing/quotes?status=draft,sent", headers=headers)
+    assert r.headers["X-Total-Count"] == "3"

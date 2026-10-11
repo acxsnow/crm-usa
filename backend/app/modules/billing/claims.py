@@ -226,13 +226,15 @@ async def get_claim_or_404(db: AsyncSession, *, organization_id: uuid.UUID, clai
     return claim
 
 
-async def list_claims(
-    db: AsyncSession, *, organization_id: uuid.UUID, status: str | None = None,
+def claims_query(
+    *, organization_id: uuid.UUID, status: str | None = None,
     program_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
-) -> list[RebateClaim]:
+):
+    """La consulta de cobros con sus filtros, sin ejecutar: el router la pagina
+    (un cobro por instalación, así que crece sin fin)."""
     stmt = (
         select(RebateClaim).where(RebateClaim.organization_id == organization_id)
-        .order_by(RebateClaim.created_at.desc())
+        .order_by(RebateClaim.created_at.desc(), RebateClaim.id.desc())
     )
     if status:
         stmt = stmt.where(RebateClaim.status == status)
@@ -240,6 +242,14 @@ async def list_claims(
         stmt = stmt.where(RebateClaim.program_id == program_id)
     if project_id:
         stmt = stmt.where(RebateClaim.project_id == project_id)
+    return stmt
+
+
+async def list_claims(
+    db: AsyncSession, *, organization_id: uuid.UUID, status: str | None = None,
+    program_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
+) -> list[RebateClaim]:
+    stmt = claims_query(organization_id=organization_id, status=status, program_id=program_id, project_id=project_id)
     return list((await db.execute(stmt)).scalars().all())
 
 

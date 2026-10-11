@@ -6,6 +6,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/apiClient";
+import { fetchPage } from "@/lib/pagination";
 import type {
   BillingDashboard,
   Claim,
@@ -141,8 +142,12 @@ export const updateRequirement = async (rid: string, body: Partial<ProgramRequir
 
 const Q = "/billing/quotes";
 
-export const listQuotes = async (params: { customer_id?: string; status?: string } = {}) =>
-  (await apiClient.get<Quote[]>(Q, { params })).data;
+/** Una página de cotizaciones; `status` acepta varios separados por coma. */
+export const listQuotesPage = (page: number, pageSize: number, status?: string) =>
+  fetchPage<Quote>(Q, page, pageSize, { status });
+/** Cantidad y total por estado, calculados en el servidor (la lista va paginada). */
+export const getQuotesSummary = async () =>
+  (await apiClient.get<Record<string, { count: number; total: number }>>(`${Q}/summary`)).data;
 export const getQuote = async (id: string) => (await apiClient.get<QuoteDetail>(`${Q}/${id}`)).data;
 export const createQuote = async (body: {
   customer_id?: string; project_id?: string; title?: string; valid_until?: string; notes?: string; lines: LineInput[];

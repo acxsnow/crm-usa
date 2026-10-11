@@ -5,26 +5,40 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { listCustomers } from "@/features/crm/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import type { LineInput, QuoteStatus } from "@/types/billing";
-import { billingKeys, createQuote, listQuotes, money, shortDay } from "./billingApi";
+import { billingKeys, createQuote, getQuotesSummary, listQuotesPage, money, shortDay } from "./billingApi";
+import { PaginationControls } from "@/components/PaginationControls";
 import { LinesEditor, emptyLine } from "./LinesEditor";
 
-const FILTROS: { key: string; label: string; match: (s: QuoteStatus) => boolean }[] = [
-  { key: "all", label: "Todas", match: () => true },
-  { key: "draft", label: "Borradores", match: (s) => s === "draft" },
-  { key: "sent", label: "Esperando respuesta", match: (s) => s === "sent" },
-  { key: "accepted", label: "Aceptadas", match: (s) => s === "accepted" },
-  { key: "closed", label: "No aceptadas o vencidas", match: (s) => s === "rejected" || s === "expired" },
+// `statuses` vacío = todas. Se filtra en el servidor: la lista va paginada.
+const FILTROS: { key: string; label: string; statuses: QuoteStatus[] }[] = [
+  { key: "all", label: "Todas", statuses: [] },
+  { key: "draft", label: "Borradores", statuses: ["draft"] },
+  { key: "sent", label: "Esperando respuesta", statuses: ["sent"] },
+  { key: "accepted", label: "Aceptadas", statuses: ["accepted"] },
+  { key: "closed", label: "No aceptadas o vencidas", statuses: ["rejected", "expired"] },
 ];
+const PAGE_SIZE = 20;
 
 /** Trabajo particular: cotizaciones vigentes y crear una nueva. */
 export function QuotesTab() {
-  const { data: quotes, isLoading } = useQuery({ queryKey: billingKeys.quotes, queryFn: () => listQuotes() });
-  const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
   const [nueva, setNueva] = useState(false);
   const [filtro, setFiltro] = useState("all");
-  const nombre = (id: string) => customers?.find((c) => c.id === id)?.legal_name ?? "Cliente";
+  const [page, setPage] = useState(1);
   const activo = FILTROS.find((f) => f.key === filtro)!;
-  const visibles = (quotes ?? []).filter((q) => activo.match(q.status));
+  // Bajo la clave `billingKeys.quotes` para que crear o editar una cotización refresque todo.
+  const { data, isLoading } = useQuery({
+    queryKey: [...billingKeys.quotes, "page", filtro, page],
+    queryFn: () => listQuotesPage(page, PAGE_SIZE, activo.statuses.join(",") || undefined),
+  });
+  const { data: resumen } = useQuery({ queryKey: [...billingKeys.quotes, "summary"], queryFn: getQuotesSummary });
+  const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
+  const nombre = (id: string) => customers?.find((c) => c.id === id)?.legal_name ?? "Cliente";
+  const visibles = data?.items ?? [];
+  const contar = (st: QuoteStatus[]) =>
+    Object.entries(resumen ?? {}).filter(([s]) => st.length === 0 || st.includes(s as QuoteStatus))
+      .reduce((a, [, r]) => ({ count: a.count + r.count, total: a.total + r.total }), { count: 0, total: 0 });
+  const totalGeneral = contar([]).count;
+  const elegir = (key: string) => { setFiltro(key); setPage(1); };
 
   return (
     <>
@@ -49,28 +63,25 @@ export function QuotesTab() {
               { label: "En borrador", st: ["draft"] },
               { label: "No aceptadas o vencidas", st: ["rejected", "expired"] },
             ].map(({ label, st }) => {
-              const grupo = (quotes ?? []).filter((q) => st.includes(q.status));
+              const grupo = contar(st as QuoteStatus[]);
               return (
                 <div key={label}><dt>{label}</dt>
-                  <dd className={`money${st[0] === "accepted" && grupo.length ? " is-ok" : ""}`}>{money(grupo.reduce((a, q) => a + q.total, 0))}</dd>
-                  <small>{grupo.length} {grupo.length === 1 ? "cotización" : "cotizaciones"}</small></div>
+                  <dd className={`money${st[0] === "accepted" && grupo.count ? " is-ok" : ""}`}>{money(grupo.total)}</dd>
+                  <small>{grupo.count} {grupo.count === 1 ? "cotización" : "cotizaciones"}</small></div>
               );
             })}
           </dl>
         </header>
         <div className="billing-pills" role="group" aria-label="Filtrar por estado">
-          {FILTROS.map((f) => {
-            const n = (quotes ?? []).filter((q) => f.match(q.status)).length;
-            return (
-              <button key={f.key} type="button" aria-pressed={filtro === f.key}
-                className={`billing-pill${filtro === f.key ? " is-on" : ""}`} onClick={() => setFiltro(f.key)}>
-                {f.label} <span>{n}</span>
-              </button>
-            );
-          })}
+          {FILTROS.map((f) => (
+            <button key={f.key} type="button" aria-pressed={filtro === f.key}
+              className={`billing-pill${filtro === f.key ? " is-on" : ""}`} onClick={() => elegir(f.key)}>
+              {f.label} <span>{contar(f.statuses).count}</span>
+            </button>
+          ))}
         </div>
         {isLoading ? <p className="acta-empty">Cargando…</p> : visibles.length === 0 ? (
-          <p className="acta-empty">{(quotes ?? []).length ? "Ninguna cotización en este estado." : "Todavía no hay cotizaciones. Crea la primera con «Nueva cotización»."}</p>
+          <p className="acta-empty">{totalGeneral ? "Ninguna cotización en este estado." : "Todavía no hay cotizaciones. Crea la primera con «Nueva cotización»."}</p>
         ) : (
           <ul className="invoice-rows">
             {visibles.map((q) => (
@@ -89,6 +100,7 @@ export function QuotesTab() {
             ))}
           </ul>
         )}
+        {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
       </section>
     </>
   );

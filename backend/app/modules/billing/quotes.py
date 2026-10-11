@@ -16,8 +16,9 @@ aplica, de una instalación) y **nunca mueve el expediente**.
 """
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.models import (
@@ -186,20 +187,44 @@ async def get_quote_or_404(db: AsyncSession, *, organization_id: uuid.UUID, quot
 
 
 async def list_quotes(db, *, organization_id, customer_id=None, project_id=None, status=None,
-                      include_history: bool = False) -> tuple[list[Quote], date]:
-    """Por defecto, solo la versión vigente de cada cotización."""
-    stmt = select(Quote).where(Quote.organization_id == organization_id).order_by(Quote.created_at.desc())
+                      include_history: bool = False, limit: int | None = None,
+                      offset: int = 0) -> tuple[list[Quote], date, int]:
+    """Por defecto, solo la versión vigente de cada cotización. Devuelve
+    (página, hoy, total). Sin filtro de estado se pagina en la base; el estado
+    («vencida») se calcula con la fecha de hoy, así que con ese filtro se
+    filtra primero y se recorta después."""
+    stmt = select(Quote).where(Quote.organization_id == organization_id).order_by(
+        Quote.created_at.desc(), Quote.id.desc())
     if customer_id:
         stmt = stmt.where(Quote.customer_id == customer_id)
     if project_id:
         stmt = stmt.where(Quote.project_id == project_id)
     if not include_history:
         stmt = stmt.where(Quote.status != QuoteStatus.superseded)
-    quotes = list((await db.execute(stmt)).scalars().all())
     hoy = await org_today(db, organization_id)
     if status:
-        quotes = [q for q in quotes if q.status_on(hoy) == status]
-    return quotes, hoy
+        # Uno o varios estados separados por coma («rejected,expired»).
+        buscados = {s.strip() for s in status.split(",") if s.strip()}
+        quotes = [q for q in (await db.execute(stmt)).scalars().all() if q.status_on(hoy) in buscados]
+        fin = None if limit is None else offset + limit
+        return quotes[offset:fin], hoy, len(quotes)
+    total = (await db.execute(select(func.count()).select_from(stmt.order_by(None).subquery()))).scalar_one()
+    if limit is not None:
+        stmt = stmt.limit(limit).offset(offset)
+    return list((await db.execute(stmt)).scalars().all()), hoy, total
+
+
+async def quotes_summary(db, *, organization_id) -> dict[str, dict]:
+    """Cantidad y total por estado de las cotizaciones vigentes (sin el
+    historial de versiones), para los totales y filtros de la pestaña. Se
+    calcula aquí porque la lista va paginada y el estado depende de hoy."""
+    quotes, hoy, _ = await list_quotes(db, organization_id=organization_id)
+    resumen: dict[str, dict] = {}
+    for q in quotes:
+        fila = resumen.setdefault(q.status_on(hoy), {"count": 0, "total": Decimal("0")})
+        fila["count"] += 1
+        fila["total"] += q.total
+    return resumen
 
 
 async def versions_of(db, quote: Quote) -> list[Quote]:

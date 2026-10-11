@@ -6,6 +6,7 @@ import "../programs/programs.css";
 import "./notifications.css";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { listPrograms, programKeys } from "@/features/programs/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   addOptOut,
   campaignKeys,
@@ -31,6 +32,9 @@ import {
   type ConsentState,
   type Product,
 } from "./api";
+
+/** Filas por página en destinatarios, contactos y bajas (los tres pueden ser miles). */
+const PAGE_SIZE = 50;
 
 type Tab = "campaigns" | "contacts" | "products" | "optouts";
 const ESTADO: Record<Campaign["status"], [string, string]> = {
@@ -323,7 +327,9 @@ function Launch({ id, canal, beforeLaunch, onDone }: { id: string; canal: Campai
 }
 
 function CampaignResult({ c, onChange }: { c: Campaign; onChange: () => void }) {
-  const { data } = useQuery({ queryKey: campaignKeys.recipients(c.id), queryFn: () => listRecipients(c.id),
+  const [page, setPage] = useState(1);
+  const { data } = useQuery({ queryKey: [...campaignKeys.recipients(c.id), page],
+    queryFn: () => listRecipients(c.id, page, PAGE_SIZE),
     refetchInterval: c.status === "sending" || c.status === "scheduled" ? 15_000 : false });
   const cancelar = useMutation({ mutationFn: () => cancelCampaign(c.id), onSuccess: onChange });
   const s = c.audience.launch_summary;
@@ -351,7 +357,7 @@ function CampaignResult({ c, onChange }: { c: Campaign; onChange: () => void }) 
       <div className="tablewrap"><table className="notices-table">
         <thead><tr><th>Nombre</th><th>Canal</th><th>Para</th><th>Estado</th></tr></thead>
         <tbody>
-          {(data ?? []).map((r) => (
+          {(data?.items ?? []).map((r) => (
             <tr key={r.id}>
               <td>{r.name}</td><td>{r.channel === "sms" ? "SMS" : "Correo"}</td>
               <td className="mono">{r.channel === "sms" ? tel(r.address) : r.address}</td>
@@ -362,13 +368,15 @@ function CampaignResult({ c, onChange }: { c: Campaign; onChange: () => void }) 
           ))}
         </tbody>
       </table></div>
+      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </div>
   );
 }
 
 function OwnContacts() {
   const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: campaignKeys.contacts, queryFn: listOwnContacts });
+  const [page, setPage] = useState(1);
+  const { data } = useQuery({ queryKey: [...campaignKeys.contacts, page], queryFn: () => listOwnContacts(page, PAGE_SIZE) });
   const [texto, setTexto] = useState("");
   const [fuente, setFuente] = useState("");
   const [confirmo, setConfirmo] = useState(false);
@@ -410,16 +418,17 @@ function OwnContacts() {
             {cargar.isPending ? "Cargando…" : "Cargar contactos"}</button>
         </div>
       </form>
-      <h3 className="acta-section-title">Tu lista ({data?.length ?? 0})</h3>
-      {(data ?? []).length === 0 ? <p className="acta-empty">Todavía no hay contactos propios.</p> : (
+      <h3 className="acta-section-title">Tu lista ({data?.total ?? 0})</h3>
+      {(data?.items ?? []).length === 0 ? <p className="acta-empty">Todavía no hay contactos propios.</p> : (
         <div className="tablewrap campaign-contacts"><table>
           <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th aria-label="Acciones" /></tr></thead>
-          <tbody>{data!.map((k) => (
+          <tbody>{data!.items.map((k) => (
             <tr key={k.id}><td>{k.name ?? "—"}</td><td className="mono">{tel(k.phone)}</td><td className="mono">{k.email ?? "—"}</td>
               <td><button type="button" className="acta-link" onClick={() => { if (window.confirm("¿Quitar este contacto de la lista?")) borrar.mutate(k.id); }}>Quitar</button></td></tr>
           ))}</tbody>
         </table></div>
       )}
+      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </article>
   );
 }
@@ -472,7 +481,8 @@ function Products() {
 
 function OptOuts() {
   const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: campaignKeys.optOuts, queryFn: listOptOuts });
+  const [page, setPage] = useState(1);
+  const { data } = useQuery({ queryKey: [...campaignKeys.optOuts, page], queryFn: () => listOptOuts(page, PAGE_SIZE) });
   const [valor, setValor] = useState("");
   const [error, setError] = useState<string | null>(null);
   const agregar = useMutation({ mutationFn: () => addOptOut(valor, "Pidió no recibir más (registro manual)"),
@@ -486,13 +496,14 @@ function OptOuts() {
         <button type="submit" className="acta-btn is-line" disabled={valor.length < 5 || agregar.isPending}>Dar de baja</button>
       </form>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {(data ?? []).length === 0 ? <p className="acta-empty">Nadie se ha dado de baja.</p> : (
+      {(data?.items ?? []).length === 0 ? <p className="acta-empty">Nadie se ha dado de baja.</p> : (
         <div className="tablewrap"><table className="notices-table">
           <thead><tr><th>Canal</th><th>Teléfono o correo</th><th>Motivo</th><th>Cuándo</th></tr></thead>
-          <tbody>{data!.map((o) => <tr key={`${o.channel}-${o.address}`}><td>{o.channel === "sms" ? "SMS" : "Correo"}</td>
+          <tbody>{data!.items.map((o) => <tr key={`${o.channel}-${o.address}`}><td>{o.channel === "sms" ? "SMS" : "Correo"}</td>
             <td className="mono">{o.channel === "sms" ? tel(o.address) : o.address}</td><td>{o.reason}</td><td>{o.at ? timeAgo(o.at) : "—"}</td></tr>)}</tbody>
         </table></div>
       )}
+      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
     </article>
   );
 }

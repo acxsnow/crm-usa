@@ -467,3 +467,15 @@ async def test_claims_of_another_organization_are_invisible(
     assert (await app_client.get(f"/api/v1/claims/{cobro['id']}", headers=ajeno)).status_code == 404
     assert (await app_client.get("/api/v1/claims", headers=ajeno)).json() == []
     assert (await _crear(app_client, ajeno, project.id, progs["TECH"].id)).status_code == 404
+
+
+async def test_the_claims_list_is_paginated(app_client, db, seeded_org, active_admin_staff_user):
+    org = seeded_org["org"].id
+    progs = await _programas(db, org)
+    _, project = await _listo_para_cobrar(db, org)
+    headers = await headers_for(app_client, active_admin_staff_user.email)
+    assert (await _crear(app_client, headers, project.id, progs["TECH"].id)).status_code == 201
+    r = await app_client.get("/api/v1/claims?limit=1", headers=headers)
+    assert r.headers["X-Total-Count"] == "1" and len(r.json()) == 1
+    r = await app_client.get("/api/v1/claims?limit=1&offset=1", headers=headers)
+    assert r.headers["X-Total-Count"] == "1" and r.json() == []

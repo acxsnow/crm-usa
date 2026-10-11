@@ -6,7 +6,7 @@ Cadena A retiró (COD-01) y su prueba exige que no responda."""
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from app.modules.billing import quotes as quotes_service
 from app.modules.billing.models import QUOTE_STATUS_LABELS
 from app.modules.billing.schemas import InvoiceLineIn, InvoiceLineResponse, InvoiceResponse, Money, invoice_response
 from app.modules.users.models import User
+from app.shared.pagination import pagination_params
 
 router = APIRouter(prefix="/billing/quotes", tags=["quotes"])
 
@@ -106,14 +107,32 @@ async def _detail(db, q) -> QuoteDetailResponse:
 _manage = require_permission("quotes.manage")
 
 
+class QuoteSummaryRow(BaseModel):
+    count: int
+    total: Money
+
+
+# `/summary` va antes de `/{quote_id}`: si no, FastAPI lo leería como un id.
+@router.get("/summary", response_model=dict[str, QuoteSummaryRow])
+async def quotes_summary(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)):
+    """Cantidad y total por estado ({"sent": {"count": 3, "total": 1200.0}, …}),
+    para los totales y filtros de la pestaña, que ya no ve todas las cotizaciones."""
+    return await quotes_service.quotes_summary(db, organization_id=organization_id)
+
+
 @router.get("", response_model=list[QuoteResponse])
-async def list_quotes(customer_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
+async def list_quotes(response: Response, customer_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
                       status: str | None = Query(default=None), include_history: bool = False,
                       db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                      pagination: tuple[int, int] = Depends(pagination_params),
                       current_user: User = Depends(_manage)):
-    quotes, hoy = await quotes_service.list_quotes(db, organization_id=organization_id, customer_id=customer_id,
-                                                   project_id=project_id, status=status,
-                                                   include_history=include_history)
+    """Paginado (`limit`/`offset`, total en X-Total-Count): crece con cada trabajo particular."""
+    limit, offset = pagination
+    quotes, hoy, total = await quotes_service.list_quotes(
+        db, organization_id=organization_id, customer_id=customer_id, project_id=project_id, status=status,
+        include_history=include_history, limit=limit, offset=offset)
+    response.headers["X-Total-Count"] = str(total)
     return [QuoteResponse.model_validate(_quote(q, hoy)) for q in quotes]
 
 

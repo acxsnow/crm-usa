@@ -1,5 +1,6 @@
 /** API del módulo 7: avisos, preferencias y administración. */
 import { apiClient } from "@/lib/apiClient";
+import { fetchPage } from "@/lib/pagination";
 
 export interface Notice { id: string; event: string; title: string; body: string; link: string | null; read: boolean; created_at: string }
 export interface Preferences { email_enabled: boolean; sms_enabled: boolean; sms_phone: string | null; email: string }
@@ -99,12 +100,16 @@ export const launchCampaign = async (id: string, scheduled_at?: string) =>
 export const cancelCampaign = async (id: string) => (await apiClient.post<Campaign>(`/campaigns/${id}/cancel`)).data;
 export const testCampaign = async (id: string, channel: "sms" | "email", phone?: string) =>
   (await apiClient.post<{ result: string; text: string; to?: string }>(`/campaigns/${id}/test`, { channel, phone: phone || null })).data;
-export const listRecipients = async (id: string) => (await apiClient.get<Recipient[]>(`/campaigns/${id}/recipients`)).data;
-export const listOptOuts = async () =>
-  (await apiClient.get<{ channel: "sms" | "email"; address: string; reason: string | null; at: string | null }[]>("/campaigns/opt-outs")).data;
+/** Destinatarios de una campaña, por páginas (pueden ser miles). */
+export const listRecipients = (id: string, page: number, pageSize: number) =>
+  fetchPage<Recipient>(`/campaigns/${id}/recipients`, page, pageSize);
+/** Bajas de SMS y correo juntas, por páginas (solo se acumulan). */
+export const listOptOuts = (page: number, pageSize: number) =>
+  fetchPage<{ channel: "sms" | "email"; address: string; reason: string | null; at: string | null }>("/campaigns/opt-outs", page, pageSize);
 export const addOptOut = async (value: string, reason: string) =>
   (await apiClient.post("/campaigns/opt-outs", value.includes("@") ? { email: value, reason } : { phone: value, reason })).data;
-export const listOwnContacts = async () => (await apiClient.get<OwnContact[]>("/campaigns/contacts")).data;
+/** Contactos propios, por páginas (se importan en masa). */
+export const listOwnContacts = (page: number, pageSize: number) => fetchPage<OwnContact>("/campaigns/contacts", page, pageSize);
 export const importOwnContacts = async (text: string, source: string) =>
   (await apiClient.post<{ created: number; updated: number; invalid: string[]; already_opted_out: number }>(
     "/campaigns/contacts/import", { text, source, confirm: true })).data;

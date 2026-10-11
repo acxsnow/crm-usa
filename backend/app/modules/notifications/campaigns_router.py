@@ -4,10 +4,10 @@ import hmac
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, literal, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_permission
@@ -23,6 +23,7 @@ from app.modules.notifications.models import (
     Product,
 )
 from app.modules.users.models import User
+from app.shared.pagination import paginate, pagination_params
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 
 router = APIRouter(tags=["campaigns"])
@@ -136,18 +137,27 @@ async def manual_opt_out(payload: OptOutIn, db: AsyncSession = Depends(get_db),
 
 
 @router.get("/campaigns/opt-outs")
-async def list_opt_outs(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_opt_outs(response: Response, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        pagination: tuple[int, int] = Depends(pagination_params),
                         current_user: User = Depends(_manage)) -> list[dict]:
-    filas = (await db.execute(select(MarketingConsent).where(
+    """Bajas de SMS y de correo juntas, las más recientes primero. Paginado
+    (`limit`/`offset`, total en X-Total-Count): las bajas solo se acumulan. Las
+    dos tablas se unen en la base (UNION ALL) para ordenar y paginar juntas."""
+    sms = select(literal("sms").label("channel"), MarketingConsent.phone.label("address"),
+                 MarketingConsent.revoked_reason.label("reason"), MarketingConsent.revoked_at.label("at")).where(
         MarketingConsent.organization_id == organization_id, MarketingConsent.status == "revoked")
-        .order_by(MarketingConsent.revoked_at.desc()))).scalars().all()
-    correos = (await db.execute(select(EmailMarketingConsent).where(
+    correo = select(literal("email").label("channel"), EmailMarketingConsent.email.label("address"),
+                    EmailMarketingConsent.revoked_reason.label("reason"),
+                    EmailMarketingConsent.revoked_at.label("at")).where(
         EmailMarketingConsent.organization_id == organization_id, EmailMarketingConsent.status == "revoked")
-        .order_by(EmailMarketingConsent.revoked_at.desc()))).scalars().all()
-    return [{"channel": "sms", "address": c.phone, "phone": c.phone, "reason": c.revoked_reason,
-             "at": c.revoked_at.isoformat() if c.revoked_at else None} for c in filas] + \
-        [{"channel": "email", "address": c.email, "phone": None, "reason": c.revoked_reason,
-          "at": c.revoked_at.isoformat() if c.revoked_at else None} for c in correos]
+    bajas = union_all(sms, correo).subquery()
+    limit, offset = pagination
+    response.headers["X-Total-Count"] = str((await db.execute(select(func.count()).select_from(bajas))).scalar_one())
+    filas = (await db.execute(select(bajas).order_by(bajas.c.at.desc(), bajas.c.address)
+                              .limit(limit).offset(offset))).all()
+    return [{"channel": f.channel, "address": f.address, "phone": f.address if f.channel == "sms" else None,
+             "reason": f.reason, "at": f.at.isoformat() if f.at else None} for f in filas]
 
 
 # --- Contactos propios -------------------------------------------------------
@@ -159,10 +169,15 @@ class ImportIn(BaseModel):
 
 
 @router.get("/campaigns/contacts")
-async def list_contacts(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_contacts(response: Response, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        pagination: tuple[int, int] = Depends(pagination_params),
                         current_user: User = Depends(_manage)) -> list[dict]:
-    filas = (await db.execute(select(MarketingContact).where(MarketingContact.organization_id == organization_id)
-                              .order_by(MarketingContact.created_at.desc()))).scalars().all()
+    """Paginado (`limit`/`offset`, total en X-Total-Count): se importan en masa."""
+    limit, offset = pagination
+    filas = await paginate(db, select(MarketingContact).where(MarketingContact.organization_id == organization_id)
+                           .order_by(MarketingContact.created_at.desc(), MarketingContact.id.desc()),
+                           limit=limit, offset=offset, response=response)
     return [{"id": str(k.id), "name": k.name, "phone": k.phone, "email": k.email} for k in filas]
 
 
@@ -328,12 +343,17 @@ async def test_send(campaign_id: uuid.UUID, payload: TestIn, db: AsyncSession = 
 
 
 @router.get("/campaigns/{campaign_id}/recipients")
-async def recipients(campaign_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def recipients(campaign_id: uuid.UUID, response: Response, db: AsyncSession = Depends(get_db),
                      organization_id: uuid.UUID = Depends(get_organization_id),
+                     pagination: tuple[int, int] = Depends(pagination_params),
                      current_user: User = Depends(_manage)) -> list[dict]:
+    """Paginado (`limit`/`offset`, total en X-Total-Count): una campaña puede
+    tener miles de destinatarios."""
     c = await svc.get_campaign(db, organization_id, campaign_id)
-    filas = (await db.execute(select(CampaignRecipient).where(CampaignRecipient.campaign_id == c.id)
-                              .order_by(CampaignRecipient.name))).scalars().all()
+    limit, offset = pagination
+    filas = await paginate(db, select(CampaignRecipient).where(CampaignRecipient.campaign_id == c.id)
+                           .order_by(CampaignRecipient.name, CampaignRecipient.id),
+                           limit=limit, offset=offset, response=response)
     return [{"id": str(r.id), "name": r.name, "channel": r.channel, "address": r.address, "phone": r.phone,
              "status": r.status, "attempts": r.attempts,
              "last_error": r.last_error, "next_attempt_at": r.next_attempt_at.isoformat() if r.next_attempt_at else None,

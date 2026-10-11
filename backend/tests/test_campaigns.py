@@ -204,3 +204,41 @@ def test_masiv_payload_and_marketing_email_footer():
     m = marketing_email.build_message(to="ana@example.com", subject="Hola", body="Oferta", unsubscribe_token="tok123")
     assert m["List-Unsubscribe"].endswith("/api/v1/unsubscribe/tok123>")
     assert "Darme de baja" in m.get_body(("html",)).get_content()
+
+
+# ---------------------------------------------------------------------------
+# Paginación (limit/offset, total en X-Total-Count)
+# ---------------------------------------------------------------------------
+
+async def test_contacts_are_paginated(app_client, admin):
+    texto = "\n".join(f"Contacto {i}, (818) 555-04{i:02d}" for i in range(5))
+    await app_client.post("/api/v1/campaigns/contacts/import", headers=admin,
+                          json={"text": texto, "source": "Feria", "confirm": True})
+    r = await app_client.get("/api/v1/campaigns/contacts?limit=2&offset=0", headers=admin)
+    assert r.headers["X-Total-Count"] == "5" and len(r.json()) == 2
+    r = await app_client.get("/api/v1/campaigns/contacts?limit=2&offset=4", headers=admin)
+    assert len(r.json()) == 1
+
+
+async def test_sms_and_email_opt_outs_are_paginated_together(app_client, admin):
+    """Las bajas de SMS y de correo están en dos tablas; se unen en la base
+    para paginarlas juntas."""
+    for tel in ("8185550101", "8185550102"):
+        await app_client.post("/api/v1/campaigns/opt-outs", headers=admin, json={"phone": tel})
+    await app_client.post("/api/v1/campaigns/opt-outs", headers=admin, json={"email": "baja@example.com"})
+    r = await app_client.get("/api/v1/campaigns/opt-outs?limit=2", headers=admin)
+    assert r.headers["X-Total-Count"] == "3" and len(r.json()) == 2
+    todas = (await app_client.get("/api/v1/campaigns/opt-outs", headers=admin)).json()
+    assert {(b["channel"], b["address"]) for b in todas} == {
+        ("sms", "8185550101"), ("sms", "8185550102"), ("email", "baja@example.com")}
+    assert all(b["phone"] == (b["address"] if b["channel"] == "sms" else None) for b in todas)
+
+
+async def test_campaign_recipients_are_paginated(app_client, db, seeded_org, admin):
+    marge, ned, _ = await _clientes(db, seeded_org["org"].id)
+    await app_client.post("/api/v1/campaigns/consents", headers=admin,
+                          json={"customer_ids": [str(marge.id), str(ned.id)], "source": "Formulario", "confirm": True})
+    c = (await app_client.post("/api/v1/campaigns", headers=admin, json={"name": "X", "message": "Oferta"})).json()
+    await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
+    r = await app_client.get(f"/api/v1/campaigns/{c['id']}/recipients?limit=1", headers=admin)
+    assert r.headers["X-Total-Count"] == "2" and len(r.json()) == 1

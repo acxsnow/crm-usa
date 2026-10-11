@@ -9,7 +9,7 @@ Permisos:
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from app.modules.billing.models import CLAIM_STATUS_LABELS
 from app.modules.billing.schemas import InvoiceResponse, Money, invoice_response
 from app.modules.field_ops.clock import org_today
 from app.modules.users.models import User
+from app.shared.pagination import paginate, pagination_params
 
 router = APIRouter(tags=["billing-claims"])
 
@@ -195,13 +196,17 @@ async def create_claim(project_id: uuid.UUID, payload: ClaimCreate, db: AsyncSes
 
 
 @router.get("/claims", response_model=list[ClaimResponse])
-async def list_claims(status: str | None = Query(default=None), program_id: uuid.UUID | None = None,
+async def list_claims(response: Response, status: str | None = Query(default=None), program_id: uuid.UUID | None = None,
                       project_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db),
                       organization_id: uuid.UUID = Depends(get_organization_id),
+                      pagination: tuple[int, int] = Depends(pagination_params),
                       current_user: User = Depends(_read)):
+    """Paginado (`limit`/`offset`, total en X-Total-Count): crece con cada instalación."""
     hoy = await org_today(db, organization_id)
-    cobros = await claims_service.list_claims(db, organization_id=organization_id, status=status,
-                                              program_id=program_id, project_id=project_id)
+    limit, offset = pagination
+    cobros = await paginate(db, claims_service.claims_query(organization_id=organization_id, status=status,
+                                                            program_id=program_id, project_id=project_id),
+                            limit=limit, offset=offset, response=response)
     contexto = await project_context(db, organization_id, {c.project_id for c in cobros})
     return [ClaimResponse.model_validate(_claim_response(c, hoy, contexto)) for c in cobros]
 
