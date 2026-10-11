@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -85,8 +85,16 @@ export function CaseFormPage() {
   const pasos = form?.definition.steps ?? [];
   const actual = paso ?? pasos.find((s) => !evaluacion?.steps.find((e) => e.code === s.code)?.complete)?.code ?? pasos[0]?.code;
 
+  // La firma dibujada en el paso de autorización se guarda junto con el paso.
+  const firmaPendiente = useRef<(() => Promise<unknown>) | null>(null);
+  const registrarFirma = useCallback((f: (() => Promise<unknown>) | null) => { firmaPendiente.current = f; }, []);
+
   const guardar = useMutation({
     mutationFn: async (siguiente: string | null) => {
+      if (firmaPendiente.current) {
+        await firmaPendiente.current();
+        firmaPendiente.current = null;
+      }
       const def = pasos.find((s) => s.code === actual);
       if (!def) return siguiente;
       const delPaso = Object.fromEntries(def.fields.filter((f) => f.key in answers && !["signature", "system_datetime", "system_user", "terms_checkbox", "info"].includes(f.type))
@@ -192,7 +200,7 @@ export function CaseFormPage() {
             {esAutorizacion && form.terms && (
               <TermsAndSignature caseId={caseId!} terms={form.terms} acceptance={form.acceptance} editable={form.editable}
                 defaultName={(answers["customer.full_name"] as string) ?? ""} coords={geo.coords}
-                onSigned={refrescar} onError={setError} />
+                onSigned={refrescar} onError={setError} registerPending={registrarFirma} />
             )}
             <FormRenderer evaluation={esAutorizacion && form.terms ? { ...evaluacion, steps: evaluacion.steps.map((st) =>
               st.code === actual ? { ...st, title: "Otros datos", fields: st.fields.filter((f) => !isAuthField(f)) } : st) } : evaluacion}
@@ -292,10 +300,17 @@ export function SignatureImage({ caseId, version }: { caseId: string; version: s
   return url ? <img src={url} alt="Firma del cliente" className="sales-signed-img" /> : <div className="sales-signed-img is-loading" />;
 }
 
-function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, coords, onSigned, onError }: {
+/**
+ * Términos y firma. La firma dibujada se guarda con «Guardar y seguir» del
+ * formulario (no hay un botón «Firmar» aparte: dibujar y pasar al siguiente
+ * paso sin tocarlo dejaba el paso sin firma). `registerPending` le entrega al
+ * formulario la acción de firmar mientras haya una firma dibujada sin guardar.
+ */
+function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, coords, onSigned, onError, registerPending }: {
   caseId: string; terms: { title: string; body: string; version: string; language: string };
   acceptance: { customer_name: string; accepted_at: string } | null; editable: boolean; defaultName: string;
   coords: { latitude: number; longitude: number } | null; onSigned: () => void; onError: (m: string | null) => void;
+  registerPending: (firmar: (() => Promise<unknown>) | null) => void;
 }) {
   const [nombre, setNombre] = useState(acceptance?.customer_name ?? defaultName);
   const [leido, setLeido] = useState(false);
@@ -306,6 +321,13 @@ function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, c
     onError: (e) => onError(apiErrorMessage(e)),
   });
   const firmado = Boolean(acceptance) && !repitiendo;
+  const listo = leido && nombre.trim().length >= 3;
+  const [dibujo, setDibujo] = useState<string | null>(null);
+  useEffect(() => {
+    registerPending(listo && dibujo && !firmado ? () => firmar.mutateAsync(dibujo) : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listo, dibujo, firmado, nombre]);
+  useEffect(() => () => registerPending(null), [registerPending]);
   return (
     <section className={`sales-terms${firmado ? " is-signed" : ""}`}>
       <h2>{terms.title}</h2>
@@ -327,8 +349,10 @@ function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, c
           </label>
           <div className="form-field"><label className="form-label" htmlFor="firma-nombre">Nombre de quien firma</label>
             <input id="firma-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
-          {leido && nombre.trim().length >= 3 ? (
-            <div className="sales-sign"><p className="form-label">Firma del cliente</p><SignaturePad onCapture={(png) => firmar.mutate(png)} disabled={firmar.isPending} /></div>
+          {listo ? (
+            <div className="sales-sign"><p className="form-label">Firma del cliente</p>
+              <SignaturePad onCapture={(png) => firmar.mutate(png)} onDraw={setDibujo} hideCapture disabled={firmar.isPending} />
+              <small className="form-help">La firma se guarda al tocar «Guardar y seguir».</small></div>
           ) : <p className="acta-empty">Marca la aceptación y escribe el nombre para habilitar la firma.</p>}
           {repitiendo && <button type="button" className="acta-btn is-quiet" onClick={() => setRepitiendo(false)}>Cancelar, dejar la firma anterior</button>}
         </>
