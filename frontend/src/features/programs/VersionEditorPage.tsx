@@ -57,7 +57,7 @@ export function VersionEditorPage() {
 
   return (
     <div className="version-page">
-      <Link to="/programs" className="acta-back"><span aria-hidden="true">‹</span> Volver a programas</Link>
+      <Link to={`/programs?program=${v.program_id}`} className="acta-back"><span aria-hidden="true">‹</span> Volver a programas</Link>
       <article className="acta version-sheet">
         <header className="acta-header">
           <div className="acta-title-row">

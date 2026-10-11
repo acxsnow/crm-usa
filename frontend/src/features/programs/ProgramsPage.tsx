@@ -62,10 +62,12 @@ function ProgramsTab() {
   const { hasPermission } = useAuth();
   const puede = hasPermission("programs.manage");
   const { data: programas, isLoading } = useQuery({ queryKey: programKeys.list, queryFn: listPrograms });
-  const [elegido, setElegido] = useState("");
+  // El programa elegido va en la dirección (?program=…): así «Volver a programas»
+  // desde el editor de una versión, atrás del navegador y recargar vuelven a él.
+  const [params, setParams] = useSearchParams();
+  const setElegido = (id: string) => setParams({ program: id }, { replace: true });
   const [nuevo, setNuevo] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (!elegido && programas?.length) setElegido(programas[0].id); }, [programas, elegido]);
   const instalar = useMutation({
     mutationFn: installDefaults,
     onSuccess: () => qc.invalidateQueries({ queryKey: programKeys.list }),
@@ -85,6 +87,7 @@ function ProgramsTab() {
       </section>
     );
   }
+  const elegido = programas.some((p) => p.id === params.get("program")) ? params.get("program")! : programas[0].id;
   const actual = programas.find((p) => p.id === elegido);
   return (
     <div className="program-layout">
