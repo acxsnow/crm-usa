@@ -85,8 +85,25 @@ export const acceptTerms = async (caseId: string, body: { customer_name: string;
 
 export const submitCase = async (caseId: string) => (await apiClient.post<Case>(`/cases/${caseId}/submit`)).data;
 
-export const getBoard = async (early: boolean, mine = false) =>
-  (await apiClient.get<BoardColumn[]>("/case-board", { params: { include_early_closes: early, mine } })).data;
+/** Filtros del tablero; se aplican en el servidor, también a los totales. */
+export interface BoardFilters {
+  q?: string;
+  salesperson_id?: string;
+  program_id?: string;
+}
+
+/** Columnas del tablero: el total de cada etapa y su primera página de `limit`. */
+export const getBoard = async (early: boolean, mine = false, limit?: number, filtros: BoardFilters = {}) =>
+  (await apiClient.get<BoardColumn[]>("/case-board",
+    { params: { include_early_closes: early, mine, limit, ...filtros } })).data;
+
+/** Una página de una sola columna, desde `offset`. */
+export const getBoardColumn = async (stage: string, early: boolean, offset: number, limit: number,
+                                     filtros: BoardFilters = {}) => {
+  const columnas = (await apiClient.get<BoardColumn[]>("/case-board",
+    { params: { include_early_closes: early, stage, offset, limit, ...filtros } })).data;
+  return columnas[0]?.cases ?? [];
+};
 
 // ---------------------------------------------------------------------------
 // Documentos (módulo 3) y revisión de Administración (módulo 4)

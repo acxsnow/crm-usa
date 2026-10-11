@@ -341,3 +341,68 @@ async def test_without_zones_every_published_program_is_an_option(app_client, db
         r = (await app_client.get("/api/v1/me/program-options", headers=await headers_for(app_client, email))).json()
         assert r["assigned"] is False
         assert {o["program"]["code"] for o in r["options"]} >= {"TECH_CLEAN_CA", "AZ_EFFICIENCY"}
+
+
+async def test_the_board_brings_only_the_latest_of_each_stage_but_the_real_total(
+    app_client, db, seeded_org, active_salesperson_user
+):
+    """La base recorta por etapa (antes se cargaban todos los expedientes en
+    memoria): cada columna trae sus más recientes y el total real."""
+    from app.modules.cases import intake as intake_mod
+
+    tech = await _tech(db, seeded_org["org"].id)
+    headers = await headers_for(app_client, "vendedor@acme-demo.com")
+    for unidad in ("Spc 1", "Spc 2", "Spc 3"):
+        await app_client.post("/api/v1/visits", json={**PUERTA, "address_unit": unidad, "program_id": str(tech.id),
+                                                       "result": "opened"}, headers=headers)
+    columnas = {c["code"]: c for c in await intake_mod.board(db, organization_id=seeded_org["org"].id,
+                                                             user=active_salesperson_user, limit_per_stage=2)}
+    assert columnas["new_prospect"]["count"] == 3
+    assert len(columnas["new_prospect"]["cases"]) == 2
+
+
+async def test_see_more_brings_the_next_batch_of_one_column(app_client, db, seeded_org, active_salesperson_user):
+    """«Ver más»: la siguiente tanda de una sola columna, sin repetir ni saltar."""
+    tech = await _tech(db, seeded_org["org"].id)
+    headers = await headers_for(app_client, "vendedor@acme-demo.com")
+    for unidad in ("Spc 1", "Spc 2", "Spc 3", "Spc 4", "Spc 5"):
+        await app_client.post("/api/v1/visits", json={**PUERTA, "address_unit": unidad, "program_id": str(tech.id),
+                                                       "result": "opened"}, headers=headers)
+    primera = {c["code"]: c for c in (await app_client.get("/api/v1/case-board?limit=2", headers=headers)).json()}
+    assert primera["new_prospect"]["count"] == 5 and len(primera["new_prospect"]["cases"]) == 2
+    vistos = [x["id"] for x in primera["new_prospect"]["cases"]]
+    for offset in (2, 4):
+        r = await app_client.get(f"/api/v1/case-board?limit=2&stage=new_prospect&offset={offset}", headers=headers)
+        columnas = r.json()
+        assert [c["code"] for c in columnas] == ["new_prospect"] and columnas[0]["count"] == 5
+        vistos += [x["id"] for x in columnas[0]["cases"]]
+    assert len(vistos) == 5 and len(set(vistos)) == 5
+
+
+async def test_board_filters_apply_in_the_database_including_totals(
+    app_client, db, seeded_org, active_salesperson_user, active_admin_staff_user
+):
+    """Búsqueda, vendedor y programa se aplican en la base, también a los totales.
+    Un vendedor no puede ver los de otro aunque mande `salesperson_id`."""
+    from tests.conftest import _make_role_user
+
+    tech = await _tech(db, seeded_org["org"].id)
+    otro = await _make_role_user(db, seeded_org, role_code="salesperson", email="v2@acme-demo.com", full_name="Otro")
+    vendedor = await headers_for(app_client, "vendedor@acme-demo.com")
+    vendedor2 = await headers_for(app_client, "v2@acme-demo.com")
+    await app_client.post("/api/v1/visits", headers=vendedor, json={
+        **PUERTA, "address_street": "55 Luna Roja Ln", "program_id": str(tech.id), "result": "opened"})
+    await app_client.post("/api/v1/visits", headers=vendedor2, json={
+        **PUERTA, "address_unit": "Spc 2", "result": "opened"})
+    adm = await headers_for(app_client, "admin-staff@acme-demo.com")
+
+    def total(columnas):
+        return sum(c["count"] for c in columnas)
+
+    assert total((await app_client.get("/api/v1/case-board", headers=adm)).json()) == 2
+    assert total((await app_client.get("/api/v1/case-board?q=luna roja", headers=adm)).json()) == 1
+    assert total((await app_client.get(f"/api/v1/case-board?program_id={tech.id}", headers=adm)).json()) == 1
+    assert total((await app_client.get(f"/api/v1/case-board?salesperson_id={otro.id}", headers=adm)).json()) == 1
+    # El vendedor sigue viendo solo lo suyo aunque pida el de otro.
+    r = await app_client.get(f"/api/v1/case-board?salesperson_id={otro.id}", headers=vendedor)
+    assert total(r.json()) == 1 and r.json()[0]["cases"][0]["address"].startswith("55 Luna Roja")

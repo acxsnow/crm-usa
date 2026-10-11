@@ -150,3 +150,17 @@
   .review-doc { grid-template-columns: 4rem minmax(0, 1fr); }
   .review-thumb { width: 4rem; height: 4rem; }
 }
+
+/* Tablero de expedientes: filtros y columnas con su propio scroll y ventana de
+   páginas (CasesBoardPage). La altura fija hace que cada columna se desplace
+   sola en vez de alargar toda la página. */
+.board-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0 0 1rem; }
+.board-filters input, .board-filters select { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.55rem 0.7rem;
+  font: inherit; font-size: 0.88rem; color: var(--ink); background: #fff; }
+.board-filters input[type="search"] { flex: 1 1 18rem; max-width: 26rem; }
+.board-filters select { flex: 0 1 14rem; }
+.board-col { display: flex; flex-direction: column; }
+.board-col-scroll { position: relative; overflow-y: auto; max-height: calc(100vh - 19rem); min-height: 8rem;
+  padding-right: 0.15rem; overscroll-behavior: contain; }
+.board-range { margin: -0.3rem 0.2rem 0.5rem; font-size: 0.74rem; color: var(--ink-soft); }
+.board-edge { margin: 0.5rem 0.2rem; font-size: 0.75rem; color: var(--ink-soft); text-align: center; }

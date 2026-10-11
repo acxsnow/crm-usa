@@ -10,7 +10,7 @@ import binascii
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_effective_permissions
@@ -543,32 +543,69 @@ async def submit(db, *, organization_id, user, case_id) -> Case:
 # Tablero (kanban)
 # ---------------------------------------------------------------------------
 
-async def board(db, *, organization_id, user, include_early_closes=False, mine=False, limit_per_stage=50) -> list[dict]:
+async def board(db, *, organization_id, user, include_early_closes=False, mine=False, limit_per_stage=50,
+                stage: str | None = None, offset: int = 0, q: str | None = None,
+                salesperson_id=None, program_id=None) -> list[dict]:
+    """Tablero por etapa: cada columna con su total real y una página de
+    `limit_per_stage` expedientes, los más recientes primero. Con `stage`
+    devuelve solo esa columna desde `offset` (la página siguiente o anterior de
+    una columna). Los filtros (`q`, vendedor, programa) se aplican en la base,
+    también a los totales."""
     from app.modules.cases.models import Program
     from app.modules.crm.models import Customer
 
-    stmt = select(Case).where(Case.organization_id == organization_id).order_by(Case.updated_at.desc())
+    filtros = [Case.organization_id == organization_id]
     # "Mi día" pide solo los propios aunque quien entre pueda ver todos.
     if mine or "cases.read_all" not in _perms(user):
-        stmt = stmt.where(Case.assigned_salesperson_id == user.id)
+        filtros.append(Case.assigned_salesperson_id == user.id)
+    elif salesperson_id:
+        # Filtrar por otro vendedor solo tiene sentido para quien ve todos.
+        filtros.append(Case.assigned_salesperson_id == salesperson_id)
+    if program_id:
+        filtros.append(Case.program_id == program_id)
+    texto = (q or "").strip()
+    if texto:
+        patron = "%" + texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        clientes_que_coinciden = select(Customer.id).where(
+            Customer.organization_id == organization_id, Customer.legal_name.ilike(patron, escape="\\"))
+        filtros.append(or_(Case.case_number.ilike(patron, escape="\\"),
+                           Case.address_street.ilike(patron, escape="\\"),
+                           Case.address_city.ilike(patron, escape="\\"),
+                           Case.customer_id.in_(clientes_que_coinciden)))
     if not include_early_closes:
-        stmt = stmt.where(Case.stage_code.not_in(EARLY_CLOSES))
-    casos = list((await db.execute(stmt)).scalars().all())
+        filtros.append(Case.stage_code.not_in(EARLY_CLOSES))
+    if stage:
+        filtros.append(Case.stage_code == stage)
+    # La base cuenta y recorta: antes se cargaban TODOS los expedientes en
+    # memoria y se cortaban aquí, y «Pagado» y «Cerrado» crecen sin fin. Ahora
+    # va el total por etapa (GROUP BY) y solo los `limit_per_stage` más
+    # recientes de cada una (ROW_NUMBER por etapa).
+    totales = dict((await db.execute(
+        select(Case.stage_code, func.count(Case.id)).where(*filtros).group_by(Case.stage_code)
+    )).all())
+    puesto = func.row_number().over(partition_by=Case.stage_code,
+                                    order_by=(Case.updated_at.desc(), Case.id.desc())).label("puesto")
+    recientes = select(Case.id.label("id"), puesto).where(*filtros).subquery()
+    casos = list((await db.execute(
+        select(Case).join(recientes, recientes.c.id == Case.id).where(recientes.c.puesto > offset,
+                                                                    recientes.c.puesto <= offset + limit_per_stage)
+        .order_by(Case.updated_at.desc(), Case.id.desc())
+    )).scalars().all())
     clientes = {c.id: c.legal_name for c in (await db.execute(select(Customer).where(
         Customer.id.in_({c.customer_id for c in casos if c.customer_id})))).scalars().all()}
     programas = {p.id: p.name for p in (await db.execute(select(Program).where(
         Program.id.in_({c.program_id for c in casos if c.program_id})))).scalars().all()}
     columnas = []
     for code in stages.STAGES:
-        if not include_early_closes and code in EARLY_CLOSES:
+        if (not include_early_closes and code in EARLY_CLOSES) or (stage and code != stage):
             continue
         del_codigo = [c for c in casos if c.stage_code == code]
         columnas.append({
-            "code": code, "label": stages.STAGE_LABELS[code], "count": len(del_codigo),
+            "code": code, "label": stages.STAGE_LABELS[code], "count": totales.get(code, 0),
             "cases": [{"id": str(c.id), "case_number": c.case_number, "customer_name": clientes.get(c.customer_id),
                        "address": ", ".join(x for x in (c.address_street, c.address_unit, c.address_city) if x),
                        "program_name": programas.get(c.program_id), "substatus_code": c.substatus_code,
                        "updated_at": c.updated_at.isoformat() if c.updated_at else None}
-                      for c in del_codigo[:limit_per_stage]],
+                      for c in del_codigo],
         })
     return columnas

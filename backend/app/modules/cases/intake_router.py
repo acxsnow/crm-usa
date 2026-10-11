@@ -5,7 +5,7 @@ expedientes se registra antes y tomaría "board" como un `case_id`."""
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,11 +167,20 @@ async def submit(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 
 
 @router.get("/case-board")
-async def board(include_early_closes: bool = False, mine: bool = False, db: AsyncSession = Depends(get_db),
-                organization_id: uuid.UUID = Depends(get_organization_id),
+async def board(include_early_closes: bool = False, mine: bool = False,
+                limit: int = Query(50, ge=1, le=200), stage: str | None = None, offset: int = Query(0, ge=0),
+                q: str | None = Query(None, max_length=100), salesperson_id: uuid.UUID | None = None,
+                program_id: uuid.UUID | None = None,
+                db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                 current_user: User = Depends(_read)) -> list[dict]:
+    """Columnas por etapa con su total y una página de `limit` de cada una.
+    `stage` + `offset` traen otra página de una sola columna. Filtros: `q`
+    (expediente, dirección, ciudad o cliente), `salesperson_id` (solo para quien
+    ve todos) y `program_id`; también afectan los totales."""
     return await intake.board(db, organization_id=organization_id, user=current_user,
-                              include_early_closes=include_early_closes, mine=mine)
+                              include_early_closes=include_early_closes, mine=mine,
+                              limit_per_stage=limit, stage=stage, offset=offset,
+                              q=q, salesperson_id=salesperson_id, program_id=program_id)
 
 
 @router.get("/cases/{case_id}/terms-acceptance/signature")
