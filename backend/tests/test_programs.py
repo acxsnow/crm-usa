@@ -402,3 +402,21 @@ async def test_a_zone_only_takes_known_states_when_created_or_edited(app_client,
                                   json={"name": "Parque Sol", "state": "AZ", "city": "Phoenix"})).json()
     r = await app_client.patch(f"/api/v1/zones/{zona['id']}", headers=headers, json={"state": "CO"})
     assert r.status_code == 400 and r.json()["code"] == "invalid_state"
+
+
+async def test_a_signature_needs_the_terms_in_the_same_step(app_client, active_admin_user):
+    """La firma se toma con el dedo en la tarjeta de términos; en un paso sin la
+    aceptación de términos el vendedor solo veía un texto y no podía firmar."""
+    headers = await _admin(app_client)
+    _, borrador = await _borrador_de_tech(app_client, headers)
+    detalle = (await app_client.get(f"/api/v1/program-versions/{borrador['id']}", headers=headers)).json()
+    campos = [c for s in detalle["definition"]["steps"] for c in s["fields"]]
+    aceptacion = next(c for c in campos if c["key"] == "authorization.terms_accepted")
+    r = await app_client.delete(f"/api/v1/workflow-step-fields/{aceptacion['id']}", headers=headers)
+    assert r.status_code == 204
+    r = await app_client.post(f"/api/v1/program-versions/{borrador['id']}/publish", headers=headers)
+    assert r.status_code == 400
+    assert "Firma del cliente" in r.json()["detail"] and "aceptación de términos" in r.json()["detail"]
+    # Antes de intentar publicar, el editor ya lo muestra entre los problemas.
+    detalle = (await app_client.get(f"/api/v1/program-versions/{borrador['id']}", headers=headers)).json()
+    assert any("Firma del cliente" in p for p in detalle["problems"])

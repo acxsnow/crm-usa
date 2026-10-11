@@ -396,6 +396,14 @@ async def version_problems(db, version: ProgramVersion) -> list[str]:
                     problemas.append(f"«{c['label']}» depende de {c['condition']['field']}, que no está en la versión")
             if c["requirement"] == "conditional" and not c["condition"]:
                 problemas.append(f"«{c['label']}» es condicional pero no tiene condición")
+        # La firma del cliente se toma con el dedo en la tarjeta de términos, que
+        # solo aparece en el paso que pide aceptarlos. Una firma en otro paso
+        # quedaba como texto sin forma de firmar (11 oct 2026).
+        if not any(c["type"] == "terms_checkbox" for c in paso["fields"]):
+            for c in paso["fields"]:
+                if c["type"] == "signature" or c["key"] == "authorization.signed_at":
+                    problemas.append(f"«{c['label']}» está en el paso «{paso['title']}», que no tiene la aceptación "
+                                     "de términos: la firma se toma al aceptarlos, agrega ese campo al mismo paso")
     pide_terminos = any(c["type"] == "terms_checkbox" for p in definicion["steps"] for c in p["fields"])
     if pide_terminos:
         terms = await db.get(ProgramTerms, version.terms_id) if version.terms_id else None
