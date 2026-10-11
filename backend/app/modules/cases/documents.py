@@ -16,7 +16,7 @@ expediente hasta que lo reemplacen (guarda `guard_documents_reviewed`).
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cases import intake
@@ -165,9 +165,18 @@ async def review_queue(db: AsyncSession, *, organization_id) -> list[dict]:
     from app.modules.cases.models import Program
     from app.modules.crm.models import Customer
 
+    # Solo los que tienen algún archivo pendiente o rechazado. Saber cuáles son
+    # los vigentes exige leer las respuestas de cada expediente (una consulta
+    # por expediente), así que primero se descartan en la base los que no
+    # tienen nada por revisar: con 20.000 expedientes la cola tardaba 15 s
+    # (prueba de carga, 11 oct 2026). El resultado no cambia: abajo se sigue
+    # verificando con los archivos vigentes.
+    por_revisar = select(CaseFile.id).where(CaseFile.case_id == Case.id,
+                                            CaseFile.review_status.in_(("pending", "rejected")))
     casos = (await db.execute(
-        select(Case).where(Case.organization_id == organization_id, Case.stage_code.in_(REVIEW_STAGES))
-        .order_by(Case.submitted_at.asc().nulls_last())
+        select(Case).where(Case.organization_id == organization_id, Case.stage_code.in_(REVIEW_STAGES),
+                           exists(por_revisar))
+        .order_by(Case.submitted_at.asc().nulls_last(), Case.id)
     )).scalars().all()
     filas = []
     for c in casos:

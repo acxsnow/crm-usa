@@ -44,10 +44,13 @@ def _product(p: Product) -> dict:
 
 
 @router.get("/products")
-async def list_products(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_products(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                        db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_manage)) -> list[dict]:
-    filas = (await db.execute(select(Product).where(Product.organization_id == organization_id)
-                              .order_by(Product.active.desc(), Product.name))).scalars().all()
+    limit, offset = pagination
+    filas = await paginate(db, select(Product).where(Product.organization_id == organization_id)
+                           .order_by(Product.active.desc(), Product.name, Product.id),
+                           limit=limit, offset=offset, response=response)
     return [_product(p) for p in filas]
 
 
@@ -236,10 +239,13 @@ def _check_length(payload: "CampaignIn") -> None:
 
 
 @router.get("/campaigns")
-async def list_campaigns(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_campaigns(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                         db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_manage)) -> list[dict]:
-    filas = (await db.execute(select(Campaign).where(Campaign.organization_id == organization_id)
-                              .order_by(Campaign.created_at.desc()))).scalars().all()
+    limit, offset = pagination
+    filas = await paginate(db, select(Campaign).where(Campaign.organization_id == organization_id)
+                           .order_by(Campaign.created_at.desc(), Campaign.id.desc()),
+                           limit=limit, offset=offset, response=response)
     return [await _out(db, c) for c in filas]
 
 

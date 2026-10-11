@@ -117,9 +117,9 @@ export async function createTask(
   return res.data;
 }
 
-export async function listOverdueTasks(): Promise<(FieldTask & { project_title: string })[]> {
-  const res = await apiClient.get<(FieldTask & { project_title: string })[]>("/tasks/overdue");
-  return res.data;
+/** Tareas vencidas, por páginas (crecen con el atraso). */
+export function listOverdueTasksPage(page: number, pageSize: number): Promise<Page<FieldTask & { project_title: string }>> {
+  return fetchPage<FieldTask & { project_title: string }>("/tasks/overdue", page, pageSize);
 }
 
 export async function listTaskComments(taskId: string): Promise<TaskComment[]> {

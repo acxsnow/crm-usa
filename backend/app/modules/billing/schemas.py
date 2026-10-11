@@ -145,6 +145,8 @@ class FinanceDashboardResponse(BaseModel):
     invoice_count: int
     overdue_count: int
     due_soon_count: int  # vencen en los próximos 7 días y no están pagadas
+    # Pagos registrados este mes (programas y particulares), para el Inicio.
+    paid_this_month: Money
 
 
 def invoice_response(invoice, today: date) -> InvoiceResponse:

@@ -1,23 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
-import { listOverdueTasks } from "@/features/field-ops/api";
+import { listOverdueTasksPage } from "@/features/field-ops/api";
 import { listCaseActivity, listCasesPage, type CaseActivityItem } from "@/features/cases/api";
 import { listCustomersPage } from "@/features/crm/api";
 import { listProjectsPage } from "@/features/field-ops/api";
-import { listInvoicesPage } from "@/features/billing/api";
-
-async function loadAllPages<T>(fetchPage: (page: number, pageSize: number) => Promise<{ items: T[]; total: number }>): Promise<T[]> {
-  const pageSize = 500;
-  const firstPage = await fetchPage(1, pageSize);
-  const pages = [firstPage.items];
-  for (let page = 2; pages.flat().length < firstPage.total; page += 1) {
-    const nextPage = await fetchPage(page, pageSize);
-    pages.push(nextPage.items);
-    if (nextPage.items.length === 0) break;
-  }
-  return pages.flat();
-}
+import { getFinanceDashboard } from "@/features/billing/api";
 
 /** «hace 12 min», «hace 3 h», «hace 2 días». */
 function haceCuanto(iso: string): string {
@@ -87,29 +75,31 @@ export function DashboardHome() {
     queryFn: () => listCustomersPage(1, 1),
     enabled: canSeeCustomers,
   });
-  const { data: projects } = useQuery({
-    queryKey: ["dashboard-projects"],
-    queryFn: () => loadAllPages(listProjectsPage),
+  // Solo totales: la base cuenta y no se traen listas completas (antes se
+  // descargaban todas las páginas de proyectos y facturas para contar).
+  const { data: activeProjects } = useQuery({
+    queryKey: ["dashboard-active-projects"],
+    queryFn: async () => {
+      const porEstado = await Promise.all(
+        ["planning", "scheduled", "in_progress"].map((status) => listProjectsPage(1, 1, { status })));
+      return porEstado.reduce((total, page) => total + page.total, 0);
+    },
     enabled: canSeeTasks,
   });
-  const { data: invoices } = useQuery({
-    queryKey: ["dashboard-invoices"],
-    queryFn: () => loadAllPages(listInvoicesPage),
+  const { data: finanzas } = useQuery({
+    queryKey: ["dashboard-finance"],
+    queryFn: getFinanceDashboard,
     enabled: canSeeFinance,
   });
 
-  const { data: overdueTasks } = useQuery({
-    queryKey: ["overdue-tasks"],
-    queryFn: listOverdueTasks,
+  // Las 10 más antiguas y el total; la lista completa vive en Proyectos.
+  const { data: vencidas } = useQuery({
+    queryKey: ["overdue-tasks", "inicio"],
+    queryFn: () => listOverdueTasksPage(1, 10),
     enabled: canSeeTasks,
   });
+  const overdueTasks = vencidas?.items;
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthlyCollected = (invoices ?? []).reduce(
-    (total, invoice) => total + invoice.payments.filter((payment) => payment.paid_at.slice(0, 7) === currentMonth).reduce((sum, payment) => sum + payment.amount, 0),
-    0,
-  );
-  const activeProjects = projects?.filter((project) => ["planning", "scheduled", "in_progress"].includes(project.status)).length;
   const today = new Date();
   const formattedDate = today.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const monthName = today.toLocaleDateString("es-CO", { month: "long" });
@@ -121,7 +111,7 @@ export function DashboardHome() {
         <article className="metric-card"><div className="metric-icon coral">✦</div><div><span>Expedientes activos</span><strong>{activeCases ?? "—"}</strong><small className="neutral">• En prospecto, revisión o aprobados</small></div></article>
         <article className="metric-card"><div className="metric-icon purple">♙</div><div><span>Clientes registrados</span><strong>{customers?.total ?? "—"}</strong><small className="neutral">• Total en tu cartera</small></div></article>
         <article className="metric-card"><div className="metric-icon blue">▣</div><div><span>Proyectos en curso</span><strong>{activeProjects ?? "—"}</strong><small className="neutral">• Planificados, programados o activos</small></div></article>
-        <article className="metric-card"><div className="metric-icon green">$</div><div><span>Cobrado este mes</span><strong>{canSeeFinance ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(monthlyCollected) : "—"}</strong><small className="neutral">• Pagos registrados en {monthName}</small></div></article>
+        <article className="metric-card"><div className="metric-icon green">$</div><div><span>Cobrado este mes</span><strong>{canSeeFinance && finanzas ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(finanzas.paid_this_month) : "—"}</strong><small className="neutral">• Pagos registrados en {monthName}</small></div></article>
       </section>
       <div className="dashboard-columns">
         {canSeeCases && (
@@ -165,7 +155,7 @@ export function DashboardHome() {
 
       {canSeeTasks && (
         <div className="overdue-section">
-          <div className="panel-heading"><div><h2>Tareas vencidas {overdueTasks && overdueTasks.length > 0 && <span className="status-pill status-inactive">{overdueTasks.length}</span>}</h2><p>Revisa estos pendientes para mantener el ritmo</p></div></div>
+          <div className="panel-heading"><div><h2>Tareas vencidas {vencidas && vencidas.total > 0 && <span className="status-pill status-inactive">{vencidas.total}</span>}</h2><p>Revisa estos pendientes para mantener el ritmo</p></div></div>
           {!overdueTasks || overdueTasks.length === 0 ? (
             <p className="page-subtitle">No hay tareas vencidas — al día.</p>
           ) : (

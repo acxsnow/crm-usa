@@ -36,7 +36,7 @@ backend/
 │   ├── shared/                    # utilidades transversales de negocio
 │   │   ├── permissions.py         #   PERMISSION_CATALOG + DEFAULT_ROLE_PERMISSIONS (matriz rol→permiso)
 │   │   ├── audit.py · audit_models.py   # record_audit_event() append-only
-│   │   ├── pagination.py          #   pagination_params + paginate() → X-Total-Count
+│   │   ├── pagination.py          #   pagination_params + paginate() / paginate_list() → X-Total-Count; EXCEPTIONS
 │   │   ├── normalize.py           #   email/teléfono/dirección normalizados (duplicados)
 │   │   └── datetime_utils.py      #   as_utc()
 │   ├── modules/                   # un paquete por dominio
@@ -86,8 +86,15 @@ complejas**. Delega en `service` (escritura) y `selectors` (lectura).
    someter / firmar / borrar → `record_audit_event()` desde el service.
 4. **Transacción**: el service hace `await db.flush()`; el router hace **un**
    `await db.commit()` al final. Si algo lanza antes, no hay commit.
-5. **Paginación**: todo listado que pueda crecer usa `pagination_params` +
-   `paginate()` (default 100, máx 500, total en `X-Total-Count`).
+5. **Paginación**: **todo** listado `GET` declara `Depends(pagination_params)`
+   (default 100, máx 500, total en `X-Total-Count`), como el
+   `DEFAULT_PAGINATION_CLASS` de DRF. `tests/test_pagination_everywhere.py`
+   recorre todas las rutas y falla si un listado no lo tiene. Según de dónde
+   salgan los datos: `paginate(db, stmt)` (un modelo por fila),
+   `paginate(db, stmt, scalars=False)` (varias columnas o entidades) o
+   `paginate_list(items)` (listas armadas en Python, ya acotadas). Las
+   excepciones (tablero por columna, actividad con tope fijo) están en
+   `EXCEPTIONS` de `app/shared/pagination.py`, cada una con su motivo.
 6. **Archivos**: solo a través de `app/shared/files/storage.py`
    (sanitiza nombre, valida MIME y tamaño, contiene la ruta). Se persiste la
    ruta **relativa** a `STORAGE_DIR`. Descarga por endpoint con permiso, nunca

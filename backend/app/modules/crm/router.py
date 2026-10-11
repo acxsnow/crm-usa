@@ -160,13 +160,14 @@ async def customer_timeline(
 
 @router.get("/funder-statuses", response_model=list[FunderStatusResponse])
 async def list_funder_statuses(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("programs.read")),
 ):
-    result = await db.execute(
-        select(FunderStatus).where(FunderStatus.organization_id == organization_id).order_by(FunderStatus.sort_order)
-    )
-    return result.scalars().all()
+    limit, offset = pagination
+    return await paginate(db, select(FunderStatus).where(FunderStatus.organization_id == organization_id)
+                          .order_by(FunderStatus.sort_order, FunderStatus.id),
+                          limit=limit, offset=offset, response=response)
 
 
 # --- Activities -----------------------------------------------------------

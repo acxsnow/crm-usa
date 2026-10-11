@@ -25,6 +25,7 @@ from app.modules.users.selectors import (
     roles_for_organization,
     user_counts_by_role,
 )
+from app.shared.pagination import paginate_list, pagination_params
 from app.shared.permissions import PERMISSION_CATALOG
 
 router = APIRouter(tags=["roles"])
@@ -63,12 +64,16 @@ async def list_permissions(
 
 @router.get("/roles", response_model=list[RoleResponse])
 async def list_roles(
+    response: Response,
+    pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     # Quien solo administra usuarios necesita leer los roles para asignarlos.
     current_user: User = Depends(require_any_permission("roles.manage", "users.manage")),
 ):
-    roles = await roles_for_organization(db, organization_id)
+    limit, offset = pagination
+    roles = paginate_list(await roles_for_organization(db, organization_id), limit=limit, offset=offset,
+                          response=response)
     counts = await user_counts_by_role(db, organization_id)
     return [_to_response(role, counts.get(role.id, 0)) for role in roles]
 

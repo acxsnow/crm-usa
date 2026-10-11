@@ -32,7 +32,7 @@ from app.modules.cases.schemas import (
     StageInfo,
 )
 from app.modules.users.models import User
-from app.shared.pagination import paginate, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -147,18 +147,21 @@ async def get_case(
 @router.get("/{case_id}/events", response_model=list[CaseStageEventResponse])
 async def list_case_events(
     case_id: uuid.UUID,
+    response: Response,
+    pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("cases.read_own", "cases.read_all")),
 ):
-    """El historial completo de etapas de un expediente."""
+    """El historial de etapas de un expediente, del más antiguo al más reciente."""
     case = await case_service.get_case_or_404(
         db, organization_id=organization_id, case_id=case_id
     )
     await _require_can_see(current_user, case)
-    return await case_service.list_stage_events(
+    limit, offset = pagination
+    return paginate_list(await case_service.list_stage_events(
         db, organization_id=organization_id, case_id=case.id
-    )
+    ), limit=limit, offset=offset, response=response)
 
 
 @router.post("/{case_id}/transition", response_model=CaseResponse)

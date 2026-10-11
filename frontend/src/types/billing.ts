@@ -76,6 +76,8 @@ export interface FinanceDashboard {
   invoice_count: number;
   overdue_count: number;
   due_soon_count: number;
+  /** Pagos registrados este mes (programas y particulares). */
+  paid_this_month: number;
 }
 
 // ---------------------------------------------------------------------------

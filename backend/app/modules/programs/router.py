@@ -16,7 +16,7 @@ from app.modules.programs import engine
 from app.modules.programs import service as svc
 from app.modules.programs.models import BINDINGS, FIELD_TYPES, PHASE_ROLES, REQUIREMENT_LEVELS
 from app.modules.users.models import User
-from app.shared.pagination import paginate, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(tags=["programs"])
 
@@ -277,9 +277,13 @@ async def install_defaults(db: AsyncSession = Depends(get_db), organization_id: 
 # ---------------------------------------------------------------------------
 
 @router.get("/programs", response_model=list[ProgramOut])
-async def list_programs(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_programs(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                        db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_read)):
-    return [await _program_out(db, organization_id, p) for p in await svc.list_programs(db, organization_id=organization_id)]
+    limit, offset = pagination
+    pagina = paginate_list(await svc.list_programs(db, organization_id=organization_id),
+                           limit=limit, offset=offset, response=response)
+    return [await _program_out(db, organization_id, p) for p in pagina]
 
 
 @router.post("/programs", response_model=ProgramOut, status_code=201)
@@ -309,9 +313,12 @@ async def update_program(program_id: uuid.UUID, payload: ProgramUpdate, db: Asyn
 # --- T&C -----------------------------------------------------------------------
 
 @router.get("/programs/{program_id}/terms", response_model=list[TermsOut])
-async def list_terms(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_terms(program_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                     db: AsyncSession = Depends(get_db),
                      organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(_read)):
-    return await svc.list_terms(db, organization_id=organization_id, program_id=program_id)
+    limit, offset = pagination
+    return paginate_list(await svc.list_terms(db, organization_id=organization_id, program_id=program_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/programs/{program_id}/terms", response_model=TermsOut, status_code=201)
@@ -342,9 +349,12 @@ async def publish_terms(terms_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 # ---------------------------------------------------------------------------
 
 @router.get("/fields", response_model=list[FieldOut])
-async def list_fields(include_inactive: bool = True, db: AsyncSession = Depends(get_db),
+async def list_fields(response: Response, include_inactive: bool = True,
+                      pagination: tuple[int, int] = Depends(pagination_params), db: AsyncSession = Depends(get_db),
                       organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(_read)):
-    return await svc.list_fields(db, organization_id=organization_id, include_inactive=include_inactive)
+    limit, offset = pagination
+    return paginate_list(await svc.list_fields(db, organization_id=organization_id, include_inactive=include_inactive),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/fields", response_model=FieldOut, status_code=201)
@@ -368,10 +378,13 @@ async def update_field(field_id: uuid.UUID, payload: FieldUpdate, db: AsyncSessi
 # ---------------------------------------------------------------------------
 
 @router.get("/programs/{program_id}/versions", response_model=list[VersionOut])
-async def list_versions(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_versions(program_id: uuid.UUID, response: Response,
+                        pagination: tuple[int, int] = Depends(pagination_params), db: AsyncSession = Depends(get_db),
                         organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_read)):
-    return await svc.list_versions(db, organization_id=organization_id, program_id=program_id)
+    limit, offset = pagination
+    return paginate_list(await svc.list_versions(db, organization_id=organization_id, program_id=program_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/programs/{program_id}/versions", response_model=VersionOut, status_code=201)
@@ -514,10 +527,13 @@ async def move_step_field(step_field_id: uuid.UUID, payload: Move, db: AsyncSess
 # ---------------------------------------------------------------------------
 
 @router.get("/programs/{program_id}/zones", response_model=list[ZoneOut])
-async def list_zones(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_zones(program_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                     db: AsyncSession = Depends(get_db),
                      organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(_read)):
-    return [await _zone_out(db, z) for z in await svc.list_zones(db, organization_id=organization_id,
-                                                                 program_id=program_id)]
+    limit, offset = pagination
+    pagina = paginate_list(await svc.list_zones(db, organization_id=organization_id, program_id=program_id),
+                           limit=limit, offset=offset, response=response)
+    return [await _zone_out(db, z) for z in pagina]
 
 
 @router.post("/programs/{program_id}/zones", response_model=ZoneOut, status_code=201)
@@ -547,15 +563,19 @@ async def set_salespeople(zone_id: uuid.UUID, payload: SalespeopleIn, db: AsyncS
 
 
 @router.get("/me/programs")
-async def my_programs(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def my_programs(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                       current_user: User = Depends(get_current_user)) -> list[dict]:
     """El inicio del vendedor (D5): sus programas, con la versión publicada que
     va a llenar, y sus zonas."""
+    limit, offset = pagination
+    asignaciones = paginate_list(await svc.my_assignments(db, organization_id=organization_id, user=current_user),
+                                 limit=limit, offset=offset, response=response)
     return [{"program": {"id": str(i["program"].id), "code": i["program"].code, "name": i["program"].name},
              "version_id": str(i["version"].id), "version": i["version"].version,
              "zones": [{"id": str(z.id), "code": z.code, "name": z.name, "state": z.state, "city": z.city}
                        for z in i["zones"]]}
-            for i in await svc.my_assignments(db, organization_id=organization_id, user=current_user)]
+            for i in asignaciones]
 
 
 @router.get("/me/program-options")

@@ -12,7 +12,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.models import DocumentStatus, Invoice, InvoiceKind, InvoiceLine, InvoicePayment, LINE_KINDS
@@ -295,6 +295,14 @@ async def finance_dashboard(db: AsyncSession, *, organization_id: uuid.UUID) -> 
         i for i in emitidas
         if i.payment_status_on(hoy) in ("unpaid", "partial") and i.due_date and hoy <= i.due_date <= limite
     ]
+    # Lo cobrado en el mes (programas y particulares), sumado en la base: el
+    # Inicio lo mostraba trayendo todas las facturas al navegador.
+    cobrado_mes = (await db.execute(
+        select(func.coalesce(func.sum(InvoicePayment.amount), 0))
+        .join(Invoice, Invoice.id == InvoicePayment.invoice_id)
+        .where(Invoice.organization_id == organization_id,
+               InvoicePayment.paid_at >= hoy.replace(day=1), InvoicePayment.paid_at <= hoy)
+    )).scalar_one()
     return {
         "total_invoiced": money_sum(i.amount for i in emitidas),
         "total_paid": money_sum(i.paid_amount for i in emitidas),
@@ -303,6 +311,7 @@ async def finance_dashboard(db: AsyncSession, *, organization_id: uuid.UUID) -> 
         "invoice_count": len(emitidas),
         "overdue_count": len(vencidas),
         "due_soon_count": len(por_vencer),
+        "paid_this_month": money_sum([Decimal(cobrado_mes)]),
     }
 
 

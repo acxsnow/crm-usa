@@ -205,3 +205,21 @@ async def test_invoices_of_another_organization_are_invisible(app_client, active
     invoice_id = (await app_client.post("/api/v1/invoices", json={"project_id": project_id, "amount": 100}, headers=headers)).json()["id"]
     otros = {"Authorization": f"Bearer {await _login(app_client, second_org_admin_user.email)}"}
     assert (await app_client.get(f"/api/v1/invoices/{invoice_id}", headers=otros)).status_code == 404
+
+
+async def test_the_dashboard_adds_up_what_was_collected_this_month_in_the_database(
+    app_client, active_admin_user, seeded_org
+):
+    """Lo cobrado en el mes, para el Inicio: solo los pagos de este mes."""
+    headers = await _admin_headers(app_client, active_admin_user)
+    project_id = await _create_project(app_client, headers)
+    factura = (await app_client.post("/api/v1/invoices", json={"project_id": project_id, "amount": 1000},
+                                     headers=headers)).json()
+    hoy = date.today()
+    mes_pasado = hoy.replace(day=1) - timedelta(days=1)
+    for monto, cuando in ((300, hoy), (200, mes_pasado)):
+        r = await app_client.post(f"/api/v1/invoices/{factura['id']}/payments",
+                                  json={"amount": monto, "paid_at": str(cuando)}, headers=headers)
+        assert r.status_code == 201, r.text
+    body = (await app_client.get("/api/v1/finance/dashboard", headers=headers)).json()
+    assert body["paid_this_month"] == 300.0

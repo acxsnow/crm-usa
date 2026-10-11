@@ -517,11 +517,11 @@ async def public_customer_sign(db: AsyncSession, *, raw_token: str, customer_nam
 # Overdue tasks
 # ---------------------------------------------------------------------------
 
-async def list_overdue_tasks(
-    db: AsyncSession, *, organization_id: uuid.UUID, restrict_to_technician_id: uuid.UUID | None = None,
-) -> list[tuple[Task, str]]:
-    """Returns (task, project_title) pairs for every not-done task whose due
-    date has passed. This is the same lazy, computed-on-read approach as
+def overdue_tasks_query(
+    *, organization_id: uuid.UUID, restrict_to_technician_id: uuid.UUID | None = None,
+):
+    """The query of (task, project_title) pairs for every not-done task whose
+    due date has passed; the router paginates it (it grows with the backlog). This is the same lazy, computed-on-read approach as
     Invoice's overdue detection — no scheduled job persists an "overdue"
     state (TaskStatus has none to persist into); it's just filtered here
     instead of per-row in Python, since a task board or an overdue-tasks
@@ -542,5 +542,4 @@ async def list_overdue_tasks(
     )
     if restrict_to_technician_id:
         stmt = stmt.where(Project.primary_technician_user_id == restrict_to_technician_id)
-    result = await db.execute(stmt)
-    return list(result.all())
+    return stmt.order_by(Task.id)

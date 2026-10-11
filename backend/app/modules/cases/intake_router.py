@@ -5,7 +5,7 @@ expedientes se registra antes y tomaría "board" como un `case_id`."""
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from app.modules.cases.router import _to_response
 from app.modules.cases.schemas import CaseResponse
 from app.modules.users.models import User
 from app.shared.files.storage import absolute_path
+from app.shared.pagination import paginate_list, pagination_params
 
 router = APIRouter(tags=["cases-intake"])
 
@@ -80,14 +81,17 @@ async def record_visit(payload: VisitIn, db: AsyncSession = Depends(get_db),
 
 
 @router.get("/cases/{case_id}/visits")
-async def list_visits(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_visits(case_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                      db: AsyncSession = Depends(get_db),
                       organization_id: uuid.UUID = Depends(get_organization_id),
                       current_user: User = Depends(_read)) -> list[dict]:
     case = await intake._get_case(db, organization_id, case_id)
     intake._require_owner(current_user, case)
+    limit, offset = pagination
+    visitas = paginate_list(await intake.list_visits(db, case), limit=limit, offset=offset, response=response)
     return [{"id": str(v.id), "result": v.answers.get("result"), "label": VISIT_RESULTS.get(v.answers.get("result")),
              "notes": v.answers.get("notes"), "at": v.submitted_at.isoformat(), "latitude": v.latitude,
-             "longitude": v.longitude} for v in await intake.list_visits(db, case)]
+             "longitude": v.longitude} for v in visitas]
 
 
 @router.put("/cases/{case_id}/program", response_model=CaseResponse)
@@ -212,14 +216,18 @@ class DocumentReviewIn(BaseModel):
 
 
 @router.get("/cases/{case_id}/documents")
-async def case_documents(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def case_documents(case_id: uuid.UUID, response: Response,
+                         pagination: tuple[int, int] = Depends(pagination_params),
+                         db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_read)) -> list[dict]:
     from app.modules.cases import documents
 
     case = await intake._get_case(db, organization_id, case_id)
     intake._require_owner(current_user, case)
-    return await documents.list_documents(db, case, current_user)
+    limit, offset = pagination
+    return paginate_list(await documents.list_documents(db, case, current_user),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/cases/{case_id}/documents", status_code=201)
@@ -250,9 +258,14 @@ async def review_document(file_id: uuid.UUID, payload: DocumentReviewIn, db: Asy
 
 
 @router.get("/documents/review-queue")
-async def document_queue(db: AsyncSession = Depends(get_db),
+async def document_queue(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                         db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_doc_review)) -> list[dict]:
+    """Cola de trabajo: se calcula sobre los expedientes en revisión (los que
+    salen al resolverse), y la respuesta va paginada como todo listado."""
     from app.modules.cases import documents
 
-    return await documents.review_queue(db, organization_id=organization_id)
+    limit, offset = pagination
+    return paginate_list(await documents.review_queue(db, organization_id=organization_id),
+                         limit=limit, offset=offset, response=response)

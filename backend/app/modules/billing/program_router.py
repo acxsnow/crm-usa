@@ -17,6 +17,7 @@ from app.modules.billing import program_config
 from app.modules.billing.requirements import AUTO_RULES
 from app.modules.billing.schemas import Money
 from app.modules.users.models import User
+from app.shared.pagination import paginate_list, pagination_params
 
 router = APIRouter(prefix="/billing/programs", tags=["billing-config"])
 
@@ -112,9 +113,12 @@ _configure = require_permission("billing.configure")
 
 
 @router.get("", response_model=list[ProgramSummary])
-async def list_programs(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def list_programs(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                        db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_read)):
-    return await program_config.list_programs(db, organization_id=organization_id)
+    limit, offset = pagination
+    return paginate_list(await program_config.list_programs(db, organization_id=organization_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.get("/auto-rules")
@@ -140,9 +144,12 @@ async def update_profile(program_id: uuid.UUID, payload: ProfileUpdate, db: Asyn
 
 
 @router.get("/{program_id}/rates", response_model=list[RateResponse])
-async def list_rates(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_rates(program_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                     db: AsyncSession = Depends(get_db),
                      organization_id: uuid.UUID = Depends(get_organization_id), current_user: User = Depends(_read)):
-    return await program_config.list_rates(db, organization_id=organization_id, program_id=program_id)
+    limit, offset = pagination
+    return paginate_list(await program_config.list_rates(db, organization_id=organization_id, program_id=program_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/{program_id}/rates", response_model=RateResponse, status_code=201)
@@ -162,10 +169,14 @@ async def close_rate(rate_id: uuid.UUID, payload: RateClose, db: AsyncSession = 
 
 
 @router.get("/{program_id}/jurisdictions", response_model=list[JurisdictionResponse])
-async def list_jurisdictions(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_jurisdictions(program_id: uuid.UUID, response: Response,
+                             pagination: tuple[int, int] = Depends(pagination_params), db: AsyncSession = Depends(get_db),
                              organization_id: uuid.UUID = Depends(get_organization_id),
                              current_user: User = Depends(_read)):
-    return await program_config.list_jurisdictions(db, organization_id=organization_id, program_id=program_id)
+    limit, offset = pagination
+    return paginate_list(await program_config.list_jurisdictions(db, organization_id=organization_id,
+                                                                program_id=program_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.post("/{program_id}/jurisdictions", response_model=JurisdictionResponse, status_code=201)
@@ -186,12 +197,14 @@ async def delete_jurisdiction(jurisdiction_id: uuid.UUID, db: AsyncSession = Dep
 
 
 @router.get("/{program_id}/requirements", response_model=list[RequirementResponse])
-async def list_requirements(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def list_requirements(program_id: uuid.UUID, response: Response,
+                            pagination: tuple[int, int] = Depends(pagination_params), db: AsyncSession = Depends(get_db),
                             organization_id: uuid.UUID = Depends(get_organization_id),
                             current_user: User = Depends(_read)):
     reqs = await program_config.list_requirements(db, organization_id=organization_id, program_id=program_id)
     await db.commit()
-    return reqs
+    limit, offset = pagination
+    return paginate_list(reqs, limit=limit, offset=offset, response=response)
 
 
 @router.post("/{program_id}/requirements", response_model=RequirementResponse, status_code=201)

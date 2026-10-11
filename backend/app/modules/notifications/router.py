@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ from app.modules.notifications.models import (
 )
 from app.modules.users.models import User
 from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 # Administración tiene `notifications.manage` y no `read_own`: también ve los suyos.
@@ -111,10 +112,11 @@ async def set_preferences(payload: PreferenceIn, db: AsyncSession = Depends(get_
 # --- Administración ----------------------------------------------------------
 
 @router.get("/deliveries")
-async def deliveries(status: str | None = None, channel: str | None = None, limit: int = Query(100, ge=1, le=500),
+async def deliveries(response: Response, status: str | None = None, channel: str | None = None,
+                     pagination: tuple[int, int] = Depends(pagination_params),
                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                      current_user: User = Depends(_manage)) -> list[dict]:
-    """Historial de envíos por correo y SMS, con su estado."""
+    """Historial de envíos por correo y SMS, con su estado. Paginado: crece con cada aviso."""
     stmt = select(NotificationDelivery, Notification).join(
         Notification, Notification.id == NotificationDelivery.notification_id).where(
         NotificationDelivery.organization_id == organization_id)
@@ -122,7 +124,9 @@ async def deliveries(status: str | None = None, channel: str | None = None, limi
         stmt = stmt.where(NotificationDelivery.status == status)
     if channel in CHANNELS:
         stmt = stmt.where(NotificationDelivery.channel == channel)
-    filas = (await db.execute(stmt.order_by(NotificationDelivery.created_at.desc()).limit(limit))).all()
+    limit, offset = pagination
+    filas = await paginate(db, stmt.order_by(NotificationDelivery.created_at.desc(), NotificationDelivery.id.desc()),
+                           limit=limit, offset=offset, response=response, scalars=False)
     return [{"id": str(d.id), "channel": d.channel, "to": d.to, "subject": d.subject, "status": d.status,
              "attempts": d.attempts, "last_error": d.last_error, "event": n.event,
              "notice_label": NOTICES.get(n.event, {}).get("label", n.event), "title": n.title,
@@ -139,11 +143,14 @@ async def resend(delivery_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 
 
 @router.get("/templates")
-async def templates(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+async def templates(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                    db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                     current_user: User = Depends(_manage)) -> list[dict]:
-    """Cada aviso con su texto vigente por canal (el editado o el de fábrica)."""
+    """Cada aviso con su texto vigente por canal (el editado o el de fábrica).
+    Se recorta la lista de avisos antes de consultar los textos."""
+    limit, offset = pagination
     salida = []
-    for code, n in NOTICES.items():
+    for code, n in paginate_list(list(NOTICES.items()), limit=limit, offset=offset, response=response):
         canales = {}
         for canal in CHANNELS:
             asunto, cuerpo, activa = await service.template_for(db, organization_id, code, canal)

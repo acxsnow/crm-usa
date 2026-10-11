@@ -53,6 +53,7 @@ frontend/
     ├── lib/                                        # transversal, sin UI
     │   ├── apiClient.ts                            #   Axios único + interceptores + tokens (localStorage)
     │   ├── pagination.ts                           #   fetchPage<T>: ?limit=&offset= + X-Total-Count → Page<T>
+    │   ├── usePaginatedQuery.ts                    #   gancho común de listados paginados (página, total, controles)
     │   └── useTableFilters.ts                      #   filtros y página en la URL (?status=&q=&page=)
     └── types/                                      # DTOs que espejan los schemas Pydantic del backend
         auth.ts · crm.ts · fieldOps.ts · billing.ts · users.ts · audit.ts
@@ -75,9 +76,13 @@ Página / componente (features/<f>/XxxPage.tsx)
 - **Interceptor de response**: en 401 (fuera de `/auth/*`) intenta un refresh
   único compartido y reintenta la petición; si falla, limpia tokens y va a
   `/login`.
-- **Listados**: `fetchPage` + `useTableFilters` + `FilterBar` + `DataTable` +
-  `PaginationControls`. Los filtros se resuelven en el **backend** (SQL), no en
-  memoria. La `queryKey` incluye `page` y `extraParams`.
+- **Listados**: todo listado del backend viene paginado (máximo 100 por
+  defecto). Una tabla o lista **nueva** usa el gancho común
+  `lib/usePaginatedQuery.ts` + `<PaginationControls {...lista.controls} />`:
+  maneja la página, pide solo esa y vuelve a la 1 al cambiar filtros. Las
+  pantallas anteriores usan `fetchPage` + `useTableFilters` + `FilterBar` +
+  `DataTable` + `PaginationControls` y siguen igual. Los filtros se resuelven
+  en el **backend** (SQL), no en memoria.
 - **Mutaciones**: `onSuccess` → `queryClient.invalidateQueries({ queryKey: [...] })`.
   Nunca mutar caché a mano salvo optimistic updates justificados.
 

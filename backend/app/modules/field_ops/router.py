@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
-from app.shared.pagination import paginate, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 from app.modules.field_ops import checklist as checklist_service
 from app.modules.field_ops import inspections as inspections_service
 from app.modules.field_ops import installation as installation_service
@@ -84,11 +84,14 @@ router = APIRouter(tags=["field-ops"])
 
 @router.get("/checklist-templates", response_model=list[ChecklistTemplateResponse])
 async def list_checklist_templates(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("checklists.manage")),
 ):
-    result = await db.execute(select(ChecklistTemplate).where(ChecklistTemplate.organization_id == organization_id))
-    return result.scalars().all()
+    limit, offset = pagination
+    return await paginate(db, select(ChecklistTemplate).where(ChecklistTemplate.organization_id == organization_id)
+                          .order_by(ChecklistTemplate.name, ChecklistTemplate.id),
+                          limit=limit, offset=offset, response=response)
 
 
 @router.post("/checklist-templates", response_model=ChecklistTemplateResponse, status_code=201)
@@ -223,24 +226,28 @@ async def seed_default_checklist_template(
 
 @router.get("/technician-monitor", response_model=list[TechnicianMonitorRow])
 async def technician_monitor(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("dashboards.operations")),
 ):
-    technicians = (
-        await db.execute(
-            select(User)
-            .join(UserRole, UserRole.user_id == User.id)
-            .join(Role, Role.id == UserRole.role_id)
-            .where(
-                User.organization_id == organization_id,
-                Role.code == "field_technician",
-                User.status == UserStatus.active,
-            )
-            .distinct()
-            .order_by(User.full_name)
+    # Se pagina la lista de técnicos; los datos de cada uno se calculan solo
+    # para los de la página.
+    limit, offset = pagination
+    technicians = await paginate(
+        db,
+        select(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(
+            User.organization_id == organization_id,
+            Role.code == "field_technician",
+            User.status == UserStatus.active,
         )
-    ).scalars().all()
+        .distinct()
+        .order_by(User.full_name, User.id),
+        limit=limit, offset=offset, response=response,
+    )
 
     today = date.today()
     now = datetime.now(timezone.utc)
@@ -376,15 +383,16 @@ async def update_project(
 
 @router.get("/projects/{project_id}/checklist", response_model=list[ProjectChecklistItemResponse])
 async def get_project_checklist(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     await _get_project_or_404(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
-    result = await db.execute(
-        select(ProjectChecklistItem).where(ProjectChecklistItem.project_id == project_id).order_by(ProjectChecklistItem.sort_order)
-    )
-    return result.scalars().all()
+    limit, offset = pagination
+    return await paginate(db, select(ProjectChecklistItem).where(ProjectChecklistItem.project_id == project_id)
+                          .order_by(ProjectChecklistItem.sort_order, ProjectChecklistItem.id),
+                          limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/checklist/apply-template", response_model=list[ProjectChecklistItemResponse])
@@ -435,13 +443,16 @@ async def set_installation_conditions(
 
 @router.get("/projects/{project_id}/tasks", response_model=list[TaskResponse])
 async def list_project_tasks(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     await _get_project_or_404(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
-    result = await db.execute(select(Task).where(Task.project_id == project_id).order_by(Task.due_date.asc().nulls_last()))
-    return result.scalars().all()
+    limit, offset = pagination
+    return await paginate(db, select(Task).where(Task.project_id == project_id)
+                          .order_by(Task.due_date.asc().nulls_last(), Task.id),
+                          limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/tasks", response_model=TaskResponse, status_code=201)
@@ -489,14 +500,16 @@ async def update_task(
 
 @router.get("/tasks/overdue", response_model=list[OverdueTaskResponse])
 async def list_overdue_tasks(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     perms = get_effective_permissions(current_user)
     restrict_to = None if "projects.read_all" in perms else current_user.id
-    pairs = await field_ops_service.list_overdue_tasks(
-        db, organization_id=organization_id, restrict_to_technician_id=restrict_to
-    )
+    limit, offset = pagination
+    pairs = await paginate(db, field_ops_service.overdue_tasks_query(
+        organization_id=organization_id, restrict_to_technician_id=restrict_to),
+        limit=limit, offset=offset, response=response, scalars=False)
     return [
         OverdueTaskResponse(**TaskResponse.model_validate(task).model_dump(), project_title=project_title)
         for task, project_title in pairs
@@ -507,15 +520,16 @@ async def list_overdue_tasks(
 
 @router.get("/tasks/{task_id}/comments", response_model=list[TaskCommentResponse])
 async def list_task_comments(
-    task_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    task_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     await _get_task_or_404(db, organization_id=organization_id, task_id=task_id, current_user=current_user)
-    result = await db.execute(
-        select(TaskComment).where(TaskComment.task_id == task_id).order_by(TaskComment.created_at.asc())
-    )
-    return result.scalars().all()
+    limit, offset = pagination
+    return await paginate(db, select(TaskComment).where(TaskComment.task_id == task_id)
+                          .order_by(TaskComment.created_at.asc(), TaskComment.id),
+                          limit=limit, offset=offset, response=response)
 
 
 @router.post("/tasks/{task_id}/comments", response_model=TaskCommentResponse, status_code=201)
@@ -686,13 +700,15 @@ async def public_customer_signature(
 
 @router.get("/projects/{project_id}/permits", response_model=list[PermitResponse])
 async def list_project_permits(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
-    return await permits_service.list_permits(
+    limit, offset = pagination
+    return paginate_list(await permits_service.list_permits(
         db, organization_id=organization_id, user=current_user, project_id=project_id
-    )
+    ), limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/permits", response_model=PermitResponse, status_code=201)
@@ -725,13 +741,15 @@ async def update_project_permit(
 
 @router.get("/projects/{project_id}/equipment", response_model=list[EquipmentResponse])
 async def list_project_equipment(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
-    return await installation_service.list_equipment(
+    limit, offset = pagination
+    return paginate_list(await installation_service.list_equipment(
         db, organization_id=organization_id, user=current_user, project_id=project_id
-    )
+    ), limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/equipment", response_model=EquipmentResponse, status_code=201)
@@ -762,13 +780,15 @@ async def delete_project_equipment(
 
 @router.get("/projects/{project_id}/materials", response_model=list[MaterialResponse])
 async def list_project_materials(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
-    return await installation_service.list_materials(
+    limit, offset = pagination
+    return paginate_list(await installation_service.list_materials(
         db, organization_id=organization_id, user=current_user, project_id=project_id
-    )
+    ), limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/materials", response_model=MaterialResponse, status_code=201)
@@ -813,17 +833,21 @@ async def schedule_project_installation(
 
 @router.get("/dispatch/technicians", response_model=list[InstallerResponse])
 async def dispatch_technicians(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("dispatch.manage")),
 ):
     """A quién se le puede asignar una orden. Existe aparte de `/users` porque
     Administración despacha pero no administra usuarios (`users.manage`)."""
-    return await installation_service.list_installers(db, organization_id=organization_id)
+    limit, offset = pagination
+    return paginate_list(await installation_service.list_installers(db, organization_id=organization_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.get("/dispatch/agenda", response_model=list[AgendaRow])
 async def dispatch_agenda(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
     date_from: date = Query(...), date_to: date = Query(...),
     technician_id: uuid.UUID | None = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -835,6 +859,8 @@ async def dispatch_agenda(
         db, organization_id=organization_id, user=current_user,
         date_from=date_from, date_to=date_to, technician_id=technician_id,
     )
+    limit, offset = pagination
+    filas = paginate_list(filas, limit=limit, offset=offset, response=response)
     return [
         AgendaRow(
             project_id=p.id, title=p.title, status=p.status, scheduled_date=p.scheduled_date,
@@ -875,13 +901,15 @@ async def close_project_installation(
 
 @router.get("/projects/{project_id}/inspections", response_model=list[InspectionResponse])
 async def list_project_inspections(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
-    return await inspections_service.list_inspections(
+    limit, offset = pagination
+    return paginate_list(await inspections_service.list_inspections(
         db, organization_id=organization_id, user=current_user, project_id=project_id
-    )
+    ), limit=limit, offset=offset, response=response)
 
 
 @router.post("/projects/{project_id}/inspections", response_model=InspectionResponse, status_code=201)
@@ -952,12 +980,14 @@ async def return_to_technician(
 
 @router.get("/projects/{project_id}/reviews", response_model=list[ProjectReviewResponse])
 async def list_project_reviews(
-    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     project = await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
-    return project.reviews
+    limit, offset = pagination
+    return paginate_list(project.reviews, limit=limit, offset=offset, response=response)
 
 
 
