@@ -18,7 +18,6 @@ export const noticeKeys = {
   count: ["notices-count"] as const,
   list: (unread: boolean) => ["notices", unread] as const,
   prefs: ["notice-prefs"] as const,
-  deliveries: (status: string) => ["notice-deliveries", status] as const,
   templates: ["notice-templates"] as const,
   settings: ["notice-settings"] as const,
 };
@@ -31,8 +30,6 @@ export const markAllRead = async () => (await apiClient.post("/notifications/rea
 export const getPrefs = async () => (await apiClient.get<Preferences>("/notifications/preferences")).data;
 export const setPrefs = async (body: Omit<Preferences, "email">) =>
   (await apiClient.put<Preferences>("/notifications/preferences", body)).data;
-export const listDeliveries = async (status: string) =>
-  (await apiClient.get<Delivery[]>("/notifications/deliveries", { params: status ? { status } : {} })).data;
 export const resendDelivery = async (id: string) => (await apiClient.post(`/notifications/deliveries/${id}/resend`)).data;
 export const listTemplates = async () => (await apiClient.get<TemplateRow[]>("/notifications/templates")).data;
 export const saveTemplate = async (code: string, channel: string, body: { subject?: string; body: string; active: boolean }) =>

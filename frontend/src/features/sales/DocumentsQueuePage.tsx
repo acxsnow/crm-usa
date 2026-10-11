@@ -1,17 +1,19 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { PaginationControls } from "@/components/PaginationControls";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 
 import "../billing/billing.css";
 import "./sales.css";
 import { SUBSTATUS_LABELS } from "./CaseReviewPage";
-import { docKeys, documentQueue } from "./api";
+import { docKeys, type QueueRow } from "./api";
 
 /**
  * Documentos por revisar (módulo 3): los expedientes en revisión que tienen
  * algo pendiente o rechazado, los que más llevan esperando primero.
  */
 export function DocumentsQueuePage() {
-  const { data, isLoading } = useQuery({ queryKey: docKeys.queue, queryFn: documentQueue });
+  const lista = usePaginatedQuery<QueueRow>({ key: docKeys.queue, path: "/documents/review-queue", pageSize: 20 });
+  const { items: data, isLoading } = lista;
   return (
     <div className="billing-page">
       <header className="billing-head">
@@ -21,11 +23,11 @@ export function DocumentsQueuePage() {
         </div>
       </header>
       <article className="acta">
-        {isLoading ? <p className="acta-empty">Cargando…</p> : (data ?? []).length === 0 ? (
+        {isLoading ? <p className="acta-empty">Cargando…</p> : data.length === 0 ? (
           <p className="acta-empty">Todo revisado. Cuando un vendedor envíe un expediente, sus documentos aparecen aquí.</p>
         ) : (
           <ul className="sales-cases queue-list">
-            {data!.map((r) => (
+            {data.map((r) => (
               <li key={r.case_id}>
                 <Link to={`/cases/${r.case_id}/review`}>
                   <span>
@@ -47,6 +49,7 @@ export function DocumentsQueuePage() {
             ))}
           </ul>
         )}
+        <PaginationControls {...lista.controls} />
       </article>
     </div>
   );

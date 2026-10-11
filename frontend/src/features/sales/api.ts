@@ -149,7 +149,6 @@ export async function uploadExtraDocument(caseId: string, label: string, file: F
   return (await apiClient.post(`/cases/${caseId}/documents`, form, { headers: { "Content-Type": "multipart/form-data" } })).data;
 }
 
-export const documentQueue = async () => (await apiClient.get<QueueRow[]>("/documents/review-queue")).data;
 
 export const caseEvents = async (caseId: string) =>
   (await apiClient.get<StageEvent[]>(`/cases/${caseId}/events`)).data;

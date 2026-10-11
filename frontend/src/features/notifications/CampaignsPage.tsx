@@ -18,7 +18,6 @@ import {
   grantConsent,
   importOwnContacts,
   launchCampaign,
-  listCampaigns,
   listProducts,
   saveCampaign,
   saveProduct,
@@ -85,13 +84,14 @@ export function CampaignsPage() {
 }
 
 function CampaignList({ onOpen }: { onOpen: (id: string) => void }) {
-  const { data, isLoading } = useQuery({ queryKey: campaignKeys.list, queryFn: listCampaigns });
+  const lista = usePaginatedQuery<Campaign>({ key: campaignKeys.list, path: "/campaigns", pageSize: 20 });
+  const { items: data, isLoading } = lista;
   if (isLoading) return <p className="acta-empty">Cargando…</p>;
   return (
     <article className="acta">
-      {(data ?? []).length === 0 ? <p className="acta-empty">Todavía no hay campañas. Crea la primera con «Nueva campaña».</p> : (
+      {data.length === 0 ? <p className="acta-empty">Todavía no hay campañas. Crea la primera con «Nueva campaña».</p> : (
         <ul className="campaigns-list">
-          {data!.map((c) => (
+          {data.map((c) => (
             <li key={c.id}>
               <button type="button" onClick={() => onOpen(c.id)}>
                 <span><strong>{c.name}</strong><small>{CANAL[c.channel]} · {c.preview}</small></span>
@@ -105,6 +105,7 @@ function CampaignList({ onOpen }: { onOpen: (id: string) => void }) {
           ))}
         </ul>
       )}
+      <PaginationControls {...lista.controls} />
     </article>
   );
 }

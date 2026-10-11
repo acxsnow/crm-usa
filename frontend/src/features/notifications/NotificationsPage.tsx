@@ -7,16 +7,18 @@ import "../programs/programs.css";
 import "./notifications.css";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
+import { PaginationControls } from "@/components/PaginationControls";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   getNoticeSettings,
   getPrefs,
-  listDeliveries,
   listNotices,
   listTemplates,
   markAllRead,
   markRead,
   noticeKeys,
   resendDelivery,
+  type Delivery,
   resetTemplate,
   saveTemplate,
   setNoticeSettings,
@@ -140,7 +142,9 @@ const ESTADO: Record<string, [string, string]> = {
 function Deliveries() {
   const qc = useQueryClient();
   const [estado, setEstado] = useState("");
-  const { data, isLoading } = useQuery({ queryKey: noticeKeys.deliveries(estado), queryFn: () => listDeliveries(estado) });
+  const lista = usePaginatedQuery<Delivery>({ key: ["notice-deliveries"], path: "/notifications/deliveries", pageSize: 50,
+    params: { status: estado || undefined } });
+  const { items: data, isLoading } = lista;
   const [error, setError] = useState<string | null>(null);
   const reenviar = useMutation({
     mutationFn: resendDelivery, onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: ["notice-deliveries"] }); },
@@ -156,11 +160,11 @@ function Deliveries() {
         </select>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {isLoading ? <p className="acta-empty">Cargando…</p> : (data ?? []).length === 0 ? <p className="acta-empty">Sin envíos.</p> : (
+      {isLoading ? <p className="acta-empty">Cargando…</p> : data.length === 0 ? <p className="acta-empty">Sin envíos.</p> : (
         <div className="tablewrap"><table className="notices-table">
           <thead><tr><th>Aviso</th><th>Canal</th><th>Para</th><th>Estado</th><th>Cuándo</th><th /></tr></thead>
           <tbody>
-            {data!.map((d) => (
+            {data.map((d) => (
               <tr key={d.id}>
                 <td><strong>{d.notice_label}</strong><small>{d.title}</small></td>
                 <td>{d.channel === "email" ? "Correo" : "SMS"}</td>
@@ -177,6 +181,7 @@ function Deliveries() {
           </tbody>
         </table></div>
       )}
+      <PaginationControls {...lista.controls} />
     </article>
   );
 }
