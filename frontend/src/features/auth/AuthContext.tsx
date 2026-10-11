@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { apiClient, clearTokens, loadTokens, saveTokens } from "@/lib/apiClient";
+import { apiClient, isSessionRejected, refreshAccessToken, setAccessToken, setOnSessionExpired } from "@/lib/apiClient";
 import type { CurrentUser } from "@/types/auth";
 
 interface AuthContextValue {
@@ -16,49 +16,87 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Perfil del usuario (nombre, roles, permisos) guardado para poder abrir la app
+// sin señal con el menú correcto. No es una credencial: con esto no se llama a
+// la API. Las credenciales están en la cookie HttpOnly y en memoria (SEG-04).
+const PROFILE_KEY = "crm.profile";
+
+function loadProfile(): CurrentUser | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as CurrentUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveProfile(profile: CurrentUser | null): void {
+  try {
+    if (profile) localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    else localStorage.removeItem(PROFILE_KEY);
+  } catch {
+    // almacenamiento bloqueado: la app sigue, solo que sin abrir sin señal
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const endSession = useCallback(() => {
+    setAccessToken(null);
+    saveProfile(null);
+    setUser(null);
+  }, []);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
       const response = await apiClient.get<CurrentUser>("/auth/me");
       setUser(response.data);
-    } catch {
-      setUser(null);
+      saveProfile(response.data);
+    } catch (error) {
+      // Sin señal se conserva el perfil guardado; solo un 401 cierra la sesión.
+      if (isSessionRejected(error)) endSession();
+      else setUser((actual) => actual ?? loadProfile());
     }
-  }, []);
+  }, [endSession]);
 
   useEffect(() => {
-    const tokens = loadTokens();
-    if (!tokens) {
-      setIsLoading(false);
-      return;
-    }
-    fetchCurrentUser().finally(() => setIsLoading(false));
-  }, [fetchCurrentUser]);
+    setOnSessionExpired(() => {
+      endSession();
+      window.location.href = "/login";
+    });
+  }, [endSession]);
+
+  // Al abrir la app: la cookie renueva la sesión. Si no hay red, se entra con el
+  // perfil guardado y la sesión se renueva sola cuando vuelva la señal.
+  useEffect(() => {
+    refreshAccessToken()
+      .then(() => fetchCurrentUser())
+      .catch((error) => {
+        if (isSessionRejected(error)) endSession();
+        else setUser(loadProfile());
+      })
+      .finally(() => setIsLoading(false));
+  }, [fetchCurrentUser, endSession]);
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const response = await apiClient.post("/auth/login", { email, password });
-      saveTokens(response.data);
+      const response = await apiClient.post<{ access_token: string }>("/auth/login", { email, password });
+      setAccessToken(response.data.access_token);
       await fetchCurrentUser();
     },
     [fetchCurrentUser]
   );
 
   const logout = useCallback(async () => {
-    const tokens = loadTokens();
-    if (tokens?.refresh_token) {
-      try {
-        await apiClient.post("/auth/logout", { refresh_token: tokens.refresh_token });
-      } catch {
-        // best-effort; proceed with local logout regardless
-      }
+    try {
+      await apiClient.post("/auth/logout");
+    } catch {
+      // best-effort; proceed with local logout regardless
     }
-    clearTokens();
-    setUser(null);
-  }, []);
+    endSession();
+  }, [endSession]);
 
   const hasPermission = useCallback(
     (permissionCode: string) => user?.permissions.includes(permissionCode) ?? false,

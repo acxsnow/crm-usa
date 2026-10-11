@@ -5,13 +5,27 @@ from app.core.security import hash_token
 from app.modules.users.models import PasswordResetToken, User, UserStatus
 
 
+async def _refresh_with(client, token: str):
+    """Llama a /auth/refresh mandando exactamente esta cookie, como haría un
+    navegador que todavía la tuviera guardada (o alguien que la robó)."""
+    client.cookies.clear()
+    client.cookies.set("crm_refresh", token)
+    return await client.post("/api/v1/auth/refresh")
+
+
 async def test_login_success(app_client, active_admin_user):
     resp = await app_client.post(
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert "access_token" in body and "refresh_token" in body
+    assert "access_token" in body
+    # SEG-04: el refresh token no va en el cuerpo (JavaScript lo leería);
+    # va en una cookie HttpOnly limitada a /auth.
+    assert "refresh_token" not in body
+    cookie = resp.headers["set-cookie"]
+    assert "crm_refresh=" in cookie and "HttpOnly" in cookie and "Path=/api/v1/auth" in cookie
+    assert "samesite=strict" in cookie.lower()
 
 
 async def test_login_wrong_password_generic_error(app_client, active_admin_user):
@@ -108,12 +122,13 @@ async def test_logout_revokes_refresh_token(app_client, active_admin_user):
     login = await app_client.post(
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
     )
-    refresh_token = login.json()["refresh_token"]
+    refresh_token = login.cookies["crm_refresh"]
 
-    resp = await app_client.post("/api/v1/auth/logout", json={"refresh_token": refresh_token})
+    resp = await app_client.post("/api/v1/auth/logout")
     assert resp.status_code == 200
+    assert 'crm_refresh=""' in resp.headers["set-cookie"] or "Max-Age=0" in resp.headers["set-cookie"]
 
-    resp = await app_client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    resp = await _refresh_with(app_client, refresh_token)
     assert resp.status_code == 401
 
 
@@ -121,13 +136,15 @@ async def test_refresh_rotation_denylists_old_token(app_client, active_admin_use
     login = await app_client.post(
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
     )
-    old_refresh_token = login.json()["refresh_token"]
+    old_refresh_token = login.cookies["crm_refresh"]
 
-    first_refresh = await app_client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh_token})
+    first_refresh = await _refresh_with(app_client, old_refresh_token)
     assert first_refresh.status_code == 200
+    assert "access_token" in first_refresh.json()
+    assert first_refresh.cookies["crm_refresh"] != old_refresh_token
 
     # Replaying the now-rotated-away token must fail.
-    replay = await app_client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh_token})
+    replay = await _refresh_with(app_client, old_refresh_token)
     assert replay.status_code == 401
 
 
@@ -142,7 +159,7 @@ async def test_password_reset_confirm_revokes_all_sessions(app_client, active_ad
     login = await app_client.post(
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
     )
-    old_refresh_token = login.json()["refresh_token"]
+    old_refresh_token = login.cookies["crm_refresh"]
 
     await app_client.post("/api/v1/auth/password-reset/request", json={"email": "admin@acme-demo.com"})
     reset_link = captured["context"]["reset_link"]
@@ -155,7 +172,7 @@ async def test_password_reset_confirm_revokes_all_sessions(app_client, active_ad
 
     # The old refresh token (issued under the previous token_version) must
     # now be rejected, even though it was never individually denylisted.
-    resp = await app_client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh_token})
+    resp = await _refresh_with(app_client, old_refresh_token)
     assert resp.status_code == 401
 
     # The new password works.
@@ -163,3 +180,20 @@ async def test_password_reset_confirm_revokes_all_sessions(app_client, active_ad
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "BrandNewPassword123"},
     )
     assert resp.status_code == 200
+
+
+async def test_refresh_without_cookie_is_401(app_client):
+    app_client.cookies.clear()
+    resp = await app_client.post("/api/v1/auth/refresh")
+    assert resp.status_code == 401
+
+
+async def test_refresh_ignores_token_in_body(app_client, active_admin_user):
+    """El cuerpo ya no sirve para renovar: solo la cookie HttpOnly."""
+    login = await app_client.post(
+        "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
+    )
+    token = login.cookies["crm_refresh"]
+    app_client.cookies.clear()
+    resp = await app_client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+    assert resp.status_code == 401

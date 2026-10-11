@@ -4,7 +4,7 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-from jose import jwt, JWTError
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
@@ -51,7 +51,7 @@ def create_jwt_token(
 def decode_jwt_token(token: str) -> dict[str, Any] | None:
     try:
         return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 

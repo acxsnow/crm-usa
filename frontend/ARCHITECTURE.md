@@ -51,7 +51,7 @@ frontend/
     │   ├── users/        api.ts, UsersPage
     │   └── audit/        api.ts, AuditLogPage
     ├── lib/                                        # transversal, sin UI
-    │   ├── apiClient.ts                            #   Axios único + interceptores + tokens (localStorage)
+    │   ├── apiClient.ts                            #   Axios único + interceptores; access token en memoria, refresh en cookie HttpOnly (SEG-04)
     │   ├── pagination.ts                           #   fetchPage<T>: ?limit=&offset= + X-Total-Count → Page<T>
     │   ├── usePaginatedQuery.ts                    #   gancho común de listados paginados (página, total, controles)
     │   └── useTableFilters.ts                      #   filtros y página en la URL (?status=&q=&page=)

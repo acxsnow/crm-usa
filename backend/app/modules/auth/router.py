@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_effective_permissions
@@ -9,13 +9,11 @@ from app.modules.auth import service as auth_service
 from app.modules.auth.schemas import (
     CurrentUserResponse,
     InvitationAcceptSchema,
+    AccessToken,
     LoginRequest,
-    LogoutRequest,
     MessageResponse,
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
-    RefreshRequest,
-    TokenPair,
 )
 from app.modules.users.models import User
 from app.modules.users.selectors import modules_for_organization
@@ -26,9 +24,27 @@ settings = get_settings()
 
 GENERIC_LOGIN_ERROR = "Invalid email or password."
 
+# SEG-04: el refresh token (dura días) viaja solo en una cookie HttpOnly que
+# JavaScript no puede leer; el navegador la manda sola a /auth/*. El access
+# token (15 min) va en el cuerpo y el frontend lo guarda solo en memoria.
+REFRESH_COOKIE = "crm_refresh"
+REFRESH_COOKIE_PATH = "/api/v1/auth"
 
-@router.post("/login", response_model=TokenPair)
-async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        REFRESH_COOKIE, token, max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400, path=REFRESH_COOKIE_PATH,
+        httponly=True, secure=settings.ENVIRONMENT in ("staging", "production"), samesite="strict",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(REFRESH_COOKIE, path=REFRESH_COOKIE_PATH, httponly=True,
+                           secure=settings.ENVIRONMENT in ("staging", "production"), samesite="strict")
+
+
+@router.post("/login", response_model=AccessToken)
+async def login(payload: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     normalized_email = payload.email.strip().lower()
 
@@ -51,18 +67,28 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=GENERIC_LOGIN_ERROR)
 
     access_token, refresh_token = await auth_service.issue_token_pair(db, user)
-    return TokenPair(access_token=access_token, refresh_token=refresh_token)
+    _set_refresh_cookie(response, refresh_token)
+    return AccessToken(access_token=access_token)
 
 
-@router.post("/refresh", response_model=TokenPair)
-async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    access_token, refresh_token = await auth_service.refresh_access_token(db, payload.refresh_token)
-    return TokenPair(access_token=access_token, refresh_token=refresh_token)
+@router.post("/refresh", response_model=AccessToken)
+async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """Renueva la sesión con la cookie: rota el refresh token y entrega un
+    access token nuevo. Sin cookie válida responde 401 y el frontend va al ingreso."""
+    token = request.cookies.get(REFRESH_COOKIE)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="La sesión no es válida. Vuelve a iniciar sesión.")
+    access_token, refresh_token = await auth_service.refresh_access_token(db, token)
+    _set_refresh_cookie(response, refresh_token)
+    return AccessToken(access_token=access_token)
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(payload: LogoutRequest):
-    await auth_service.logout(payload.refresh_token)
+async def logout(request: Request, response: Response):
+    token = request.cookies.get(REFRESH_COOKIE)
+    if token:
+        await auth_service.logout(token)
+    _clear_refresh_cookie(response)
     return MessageResponse(message="Logged out.")
 
 

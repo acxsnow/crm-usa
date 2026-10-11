@@ -8,18 +8,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenPair(BaseModel):
+class AccessToken(BaseModel):
+    """El refresh token no va aquí: viaja en la cookie HttpOnly (SEG-04)."""
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
-class LogoutRequest(BaseModel):
-    refresh_token: str
 
 
 class PasswordResetRequestSchema(BaseModel):

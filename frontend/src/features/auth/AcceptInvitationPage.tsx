@@ -22,7 +22,7 @@ export function AcceptInvitationPage() {
       await apiClient.post("/auth/invitations/accept", { token, password });
       // The accept endpoint doesn't return tokens directly (spec: activation, not auto-login),
       // so we redirect to login with the account now active. If tokens were returned we could
-      // saveTokens(...) and skip straight to the dashboard instead.
+      // guardar la sesión y saltar directo al tablero.
       navigate("/login", { replace: true, state: { activated: true } });
     } catch {
       setError("This invitation link is invalid or has expired.");
