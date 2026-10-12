@@ -83,7 +83,16 @@ export function CaseFormPage() {
 
   const refrescar = () => qc.invalidateQueries({ queryKey: salesKeys.form(caseId!) });
   const pasos = form?.definition.steps ?? [];
-  const actual = paso ?? pasos.find((s) => !evaluacion?.steps.find((e) => e.code === s.code)?.complete)?.code ?? pasos[0]?.code;
+  // El paso se fija al abrir el expediente —el primero incompleto según lo
+  // GUARDADO— y solo cambia cuando el vendedor navega. Antes se recalculaba con
+  // la evaluación en vivo: al llenar el último campo de un paso, la pantalla
+  // saltaba sola al siguiente sin guardar, y lo escrito se perdía (12 oct 2026).
+  const inicial = pasos.find((s) => !form?.evaluation.steps.find((e) => e.code === s.code)?.complete)?.code ?? pasos[0]?.code;
+  useEffect(() => { if (!paso && inicial) setPaso(inicial); }, [paso, inicial]);
+  const actual = paso ?? inicial;
+  // Pasos con algo escrito sin guardar: no se marcan completos ni dejan enviar,
+  // porque el servidor revisa lo guardado y no lo que hay en pantalla.
+  const sinGuardar = new Set(pasos.filter((s) => s.fields.some((f) => sucio.has(f.key))).map((s) => s.code));
 
   // La firma dibujada en el paso de autorización se guarda junto con el paso.
   const firmaPendiente = useRef<(() => Promise<unknown>) | null>(null);
@@ -176,23 +185,24 @@ export function CaseFormPage() {
         </header>
 
         <ol className="preview-steps sales-steps">
-          {evaluacion.steps.map((s, n) => (
+          {evaluacion.steps.map((s, n) => { const listo = s.complete && !sinGuardar.has(s.code); return (
             <li key={s.code}>
-              <button type="button" className={`${s.code === actual ? "is-on" : ""}${s.complete ? " is-complete" : ""}`}
+              <button type="button" className={`${s.code === actual ? "is-on" : ""}${listo ? " is-complete" : ""}`}
+                title={sinGuardar.has(s.code) ? "Tiene cambios sin guardar" : undefined}
                 onClick={() => form.editable ? guardar.mutate(s.code) : setPaso(s.code)}>
-                {s.complete ? "✓" : n + 1}<span>{s.title}</span>
+                {listo ? "✓" : n + 1}<span>{s.title}</span>
               </button>
             </li>
-          ))}
+          ); })}
           <li><button type="button" className={actual === REVIEW ? "is-on" : ""} onClick={() => form.editable ? guardar.mutate(REVIEW) : setPaso(REVIEW)}>
-            {evaluacion.can_submit ? "✓" : "→"}<span>Enviar</span></button></li>
+            {evaluacion.can_submit && sinGuardar.size === 0 ? "✓" : "→"}<span>Enviar</span></button></li>
         </ol>
 
         {error && <p className="form-error" role="alert">{error}</p>}
         {aviso && <p className="info-banner" role="status">{aviso}</p>}
 
         {actual === REVIEW ? (
-          <Review caseId={caseId!} evaluation={evaluacion} editable={form.editable} resubmit={devuelto || rechazado}
+          <Review caseId={caseId!} evaluation={evaluacion} unsaved={sinGuardar} editable={form.editable} resubmit={devuelto || rechazado}
             onGo={(code) => setPaso(code)} onSent={async () => { setAviso("Enviado a revisión. Administración lo revisa y te avisa si hay que corregir."); await refrescar(); }}
             onError={setError} />
         ) : (
@@ -361,23 +371,28 @@ function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, c
   );
 }
 
-function Review({ caseId, evaluation, editable, resubmit, onGo, onSent, onError }: {
-  caseId: string; evaluation: Evaluation; editable: boolean; resubmit: boolean;
+function Review({ caseId, evaluation: evaluada, unsaved, editable, resubmit, onGo, onSent, onError }: {
+  caseId: string; evaluation: Evaluation; unsaved: Set<string>; editable: boolean; resubmit: boolean;
   onGo: (step: string) => void; onSent: () => void; onError: (m: string | null) => void;
 }) {
   const { hasPermission } = useAuth();
   const enviar = useMutation({ mutationFn: () => submitCase(caseId), onSuccess: () => { onError(null); onSent(); },
     onError: (e) => onError(apiErrorMessage(e)) });
+  // Un paso con cambios sin guardar no cuenta como completo: el envío lo valida
+  // el servidor con lo guardado.
+  const evaluation = { ...evaluada, can_submit: evaluada.can_submit && unsaved.size === 0,
+    steps: evaluada.steps.map((s) => ({ ...s, complete: s.complete && !unsaved.has(s.code) })) };
   const porPaso = evaluation.steps.map((s) => ({ ...s, faltan: evaluation.missing.filter((m) => m.step === s.code) }));
   return (
     <section className="sales-review">
-      <h2>{!editable ? "Enviado a revisión" : evaluation.can_submit ? "Todo listo para enviar" : `Faltan ${evaluation.missing.length} para enviar`}</h2>
+      <h2>{!editable ? "Enviado a revisión" : evaluation.can_submit ? "Todo listo para enviar" : evaluation.missing.length ? `Faltan ${evaluation.missing.length} para enviar` : "Hay pasos sin guardar"}</h2>
       {!editable && <p className="acta-lead">Administración lo está revisando. Si hay algo que corregir, te lo devuelve con el motivo y vuelve a aparecer en «Mi día».</p>}
       <ul className="billing-req">
         {porPaso.map((s) => (
           <li key={s.code} className={s.complete ? "is-met" : undefined}>
             <span className="acta-tick" aria-hidden="true">{s.complete ? "✓" : ""}</span>
             <span className="billing-req-label">{s.title}
+              {unsaved.has(s.code) && <small>Tiene cambios sin guardar: ábrelo y toca «Guardar y seguir»</small>}
               {s.faltan.length > 0 && <small>Falta: {s.faltan.map((m) => m.label).join(", ")}</small>}
               {Object.keys(evaluation.errors).some((k) => s.fields.some((f) => f.key === k)) && <small>Hay valores por corregir</small>}
             </span>
