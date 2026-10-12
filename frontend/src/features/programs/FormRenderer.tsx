@@ -78,11 +78,26 @@ function FieldControl({ field: f, value, onChange, mediaPlaceholder, showMissing
       control = <textarea id={id} value={String(texto)} onChange={(e) => onChange(e.target.value)} />;
       break;
     case "integer":
-    case "decimal":
-      control = <input id={id} type="number" inputMode={f.type === "integer" ? "numeric" : "decimal"}
-        step={f.type === "integer" ? 1 : "any"} value={String(texto)}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} />;
+    case "decimal": {
+      // Texto con teclado numérico y no `type="number"`: ese deja escribir «e»,
+      // «+» y «-» (notación científica) y cualquier tamaño. Aquí solo entran
+      // dígitos (y un punto en decimales, un «-» si el mínimo es negativo) y no
+      // se puede pasar del máximo configurado; el mínimo lo avisa la validación.
+      const reglas = f.validation ?? {};
+      const max = typeof reglas.max === "number" ? reglas.max : null;
+      const negativo = typeof reglas.min === "number" && reglas.min < 0;
+      const patron = f.type === "integer" ? (negativo ? /^-?\d*$/ : /^\d*$/) : (negativo ? /^-?\d*\.?\d*$/ : /^\d*\.?\d*$/);
+      control = <input id={id} type="text" inputMode={f.type === "integer" ? "numeric" : "decimal"} value={String(texto)}
+        onChange={(e) => {
+          const v = e.target.value.trim();
+          if (!patron.test(v)) return;
+          if (v === "" || v === "-" || v.endsWith(".")) { onChange(v === "" ? "" : v); return; }
+          const n = Number(v);
+          if (max !== null && n > max) return;
+          onChange(n);
+        }} />;
       break;
+    }
     case "phone":
       control = <input id={id} type="tel" inputMode="tel" autoComplete="tel" value={String(texto)} onChange={(e) => onChange(e.target.value)} />;
       break;
