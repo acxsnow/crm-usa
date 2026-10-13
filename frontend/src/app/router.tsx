@@ -27,6 +27,11 @@ import { CasesBoardPage } from "@/features/sales/CasesBoardPage";
 import { CaseReviewPage } from "@/features/sales/CaseReviewPage";
 import { NotificationsPage } from "@/features/notifications/NotificationsPage";
 import { CampaignsPage } from "@/features/notifications/CampaignsPage";
+import { ExpensesPage } from "@/features/finance/ExpensesPage";
+import { PayablesPage } from "@/features/finance/PayablesPage";
+import { FinanceClosePage } from "@/features/finance/FinanceClosePage";
+import { ReportsPage } from "@/features/finance/ReportsPage";
+import { PermitsPage } from "@/features/finance/PermitsPage";
 import { DocumentsQueuePage } from "@/features/sales/DocumentsQueuePage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
@@ -132,6 +137,46 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["cases.read_own", "cases.read_all"]} moduleLabel="Expedientes">
             <CasesBoardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "expenses",
+        element: (
+          <RequireAccess permission={["expenses.create_own", "expenses.read_all", "expenses.approve"]} moduleLabel="Gastos de campo">
+            <ExpensesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "payables",
+        element: (
+          <RequireAccess permission={["payables.manage", "suppliers.manage", "payables.approve"]} moduleLabel="Proveedores y pagos">
+            <PayablesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "finance-close",
+        element: (
+          <RequireAccess permission={["reconciliation.manage", "profitability.read"]} moduleLabel="Conciliación y rentabilidad">
+            <FinanceClosePage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "reports",
+        element: (
+          <RequireAccess permission={"reports.view"} moduleLabel="Reportes">
+            <ReportsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "permits",
+        element: (
+          <RequireAccess permission={["permits.manage", "inspections.manage", "projects.read_all"]} moduleLabel="Permisos e inspecciones">
+            <PermitsPage />
           </RequireAccess>
         ),
       },

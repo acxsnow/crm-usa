@@ -65,6 +65,36 @@ NOTICES: dict[str, dict] = {
         "title": "Permiso por vencer: {{proyecto}}",
         "body": "El permiso {{permiso}} de {{proyecto}} vence el {{fecha}}.",
     },
+    "expense.submitted": {
+        "label": "Gasto de campo por revisar", "audience": "Quien aprueba gastos (expenses.approve)",
+        "title": "Gasto por revisar: {{monto}}",
+        "body": "{{persona}} registró un gasto de {{monto}} ({{categoria}}): {{descripcion}}.",
+    },
+    "expense.approved": {
+        "label": "Gasto de campo aprobado", "audience": "Quien registró el gasto",
+        "title": "Gasto aprobado: {{monto}}",
+        "body": "Tu gasto de {{monto}} ({{categoria}}) fue aprobado.",
+    },
+    "expense.rejected": {
+        "label": "Gasto de campo rechazado", "audience": "Quien registró el gasto",
+        "title": "Gasto rechazado: {{monto}}",
+        "body": "Tu gasto de {{monto}} ({{categoria}}) fue rechazado: {{motivo}}",
+    },
+    "payable.pending_approval": {
+        "label": "Factura de proveedor por aprobar", "audience": "Quien aprueba pagos (payables.approve)",
+        "title": "Factura por aprobar: {{proveedor}} {{factura}}",
+        "body": "{{proveedor}} · factura {{factura}} por {{monto}}, vence el {{fecha}}.",
+    },
+    "payable.due_soon": {
+        "label": "Alerta: factura de proveedor por vencer", "audience": "Cuentas por pagar",
+        "title": "Vence el {{fecha}}: {{proveedor}} {{factura}}",
+        "body": "A la factura {{factura}} de {{proveedor}} le quedan {{monto}} por pagar y vence el {{fecha}}.",
+    },
+    "supplier.document_expiring": {
+        "label": "Alerta: licencia o seguro de proveedor por vencer", "audience": "Proveedores (suppliers.manage)",
+        "title": "{{documento}} de {{proveedor}} vence el {{fecha}}",
+        "body": "Pide a {{proveedor}} la renovación de su {{documento}} (vence el {{fecha}}).",
+    },
 }
 
 DEFAULT_PERMISSION = {
@@ -73,6 +103,9 @@ DEFAULT_PERMISSION = {
     "claim.rejected": "billing.submit",
     "claim.paid": "billing.submit",
     "permit.expiring": "permits.manage",
+    "expense.submitted": "expenses.approve",
+    "payable.pending_approval": "payables.approve",
+    "supplier.document_expiring": "suppliers.manage",
 }
 
 

@@ -1,6 +1,6 @@
 # Pasos para cerrar y salir a producción
 
-Actualizado: 7 de octubre de 2026, después del QA de punta a punta (`docs/qa/`).
+Actualizado: 13 de octubre de 2026, después del QA de punta a punta (`docs/qa/`).
 El código de los módulos 0 a 7 está terminado y probado. Esto es lo que falta, en orden.
 
 ## 1. Decisiones del cliente (bloquean la salida)
@@ -48,6 +48,12 @@ El código de los módulos 0 a 7 está terminado y probado. Esto es lo que falta
 - [ ] Repetir el QA automático contra el servidor de pruebas: `QA_API=https://<dominio>/api/v1 python -m scripts.qa_e2e`
   (solo en un ambiente de pruebas: crea registros).
 
-## 7. Después de salir
+## 7. Gastos, proveedores, conciliación y reportes (hechos el 13 oct 2026)
 
-- [ ] Gastos de campo, proveedores y pagos, conciliación y rentabilidad, reportes: siguen en gris en el menú (fuera del alcance de esta entrega). Esconderlos antes del piloto (hallazgo QA-02).
+Ya no queda nada en gris en el menú (QA-02 cerrado). Falta confirmar con el cliente los supuestos de
+`docs/superpowers/specs/2026-10-13-modulos-gastos-proveedores-finanzas-design.md`:
+
+- [ ] Quién es Aldo Martínez en la plataforma (rol Gerencia o Administrador) para que apruebe y programe pagos.
+- [ ] Umbral de doble aprobación (hoy 10.000 USD) y tope por gasto de campo (hoy 5.000 USD).
+- [ ] Categorías de gasto de campo y si la comisión del vendedor entra en la rentabilidad.
+- [ ] Cargar sus proveedores desde QuickBooks (Proveedores → Importar CSV).

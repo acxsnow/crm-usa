@@ -108,6 +108,9 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     # Proveedores y pagos (PDF §4.4)
     ("suppliers.manage", "Gestionar proveedores"),
     ("payables.manage", "Gestionar cuentas por pagar"),
+    # Aprobar y programar el pago de facturas de proveedor (respuesta del cliente
+    # 2.1: lo hace Aldo Martínez; desde el umbral, también Contabilidad).
+    ("payables.approve", "Aprobar y programar pagos a proveedores"),
     # Conciliación y rentabilidad (PDF §4.5)
     ("reconciliation.manage", "Conciliar pagos y movimientos"),
     ("profitability.read", "Ver la rentabilidad por proyecto"),
@@ -242,7 +245,7 @@ DEFAULT_MODULES: dict[str, Module] = {
     ),
     "payables": Module(
         "Proveedores y pagos",
-        ["suppliers.manage", "payables.manage"],
+        ["suppliers.manage", "payables.manage", "payables.approve"],
     ),
     "finance_close": Module(
         "Conciliación y rentabilidad",
@@ -429,6 +432,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "reports.view",
         "reports.generate",
         "reports.export",
+        "payables.approve",
         "audit.read",
         "users.read",
         "notifications.read_own",

@@ -672,6 +672,134 @@ def flujo_permisos_por_rol(clients: dict) -> None:
     check("Webhook de Masiv con token falso → 404", r.status_code == 404, str(r.status_code))
 
 
+def flujo_finanzas(c: dict, pid: str | None, pid_az: str | None) -> None:
+    """Gastos, proveedores y pagos, conciliación, rentabilidad, reportes y permisos."""
+    tec, conta, ger, admin, v, adm = c["tecnico"], c["conta"], c["gerencia"], c["admin"], c["vendedor"], c["adm"]
+    section("12. Gastos de campo")
+    def gasto(cli, monto, proyecto=None, **kw):
+        datos = {"expense_date": HOY.isoformat(), "category": "fuel", "amount": monto, "payment_method": "own_money",
+                 "description": f"QA {RUN} gasolina al parque", "project_id": proyecto, **kw}
+        return cli.post("/expenses", data={"data": json.dumps(datos)},
+                        files={"receipt": ("recibo.jpg", jpeg("recibo"), "image/jpeg")})
+    g = expect("Técnico registra gasolina con foto del recibo, cargada a la instalación TECH",
+               gasto(tec, "48.75", pid), 201) or {}
+    expect("Gasto sobre el tope se rechaza", gasto(tec, "9000"), 400)
+    expect("Gasto con fecha futura se rechaza", gasto(tec, "10", expense_date=(HOY + timedelta(days=2)).isoformat()), 400)
+    expect("Recibo disfrazado (exe) se rechaza", tec.post("/expenses", data={"data": json.dumps({
+        "expense_date": HOY.isoformat(), "category": "fuel", "amount": "5", "description": "QA exe"})},
+        files={"receipt": ("r.jpg", b"MZ\x90\x00", "image/jpeg")}), 400)
+    g2 = expect("Técnico registra un segundo gasto (hotel, tarjeta de la empresa)",
+                gasto(tec, "129.00", pid_az, category="lodging", payment_method="company_card"), 201) or {}
+    expect("El técnico no aprueba su gasto", tec.post(f"/expenses/{g.get('id')}/review", json={"approve": True}), 403)
+    expect("Rechazar sin motivo se bloquea", conta.post(f"/expenses/{g2.get('id')}/review", json={"approve": False}), 400)
+    expect("Contabilidad aprueba la gasolina", conta.post(f"/expenses/{g.get('id')}/review", json={"approve": True}), 200)
+    expect("Contabilidad rechaza el hotel con motivo", conta.post(f"/expenses/{g2.get('id')}/review", json={
+        "approve": False, "notes": "QA: falta la factura del hotel a nombre de la empresa"}), 200)
+    expect("Reembolso al técnico", conta.post(f"/expenses/{g.get('id')}/reimburse", json={
+        "paid_on": HOY.isoformat(), "reference": f"QA-ZELLE-{RUN}"}), 200)
+    expect("El vendedor no ve gastos de otros", v.get(f"/expenses/{g.get('id')}/receipt"), 404)
+
+    section("13. Proveedores y pagos")
+    prov = expect("Contabilidad crea proveedor de equipos con datos bancarios", conta.post("/payables/suppliers", json={
+        "name": f"QA Ferguson HVAC {RUN}", "kinds": ["equipment"], "payment_terms_days": 30, "states": ["CA", "AZ"],
+        "bank_details": "Chase ****1234", "contact_name": "QA Contacto", "email": "qa.ferguson@example.com",
+        "license_expires_on": (HOY + timedelta(days=10)).isoformat()}), 201) or {}
+    r = expect("Importar proveedores desde CSV (QuickBooks)", conta.post("/payables/suppliers/import", json={
+        "text": f"Nombre,EIN,Teléfono,Condiciones,Tipo\nQA CED Electrical {RUN},12-3456789,(602) 555-0101,15,electrical\n"
+                f"QA Instalador Pérez {RUN},,(602) 555-0102,0,contractor\n"}), 200) or {}
+    check("Dos proveedores importados", r.get("created") == 2, str(r))
+    check("Gerencia (Aldo) no ve datos bancarios",
+          ger.get("/payables/suppliers", params={"q": f"Ferguson HVAC {RUN}"}).json()[0]["bank_details"] == "•••")
+    def factura(numero, **kw):
+        datos = {"supplier_id": prov.get("id"), "number": numero, "invoice_date": HOY.isoformat(), **kw}
+        return conta.post("/payables/invoices", data={"data": json.dumps(datos)},
+                          files={"file": ("factura.pdf", b"%PDF-1.4 QA factura\n%%EOF", "application/pdf")})
+    f1 = expect("Factura de equipos con líneas por instalación (TECH y Arizona)", factura(f"QA-{RUN}-1", lines=[
+        {"description": "Mini-split 12k", "category": "equipment", "quantity": "1", "unit_cost": "1450.00", "project_id": pid},
+        {"description": "Bomba de calor 24k", "category": "equipment", "quantity": "1", "unit_cost": "2350.00", "project_id": pid_az},
+        {"description": "Línea de refrigerante", "category": "materials", "quantity": "2", "unit_cost": "60.00", "project_id": pid}],
+        tax="310.00", shipping="40.00"), 201) or {}
+    check(f"Total con impuestos y envío ({f1.get('total')})", f1.get("total") == "4270.00", str(f1.get("total")))
+    expect("Factura duplicada se rechaza", factura(f"QA-{RUN}-1", total="10"), 409)
+    expect("Contabilidad sola no aprueba bajo el umbral", conta.post(f"/payables/invoices/{f1.get('id')}/approve", json={}), 403)
+    expect("Aldo (Gerencia) aprueba", ger.post(f"/payables/invoices/{f1.get('id')}/approve", json={}), 200)
+    expect("Aldo programa el pago", ger.post(f"/payables/invoices/{f1.get('id')}/schedule", json={
+        "scheduled_payment_date": (HOY + timedelta(days=5)).isoformat()}), 200)
+    grande = expect("Factura de contratista de 12.500 USD", factura(f"QA-{RUN}-2", total="12500.00",
+                                                                      category="contractor", project_id=pid), 201) or {}
+    check("Necesita dos aprobaciones", grande.get("approvals_missing") == ["approve", "accounting"], str(grande.get("approvals_missing")))
+    expect("Primera aprobación (Aldo)", ger.post(f"/payables/invoices/{grande.get('id')}/approve", json={}), 200)
+    expect("Aldo no puede dar la segunda", ger.post(f"/payables/invoices/{grande.get('id')}/approve", json={}), 409)
+    r = expect("Segunda aprobación (Contabilidad)", conta.post(f"/payables/invoices/{grande.get('id')}/approve", json={}), 200) or {}
+    check("Aprobada con las dos", r.get("status") == "approved", str(r.get("status")))
+    tarjeta = expect("Compra con tarjeta, pagada al momento", factura(f"QA-{RUN}-3", total="86.40", paid_now=True,
+                                                                       paid_method="card", project_id=pid), 201) or {}
+    check("Queda pagada sin pasar por aprobación", tarjeta.get("status") == "paid", str(tarjeta.get("status")))
+    expect("Factura de material que vence en 3 días (para la alerta)", factura(
+        f"QA-{RUN}-4", total="230.00", category="materials", due_date=(HOY + timedelta(days=3)).isoformat()), 201)
+    def pago(monto, repartos, ref):
+        return conta.post("/payables/payments", data={"data": json.dumps({
+            "supplier_id": prov.get("id"), "paid_on": HOY.isoformat(), "amount": monto, "method": "check",
+            "reference": ref, "bank_account": "Chase operativa", "allocations": repartos})},
+            files={"file": ("cheque.jpg", jpeg("cheque"), "image/jpeg")})
+    expect("Pago que no cuadra con el reparto se rechaza", pago("100", [{"invoice_id": f1.get("id"), "amount": "90"}], "X"), 400)
+    expect("Pago de dos facturas: completa la primera y abona 2.500 a la grande",
+           pago("6770.00", [{"invoice_id": f1.get("id"), "amount": "4270.00"},
+                            {"invoice_id": grande.get("id"), "amount": "2500.00"}], f"QA-CHK-{RUN}"), 201)
+    g_inv = conta.get(f"/payables/invoices/{grande.get('id')}").json()
+    check(f"Grande parcial con saldo 10.000 ({g_inv.get('balance')})",
+          (g_inv.get("status"), g_inv.get("balance")) == ("partially_paid", "10000.00"))
+    ag = expect("Antigüedad de cuentas por pagar", ger.get("/payables/aging"), 200) or {}
+    check("Aparece lo que se le debe al proveedor", any(r["supplier_id"] == prov.get("id") for r in ag.get("rows", [])))
+    exp_csv = conta.get("/payables/export.csv", params={"kind": "payments"})
+    check("Exportación de pagos para el contador", exp_csv.status_code == 200 and f"QA-CHK-{RUN}" in exp_csv.text)
+    expect("El técnico no entra a proveedores", tec.get("/payables/suppliers"), 403)
+
+    section("14. Conciliación bancaria")
+    extracto = (f"Date,Description,Amount\n{HOY.isoformat()},CHECK QA-CHK-{RUN},-6770.00\n"
+                f"{HOY.isoformat()},ZELLE QA reembolso,-48.75\n{HOY.isoformat()},MONTHLY SERVICE FEE,-15.00\n"
+                f"{HOY.isoformat()},DEPOSITO DESCONOCIDO,+123.45\n")
+    r = expect("Importar extracto del banco", conta.post("/reconciliation/statements", data={"account_label": f"QA Chase {RUN}"},
+                                                         files={"file": ("extracto.csv", extracto.encode(), "text/csv")}), 201) or {}
+    check(f"Se concilian solos el cheque y el reembolso ({r.get('auto_matched')} de {r.get('lines')})",
+          r.get("auto_matched", 0) >= 2, str(r))
+    pend = conta.get("/reconciliation/lines", params={"status": "unmatched", "limit": 50}).json()
+    fee = next((l for l in pend if "SERVICE FEE" in l["description"]), None)
+    if fee:
+        expect("Comisión marcada como «otro»", conta.post(f"/reconciliation/lines/{fee['id']}/ignore",
+                                                          json={"notes": "Comisión mensual del banco"}), 200)
+    expect("Gerencia no concilia", ger.get("/reconciliation/summary"), 403)
+
+    section("15. Rentabilidad, reportes y permisos")
+    rep = expect("Rentabilidad de la instalación TECH", ger.get("/finance/profitability", params={"project_id": pid}), 200) or {}
+    fila = (rep.get("rows") or [{}])[0]
+    check(f"Cobrado {fila.get('collected')} · costos {fila.get('costs')} · margen {fila.get('margin')}",
+          fila.get("collected") not in (None, "0.00") and fila.get("costs") not in (None, "0.00"), str(fila)[:250])
+    check("El costo incluye equipos, contratista y la gasolina aprobada",
+          all(float(fila.get("cost_breakdown", {}).get(k, 0)) > 0 for k in ("equipment", "contractor", "field_expenses")),
+          str(fila.get("cost_breakdown")))
+    for kind in ("commercial", "operations", "finance"):
+        r = expect(f"Reporte {kind}", ger.get(f"/reports/{kind}", params={"date_from": (HOY - timedelta(days=30)).isoformat()}), 200) or {}
+        check(f"  {kind}: {len(r.get('kpis', []))} indicadores, {len(r.get('sections', []))} secciones", bool(r.get("kpis")))
+    csv_r = ger.get("/reports/commercial/csv")
+    check("Reporte comercial en CSV", csv_r.status_code == 200 and csv_r.text.startswith("Reporte"))
+    expect("El técnico no ve reportes", tec.get("/reports/finance"), 403)
+    perms = expect("Permisos por vencer en 30 días", adm.get("/permits", params={"expiring_within_days": 30}), 200) or []
+    check(f"{len(perms)} permisos por vencer (el QA dejó permisos a 5 días)", len(perms) >= 1)
+    expect("Inspecciones (todas)", adm.get("/inspections"), 200)
+    expect("El vendedor no ve permisos", v.get("/permits"), 403)
+    time.sleep(6)  # el worker procesa los avisos de gastos
+    salida = worker("from app.modules.notifications import service\nprint(await service.daily_alerts_all(db))")
+    check(f"Alertas diarias con finanzas: {(salida.splitlines() or ['?'])[-1]}", bool(salida))
+    eventos = {i["event"] for i in conta.get("/notifications", params={"limit": 100}).json()["items"]}
+    check("Contabilidad recibe «factura por vencer» y «licencia de proveedor por vencer»",
+          {"payable.due_soon", "supplier.document_expiring"} <= eventos, str(sorted(eventos)))
+    eventos_t = {i["event"] for i in tec.get("/notifications", params={"limit": 100}).json()["items"]}
+    check("El técnico recibe gasto aprobado y rechazado", {"expense.approved", "expense.rejected"} <= eventos_t,
+          str(sorted(eventos_t)))
+    RECORDS["Proveedor"] = f"QA Ferguson HVAC {RUN} (facturas QA-{RUN}-1/2/3)"
+
+
 def reporte() -> Path:
     total, malos = len(RESULTS), [r for r in RESULTS if not r["ok"]]
     salida = Path(__file__).resolve().parents[2] / "docs" / "qa" / f"qa-e2e-{date.today().isoformat()}-{RUN}.md"
@@ -735,6 +863,7 @@ def main() -> int:
     seguro("Campañas", flujo_campanas, admin, v)
     seguro("Particular", flujo_particular, conta, admin)
     seguro("Permisos", flujo_permisos_por_rol, c)
+    seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")
