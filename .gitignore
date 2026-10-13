@@ -1,8 +1,9 @@
 __pycache__/
 *.pyc
-# Se comentan mientras se finaliza el proceso de desarrollo
-# .env
-# .venv/
+# Secretos y entornos locales: NUNCA al repositorio. Se habían comentado el
+# 8 oct 2026 y subieron backend/.env (claves de Gmail, Render y JWT) y backend/.venv.
+.env
+.venv/
 venv/
 node_modules/
 dist/

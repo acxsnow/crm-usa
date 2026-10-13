@@ -1,0 +1,68 @@
+/* Gastos, proveedores y pagos, conciliación, rentabilidad, reportes y permisos. Mismo lenguaje del acta. */
+.fin-page { max-width: 1200px; }
+.fin-page > .acta, .fin-grid > .acta { margin-bottom: 1rem; }
+.fin-grid { display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.fin-h2 { margin: 0 0 0.8rem; font-size: 1.05rem; }
+.fin-form { display: grid; gap: 0.8rem; }
+.fin-narrow { max-width: 34rem; }
+.fin-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.fin-box { border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin: 0.6rem 0 1rem; background: var(--surface); }
+.fin-submit { min-height: 2.9rem; }
+.fin-picker { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 0.4rem; }
+.fin-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.fin-cards li { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.9rem; display: grid; gap: 0.25rem; }
+.fin-cards small { color: var(--ink-soft); font-size: 0.8rem; }
+.fin-card-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.fin-note { margin: 0.2rem 0; font-size: 0.86rem; }
+.fin-note.is-bad { color: var(--red-dark); font-weight: 600; }
+.fin-danger { color: var(--red-dark); }
+.fin-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.fin-inline { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.fin-inline input { min-width: 8rem; flex: 1 1 8rem; }
+.fin-overdue td { background: var(--red-wash); }
+.fin-inactive { opacity: 0.55; }
+.fin-rowlink { padding: 0; text-align: left; }
+.fin-detail td { background: var(--card-soft); }
+.fin-lines { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 0.4rem 0; }
+.fin-lines th, .fin-lines td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line-soft); }
+.fin-lines-edit { display: grid; gap: 0.5rem; }
+.fin-line { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 4.5rem 6.5rem minmax(0, 2fr) auto; gap: 0.4rem; align-items: end;
+  border: 1px solid var(--line-soft); border-radius: 10px; padding: 0.5rem; }
+.fin-line .form-field { gap: 0.15rem; }
+.fin-checks { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.fin-center { align-self: end; }
+.fin-docs ul { margin: 0.4rem 0; padding-left: 1rem; }
+.fin-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.6rem; margin: 0.6rem 0 1rem; }
+.fin-kpi { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.9rem; display: grid; gap: 0.2rem; background: var(--surface); }
+.fin-kpi small { color: var(--ink-soft); font-size: 0.78rem; }
+.fin-kpi strong { font-size: 1.15rem; }
+.fin-kpi.is-alert { border-color: var(--red); background: var(--red-wash); }
+.fin-kpi.is-total { border-color: var(--ink); }
+.fin-filters { justify-content: flex-start; }
+.fin-filters input[type="date"] { margin-left: 0.3rem; }
+.fin-section { margin-top: 1.2rem; }
+.fin-import { margin-bottom: 0.4rem; }
+.fin-bank { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.fin-bank-line { border: 1px solid var(--line); border-radius: 12px; padding: 0.7rem 0.9rem; display: grid; gap: 0.35rem; }
+.fin-bank-line.is-matched { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.fin-bank-line.is-ignored { opacity: 0.75; }
+.fin-bank-head { display: flex; justify-content: space-between; gap: 0.8rem; }
+.fin-bank-head span:first-child { display: grid; }
+.fin-bank-line small { color: var(--ink-soft); font-size: 0.8rem; }
+.fin-in { color: var(--ok); font-weight: 700; }
+.fin-out { color: var(--ink); font-weight: 700; }
+.fin-cands ul { list-style: none; margin: 0.2rem 0; padding: 0; display: grid; gap: 0.3rem; }
+.fin-cands li { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; font-size: 0.88rem; }
+@media (max-width: 900px) {
+  .fin-grid { grid-template-columns: 1fr; }
+  .fin-line { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .fin-row, .fin-picker { grid-template-columns: 1fr; }
+}
+.fin-page table.notices-table, .fin-page .fin-lines { width: 100%; border-collapse: collapse; }
+.fin-page table.notices-table th { text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-soft); font-weight: 600; padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--line); }
+.fin-page table.notices-table td { padding: 0.6rem 0.55rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.fin-page table.notices-table td small { display: block; color: var(--ink-soft); font-size: 0.78rem; margin-top: 0.1rem; }
+.fin-page table.notices-table td.mono { white-space: nowrap; }
