@@ -177,6 +177,31 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
         ctx["monto"] = f"${payload['amount']}" if payload.get("amount") else ""
         return (event, await _users_with(db, org, DEFAULT_PERMISSION[event]), ctx,
                 f"/invoices/claims/{payload['claim_id']}", ("claim", payload["claim_id"]))
+    if event in ("expense.submitted", "expense.reviewed"):
+        from app.modules.finance.models import EXPENSE_CATEGORIES, Expense
+
+        g = await db.get(Expense, uuid.UUID(str(payload["expense_id"])))
+        if g is None:
+            return None, [], {}, None, (None, None)
+        quien = await _user(db, g.user_id)
+        ctx = {"monto": f"${g.amount}", "categoria": EXPENSE_CATEGORIES.get(g.category, g.category),
+               "descripcion": g.description, "persona": quien[0].full_name if quien else "", "motivo": g.review_notes or ""}
+        if event == "expense.submitted":
+            return ("expense.submitted", [u for u in await _users_with(db, org, "expenses.approve") if u.id != g.user_id],
+                    ctx, "/expenses?tab=review", ("expense", str(g.id)))
+        codigo = "expense.approved" if payload.get("status") == "approved" else "expense.rejected"
+        return codigo, quien, ctx, "/expenses", ("expense", str(g.id))
+    if event == "payable.pending_approval":
+        from app.modules.finance.models import Supplier, SupplierInvoice
+
+        inv = await db.get(SupplierInvoice, uuid.UUID(str(payload["invoice_id"])))
+        if inv is None:
+            return None, [], {}, None, (None, None)
+        prov = await db.get(Supplier, inv.supplier_id)
+        ctx = {"proveedor": prov.name if prov else "", "factura": inv.number, "monto": f"${inv.total}",
+               "fecha": inv.due_date.isoformat()}
+        return ("payable.pending_approval", await _users_with(db, org, "payables.approve"), ctx,
+                "/payables", ("supplier_invoice", str(inv.id)))
     return None, [], {}, None, (None, None)
 
 
@@ -343,7 +368,45 @@ async def daily_alerts(db: AsyncSession, organization_id) -> int:
         total += len(await notify(db, organization_id=organization_id, code="permit.expiring", users=gestores,
                                   context=ctx, link=f"/projects/{pm.project_id}", entity=("permit", str(pm.id)),
                                   dedupe_key=f"permit_expiring:{pm.id}"))
+    total += await _finance_alerts(db, organization_id, hoy)
     await db.commit()
+    return total
+
+
+async def _finance_alerts(db, organization_id, hoy) -> int:
+    """Facturas de proveedor por vencer y licencias o seguros de proveedor por vencer."""
+    from app.modules.finance.expenses import settings_of
+    from app.modules.finance.models import Supplier, SupplierInvoice
+    from app.modules.finance.payables import balance
+
+    ajustes = await settings_of(db, organization_id)
+    total = 0
+    gestores = {u.id: u for perm in ("payables.manage", "payables.approve")
+                for u in await _users_with(db, organization_id, perm)}
+    limite = hoy + timedelta(days=ajustes.due_alert_days)
+    facturas = (await db.execute(select(SupplierInvoice).where(
+        SupplierInvoice.organization_id == organization_id,
+        SupplierInvoice.status.in_(("pending_approval", "approved", "partially_paid")),
+        SupplierInvoice.due_date >= hoy, SupplierInvoice.due_date <= limite))).scalars().all()
+    nombres = {p.id: p.name for p in (await db.execute(select(Supplier).where(
+        Supplier.organization_id == organization_id))).scalars().all()}
+    for inv in facturas:
+        ctx = {"proveedor": nombres.get(inv.supplier_id, ""), "factura": inv.number, "monto": f"${balance(inv)}",
+               "fecha": inv.due_date.isoformat()}
+        total += len(await notify(db, organization_id=organization_id, code="payable.due_soon",
+                                  users=list(gestores.values()), context=ctx, link="/payables",
+                                  entity=("supplier_invoice", str(inv.id)), dedupe_key=f"payable_due:{inv.id}"))
+    limite_doc = hoy + timedelta(days=ajustes.document_alert_days)
+    proveedores = await _users_with(db, organization_id, "suppliers.manage")
+    for prov in (await db.execute(select(Supplier).where(Supplier.organization_id == organization_id,
+                                                         Supplier.active.is_(True)))).scalars().all():
+        for doc, vence in (("Licencia", prov.license_expires_on), ("Seguro", prov.insurance_expires_on)):
+            if vence and hoy <= vence <= limite_doc:
+                total += len(await notify(db, organization_id=organization_id, code="supplier.document_expiring",
+                                          users=proveedores, context={"proveedor": prov.name, "documento": doc,
+                                                                      "fecha": vence.isoformat()},
+                                          link="/payables?tab=suppliers", entity=("supplier", str(prov.id)),
+                                          dedupe_key=f"supplier_doc:{prov.id}:{doc}:{vence.isoformat()}"))
     return total
 
 

@@ -11,4 +11,5 @@ from app.modules.programs import models as _programs  # noqa: F401
 from app.modules.field_ops import models as _field_ops  # noqa: F401
 from app.modules.billing import models as _billing  # noqa: F401
 from app.modules.notifications import models as _notifications  # noqa: F401
+from app.modules.finance import models as _finance  # noqa: F401
 from app.shared import audit_models as _audit  # noqa: F401

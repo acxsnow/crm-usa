@@ -1032,3 +1032,74 @@ async def project_of_case(
     if project is None:
         raise NotFoundError("Este expediente no tiene proyecto.", code="project_not_found")
     return {"id": str(project.id), "title": project.title, "status": project.status}
+
+
+# --- Permisos e inspecciones de todos los proyectos (vista de oficina) ---------
+
+_permits_view = require_any_permission("permits.manage", "inspections.manage", "projects.read_all")
+
+
+async def _project_titles(db, ids) -> dict:
+    ids = {i for i in ids if i}
+    return {p.id: p.title for p in (await db.execute(select(Project).where(Project.id.in_(ids)))).scalars().all()} \
+        if ids else {}
+
+
+@router.get("/permits")
+async def list_all_permits(
+    response: Response, status: str | None = None, expiring_within_days: int | None = Query(None, ge=0, le=365),
+    db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+    pagination: tuple[int, int] = Depends(pagination_params), current_user: User = Depends(_permits_view),
+) -> list[dict]:
+    """Todos los permisos municipales, con su estado y vencimiento."""
+    from app.modules.field_ops.catalogs import PERMIT_STATUS_LABELS
+    from app.modules.field_ops.clock import org_today
+    from app.modules.field_ops.models import Permit
+
+    hoy = await org_today(db, organization_id)
+    stmt = select(Permit).join(Project, Project.id == Permit.project_id).where(Project.organization_id == organization_id)
+    stmt = _scope_projects_stmt(stmt, current_user)
+    if status:
+        stmt = stmt.where(Permit.status == status)
+    if expiring_within_days is not None:
+        stmt = stmt.where(Permit.expires_on.is_not(None), Permit.expires_on >= hoy,
+                          Permit.expires_on <= hoy + timedelta(days=expiring_within_days))
+    limit, offset = pagination
+    items = await paginate(db, stmt.order_by(Permit.expires_on.asc().nulls_last(), Permit.id), limit=limit,
+                           offset=offset, response=response)
+    titulos = await _project_titles(db, {p.project_id for p in items})
+    return [{"id": str(p.id), "project_id": str(p.project_id), "project_title": titulos.get(p.project_id),
+             "jurisdiction": p.jurisdiction, "permit_number": p.permit_number, "permit_type": p.permit_type,
+             "status": str(p.status), "status_label": PERMIT_STATUS_LABELS.get(p.status, str(p.status)),
+             "filed_on": p.filed_on.isoformat() if p.filed_on else None,
+             "approved_on": p.approved_on.isoformat() if p.approved_on else None,
+             "expires_on": p.expires_on.isoformat() if p.expires_on else None,
+             "days_to_expiry": (p.expires_on - hoy).days if p.expires_on else None} for p in items]
+
+
+@router.get("/inspections")
+async def list_all_inspections(
+    response: Response, result: str | None = None, upcoming: bool = False,
+    db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+    pagination: tuple[int, int] = Depends(pagination_params), current_user: User = Depends(_permits_view),
+) -> list[dict]:
+    """Todas las inspecciones: agendadas y resultados."""
+    from app.modules.field_ops.catalogs import INSPECTION_RESULT_LABELS
+    from app.modules.field_ops.models import Inspection
+
+    stmt = select(Inspection).join(Project, Project.id == Inspection.project_id).where(
+        Project.organization_id == organization_id)
+    stmt = _scope_projects_stmt(stmt, current_user)
+    if result:
+        stmt = stmt.where(Inspection.result == result)
+    if upcoming:
+        stmt = stmt.where(Inspection.result == "pending", Inspection.scheduled_for >= datetime.now(timezone.utc))
+    limit, offset = pagination
+    orden = Inspection.scheduled_for.asc() if upcoming else Inspection.scheduled_for.desc()
+    items = await paginate(db, stmt.order_by(orden, Inspection.id), limit=limit, offset=offset, response=response)
+    titulos = await _project_titles(db, {i.project_id for i in items})
+    return [{"id": str(i.id), "project_id": str(i.project_id), "project_title": titulos.get(i.project_id),
+             "scheduled_for": i.scheduled_for.isoformat(), "inspector_name": i.inspector_name,
+             "result": str(i.result), "result_label": INSPECTION_RESULT_LABELS.get(i.result, str(i.result)),
+             "result_recorded_at": i.result_recorded_at.isoformat() if i.result_recorded_at else None,
+             "observations": i.observations} for i in items]
