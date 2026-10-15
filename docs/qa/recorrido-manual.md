@@ -507,24 +507,20 @@ El autollenado de formularios municipales (§3.2), la sincronización con Micros
 
 ## Bitácora de lo que encuentres
 
-Anota aquí cada cosa rara, aunque no estés seguro de que sea un error. Con la fase y el paso es fácil reproducirlo.
+Anota aquí cada cosa rara, aunque no estés seguro de que sea un error: la fecha, qué pasó y qué se hizo.
 
-Recorrido de José, 11 al 15 de octubre de 2026. Cada arreglo tiene su commit en `devjj`; la columna dice qué cambió.
-
-| # | Fase y paso | Rol | Qué hice | Qué pasó | Qué esperaba | Arreglo |
-|---|---|---|---|---|---|---|
-| 1 | Menú (todas las listas) | Administración | Abrí Clientes, Equipo, Campañas y Documentos por revisar | No vi botones de página | Paginación en todas las listas | En Clientes y Equipo había menos de 20 registros (los botones solo salen con más de una página). Campañas, Documentos por revisar y Envíos de notificaciones no tenían botones: se agregaron (`fe0f21e`) |
-| 2 | 1.6, lo que no puede hacer | Vendedor | Escribí `/documents` en la barra | Salía «No tienes acceso a esta sección» | Que me devolviera al Inicio | Sin permiso o con una dirección que no existe, vuelve al Inicio (`d9e98f0`) |
-| 3 | 0.4 y 1.5, firma | Administrador / Vendedor | Armé un formulario de prueba con el campo de firma y lo llené | La firma salía como texto, sin recuadro para firmar con el dedo | Firmar en pantalla | La firma solo aparece en el paso con «Aceptación de T&C» y con términos publicados; ahora no deja publicar una versión con la firma en un paso sin aceptación (`3afa0b4`) |
-| 4 | 0.4, editor de versión | Administración | Desde «texas» entré a Editar la versión 2 y toqué «Volver a programas» | Volvía al primer programa de la lista | Volver a «texas» | El programa elegido queda en la dirección (`23fac57`) |
-| 5 | 1.5, firma | Vendedor | Dibujé la firma y toqué «Guardar y seguir» | El paso seguía diciendo que faltaba la firma | Que la firma quedara guardada | La firma dibujada se guarda con «Guardar y seguir»; ya no hay botón «Firmar» aparte (`7e2708a`) |
-| 6 | 2.5 y 2.1, tablero | Administración | Aprobé un expediente y volví a Expedientes | «Aprobado 1» pero la columna vacía, y seguía en «Pendiente» | Verlo en «Aprobado» | Cada columna toma las tarjetas nuevas al volver al tablero (`0573ed4`) |
-| 7 | 1.4 y 1.6, formulario | Vendedor | Llené todos los pasos y toqué «Enviar a revisión» | «No se puede enviar. Falta: Nombre completo; Teléfono…» aunque todo se veía completo | Que se enviara | Al llenar el último campo de un paso, la pantalla saltaba al siguiente **sin guardar**. Ahora el paso no cambia solo y un paso con cambios sin guardar no se marca ✓ ni deja enviar (`d7bdff5`) |
-| 8 | 1.4, campo numérico | Vendedor | Escribí 344444, «e» y «+» en «Número de miembros del hogar» | Los aceptaba; el error de «máximo 30» salía al guardar | Que no me dejara | Los números solo aceptan dígitos y respetan el máximo del catálogo (`d6fb855`) |
-| 9 | 2.1, contador de días | Administración | Busqué el «contador de días» en Documentos por revisar y en la revisión | No se veía en ninguna pantalla | Ver cuántos días lleva esperando | «⏱ N días hábiles» en el tablero, la cola y la revisión, en rojo desde el límite (`607043e`) |
-| 10 | 6, Notificaciones → Alertas | Administración | Puse el límite en 1 día | No salía ninguna alerta | Ver la alerta | La revisión corre una vez al día (14:00 UTC). Se agregó el botón «Revisar ahora» (`607043e`) |
-| 11 | 2.2, documentos | Administración | Abrí el PDF «Factura reciente de electricidad» | Chrome: «error al cargar el documento PDF» | Ver el PDF | Era un PDF falso de 27 bytes del script de QA. La subida ahora rechaza PDF falsos o cortados, el QA sube PDF reales y se reemplazaron los 70 falsos de la base local (`7a6ef81`) |
-| 12 | 6, Mis avisos | Administración | Abrí Notificaciones → Mis avisos | Una lista larga sin páginas (cortaba en 100) | Paginación | «Mis avisos» por páginas de a 30; la guardia de paginación también revisa los objetos con `items` (`448a851`) |
-| 13 | 6, campana | Todos | Miré el ícono de avisos arriba | Era un rombo ♢ | Una campana | Campana dibujada (`403d727`) |
-| 14 | | | | | | |
-| 15 | | | | | | |
+| Fecha | Qué pasó | Qué hicimos |
+|---|---|---|
+| 11 oct | Campañas, Documentos por revisar y Envíos no tenían botones de página | Se agregaron (`fe0f21e`) |
+| 11 oct | Una dirección sin permiso mostraba «No tienes acceso» | Ahora lleva al Inicio (`d9e98f0`) |
+| 11 oct | La firma salía como texto, sin recuadro para firmar | No deja publicar una versión con firma sin aceptación de términos (`3afa0b4`) |
+| 11 oct | «Volver a programas» iba al primer programa | Vuelve al programa en el que estabas (`23fac57`) |
+| 11 oct | La firma dibujada no se guardaba | Se guarda con «Guardar y seguir» (`7e2708a`) |
+| 11 oct | Un expediente aprobado no salía en la columna «Aprobado» | El tablero refresca sus tarjetas al volver (`0573ed4`) |
+| 12 oct | Decía que faltaban datos aunque el formulario se veía completo | El paso ya no salta solo sin guardar (`d7bdff5`) |
+| 12 oct | Los números aceptaban «e», «+» y valores sobre el máximo | Solo dígitos y hasta el máximo del catálogo (`d6fb855`) |
+| 14 oct | No se veía el contador de días ni salía la alerta | Contador «⏱ N días hábiles» y botón «Revisar ahora» (`607043e`) |
+| 15 oct | Un PDF no abría (era falso, del script de QA) | La subida rechaza PDF falsos o cortados (`7a6ef81`) |
+| 15 oct | «Mis avisos» no tenía páginas | Páginas de a 30 (`448a851`) |
+| 15 oct | El ícono de avisos era un rombo | Campana (`403d727`) |
+|  |  |  |
