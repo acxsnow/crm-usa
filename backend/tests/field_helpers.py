@@ -31,6 +31,20 @@ def jpeg_bytes() -> bytes:
     return buf.getvalue()
 
 
+def pdf_bytes(texto: str = "Documento de prueba") -> bytes:
+    """Un PDF real de una página (la validación rechaza los de mentira)."""
+    import io
+
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    hoja = canvas.Canvas(buf)
+    hoja.drawString(72, 720, texto)
+    hoja.showPage()
+    hoja.save()
+    return buf.getvalue()
+
+
 async def approved_case_with_project(db, org_id, *, technician_id=None, program_id=None):
     """Expediente en `approved` con su proyecto de instalación, como lo deja
     Administración al aprobar. Devuelve (case, project)."""

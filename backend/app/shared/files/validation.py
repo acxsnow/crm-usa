@@ -77,4 +77,19 @@ def check_type(data: bytes, declared: str | None, allowed: set[str]) -> str:
     if esperado is None or sniff_mime(data) != esperado:
         raise InvalidInputError("El contenido del archivo no corresponde a su tipo. Sube una foto, video o PDF real.",
                                 code="file_content_mismatch")
+    if esperado == "pdf" and not pdf_is_complete(data):
+        raise InvalidInputError("El PDF está incompleto o dañado. Vuelve a subirlo.", code="pdf_incomplete")
     return tipo
+
+
+def pdf_is_complete(data: bytes) -> bool:
+    """¿El PDF termina como termina todo PDF bien formado?
+
+    La cabecera sola no basta: dejaba pasar PDF falsos (los del script de QA,
+    27 bytes que Chrome no abre) y PDF cortados a la mitad cuando se cae la
+    señal durante la subida. Todo PDF completo cierra con `startxref` y `%%EOF`
+    (también los de tablas de referencia comprimidas y los linealizados); se
+    buscan en los últimos 2 KB porque algunos programas agregan espacios o
+    saltos después del final (spec 2026-10-14-pdf-completo)."""
+    cola = data[-2048:]
+    return b"startxref" in cola and b"%%EOF" in cola

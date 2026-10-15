@@ -60,3 +60,36 @@ async def test_evidence_rejects_a_disguised_file(app_client, active_admin_user, 
     r = await app_client.post(f"/api/v1/projects/{project_id}/evidence", files=files,
                               data={"category": "additional_photo"}, headers=headers)
     assert r.status_code == 400 and "no corresponde" in r.json()["detail"]
+
+
+# --- PDF completo (spec 2026-10-14-pdf-completo) ----------------------------
+
+PDF_TIPOS = {"application/pdf"}
+
+
+def test_a_real_pdf_passes():
+    from tests.field_helpers import pdf_bytes
+
+    assert check_type(pdf_bytes(), "application/pdf", PDF_TIPOS) == "application/pdf"
+    assert check_type(pdf_bytes() + b"\r\n  \n", "application/pdf", PDF_TIPOS) == "application/pdf"
+
+
+@pytest.mark.parametrize("contenido", [
+    b"%PDF-1.4 QA documento\n%%EOF",   # el del script de QA: cabecera y fin, sin documento
+    b"%PDF-1.7 x",                     # solo la cabecera
+], ids=["falso-del-qa", "solo-cabecera"])
+def test_a_fake_pdf_is_rejected(contenido):
+    with pytest.raises(InvalidInputError) as err:
+        check_type(contenido, "application/pdf", PDF_TIPOS)
+    assert err.value.code == "pdf_incomplete"
+
+
+def test_a_pdf_cut_in_half_is_rejected():
+    """Se cae la señal a mitad de la subida: empieza bien pero no termina."""
+    from tests.field_helpers import pdf_bytes
+
+    real = pdf_bytes()
+    with pytest.raises(InvalidInputError) as err:
+        check_type(real[: len(real) // 2], "application/pdf", PDF_TIPOS)
+    assert err.value.code == "pdf_incomplete"
+    assert "incompleto" in err.value.message

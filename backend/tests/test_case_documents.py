@@ -4,7 +4,7 @@ import pytest
 from app.modules.cases import documents, stages
 from app.modules.field_ops import case_hooks
 from app.shared import events as domain_events
-from tests.field_helpers import headers_for, jpeg_bytes
+from tests.field_helpers import headers_for, jpeg_bytes, pdf_bytes
 from tests.test_cases_intake import _abrir, _llenar_todo, _subir, _tech
 
 
@@ -123,11 +123,11 @@ async def test_a_returned_case_with_rejected_documents_is_resubmitted_after_repl
 
 async def test_admin_adds_an_extra_document(app_client, enviado):
     url = f"/api/v1/cases/{enviado['id']}/documents"
-    r = await app_client.post(url, data={"label": " "}, files={"file": ("x.pdf", b"%PDF-1.7 x", "application/pdf")},
+    r = await app_client.post(url, data={"label": " "}, files={"file": ("x.pdf", pdf_bytes(), "application/pdf")},
                               headers=enviado["admin"])
     assert r.status_code == 400
     r = await app_client.post(url, data={"label": "Factura de luz de septiembre"},
-                              files={"file": ("luz.pdf", b"%PDF-1.7 x", "application/pdf")}, headers=enviado["admin"])
+                              files={"file": ("luz.pdf", pdf_bytes(), "application/pdf")}, headers=enviado["admin"])
     assert r.status_code == 201, r.text
     extra = next(d for d in await _docs(app_client, enviado) if d["field_key"] == "__extra__")
     assert (extra["label"], extra["step_title"]) == ("Factura de luz de septiembre", "Documentos adicionales")

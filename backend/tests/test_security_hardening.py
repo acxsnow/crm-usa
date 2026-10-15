@@ -6,6 +6,7 @@ import io
 import uuid
 
 from app.shared.files.storage import _sanitize_filename, save_bytes
+from tests.field_helpers import pdf_bytes
 
 
 async def _login(app_client, email, password="SuperSecret123"):
@@ -81,7 +82,7 @@ async def test_invoice_attachment_rejects_disallowed_mime_type(app_client, db, a
 
     ok_resp = await app_client.post(
         f"/api/v1/invoices/{invoice_id}/attachments",
-        files={"file": ("proof.pdf", io.BytesIO(b"%PDF-1.4 fake"), "application/pdf")},
+        files={"file": ("proof.pdf", io.BytesIO(pdf_bytes()), "application/pdf")},
         headers=_auth(token),
     )
     assert ok_resp.status_code == 201

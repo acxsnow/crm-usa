@@ -59,6 +59,19 @@ def jpeg(text: str = "QA", color=(40, 120, 200)) -> bytes:
     return buf.getvalue()
 
 
+def pdf_doc(text: str = "QA") -> bytes:
+    """Un PDF real de una página. La subida rechaza los de mentira (antes este
+    script subía 27 bytes que pasaban la validación pero ningún visor abría)."""
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    hoja = canvas.Canvas(buf)
+    hoja.drawString(72, 720, text)
+    hoja.showPage()
+    hoja.save()
+    return buf.getvalue()
+
+
 def png_signature() -> str:
     img = Image.new("RGB", (300, 100), "white")
     ImageDraw.Draw(img).line([(10, 80), (90, 20), (180, 70), (290, 15)], fill="black", width=4)
@@ -206,7 +219,7 @@ def llenar_formulario(v: Client, case_id: str, persona: dict) -> dict:
                 if actual not in (None, "", [], {}) and not campo.get("error"):
                     continue
                 if campo["type"] in MEDIA:
-                    mime, data, nombre = ("application/pdf", b"%PDF-1.4 QA documento\n%%EOF", "doc.pdf") \
+                    mime, data, nombre = ("application/pdf", pdf_doc(f"QA {campo['key']}"), "doc.pdf") \
                         if campo["type"] == "document" else ("image/jpeg", jpeg(campo["key"]), "foto.jpg")
                     if campo["type"] == "video":
                         continue  # no hay videos obligatorios en las plantillas; se prueba aparte
@@ -311,7 +324,7 @@ def flujo_revision(v: Client, adm: Client, admin: Client, case_id: str, p: dict,
     check("El expediente aparece en la cola de documentos", any(c["case_id"] == case_id for c in cola))
     expect("Extra: Administración agrega una factura de luz", adm.post(
         f"/cases/{case_id}/documents", data={"label": "QA Factura de luz (correo)"},
-        files={"file": ("luz.pdf", b"%PDF-1.4 QA\n%%EOF", "application/pdf")}), 201)
+        files={"file": ("luz.pdf", pdf_doc("QA factura de luz"), "application/pdf")}), 201)
     docs = adm.get(f"/cases/{case_id}/documents").json()
     if devolver and docs:
         d0 = docs[0]
@@ -713,7 +726,7 @@ def flujo_finanzas(c: dict, pid: str | None, pid_az: str | None) -> None:
     def factura(numero, **kw):
         datos = {"supplier_id": prov.get("id"), "number": numero, "invoice_date": HOY.isoformat(), **kw}
         return conta.post("/payables/invoices", data={"data": json.dumps(datos)},
-                          files={"file": ("factura.pdf", b"%PDF-1.4 QA factura\n%%EOF", "application/pdf")})
+                          files={"file": ("factura.pdf", pdf_doc("QA factura"), "application/pdf")})
     f1 = expect("Factura de equipos con líneas por instalación (TECH y Arizona)", factura(f"QA-{RUN}-1", lines=[
         {"description": "Mini-split 12k", "category": "equipment", "quantity": "1", "unit_cost": "1450.00", "project_id": pid},
         {"description": "Bomba de calor 24k", "category": "equipment", "quantity": "1", "unit_cost": "2350.00", "project_id": pid_az},
