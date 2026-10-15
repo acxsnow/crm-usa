@@ -35,6 +35,8 @@ EXCEPTIONS: dict[str, str] = {
     "/api/v1/case-board": "Tablero por etapa: pagina cada columna por separado (limit/offset por etapa, "
                           "ROW_NUMBER en la base).",
     "/api/v1/cases/activity": "Actividad del Inicio: tope fijo de 50 eventos (parámetro limit), sin páginas.",
+    "/api/v1/reconciliation/lines/{line_id}/candidates": "Candidatos para conciliar un movimiento del banco: solo "
+                                                         "los del mismo monto en ±5 días; son pocos por definición.",
 }
 
 

@@ -1,5 +1,6 @@
 /** API del módulo 7: avisos, preferencias y administración. */
 import { apiClient } from "@/lib/apiClient";
+import { fetchPage } from "@/lib/pagination";
 
 export interface Notice { id: string; event: string; title: string; body: string; link: string | null; read: boolean; created_at: string }
 export interface Preferences { email_enabled: boolean; sms_enabled: boolean; sms_phone: string | null; email: string }
@@ -23,8 +24,8 @@ export const noticeKeys = {
 };
 
 export const unreadCount = async () => (await apiClient.get<{ unread: number }>("/notifications/unread-count")).data.unread;
-export const listNotices = async (unread = false, limit = 30) =>
-  (await apiClient.get<{ items: Notice[]; unread: number }>("/notifications", { params: { unread, limit } })).data;
+/** Una página de mis avisos, del más nuevo al más viejo (la campana pide la primera de 8). */
+export const listNotices = (unread = false, limit = 8) => fetchPage<Notice>("/notifications", 1, limit, { unread });
 export const markRead = async (id: string) => (await apiClient.post<Notice>(`/notifications/${id}/read`)).data;
 export const markAllRead = async () => (await apiClient.post("/notifications/read-all")).data;
 export const getPrefs = async () => (await apiClient.get<Preferences>("/notifications/preferences")).data;

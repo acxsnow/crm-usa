@@ -37,15 +37,18 @@ def _out(n: Notification) -> dict:
 # --- Mis avisos --------------------------------------------------------------
 
 @router.get("")
-async def my_notifications(unread: bool = False, limit: int = Query(30, ge=1, le=100), db: AsyncSession = Depends(get_db),
-                           current_user: User = Depends(_own)) -> dict:
+async def my_notifications(response: Response, unread: bool = False, db: AsyncSession = Depends(get_db),
+                           current_user: User = Depends(_own),
+                           pagination: tuple[int, int] = Depends(pagination_params)) -> list[dict]:
+    """Mis avisos, del más nuevo al más viejo, por páginas (total en
+    X-Total-Count). Antes se cortaba en 100 y los más viejos desaparecían sin
+    aviso (spec 2026-10-15-paginar-avisos). Los no leídos: `/unread-count`."""
+    limit, offset = pagination
     stmt = select(Notification).where(Notification.user_id == current_user.id)
     if unread:
         stmt = stmt.where(Notification.read_at.is_(None))
-    filas = (await db.execute(stmt.order_by(Notification.created_at.desc()).limit(limit))).scalars().all()
-    sin_leer = (await db.execute(select(func.count()).select_from(Notification).where(
-        Notification.user_id == current_user.id, Notification.read_at.is_(None)))).scalar_one()
-    return {"items": [_out(n) for n in filas], "unread": sin_leer}
+    stmt = stmt.order_by(Notification.created_at.desc(), Notification.id.desc())
+    return [_out(n) for n in await paginate(db, stmt, limit=limit, offset=offset, response=response)]
 
 
 @router.get("/unread-count")

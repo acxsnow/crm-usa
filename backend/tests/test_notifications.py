@@ -150,9 +150,9 @@ async def test_my_notifications_are_mine(app_client, db, seeded_org, active_sale
     vendedor = await headers_for(app_client, "vendedor@acme-demo.com")
     r = await app_client.get("/api/v1/notifications", headers=admin)
     assert r.status_code == 200, r.text
-    r = r.json()
-    assert r["unread"] == 1
-    nid = r["items"][0]["id"]
+    assert r.headers["x-total-count"] == "1"
+    assert (await app_client.get("/api/v1/notifications/unread-count", headers=admin)).json()["unread"] == 1
+    nid = r.json()[0]["id"]
     assert (await app_client.post(f"/api/v1/notifications/{nid}/read", headers=vendedor)).status_code == 404
     assert (await app_client.post(f"/api/v1/notifications/{nid}/read", headers=admin)).json()["read"] is True
     assert (await app_client.get("/api/v1/notifications/unread-count", headers=admin)).json()["unread"] == 0
@@ -161,3 +161,34 @@ async def test_my_notifications_are_mine(app_client, db, seeded_org, active_sale
     r = await app_client.put("/api/v1/notifications/preferences", headers=vendedor,
                              json={"email_enabled": True, "sms_enabled": True, "sms_phone": ""})
     assert r.status_code == 400
+
+
+
+async def test_my_notifications_are_paginated(app_client, db, seeded_org, active_salesperson_user,
+                                             active_admin_staff_user):
+    """«Mis avisos» por páginas (spec 2026-10-15-paginar-avisos): antes se
+    cortaba en 100 y los más viejos desaparecían sin aviso."""
+    org = seeded_org["org"].id
+    base = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    for i in range(5):  # 5 de Administración: el 0 es el más viejo; 1 y 3 ya leídos
+        db.add(Notification(organization_id=org, user_id=active_admin_staff_user.id, event="case.submitted",
+                            title=f"Aviso {i}", body="", created_at=base + timedelta(hours=i),
+                            read_at=base if i in (1, 3) else None))
+    db.add(Notification(organization_id=org, user_id=active_salesperson_user.id, event="case.approved",
+                        title="Del vendedor", body="", created_at=base))
+    await db.commit()
+    admin = await headers_for(app_client, "admin-staff@acme-demo.com")
+
+    p1 = await app_client.get("/api/v1/notifications", params={"limit": 2, "offset": 0}, headers=admin)
+    p2 = await app_client.get("/api/v1/notifications", params={"limit": 2, "offset": 2}, headers=admin)
+    p3 = await app_client.get("/api/v1/notifications", params={"limit": 2, "offset": 4}, headers=admin)
+    assert p1.headers["x-total-count"] == "5"
+    titulos = [n["title"] for p in (p1, p2, p3) for n in p.json()]
+    assert titulos == ["Aviso 4", "Aviso 3", "Aviso 2", "Aviso 1", "Aviso 0"]  # más nuevo primero, sin repetir
+
+    sin_leer = await app_client.get("/api/v1/notifications", params={"unread": True, "limit": 2, "offset": 2},
+                                    headers=admin)
+    assert sin_leer.headers["x-total-count"] == "3"
+    assert [n["title"] for n in sin_leer.json()] == ["Aviso 0"]
+
+    assert (await app_client.get("/api/v1/notifications", params={"limit": 501}, headers=admin)).status_code == 422

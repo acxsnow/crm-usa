@@ -16,13 +16,23 @@ from app.main import app
 from app.shared.pagination import EXCEPTIONS, MAX_LIMIT, pagination_params
 
 
+def _returns_items(r: APIRoute, devuelve) -> bool:
+    """¿Devuelve un objeto con la lista en `items` (`{"items": [...], ...}`)?
+    Se escapó «Mis avisos» (15 oct 2026): la guardia solo miraba listas."""
+    campos = getattr(r.response_model, "model_fields", None)
+    if campos and "items" in campos and typing.get_origin(campos["items"].annotation) is list:
+        return True
+    return devuelve is dict and '"items":' in inspect.getsource(r.endpoint)
+
+
 def _list_routes() -> list[APIRoute]:
     rutas = []
     for r in app.routes:
         if not isinstance(r, APIRoute) or "GET" not in r.methods:
             continue
         devuelve = inspect.signature(r.endpoint).return_annotation
-        if typing.get_origin(r.response_model) is list or typing.get_origin(devuelve) is list:
+        if (typing.get_origin(r.response_model) is list or typing.get_origin(devuelve) is list
+                or _returns_items(r, devuelve)):
             rutas.append(r)
     return rutas
 

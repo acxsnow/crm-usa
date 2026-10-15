@@ -13,7 +13,8 @@ import {
   getNoticeSettings,
   runAlertsNow,
   getPrefs,
-  listNotices,
+  unreadCount,
+  type Notice,
   listTemplates,
   markAllRead,
   markRead,
@@ -67,7 +68,11 @@ function MyNotices() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [soloSinLeer, setSoloSinLeer] = useState(false);
-  const { data, isLoading } = useQuery({ queryKey: noticeKeys.list(soloSinLeer), queryFn: () => listNotices(soloSinLeer, 100) });
+  // Por páginas (spec 2026-10-15-paginar-avisos): antes se pedían los 100 más
+  // recientes y los más viejos desaparecían sin aviso.
+  const lista = usePaginatedQuery<Notice>({ key: ["notices", "page", soloSinLeer], path: "/notifications", pageSize: 30,
+    params: { unread: soloSinLeer } });
+  const { data: sinLeer = 0 } = useQuery({ queryKey: noticeKeys.count, queryFn: unreadCount });
   const refrescar = () => { qc.invalidateQueries({ queryKey: ["notices"] }); qc.invalidateQueries({ queryKey: noticeKeys.count }); };
   const leer = useMutation({ mutationFn: markRead, onSuccess: refrescar });
   const leerTodo = useMutation({ mutationFn: markAllRead, onSuccess: refrescar });
@@ -75,13 +80,13 @@ function MyNotices() {
     <article className="acta">
       <div className="notices-toolbar">
         <label className="billing-check"><input type="checkbox" checked={soloSinLeer} onChange={(e) => setSoloSinLeer(e.target.checked)} /> Solo sin leer</label>
-        {(data?.unread ?? 0) > 0 && <button type="button" className="acta-btn is-quiet" onClick={() => leerTodo.mutate()}>Marcar todas como leídas</button>}
+        {sinLeer > 0 && <button type="button" className="acta-btn is-quiet" onClick={() => leerTodo.mutate()}>Marcar todas como leídas</button>}
       </div>
-      {isLoading ? <p className="acta-empty">Cargando…</p> : (data?.items ?? []).length === 0 ? (
+      {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
         <p className="acta-empty">{soloSinLeer ? "Nada sin leer." : "Todavía no tienes avisos. Aparecen cuando algo de tu trabajo cambia."}</p>
       ) : (
         <ul className="notice-list">
-          {data!.items.map((n) => (
+          {lista.items.map((n) => (
             <li key={n.id} className={n.read ? "" : "is-unread"}>
               <button type="button" onClick={() => { if (!n.read) leer.mutate(n.id); if (n.link) navigate(n.link); }}>
                 <strong>{n.title}</strong>
@@ -92,6 +97,7 @@ function MyNotices() {
           ))}
         </ul>
       )}
+      <PaginationControls {...lista.controls} />
     </article>
   );
 }
