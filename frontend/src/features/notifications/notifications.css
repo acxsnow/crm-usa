@@ -1,6 +1,6 @@
 /* Módulo 7 — Notificaciones. Mismo lenguaje del acta. */
 .notice-bell { position: relative; }
-.notice-badge { position: absolute; top: -2px; right: -6px; min-width: 1.15rem; height: 1.15rem; padding: 0 0.3rem; border-radius: 999px;
+.notice-badge { position: absolute; top: -7px; right: -11px; min-width: 1.15rem; height: 1.15rem; padding: 0 0.3rem; border-radius: 999px;
   background: var(--red); color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 1.15rem; text-align: center; }
 .notice-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); width: min(24rem, calc(100vw - 2rem)); z-index: 40;
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 40px rgba(23, 21, 20, 0.16);
@@ -77,3 +77,4 @@
 .campaign-contacts td .billing-chip { margin-left: 0.4rem; }
 @media (max-width: 640px) { .campaign-row { grid-template-columns: 1fr; } }
 .campaign-result .campaign-preview { display: grid; gap: 0.25rem; }
+.notice-bell-icon { display: block; }
