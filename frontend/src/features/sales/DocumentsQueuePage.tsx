@@ -5,6 +5,7 @@ import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import "../billing/billing.css";
 import "./sales.css";
 import { SUBSTATUS_LABELS } from "./CaseReviewPage";
+import { ApprovalDays } from "./ApprovalDays";
 import { docKeys, type QueueRow } from "./api";
 
 /**
@@ -39,6 +40,7 @@ export function DocumentsQueuePage() {
                     </small>
                   </span>
                   <span className="queue-counts">
+                    <ApprovalDays wait={r.approval_wait} />
                     {r.pending > 0 && <span className="billing-chip is-preparing">{r.pending} por revisar</span>}
                     {r.rejected > 0 && <span className="billing-chip is-rejected">{r.rejected} rechazados</span>}
                     <span className="billing-chip is-accepted">{r.accepted} aceptados</span>

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_effective_permissions
 from app.modules.cases import service as case_service
+from app.modules.cases.approval_clock import approval_wait, wait_context
 from app.modules.cases import stages
 from app.modules.cases.models import (
     VISIT_RESULTS,
@@ -271,6 +272,7 @@ async def form_state(db, *, user, case: Case) -> dict:
                        "accepted_at": aceptacion.accepted_at.isoformat(),
                        "terms_version": aceptacion.terms_version} if aceptacion else None,
         "editable": is_editable(case),
+        "approval_wait": approval_wait(case, await wait_context(db, case.organization_id)),
     }
 
 
@@ -595,6 +597,9 @@ async def board(db, *, organization_id, user, include_early_closes=False, mine=F
         Customer.id.in_({c.customer_id for c in casos if c.customer_id})))).scalars().all()}
     programas = {p.id: p.name for p in (await db.execute(select(Program).where(
         Program.id.in_({c.program_id for c in casos if c.program_id})))).scalars().all()}
+    # Días esperando aprobación (spec 2026-10-14): una sola lectura de zona,
+    # «hoy» y umbral para toda la página, no una por tarjeta.
+    reloj = await wait_context(db, organization_id)
     columnas = []
     for code in stages.STAGES:
         if (not include_early_closes and code in EARLY_CLOSES) or (stage and code != stage):
@@ -605,7 +610,8 @@ async def board(db, *, organization_id, user, include_early_closes=False, mine=F
             "cases": [{"id": str(c.id), "case_number": c.case_number, "customer_name": clientes.get(c.customer_id),
                        "address": ", ".join(x for x in (c.address_street, c.address_unit, c.address_city) if x),
                        "program_name": programas.get(c.program_id), "substatus_code": c.substatus_code,
-                       "updated_at": c.updated_at.isoformat() if c.updated_at else None}
+                       "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                       "approval_wait": approval_wait(c, reloj)}
                       for c in del_codigo],
         })
     return columnas

@@ -16,6 +16,8 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 
 **Servicios:** `docker compose up` (API en `localhost:8000`, app en `localhost:5173`).
 
+**Base al día:** desde el 13 de octubre (módulos de finanzas) hace falta la migración `0025`. Córrela una vez: `docker compose exec api alembic upgrade head`. Sin ella, las pantallas de Gastos, Proveedores, Conciliación y Reportes fallan y nadie tiene el permiso de aprobar facturas de proveedor (`payables.approve`). Si al hacer `git pull` desaparecieron `backend/.env` o `frontend/.env` (ya no se suben al repositorio), créalos de nuevo desde los `.env.example`.
+
 **Usuarios** (contraseña `ChangeMe123!`):
 
 | Rol | Usuario |
@@ -47,6 +49,10 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | 4. Confirmación del acta e inspección | Administración | §3.4, §3.5 | Inspección pendiente |
 | 5. Cobro y pago | Administración y Contabilidad | §3.4, §4.2, §4.3 | Pagado → Cerrado |
 | 6. Lo transversal | Todos | §3 (notificaciones), §4.2, §7 | — |
+| 7. Gastos de campo | Técnico, Vendedor, Contabilidad | §4.1 | — |
+| 8. Proveedores y pagos | Contabilidad, Gerencia, Administrador | §4.4 | — |
+| 9. Conciliación y rentabilidad | Contabilidad | §4.5 | — |
+| 10. Reportes | Gerencia, Contabilidad, Administración | §7 | — |
 
 ---
 
@@ -180,7 +186,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
   - Enviar con campos obligatorios vacíos.
   - Aprobar su propio expediente: no hay botón, y si se llama a la API (`POST /cases/{id}/transition` con `approved`) responde **403**.
   - Ver los expedientes de otro vendedor, ni escribiendo la dirección.
-  - Entrar a Proyectos, Facturación, Programas, Equipo (debe salir «No tienes acceso»).
+  - Entrar a Proyectos, Facturación, Programas, Equipo: escribiendo la dirección a mano debe devolverlo al **Inicio** (desde el 11 de octubre ya no sale «No tienes acceso»). Una dirección que no existe también lleva al Inicio.
 
 ---
 
@@ -194,7 +200,8 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 - **Pantallas:**
   - **Expedientes** (`/cases`) · `features/sales/CasesBoardPage.tsx` · API `GET /case-board`.
   - **Documentos por revisar** (`/documents`) · `features/sales/DocumentsQueuePage.tsx` · API `GET /documents/review-queue`.
-- **Qué debe pasar:** tu expediente aparece en «Pendiente de aprobación», con el contador de días (PDF §7, «con contador de días»).
+- **Qué debe pasar:** tu expediente aparece en «Pendiente de aprobación» con el contador de días (PDF §3.1 y §7, «con contador de días»): **⏱ N días hábiles** desde que se envió a revisión, en la tarjeta del tablero, en la fila de la cola y bajo «Enviado» en la revisión. Gris mientras está a tiempo; en rojo y con «· límite L» desde el límite. La cola ordena del más antiguo al más nuevo, así que los rojos quedan arriba. Una devolución al vendedor no reinicia la cuenta.
+- **El límite y la alerta:** Notificaciones → **Alertas** (Administrador y Administración). Cambia «días hábiles en Pendiente de aprobación» (por defecto 3): el color del contador cambia al recargar. La alerta a la campana («Lleva N días hábiles sin aprobar») sale en la revisión diaria de las 14:00 UTC o al tocar **Revisar ahora**, que dice cuántos avisos creó. Tocarlo otra vez el mismo día dice «No había nada nuevo para avisar»: no repite avisos. API: `POST /notifications/alerts/run`.
 
 ### 2.2 Revisar documento por documento
 
@@ -282,6 +289,14 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 - **Qué debe pasar:** **Inspección pendiente** → sub-estado **Inspección aprobada**. Cada intento queda guardado.
 - **Nota:** si el programa no exige inspección (requisito desactivado en 0.6, como TECH), del acta confirmada se pasa directo a cobro.
 
+### 4.3 Vista general de permisos e inspecciones
+
+- **PDF:** §3.2 («Seguimiento de permisos»), §3.5.
+- **Quién:** Administración (y quien ve todos los proyectos).
+- **Pantalla:** Operación de campo → **Permisos e inspecciones** (`/permits`) · `features/finance/PermitsPage.tsx`.
+- **API:** `GET /permits`, `GET /inspections`.
+- **Qué debe pasar:** ves el permiso y las inspecciones del proyecto de los pasos 3.1 y 4.2, con estado y vencimiento, y los filtros funcionan. Es solo consulta: lo que se registra sigue estando dentro de cada proyecto. El técnico y el vendedor no deben poder entrar.
+
 ---
 
 ## Fase 5. Cobro y pago
@@ -337,10 +352,156 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | Gerencia solo consulta | Gerencia | todo lo que ve | intenta guardar algo: ningún botón debe funcionar | §1 |
 | Auditoría | Administrador, Administración, Contabilidad, Gerencia | **Auditoría** (`/audit-log`) | `GET /audit-events` | — |
 | Equipo, roles y permisos | Administrador | **Equipo** (`/users`), **Roles y permisos** (`/roles`) | `/users`, `/roles`, `/permissions` | — |
+| Avisos de finanzas | Contabilidad, quien registró el gasto | campana | alertas diarias | §4.1, §4.4 |
+
+Avisos nuevos desde el 13 de octubre: **gasto por revisar** (a quien aprueba), **gasto revisado** (a quien lo registró), **factura de proveedor por vencer** (5 días antes) y **licencia o seguro del proveedor por vencer**.
+
+---
+
+## Fase 7. Gastos de campo
+
+> Paquete `finance` (Cadena B, 13 oct). Spec: `docs/superpowers/specs/2026-10-13-modulos-gastos-proveedores-finanzas-design.md`.
+
+### 7.1 Registrar un gasto (Técnico o Vendedor)
+
+- **PDF:** §4.1 («Registro de gastos de campo»).
+- **Quién:** `tecnico@demo-org.com`, idealmente desde el celular. Repite con `vendedor@demo-org.com`.
+- **Pantalla:** Finanzas → **Gastos de campo** (`/expenses`) · `features/finance/ExpensesPage.tsx`.
+- **Qué hacer:** registra un gasto con categoría (gasolina, viáticos, hotel, comida, peajes y parqueo, material menor, herramienta, otro), monto, fecha, forma de pago, **foto del recibo** y, si aplica, el proyecto de la fase 3.
+- **API:** `GET /expenses/catalogs`, `POST /expenses`, mis gastos: `GET /expenses/mine`, recibo: `GET /expenses/{id}/receipt`.
+- **Prueba también:**
+  - **Sin recibo:** no debe dejar guardar; la foto es obligatoria.
+  - **Un recibo disfrazado** (un `.txt` renombrado a `.jpg`) o de más de 10 MB: debe rechazarlo, como toda subida.
+  - **Más del tope** (5.000 USD por defecto): debe rechazarlo con un mensaje claro.
+  - **Editar o borrar** el gasto mientras está pendiente: `PUT /expenses/{id}`, `DELETE /expenses/{id}`. Ya revisado, no debe dejar.
+- **Qué debe pasar:** el gasto queda **por revisar** y a Contabilidad le llega el aviso. El técnico solo ve sus propios gastos.
+
+### 7.2 Revisar el gasto (Contabilidad)
+
+- **Quién:** `contabilidad@demo-org.com`.
+- **Qué hacer:** aprueba uno y rechaza otro con motivo.
+- **API:** `GET /expenses`, `POST /expenses/{id}/review`.
+- **Qué debe pasar:** a quien lo registró le llega el aviso con el resultado. **Nadie aprueba lo propio:** con el Administrador (que también registra gastos) registra uno y trata de aprobarlo; no debe dejar.
+- **Lo que no debe poder hacer:** el técnico y el vendedor no ven los gastos de los demás ni pueden aprobar.
+
+### 7.3 Reembolso
+
+- **Qué hacer:** a un gasto aprobado y pagado con dinero propio, **marcar reembolsado**.
+- **API:** `POST /expenses/{id}/reimburse`.
+- **Qué debe pasar:** queda reembolsado y, si el gasto tiene proyecto, suma a los costos de ese proyecto en la rentabilidad (fase 9.1).
+
+---
+
+## Fase 8. Proveedores y pagos
+
+> El cliente respondió el cuestionario de proveedores el 8 de octubre: lo que se compra se paga al momento o con tarjeta, quieren dejar QuickBooks y Housecall, y facturas desde 10.000 USD llevan dos aprobaciones. **La plataforma no paga:** registra el pago hecho por fuera.
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Proveedores, facturas y registrar pagos | Contabilidad, Administrador | `suppliers.manage`, `payables.manage` |
+| Aprobar y programar el pago | Gerencia y Administrador (donde está Aldo Martínez) | `payables.approve` |
+| Desde el umbral: segunda aprobación | otra persona, con `payables.manage` | — |
+
+### 8.1 El proveedor
+
+- **PDF:** §4.4 («Gestión de proveedores»), §3.2 del cuestionario.
+- **Quién:** `contabilidad@demo-org.com`.
+- **Pantalla:** Finanzas → **Proveedores y pagos** (`/payables`) · `features/finance/PayablesPage.tsx` → pestaña **Proveedores**.
+- **Qué hacer:**
+  1. Crea un proveedor (tipo: equipos, material eléctrico, contratistas, servicios u otro), con condiciones de pago en días.
+  2. Súbele documentos: W-9, licencia, seguro y contrato, con fecha de vencimiento. Pon uno que venza en menos de 30 días.
+  3. **Importar CSV:** carga varios proveedores de una vez (columnas reconocidas en inglés o español: `name/nombre`, `razon_social`, `ein`, `contacto`, `telefono`, `email`, `terms`, `tipo`…). Mete uno repetido: no debe duplicarlo.
+- **API:** `GET/POST /payables/suppliers`, `GET/PUT /payables/suppliers/{id}`, `POST /payables/suppliers/import`, `POST /payables/suppliers/{id}/documents`, `GET /payables/supplier-documents/{id}/file`.
+- **Qué debe pasar:** los datos bancarios del proveedor solo los ve quien tiene `payables.manage`. Gerencia los ve ocultos. El documento por vencer genera el aviso diario.
+
+### 8.2 Registrar una factura de proveedor
+
+- **PDF:** §4.4 («Registro de facturas»).
+- **Pantalla:** pestaña **Facturas**.
+- **Qué hacer:** registra una factura con número del proveedor, fechas (el vencimiento sale de las condiciones de pago), líneas o total, impuestos, envío y el archivo. **Asigna una línea al proyecto de la fase 3** (es lo que alimenta la rentabilidad).
+- **API:** `GET/POST /payables/invoices`, `GET /payables/invoices/{id}`, `GET /payables/invoices/{id}/file`, `GET /payables/catalogs`.
+- **Prueba también:**
+  - **El mismo número de factura del mismo proveedor:** debe rechazarlo.
+  - **Factura ya pagada** (contado o tarjeta, bajo el umbral): queda aprobada y pagada en el mismo paso.
+- **Qué debe pasar:** la factura queda **por aprobar**.
+
+### 8.3 Aprobar (una o dos aprobaciones)
+
+- **PDF:** §4.4 («Aprobación de pagos»).
+- **Bajo el umbral** (10.000 USD por defecto): entra como `gerencia@demo-org.com` → la factura → **Aprobar** → **Programar el pago** con fecha.
+- **Desde el umbral:** registra otra factura de 10.000 USD o más. Apruébala con Gerencia: queda esperando la segunda aprobación. Apruébala luego con Contabilidad. Con la **misma persona** dos veces no debe dejar.
+- **API:** `POST /payables/invoices/{id}/approve`, `POST /payables/invoices/{id}/schedule`.
+- **Lo que no debe poder hacer:** Contabilidad sola no aprueba una factura bajo el umbral (no tiene `payables.approve`). El técnico y el vendedor no entran a esta pantalla.
+- **Anular:** una factura con motivo → `POST /payables/invoices/{id}/void`. Anulada, no se paga.
+
+### 8.4 Registrar el pago
+
+- **Quién:** `contabilidad@demo-org.com`.
+- **Pantalla:** pestaña **Pagos**.
+- **Qué hacer:** registra un pago con fecha, monto, forma, referencia, cuenta y comprobante, y repártelo entre facturas aprobadas del mismo proveedor. Haz primero un pago **parcial**.
+- **API:** `GET/POST /payables/payments`, `GET /payables/payments/{id}/file`.
+- **Qué debe pasar:** la factura pasa a **pagada parcialmente** y luego a **pagada**. No debe dejar pagar más que el saldo, ni pagar una factura sin aprobar.
+
+### 8.5 Antigüedad y exportación
+
+- **Pantalla:** pestaña **Antigüedad** (al día, 1–30, 31–60, 61–90, más de 90 días) y el botón de exportar.
+- **API:** `GET /payables/aging`, `GET /payables/export.csv` (exige `accounting.export`).
+- **Qué debe pasar:** el CSV trae facturas y pagos y se abre bien en Excel.
+
+### 8.6 Ajustes (umbral y avisos)
+
+- **Quién:** quien tiene `payables.approve` (Gerencia o Administrador). Contabilidad no ve esta pestaña.
+- **Pantalla:** pestaña **Ajustes**: umbral de doble aprobación, días de aviso de vencimiento y de documentos, tope de gasto de campo.
+- **API:** `GET/PUT /finance/settings`.
+- **Prueba:** baja el tope de gasto a 100 y registra un gasto de 150 en la fase 7: debe rechazarlo. Déjalo como estaba.
+
+---
+
+## Fase 9. Conciliación y rentabilidad
+
+> Pantalla: Finanzas → **Conciliación y rentabilidad** (`/finance-close`) · `features/finance/FinanceClosePage.tsx`.
+
+### 9.1 Rentabilidad por proyecto
+
+- **PDF:** §4.5 («Rentabilidad por proyecto»).
+- **Quién:** Contabilidad, Gerencia o Administrador (`profitability.read`).
+- **Pantalla:** pestaña **Rentabilidad**.
+- **API:** `GET /finance/profitability`.
+- **Qué debe pasar:** el proyecto de la fase 3 muestra lo esperado, lo cobrado (fase 5.4), los costos por tipo (la línea de la factura de proveedor de 8.2 y el gasto aprobado de 7.2) y el margen en dinero y en %. Los filtros por fechas y por programa cambian los totales. La comisión del vendedor todavía no entra.
+
+### 9.2 Conciliación bancaria
+
+- **PDF:** §4.5 («Conciliación»).
+- **Quién:** Contabilidad o Administrador (`reconciliation.manage`).
+- **Pantalla:** pestaña **Conciliación**.
+- **Qué hacer:** importa un extracto CSV del banco con columnas de fecha, descripción y monto (o débito y crédito separados; en inglés o español). Pon:
+  - una entrada con el monto del pago de la fase 5.4 y fecha cercana (±5 días);
+  - una salida con el monto del pago al proveedor de la fase 8.4;
+  - una salida con el reembolso de la fase 7.3;
+  - un movimiento que no corresponda a nada.
+- **API:** `POST /reconciliation/statements`, `GET /reconciliation/statements`, `GET /reconciliation/lines`, `GET /reconciliation/summary`, `GET /reconciliation/lines/{id}/candidates`, `POST /reconciliation/lines/{id}/match`, `.../ignore`, `.../unmatch`.
+- **Qué debe pasar:** los movimientos con un solo candidato se concilian solos. El que no corresponde queda pendiente: márcalo como **otro** con una nota. Deshaz una conciliación y vuélvela a hacer a mano. Un CSV sin columnas de fecha y monto debe dar un mensaje claro.
+
+---
+
+## Fase 10. Reportes
+
+- **PDF:** §7 («indicadores», «visibilidad en tiempo real»).
+- **Quién:** Gerencia, Contabilidad, Administrador y Administración (`reports.view`). Exportar a CSV exige `reports.export` (Administración no lo tiene).
+- **Pantalla:** Administración → **Reportes** (`/reports`) · `features/finance/ReportsPage.tsx`, con tres pestañas:
+  - **Comercial:** visitas por resultado, expedientes por etapa, conversión, días hábiles hasta la aprobación, rechazos y devoluciones, por vendedor.
+  - **Operación:** instalaciones por semana y por técnico, inspecciones aprobadas y fallidas, días de aprobación a instalación.
+  - **Finanzas:** cobrado por mes, por cobrar, por pagar con antigüedad, gastos por categoría.
+- **API:** `GET /reports/{commercial|operations|finance}`, `GET /reports/{tipo}/csv`, con `date_from` y `date_to`.
+- **Qué debe pasar:** el expediente que recorriste aparece en los números (visita, aprobación, instalación, cobro, gasto, factura). Los tiempos salen del historial de etapas. Cambia el rango de fechas y revisa que los totales cambien. El técnico y el vendedor no entran.
+
+---
 
 ## Lo que todavía no existe (no lo busques)
 
-En gris en el menú: Permisos e inspecciones (vista general; hoy se manejan dentro de cada proyecto), Gastos de campo (§4.1), Proveedores y pagos (§4.4), Conciliación y rentabilidad (§4.5) y Reportes (§7). Tampoco el autollenado de formularios municipales (§3.2) ni la sincronización con Microsoft Forms (§3).
+El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, el inventario de bodega, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
 
 ---
 

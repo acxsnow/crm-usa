@@ -20,6 +20,7 @@ from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.cases import intake
+from app.modules.cases.approval_clock import approval_wait, wait_context
 from app.modules.cases.models import DOCUMENT_REVIEW_STATUSES, EXTRA_DOCUMENT_KEY, Case, CaseFile
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
@@ -189,11 +190,13 @@ async def review_queue(db: AsyncSession, *, organization_id) -> list[dict]:
         Customer.id.in_({c.customer_id for c, _ in filas if c.customer_id})))).scalars().all()}
     programas = {x.id: x.name for x in (await db.execute(select(Program).where(
         Program.id.in_({c.program_id for c, _ in filas if c.program_id})))).scalars().all()}
+    reloj = await wait_context(db, organization_id)
     return [{"case_id": str(c.id), "case_number": c.case_number, "customer_name": clientes.get(c.customer_id),
              "program_name": programas.get(c.program_id), "stage_label": c.stage_label,
              "substatus_code": c.substatus_code,
              "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
-             "pending": cuenta["pending"], "accepted": cuenta["accepted"], "rejected": cuenta["rejected"]}
+             "pending": cuenta["pending"], "accepted": cuenta["accepted"], "rejected": cuenta["rejected"],
+             "approval_wait": approval_wait(c, reloj)}
             for c, cuenta in filas]
 
 

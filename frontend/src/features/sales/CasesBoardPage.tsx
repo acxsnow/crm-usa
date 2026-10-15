@@ -7,6 +7,7 @@ import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listPrograms } from "@/features/programs/api";
 import { listUsersPage } from "@/features/users/api";
+import { ApprovalDays } from "./ApprovalDays";
 import { getBoard, getBoardColumn, salesKeys, type BoardColumn, type BoardFilters } from "./api";
 
 /**
@@ -208,6 +209,7 @@ function ColumnaPaginada({ col, tempranos, filtros, revisa }: {
                 {c.substatus_code && SUB[c.substatus_code] && (
                   <span className={`billing-chip ${c.substatus_code === "returned" ? "is-rejected" : "is-submitted"}`}>{SUB[c.substatus_code]}</span>
                 )}
+                <ApprovalDays wait={c.approval_wait} />
               </Link>
             </li>
           ))}

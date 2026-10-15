@@ -11,6 +11,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   getNoticeSettings,
+  runAlertsNow,
   getPrefs,
   listNotices,
   listTemplates,
@@ -265,7 +266,18 @@ function Settings() {
   useEffect(() => { if (data) { setDias(data.approval_alert_business_days); setPermiso(data.permit_expiry_alert_days); } }, [data]);
   const guardar = useMutation({
     mutationFn: () => setNoticeSettings({ approval_alert_business_days: dias, permit_expiry_alert_days: permiso }),
-    onSuccess: (s) => { qc.setQueryData(noticeKeys.settings, s); setError(null); setMsg("Guardado. Se aplica desde la próxima revisión diaria."); },
+    onSuccess: (s) => { qc.setQueryData(noticeKeys.settings, s); setError(null); setMsg("Guardado. Se aplica en la próxima revisión diaria o al tocar «Revisar ahora»."); },
+    onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); },
+  });
+  // Sin esperar a la revisión de las 14:00 UTC: útil al cambiar un umbral.
+  const revisar = useMutation({
+    mutationFn: runAlertsNow,
+    onSuccess: ({ created }) => {
+      setError(null);
+      setMsg(created ? `Se ${created === 1 ? "creó 1 aviso" : `crearon ${created} avisos`}.` : "No había nada nuevo para avisar.");
+      qc.invalidateQueries({ queryKey: noticeKeys.count });
+      qc.invalidateQueries({ queryKey: ["notices"] });
+    },
     onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); },
   });
   return (
@@ -286,7 +298,11 @@ function Settings() {
         </dl>
         {error && <p className="form-error" role="alert">{error}</p>}
         {msg && <p className="info-banner" role="status">{msg}</p>}
-        <div className="acta-actions"><button type="submit" className="acta-btn is-primary" disabled={guardar.isPending}>Guardar</button></div>
+        <div className="acta-actions">
+          <button type="button" className="acta-btn is-quiet" disabled={revisar.isPending} onClick={() => revisar.mutate()}>
+            {revisar.isPending ? "Revisando…" : "Revisar ahora"}</button>
+          <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending}>Guardar</button>
+        </div>
       </form>
     </article>
   );

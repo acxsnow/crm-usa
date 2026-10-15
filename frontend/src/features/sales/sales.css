@@ -164,3 +164,9 @@
   padding-right: 0.15rem; overscroll-behavior: contain; }
 .board-range { margin: -0.3rem 0.2rem 0.5rem; font-size: 0.74rem; color: var(--ink-soft); }
 .board-edge { margin: 0.5rem 0.2rem; font-size: 0.75rem; color: var(--ink-soft); text-align: center; }
+
+/* Días hábiles esperando aprobación (features/sales/ApprovalDays.tsx). */
+.approval-days { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 600;
+  color: var(--ink-soft); white-space: nowrap; }
+.approval-days.is-overdue { color: var(--red); }
+.board-card .approval-days { margin-top: 0.15rem; }

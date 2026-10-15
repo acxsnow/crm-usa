@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
+import { ApprovalDays } from "./ApprovalDays";
 import {
   caseEvents,
   caseProject,
@@ -87,7 +88,8 @@ export function CaseReviewPage() {
               <dl className="acta-meta">
                 <div><dt>Expediente</dt><dd className="acta-data">{c.case_number}</dd></div>
                 <div><dt>Dirección</dt><dd>{[c.address_street, c.address_unit, c.address_city, c.address_state].filter(Boolean).join(", ")}</dd></div>
-                <div><dt>Enviado</dt><dd>{c.submitted_at ? fecha(c.submitted_at) : "—"}</dd></div>
+                <div><dt>Enviado</dt><dd>{c.submitted_at ? fecha(c.submitted_at) : "—"}
+                  {form?.approval_wait && <><br /><ApprovalDays wait={form.approval_wait} /></>}</dd></div>
                 <div><dt>Formulario</dt><dd>{form ? `versión ${form.definition.version}` : "sin formulario"}</dd></div>
                 {proyecto && <div><dt>Instalación</dt><dd><Link to={`/projects/${proyecto.id}`} className="acta-link">{proyecto.title} ›</Link></dd></div>}
                 {c.approval_code && <div><dt>Código de aprobación</dt><dd className="acta-data">{c.approval_code}</dd></div>}

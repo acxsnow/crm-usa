@@ -236,3 +236,13 @@ async def set_settings(payload: SettingsIn, db: AsyncSession = Depends(get_db),
     s.permit_expiry_alert_days = payload.permit_expiry_alert_days
     await db.commit()
     return await get_settings_(db=db, organization_id=organization_id, current_user=current_user)
+
+
+@router.post("/alerts/run")
+async def run_alerts_now(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    """«Revisar ahora» (spec 2026-10-14-contador-dias-aprobacion): corre en el
+    momento la revisión diaria de esta organización. Sirve para ver el efecto
+    de cambiar un umbral sin esperar a la de las 14:00 UTC. No repite avisos:
+    `daily_alerts` usa una marca por expediente y por día."""
+    return {"created": await service.daily_alerts(db, organization_id)}

@@ -37,6 +37,8 @@ export const saveTemplate = async (code: string, channel: string, body: { subjec
 export const resetTemplate = async (code: string, channel: string) =>
   (await apiClient.delete(`/notifications/templates/${code}/${channel}`)).data;
 export const getNoticeSettings = async () => (await apiClient.get<NoticeSettings>("/notifications/settings")).data;
+/** «Revisar ahora»: corre en el momento la revisión diaria de alertas de la organización. */
+export const runAlertsNow = async () => (await apiClient.post<{ created: number }>("/notifications/alerts/run")).data;
 export const setNoticeSettings = async (body: { approval_alert_business_days: number; permit_expiry_alert_days: number }) =>
   (await apiClient.put<NoticeSettings>("/notifications/settings", body)).data;
 

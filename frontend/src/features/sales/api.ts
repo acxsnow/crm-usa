@@ -10,6 +10,9 @@ export interface MyProgram {
   zones: { id: string; code: string; name: string; state: string | null; city: string | null }[];
 }
 
+/** Días hábiles esperando aprobación; lo calcula el servidor (`cases/approval_clock.py`). */
+export interface ApprovalWait { business_days: number; overdue: boolean; limit: number }
+
 export interface CaseForm {
   case: Case;
   definition: { steps: DefinitionStep[]; version: string };
@@ -21,6 +24,7 @@ export interface CaseForm {
   terms: { id: string; version: string; language: string; title: string; body: string } | null;
   acceptance: { id: string; customer_name: string; accepted_at: string; terms_version: string | null } | null;
   editable: boolean;
+  approval_wait?: ApprovalWait | null;
 }
 
 export interface BoardColumn {
@@ -28,7 +32,8 @@ export interface BoardColumn {
   label: string;
   count: number;
   cases: { id: string; case_number: string; customer_name: string | null; address: string;
-    program_name: string | null; substatus_code: string | null; updated_at: string | null }[];
+    program_name: string | null; substatus_code: string | null; updated_at: string | null;
+    approval_wait?: ApprovalWait | null }[];
 }
 
 export const salesKeys = {
@@ -121,6 +126,7 @@ export interface QueueRow {
   case_id: string; case_number: string; customer_name: string | null; program_name: string | null;
   stage_label: string; substatus_code: string | null; submitted_at: string | null;
   pending: number; accepted: number; rejected: number;
+  approval_wait?: ApprovalWait | null;
 }
 
 export interface StageEvent {
