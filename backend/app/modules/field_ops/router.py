@@ -848,19 +848,24 @@ async def dispatch_technicians(
 @router.get("/dispatch/agenda", response_model=list[AgendaRow])
 async def dispatch_agenda(
     response: Response, pagination: tuple[int, int] = Depends(pagination_params),
-    date_from: date = Query(...), date_to: date = Query(...),
+    date_from: date | None = Query(None), date_to: date | None = Query(None),
     technician_id: uuid.UUID | None = Query(None),
+    view: str | None = Query(None, description="pending (lo que falta, atrasado incluido) o history (lo cerrado)"),
     db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("dispatch.manage", "dispatch.read_own")),
 ):
-    """Administración ve la agenda de todos; el técnico, solo la suya."""
-    filas = await installation_service.list_agenda(
-        db, organization_id=organization_id, user=current_user,
-        date_from=date_from, date_to=date_to, technician_id=technician_id,
+    """Administración ve la agenda de todos; el técnico, solo la suya.
+    Vistas en spec 2026-10-16-agenda-pendientes-historial."""
+    from app.modules.field_ops.clock import org_today
+
+    stmt = installation_service.agenda_query(
+        organization_id=organization_id, user=current_user, date_from=date_from, date_to=date_to,
+        technician_id=technician_id, view=view,
     )
     limit, offset = pagination
-    filas = paginate_list(filas, limit=limit, offset=offset, response=response)
+    filas = await paginate(db, stmt, limit=limit, offset=offset, response=response, scalars=False)
+    hoy = await org_today(db, organization_id)
     return [
         AgendaRow(
             project_id=p.id, title=p.title, status=p.status, scheduled_date=p.scheduled_date,
@@ -868,6 +873,7 @@ async def dispatch_agenda(
             address_street=p.address_street, address_unit=p.address_unit, address_city=p.address_city,
             case_id=c.id if c else None, case_number=c.case_number if c else None,
             stage_code=c.stage_code if c else None, substatus_code=c.substatus_code if c else None,
+            days_late=installation_service.days_late(p, hoy),
         )
         for p, c in filas
     ]

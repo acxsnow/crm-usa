@@ -1526,6 +1526,30 @@ button {
 .permit-form .optional { font-weight: 400; opacity: 0.6; }
 .permit-new-title { margin: 0.4rem 0 0.6rem; font-size: 0.95rem; }
 
+/* Materiales de la orden (field-ops/components/MaterialsPanel.tsx). */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.materials-help { margin: 0 0 0.8rem; font-size: 0.88rem; color: var(--ink-soft); }
+.materials-table { width: 100%; border-collapse: collapse; margin-bottom: 1.2rem; background: var(--surface, #fff);
+  border: 1px solid var(--line, #e2ddd5); border-radius: 12px; overflow: hidden; }
+.materials-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-soft); padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--line, #e2ddd5); }
+.materials-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--line, #e2ddd5); vertical-align: middle; }
+.materials-table tr:last-child td { border-bottom: 0; }
+.materials-table td strong { display: block; font-weight: 600; }
+.materials-table td small { display: block; color: var(--ink-soft); font-size: 0.78rem; }
+.materials-table .is-num { text-align: right; white-space: nowrap; }
+.materials-table .is-action { text-align: right; width: 1%; white-space: nowrap; }
+.materials-form { border-top: 1px dashed var(--line, #e2ddd5); padding-top: 0.9rem; }
+.materials-form h5 { margin: 0 0 0.6rem; font-size: 0.92rem; }
+.materials-fields { display: grid; grid-template-columns: 2fr 1.2fr 0.8fr 1fr; gap: 0 0.75rem; }
+.materials-fields .field label { font-size: 0.82rem; font-weight: 600; }
+.materials-fields .optional { font-weight: 400; opacity: 0.6; }
+@media (max-width: 760px) {
+  .materials-fields { grid-template-columns: 1fr 1fr; }
+  .materials-fields .is-wide { grid-column: 1 / -1; }
+}
+
 .info-banner {
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -3452,3 +3476,10 @@ fieldset.field legend {
 .user-profile-zones .status-pill {
   margin-left: 0.5rem;
 }
+
+/* Agenda: pendientes con atrasadas arriba (field-ops/AgendaPage.tsx). */
+.agenda-hint { margin: 0.4rem 0 0; font-size: 0.85rem; color: var(--ink-soft); }
+.agenda-late { border-left: 4px solid var(--red); }
+.agenda-late h3 { color: var(--red); }
+.agenda-today { border-left: 4px solid #1f7a4c; }
+.agenda-page .plain-list li.is-late a { font-weight: 600; }

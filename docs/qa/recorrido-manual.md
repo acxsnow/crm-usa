@@ -252,6 +252,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 - **Pantalla:** paso **Orden liberada**: elegir técnico y fecha.
 - **API:** `GET /dispatch/technicians` (solo quienes pueden instalar), `PATCH /projects/{id}/schedule`.
 - **Qué debe pasar:** sub-estado **Instalación agendada**. Aparece en la **Agenda** del técnico (`/my-schedule` · `features/field-ops/AgendaPage.tsx`) y en el **Monitor de técnicos** (`/technician-monitor`).
+- **La agenda** (desde el 16 oct) abre en **Pendientes**: arriba las **Atrasadas** (fecha pasada y sin cerrar, en rojo con los días de atraso, salen siempre), luego **Hoy** y los días siguientes hasta «Ver hasta» (por defecto dos semanas). Lo cerrado o cancelado está en **Historial**, con Desde/Hasta y páginas de a 30. Administración ve a todos y filtra por técnico; el técnico, solo lo suyo. API: `GET /dispatch/agenda?view=pending|history`.
 
 ### 3.3 La instalación (Técnico)
 

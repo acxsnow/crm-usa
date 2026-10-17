@@ -365,6 +365,8 @@ class AgendaRow(BaseModel):
     case_number: str | None
     stage_code: str | None
     substatus_code: str | None
+    # Días de atraso si sigue sin cerrar y su fecha ya pasó (spec 2026-10-16).
+    days_late: int | None = None
 
 
 class InstallationGapsResponse(BaseModel):

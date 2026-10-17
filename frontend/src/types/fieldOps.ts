@@ -221,4 +221,6 @@ export interface AgendaRow {
   case_number: string | null;
   stage_code: string | null;
   substatus_code: string | null;
+  /** Días de atraso si sigue sin cerrar y su fecha ya pasó (lo calcula el servidor). */
+  days_late: number | null;
 }

@@ -32,6 +32,10 @@ from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 # Una agenda más larga que dos meses no es una agenda: es un reporte, y sin
 # límite la consulta crece con la historia de la empresa.
 MAX_AGENDA_DAYS = 62
+# El historial se consulta en rangos más largos: es lectura de lo cerrado.
+MAX_HISTORY_DAYS = 366
+# Vistas de la agenda (spec 2026-10-16-agenda-pendientes-historial).
+CLOSED_STATUSES = (ProjectStatus.completed, ProjectStatus.cancelled)
 
 
 # ---------------------------------------------------------------------------
@@ -169,31 +173,57 @@ async def schedule_installation(
     return await _reload(db, project_id_)
 
 
-async def list_agenda(
-    db, *, organization_id, user, date_from: date, date_to: date, technician_id: uuid.UUID | None
-) -> list[tuple[Project, Case | None]]:
+def _validar_rango(date_from: date | None, date_to: date | None, maximo: int) -> None:
+    if date_from is None or date_to is None:
+        raise InvalidInputError("Indica la fecha inicial y la final.", code="agenda_range_required")
     if date_to < date_from:
         raise InvalidInputError("La fecha final es anterior a la inicial.", code="agenda_range_inverted")
-    if (date_to - date_from) > timedelta(days=MAX_AGENDA_DAYS):
-        raise InvalidInputError(
-            f"La agenda se consulta en rangos de hasta {MAX_AGENDA_DAYS} días.", code="agenda_range_too_long"
-        )
-    stmt = (
-        select(Project, Case)
-        .outerjoin(Case, Case.id == Project.case_id)
-        .where(
-            Project.organization_id == organization_id,
-            Project.scheduled_date >= date_from,
-            Project.scheduled_date <= date_to,
-        )
-        .order_by(Project.scheduled_date, Project.created_at)
-    )
+    if (date_to - date_from) > timedelta(days=maximo):
+        raise InvalidInputError(f"La agenda se consulta en rangos de hasta {maximo} días.",
+                                code="agenda_range_too_long")
+
+
+def agenda_query(*, organization_id, user, date_from: date | None, date_to: date | None,
+                 technician_id: uuid.UUID | None, view: str | None = None):
+    """La consulta de la agenda, para paginarla en la base.
+
+    - `pending`: lo que falta por hacer hasta `date_to`, **sin límite hacia
+      atrás** (una orden atrasada sin cerrar sale aunque sea de hace semanas),
+      de la más vieja a la más nueva.
+    - `history`: lo cerrado o cancelado en el rango, de lo más nuevo a lo más viejo.
+    - Sin `view`: el rango de siempre (hasta 62 días, todos los estados).
+    """
+    stmt = select(Project, Case).outerjoin(Case, Case.id == Project.case_id).where(
+        Project.organization_id == organization_id, Project.scheduled_date.is_not(None))
+    if view == "pending":
+        if date_to is None:
+            raise InvalidInputError("Indica hasta qué fecha ver lo pendiente.", code="agenda_range_required")
+        stmt = stmt.where(Project.status.not_in(CLOSED_STATUSES), Project.scheduled_date <= date_to) \
+            .order_by(Project.scheduled_date, Project.created_at, Project.id)
+    elif view == "history":
+        _validar_rango(date_from, date_to, MAX_HISTORY_DAYS)
+        stmt = stmt.where(Project.status.in_(CLOSED_STATUSES), Project.scheduled_date >= date_from,
+                          Project.scheduled_date <= date_to) \
+            .order_by(Project.scheduled_date.desc(), Project.created_at.desc(), Project.id)
+    elif view is None:
+        _validar_rango(date_from, date_to, MAX_AGENDA_DAYS)
+        stmt = stmt.where(Project.scheduled_date >= date_from, Project.scheduled_date <= date_to) \
+            .order_by(Project.scheduled_date, Project.created_at, Project.id)
+    else:
+        raise InvalidInputError("La vista de la agenda es «pending» o «history».", code="agenda_unknown_view")
     if "dispatch.manage" not in get_effective_permissions(user):
         # El técnico ve su agenda, y solo la suya, pida el filtro que pida.
         stmt = stmt.where(Project.primary_technician_user_id == user.id)
     elif technician_id is not None:
         stmt = stmt.where(Project.primary_technician_user_id == technician_id)
-    return [(p, c) for p, c in (await db.execute(stmt)).all()]
+    return stmt
+
+
+def days_late(project: Project, today: date) -> int | None:
+    """Días de atraso de una orden sin cerrar con fecha anterior a hoy."""
+    if project.status in CLOSED_STATUSES or project.scheduled_date is None or project.scheduled_date >= today:
+        return None
+    return (today - project.scheduled_date).days
 
 
 # ---------------------------------------------------------------------------
