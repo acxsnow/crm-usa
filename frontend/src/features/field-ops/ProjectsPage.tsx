@@ -24,12 +24,15 @@ export function ProjectsPage() {
   // Dropdown for the create-project form needs the full customer list, not
   // a page of it — listCustomers() (unpaginated call, capped at the API's
   // 100-row default) is the right fit here, separate from listCustomersPage.
-  const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers });
   // Solo quien puede ver la lista de usuarios (`users.read` o `users.manage`)
   // la pide; el técnico, que ve solo sus proyectos, se queda sin este filtro en
   // vez de recibir un 403 en cada visita.
   const { hasPermission } = useAuth();
   const canListUsers = hasPermission("users.read") || hasPermission("users.manage");
+  // Crear proyectos a mano es de Administración (`projects.create`); el técnico
+  // veía el formulario y recibía un 403 al usarlo (revisión del 17 oct).
+  const canCreate = hasPermission("projects.create");
+  const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers, enabled: canCreate });
   const { data: allUsers } = useQuery({ queryKey: ["users"], queryFn: listUsers, enabled: canListUsers,
                                         retry: false, throwOnError: false });
 
@@ -102,6 +105,7 @@ export function ProjectsPage() {
       <h1>Proyectos</h1>
       <p className="page-subtitle">Un proyecto por dirección/espacio — instalación, evidencia y atestación.</p>
 
+      {canCreate && (
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -123,6 +127,7 @@ export function ProjectsPage() {
           Crear proyecto
         </button>
       </form>
+      )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={projects ?? []} isLoading={isLoading} getRowKey={(p) => p.id} emptyMessage="Sin proyectos para mostrar." />
