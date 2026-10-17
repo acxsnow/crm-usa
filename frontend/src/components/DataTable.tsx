@@ -35,7 +35,9 @@ export function DataTable<T>({
 
   return (
     <div className="table-wrap">
-      <table className="data-table">
+      {/* En el celular cada fila se vuelve una tarjeta (`.is-cards`, index.css):
+          la tabla no cabía y se salía por la derecha (revisión del 17 oct). */}
+      <table className="data-table is-cards">
         <thead>
           <tr>
             {columns.map((col) => (
@@ -47,8 +49,11 @@ export function DataTable<T>({
           {rows.map((row) => (
             <Fragment key={getRowKey(row)}>
               <tr>
-                {columns.map((col) => (
-                  <td key={col.key}>{col.render ? col.render(row) : cellValue(row, col.key)}</td>
+                {columns.map((col, i) => (
+                  <td key={col.key} data-label={col.header}
+                    className={i === 0 ? "is-title" : col.header === "" ? "is-actions" : undefined}>
+                    {col.render ? col.render(row) : cellValue(row, col.key)}
+                  </td>
                 ))}
               </tr>
               {renderDetailRow && (

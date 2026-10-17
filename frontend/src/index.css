@@ -922,6 +922,41 @@ button {
   color: var(--red);
 }
 
+/* En el celular, la tabla común (components/DataTable.tsx) se vuelve una
+   tarjeta por fila: título arriba, cada dato con su etiqueta y la acción a
+   todo el ancho. Antes se salía por la derecha y partía las palabras. */
+@media (max-width: 640px) {
+  .table-wrap:has(.data-table.is-cards) { overflow: visible; }
+  .data-table.is-cards { border: 0; box-shadow: none; background: transparent; }
+  .data-table.is-cards thead { display: none; }
+  .data-table.is-cards tbody, .data-table.is-cards tr, .data-table.is-cards td { display: block; width: 100%; }
+  .data-table.is-cards tbody tr {
+    background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm); margin-bottom: 0.75rem; padding: 0.35rem 0;
+  }
+  .data-table.is-cards tbody tr:hover { background: var(--surface); }
+  .data-table.is-cards td {
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    border-bottom: 0; padding: 0.45rem 1rem; font-size: 0.92rem; text-align: right;
+  }
+  .data-table.is-cards td::before {
+    content: attr(data-label); flex: none; text-align: left;
+    font-family: var(--mono-font); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft);
+  }
+  .data-table.is-cards td.is-title {
+    display: block; text-align: left; font-size: 1rem; font-weight: 700; color: var(--ink);
+    padding: 0.6rem 1rem 0.4rem; border-bottom: 1px solid var(--line-soft); margin-bottom: 0.2rem;
+  }
+  .data-table.is-cards td.is-title::before, .data-table.is-cards td.is-actions::before,
+  .data-table.is-cards td[colspan]::before { content: none; }
+  .data-table.is-cards td.is-actions { display: block; padding: 0.5rem 1rem 0.6rem; }
+  .data-table.is-cards td.is-actions > a, .data-table.is-cards td.is-actions > button {
+    display: block; width: 100%; text-align: center; padding: 0.65rem; border: 1px solid var(--line);
+    border-radius: 8px; font-weight: 600; text-decoration: none;
+  }
+  .data-table.is-cards td[colspan] { display: block; text-align: left; }
+}
+
 .data-table tbody tr {
   transition: background 0.12s ease;
 }
