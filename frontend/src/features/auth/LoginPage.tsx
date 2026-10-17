@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -37,7 +38,7 @@ export function LoginPage() {
         </label>
         <label>
           Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={isSubmitting}>

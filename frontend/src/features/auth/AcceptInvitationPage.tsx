@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiClient } from "@/lib/apiClient";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export function AcceptInvitationPage() {
   const [searchParams] = useSearchParams();
@@ -37,7 +38,7 @@ export function AcceptInvitationPage() {
         <h1>Activate your account</h1>
         <label>
           Choose a password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={isSubmitting || !token}>

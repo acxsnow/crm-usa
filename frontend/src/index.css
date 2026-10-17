@@ -159,6 +159,20 @@ a {
   cursor: not-allowed;
 }
 
+/* Contraseña con el ojo para verla (components/PasswordInput.tsx). */
+.password-field { position: relative; display: block; }
+.password-field input { width: 100%; padding-right: 2.8rem; box-sizing: border-box; }
+.password-field .password-toggle,
+.auth-card .password-field .password-toggle {
+  position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
+  display: grid; place-items: center; width: 2.2rem; height: 2.2rem; padding: 0;
+  border: 0; border-radius: 5px; background: transparent; color: var(--ink-soft);
+  text-transform: none; letter-spacing: normal; cursor: pointer;
+}
+.auth-card .password-field .password-toggle:hover:not(:disabled) { background: var(--red-wash); color: var(--ink); }
+.auth-card .password-field .password-toggle:active:not(:disabled) { transform: translateY(-50%); }
+.password-field .password-toggle:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+
 .auth-link {
   font-size: 0.85rem;
   color: var(--red);
