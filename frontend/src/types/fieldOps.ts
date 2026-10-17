@@ -162,6 +162,8 @@ export interface Permit {
   notes: string | null;
   is_expired: boolean;
   is_cleared: boolean;
+  /** Si deja pasar a «Listo para instalar» (con PERMIT_FILED_ALLOWS_INSTALL, también radicado). */
+  allows_install: boolean;
   created_at: string;
 }
 

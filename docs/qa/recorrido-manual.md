@@ -241,9 +241,10 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 
 - **PDF:** §3.2.
 - **Pantalla:** **Proyectos** → el proyecto → paso **Permiso municipal** · `components/PermitsPanel.tsx`.
-- **Qué hacer:** **Registrar permiso** (radicado) con fecha de vencimiento; luego marcarlo **Aprobado**. También existe «No requerido» con motivo.
+- **Qué hacer:** **Registrar el permiso** (ciudad o condado, número, tipo y fecha de radicado). Cada permiso queda como una tarjeta con sus pasos (Radicado → Aprobado por la ciudad). Cuando la ciudad responda: **La ciudad lo aprobó** (fecha de aprobación y, opcional, de vencimiento) o **La ciudad lo rechazó** (motivo; luego «Volver a radicar»). También existe «No requerido» con motivo.
 - **API:** `POST /projects/{id}/permits`, `PATCH /permits/{id}`.
 - **Qué debe pasar:** el expediente pasa a **Permiso en trámite** y, al aprobarse, a **Listo para instalar**.
+- **Instalar con el permiso solo radicado** (variable `PERMIT_FILED_ALLOWS_INSTALL` en `backend/.env`, desde el 16 oct): en `false` (por defecto) hace falta la aprobación de la ciudad, como arriba. En `true` el expediente pasa a **Listo para instalar** apenas se radica, y la tarjeta dice «Radicado. Ya se puede instalar; registra la aprobación cuando la ciudad responda». En los dos casos un permiso rechazado o vencido bloquea, y el **cobro al programa sigue pidiendo el permiso aprobado**. Para probarlo: cambiar la variable, reiniciar (`docker compose restart api`) y registrar un permiso radicado en otro proyecto.
 
 ### 3.2 Liberar la orden: técnico y fecha (Administración)
 

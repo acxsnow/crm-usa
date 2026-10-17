@@ -133,7 +133,11 @@ function SiguientePaso({ permits }: { permits: Permit[] }) {
   if (permits.every((p) => p.is_cleared)) {
     return <p className="permit-next is-done">✓ Permisos listos. Ya se puede liberar la orden: elegir técnico y fecha de instalación.</p>;
   }
-  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.is_cleared).length === 1 ? "el permiso" : "los permisos"} de abajo. Hasta entonces no se puede agendar la instalación.</p>;
+  // Con PERMIT_FILED_ALLOWS_INSTALL el radicado basta para instalar; el servidor lo dice en `allows_install`.
+  if (permits.every((p) => p.allows_install)) {
+    return <p className="permit-next is-done">✓ Ya se puede liberar la orden. Registra la aprobación de la ciudad cuando llegue: el cobro al programa la va a pedir.</p>;
+  }
+  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.allows_install).length === 1 ? "el permiso" : "los permisos"} de abajo. Hasta entonces no se puede agendar la instalación.</p>;
 }
 
 /**
@@ -165,6 +169,7 @@ function PermitCard({ permit, canManage, onError, onChanged }: {
   else if (permit.status === "rejected") estado = { tono: "bad", texto: `La ciudad lo rechazó${permit.notes ? `: ${permit.notes}` : "."} Corrige lo que pidió y vuelve a radicarlo.` };
   else if (aprobado && permit.is_expired) estado = { tono: "bad", texto: `Venció el ${fechaCorta(permit.expires_on)}. Registra la renovación para poder instalar.` };
   else if (aprobado) estado = { tono: "ok", texto: permit.expires_on ? `Aprobado. Vale hasta el ${fechaCorta(permit.expires_on)}; te avisamos antes de que venza.` : "Aprobado. No tiene fecha de vencimiento registrada." };
+  else if (permit.allows_install) estado = { tono: "ok", texto: "Radicado. Ya se puede instalar; registra la aprobación cuando la ciudad responda." };
   else estado = { tono: "wait", texto: "Falta que la ciudad lo apruebe. Cuando responda, regístralo aquí." };
 
   return (

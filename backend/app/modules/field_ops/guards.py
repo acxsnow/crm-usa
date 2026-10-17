@@ -10,7 +10,8 @@ base (COD-08).
 """
 from app.modules.field_ops.case_flow import project_for_case
 from app.modules.field_ops.clock import org_today
-from app.modules.field_ops.permits import all_cleared, permits_of
+from app.core.config import get_settings
+from app.modules.field_ops.permits import all_allow_install, permits_of
 from app.shared.errors import InvalidInputError
 
 
@@ -25,9 +26,12 @@ async def guard_has_permit(*, db, case, actor_id, reason):
 
 async def guard_permits_cleared(*, db, case, actor_id, reason):
     project = await project_for_case(db, case)
-    if not all_cleared(await permits_of(db, project.id), await org_today(db, case.organization_id)):
+    if not all_allow_install(await permits_of(db, project.id), await org_today(db, case.organization_id)):
+        # Con PERMIT_FILED_ALLOWS_INSTALL basta el radicado (spec 2026-10-16).
+        requisito = ("radicados o aprobados y vigentes" if get_settings().PERMIT_FILED_ALLOWS_INSTALL
+                     else "aprobados y vigentes")
         raise InvalidInputError(
-            "Todos los permisos deben estar aprobados y vigentes, o marcados como no "
+            f"Todos los permisos deben estar {requisito}, o marcados como no "
             "requeridos, antes de pasar a «Listo para instalar».",
             code="permits_not_cleared",
         )

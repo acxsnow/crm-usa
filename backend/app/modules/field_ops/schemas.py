@@ -302,6 +302,8 @@ class PermitResponse(BaseModel):
     notes: str | None
     is_expired: bool
     is_cleared: bool
+    # Si deja pasar a «Listo para instalar» (incluye radicado con PERMIT_FILED_ALLOWS_INSTALL).
+    allows_install: bool
     created_at: datetime
     model_config = {"from_attributes": True}
 

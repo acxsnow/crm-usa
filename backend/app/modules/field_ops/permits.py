@@ -12,6 +12,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case
 from app.modules.field_ops.clock import org_today
@@ -33,7 +34,23 @@ async def permits_of(db: AsyncSession, project_id: uuid.UUID) -> list[Permit]:
 
 
 def all_cleared(permits: list[Permit], today: date) -> bool:
+    """Todos aprobados y vigentes (o no requeridos). Regla estricta: la usa el
+    requisito de cobro «Permiso municipal aprobado»."""
     return bool(permits) and all(p.is_cleared_on(today) for p in permits)
+
+
+def allows_install(permit: Permit, today: date) -> bool:
+    """Si este permiso deja pasar a «Listo para instalar». Con
+    PERMIT_FILED_ALLOWS_INSTALL también vale el permiso radicado (aún sin
+    aprobar); rechazado y aprobado vencido bloquean siempre
+    (spec 2026-10-16-instalar-con-permiso-radicado)."""
+    if permit.is_cleared_on(today):
+        return True
+    return get_settings().PERMIT_FILED_ALLOWS_INSTALL and permit.status == PermitStatus.submitted
+
+
+def all_allow_install(permits: list[Permit], today: date) -> bool:
+    return bool(permits) and all(allows_install(p, today) for p in permits)
 
 
 def as_response(permit: Permit, today: date) -> dict:
@@ -43,7 +60,8 @@ def as_response(permit: Permit, today: date) -> dict:
 
     datos = PermitResponse.model_validate(
         {**{c.name: getattr(permit, c.name) for c in Permit.__table__.columns},
-         "is_expired": permit.is_expired_on(today), "is_cleared": permit.is_cleared_on(today)}
+         "is_expired": permit.is_expired_on(today), "is_cleared": permit.is_cleared_on(today),
+         "allows_install": allows_install(permit, today)}
     )
     return datos.model_dump()
 
@@ -102,7 +120,7 @@ async def _finish(db: AsyncSession, *, project: Project, permit: Permit, user) -
     await advance_case(db, project=project, to_stage="permit_in_progress", user=user,
                        reason="Permiso municipal radicado")
     today = await org_today(db, org_id)
-    if all_cleared(await permits_of(db, project.id), today):
+    if all_allow_install(await permits_of(db, project.id), today):
         await advance_case(db, project=project, to_stage="ready_to_install", user=user,
                            reason="Permisos municipales despejados")
     await db.commit()

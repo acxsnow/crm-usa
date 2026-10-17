@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # Plan limits (spec 5.4)
     DEFAULT_MAX_ACTIVE_USERS: int = 30
 
+    # Permiso municipal (spec 2026-10-16-instalar-con-permiso-radicado). false = para
+    # pasar a «Listo para instalar» el permiso tiene que estar aprobado por la ciudad
+    # (como siempre); true = basta con haberlo radicado. El cobro al programa sigue
+    # pidiendo el permiso aprobado en los dos casos. Cambiarlo exige reiniciar la API.
+    PERMIT_FILED_ALLOWS_INSTALL: bool = False
+
     # Frontend URL used to build reset/invitation links (never an internal host)
     FRONTEND_APP_URL: str = Field(default_factory=lambda: os.getenv("RENDER_EXTERNAL_URL", "http://localhost:5173"))
 

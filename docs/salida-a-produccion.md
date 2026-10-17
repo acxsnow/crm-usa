@@ -10,6 +10,7 @@ El código de los módulos 0 a 7 está terminado y probado. Esto es lo que falta
 - [ ] **Norma de protección de datos** aplicable en California, Arizona y Nevada (hallazgo abierto).
 - [ ] **Piloto:** con un vendedor primero (recomendado) o apertura total.
 - [ ] Valores definitivos de los formularios de Arizona y TECH (hoy provisionales).
+- [ ] **¿Se instala con el permiso solo radicado?** Si sí, `PERMIT_FILED_ALLOWS_INSTALL=true` en el servidor (por defecto `false`: hace falta la aprobación de la ciudad). El cobro al programa sigue pidiendo el permiso aprobado. Ver `docs/superpowers/specs/2026-10-16-instalar-con-permiso-radicado-design.md`.
 
 ## 2. Infraestructura en AWS
 
