@@ -7,10 +7,14 @@ import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import type { Customer } from "@/types/crm";
+import { useAuth } from "@/features/auth/AuthContext";
 
 const PAGE_SIZE = 20;
 
 export function CustomersPage() {
+  // Crear clientes es de quien vende o administra (`customers.create`); el
+  // técnico ve la cartera pero veía el formulario y recibía un 403 (17 oct).
+  const canCreate = useAuth().hasPermission("customers.create");
   const queryClient = useQueryClient();
   const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
   const { data, isLoading } = useQuery({
@@ -56,7 +60,8 @@ export function CustomersPage() {
 
   return (
     <div className="list-page">
-      <div className="page-heading"><div><p className="eyebrow">RELACIONES</p><h1>Clientes</h1><p className="page-subtitle">Administra tu cartera y mantén cada relación al día.</p></div><button className="primary-button" onClick={() => document.getElementById("new-customer")?.focus()}>+ Nuevo cliente</button></div>
+      <div className="page-heading"><div><p className="eyebrow">RELACIONES</p><h1>Clientes</h1><p className="page-subtitle">Administra tu cartera y mantén cada relación al día.</p></div>{canCreate && <button className="primary-button" onClick={() => document.getElementById("new-customer")?.focus()}>+ Nuevo cliente</button>}</div>
+      {canCreate && (
       <form className="inline-form compact-form" onSubmit={handleSubmit}>
         <span className="form-search">⌕</span>
         <input id="new-customer" placeholder="Nombre del cliente" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -64,6 +69,7 @@ export function CustomersPage() {
           {createMutation.isPending ? "Guardando..." : "Agregar cliente"}
         </button>
       </form>
+      )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={customers ?? []} isLoading={isLoading} getRowKey={(c) => c.id} emptyMessage="Sin clientes para mostrar." />
