@@ -1499,6 +1499,33 @@ button {
   opacity: 0.6;
 }
 
+/* Permisos municipales como tarjetas con pasos (field-ops/components/PermitsPanel.tsx). */
+.permit-next { margin: 0 0 1rem; padding: 0.7rem 0.9rem; border-radius: 10px; font-size: 0.9rem;
+  background: rgba(207, 29, 43, 0.06); border: 1px solid rgba(207, 29, 43, 0.22); }
+.permit-next.is-done { background: rgba(31, 122, 76, 0.08); border-color: rgba(31, 122, 76, 0.3); }
+.permit-list { display: grid; gap: 0.8rem; margin-bottom: 1.4rem; }
+.permit-card { border: 1px solid var(--line, #e2ddd5); border-left-width: 4px; border-radius: 12px; padding: 0.9rem 1rem;
+  background: var(--surface, #fff); }
+.permit-card.is-wait { border-left-color: #c98a12; }
+.permit-card.is-ok { border-left-color: #1f7a4c; }
+.permit-card.is-bad { border-left-color: var(--red); }
+.permit-card h4 { margin: 0 0 0.6rem; font-size: 0.98rem; }
+.permit-steps { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; list-style: none; margin: 0 0 0.6rem; padding: 0; }
+.permit-steps li { display: grid; grid-template-columns: 1.4rem auto; column-gap: 0.3rem; font-weight: 600; font-size: 0.88rem;
+  color: var(--ink-soft); }
+.permit-steps li > span { grid-row: span 2; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%;
+  border: 1.5px solid currentColor; font-size: 0.75rem; }
+.permit-steps li small { grid-column: 2; font-weight: 400; font-size: 0.78rem; }
+.permit-steps li.is-done { color: #1f7a4c; }
+.permit-steps li.is-bad { color: var(--red); }
+.permit-status { margin: 0 0 0.7rem; font-size: 0.9rem; }
+.permit-card.is-bad .permit-status { color: var(--red); }
+.permit-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.permit-form { margin-top: 0.4rem; padding-top: 0.8rem; border-top: 1px dashed var(--line, #e2ddd5); max-width: 26rem; }
+.permit-form .field label { font-size: 0.85rem; font-weight: 600; }
+.permit-form .optional { font-weight: 400; opacity: 0.6; }
+.permit-new-title { margin: 0.4rem 0 0.6rem; font-size: 0.95rem; }
+
 .info-banner {
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;

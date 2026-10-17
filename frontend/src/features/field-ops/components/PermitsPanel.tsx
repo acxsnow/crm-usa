@@ -41,31 +41,16 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
   return (
     <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {permits && permits.length > 0 ? (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ciudad o condado</th>
-                <th>Número</th>
-                <th>Estado</th>
-                <th>Aprobado</th>
-                <th>Vence</th>
-                {canManage && <th />}
-              </tr>
-            </thead>
-            <tbody>
-              {permits.map((p) => (
-                <PermitRow key={p.id} permit={p} statusLabel={catalogs?.permit_statuses[p.status] ?? p.status}
-                  canManage={canManage} onError={setError} onChanged={refresh} />
-              ))}
-            </tbody>
-          </table>
+      {permits && <SiguientePaso permits={permits} />}
+      {permits && permits.length > 0 && (
+        <div className="permit-list">
+          {permits.map((p) => (
+            <PermitCard key={p.id} permit={p} canManage={canManage} onError={setError} onChanged={refresh} />
+          ))}
         </div>
-      ) : (
-        <p className="acta-empty">Sin permisos registrados.</p>
       )}
 
+      {canManage && <h4 className="permit-new-title">{permits?.length ? "Registrar otro permiso" : "Registrar el permiso"}</h4>}
       {canManage && (
         <form
           className="panel-form"
@@ -133,44 +118,127 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
   );
 }
 
-function PermitRow({ permit, statusLabel, canManage, onError, onChanged }: {
-  permit: Permit; statusLabel: string; canManage: boolean;
-  onError: (m: string) => void; onChanged: () => Promise<unknown>;
+/** «15 oct 2026» a partir de una fecha ISO sin hora (sin correrse por la zona horaria). */
+function fechaCorta(iso: string | null): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** Qué falta, mirando todos los permisos del proyecto: una sola frase arriba de las tarjetas. */
+function SiguientePaso({ permits }: { permits: Permit[] }) {
+  if (permits.length === 0) {
+    return <p className="permit-next">Registra el permiso que se radicó en la ciudad, o márcalo como «No requerido» con el motivo. Sin esto no se puede agendar la instalación.</p>;
+  }
+  if (permits.every((p) => p.is_cleared)) {
+    return <p className="permit-next is-done">✓ Permisos listos. Ya se puede liberar la orden: elegir técnico y fecha de instalación.</p>;
+  }
+  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.is_cleared).length === 1 ? "el permiso" : "los permisos"} de abajo. Hasta entonces no se puede agendar la instalación.</p>;
+}
+
+/**
+ * Un permiso como tarjeta con sus pasos (Radicado → Aprobado por la ciudad), una
+ * frase con lo que falta y botones con la acción exacta. Antes era una fila de
+ * tabla con dos fechas sin título y un botón «Aprobado» que no se entendía
+ * (revisión manual del 16 de octubre).
+ */
+function PermitCard({ permit, canManage, onError, onChanged }: {
+  permit: Permit; canManage: boolean; onError: (m: string) => void; onChanged: () => Promise<unknown>;
 }) {
+  const [accion, setAccion] = useState<"aprobar" | "rechazar" | null>(null);
   const [aprobadoEl, setAprobadoEl] = useState(hoy());
   const [venceEl, setVenceEl] = useState("");
-  const approve = useMutation({
-    mutationFn: () => updatePermit(permit.id, { status: "approved", approved_on: aprobadoEl, expires_on: venceEl || null }),
-    onSuccess: onChanged,
+  const [motivo, setMotivo] = useState("");
+  const guardar = useMutation({
+    mutationFn: (cambios: Partial<PermitInput>) => updatePermit(permit.id, cambios),
+    onSuccess: async () => { setAccion(null); await onChanged(); },
     onError: (err) => onError(apiErrorMessage(err)),
   });
-  const pendiente = permit.status === "submitted";
+
+  const titulo = [permit.permit_type ? `Permiso ${permit.permit_type.toLowerCase()}` : "Permiso", permit.jurisdiction,
+    permit.permit_number ? `N.º ${permit.permit_number}` : null].filter(Boolean).join(" · ");
+  const radicado = permit.status !== "not_required";
+  const aprobado = permit.status === "approved";
+
+  let estado: { tono: "ok" | "wait" | "bad"; texto: string };
+  if (permit.status === "not_required") estado = { tono: "ok", texto: `No requiere permiso: ${permit.not_required_reason ?? ""}` };
+  else if (permit.status === "rejected") estado = { tono: "bad", texto: `La ciudad lo rechazó${permit.notes ? `: ${permit.notes}` : "."} Corrige lo que pidió y vuelve a radicarlo.` };
+  else if (aprobado && permit.is_expired) estado = { tono: "bad", texto: `Venció el ${fechaCorta(permit.expires_on)}. Registra la renovación para poder instalar.` };
+  else if (aprobado) estado = { tono: "ok", texto: permit.expires_on ? `Aprobado. Vale hasta el ${fechaCorta(permit.expires_on)}; te avisamos antes de que venza.` : "Aprobado. No tiene fecha de vencimiento registrada." };
+  else estado = { tono: "wait", texto: "Falta que la ciudad lo apruebe. Cuando responda, regístralo aquí." };
 
   return (
-    <tr>
-      <td>{permit.jurisdiction}{permit.permit_type ? ` · ${permit.permit_type}` : ""}</td>
-      <td>{permit.permit_number ?? "—"}</td>
-      <td>
-        <span className={`status-pill ${permit.is_cleared ? "status-completed" : "status-pending"}`}>{statusLabel}</span>
-        {permit.is_expired && <span className="status-pill status-overdue">Vencido</span>}
-        {permit.not_required_reason && <small> {permit.not_required_reason}</small>}
-      </td>
-      <td>{permit.approved_on ?? "—"}</td>
-      <td>{permit.expires_on ?? "—"}</td>
-      {canManage && (
-        <td>
-          {pendiente && (
-            <form className="inline-form" onSubmit={(e) => { e.preventDefault(); approve.mutate(); }}>
-              <input type="date" aria-label="Fecha de aprobación" required value={aprobadoEl}
-                onChange={(e) => setAprobadoEl(e.target.value)} />
-              <input type="date" aria-label="Fecha de vencimiento" value={venceEl}
-                onChange={(e) => setVenceEl(e.target.value)} />
-              <button type="submit" disabled={approve.isPending}>Aprobado</button>
-            </form>
-          )}
-        </td>
+    <article className={`permit-card is-${estado.tono}`}>
+      <h4>{titulo}</h4>
+      {radicado && (
+        <ol className="permit-steps">
+          <li className="is-done"><span aria-hidden="true">✓</span> Radicado<small>{permit.filed_on ? fechaCorta(permit.filed_on) : "sin fecha"}</small></li>
+          <li className={aprobado ? "is-done" : permit.status === "rejected" ? "is-bad" : ""}>
+            <span aria-hidden="true">{aprobado ? "✓" : permit.status === "rejected" ? "✕" : ""}</span> Aprobado por la ciudad
+            <small>{aprobado ? fechaCorta(permit.approved_on) : permit.status === "rejected" ? "rechazado" : "pendiente"}</small>
+          </li>
+        </ol>
       )}
-    </tr>
+      <p className="permit-status" role="status">{estado.texto}</p>
+
+      {canManage && accion === null && (
+        <div className="permit-actions">
+          {permit.status === "submitted" && (<>
+            <button type="button" className="acta-btn is-primary" onClick={() => setAccion("aprobar")}>La ciudad lo aprobó</button>
+            <button type="button" className="acta-btn is-quiet" onClick={() => setAccion("rechazar")}>La ciudad lo rechazó</button>
+          </>)}
+          {aprobado && (
+            <button type="button" className={`acta-btn ${permit.is_expired ? "is-primary" : "is-quiet"}`} onClick={() => {
+              setAprobadoEl(hoy()); setVenceEl(permit.expires_on ?? ""); setAccion("aprobar");
+            }}>{permit.is_expired ? "Registrar la renovación" : permit.expires_on ? "Cambiar fechas" : "Agregar fecha de vencimiento"}</button>
+          )}
+          {permit.status === "rejected" && (
+            <button type="button" className="acta-btn is-primary" disabled={guardar.isPending}
+              onClick={() => guardar.mutate({ status: "submitted", filed_on: hoy() })}>Volver a radicar (hoy)</button>
+          )}
+        </div>
+      )}
+
+      {accion === "aprobar" && (
+        <form className="permit-form" onSubmit={(e) => {
+          e.preventDefault();
+          guardar.mutate({ status: "approved", approved_on: aprobadoEl, expires_on: venceEl || null });
+        }}>
+          <div className="field">
+            <label htmlFor={`aprobado-${permit.id}`}>¿Qué día lo aprobó la ciudad?</label>
+            <input id={`aprobado-${permit.id}`} type="date" required max={hoy()} value={aprobadoEl}
+              onChange={(e) => setAprobadoEl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor={`vence-${permit.id}`}>¿Hasta cuándo vale? <span className="optional">(opcional)</span></label>
+            <input id={`vence-${permit.id}`} type="date" min={aprobadoEl || undefined} value={venceEl}
+              onChange={(e) => setVenceEl(e.target.value)} />
+            <small>Viene en el permiso. Con esta fecha te avisamos antes de que venza; vencido, no deja instalar.</small>
+          </div>
+          <div className="permit-actions">
+            <button type="button" className="acta-btn is-quiet" onClick={() => setAccion(null)}>Cancelar</button>
+            <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending}>
+              {guardar.isPending ? "Guardando…" : "Guardar aprobación"}</button>
+          </div>
+        </form>
+      )}
+
+      {accion === "rechazar" && (
+        <form className="permit-form" onSubmit={(e) => { e.preventDefault(); guardar.mutate({ status: "rejected", notes: motivo.trim() }); }}>
+          <div className="field">
+            <label htmlFor={`motivo-${permit.id}`}>¿Por qué lo rechazó la ciudad?</label>
+            <textarea id={`motivo-${permit.id}`} required minLength={3} rows={2} value={motivo}
+              onChange={(e) => setMotivo(e.target.value)} />
+            <small>Queda en el permiso para corregirlo antes de volver a radicar.</small>
+          </div>
+          <div className="permit-actions">
+            <button type="button" className="acta-btn is-quiet" onClick={() => setAccion(null)}>Cancelar</button>
+            <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending}>
+              {guardar.isPending ? "Guardando…" : "Guardar rechazo"}</button>
+          </div>
+        </form>
+      )}
+    </article>
   );
 }
 
