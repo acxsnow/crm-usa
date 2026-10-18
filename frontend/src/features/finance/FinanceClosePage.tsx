@@ -110,7 +110,7 @@ function Recon() {
   const refrescar = () => { qc.invalidateQueries({ queryKey: ["recon-lines"] }); qc.invalidateQueries({ queryKey: ["recon-summary"] }); };
   const importar = useMutation({ mutationFn: () => importStatement(cuenta, archivo!),
     onSuccess: (r) => { setError(null); setArchivo(null); setMsg(`${r.lines} movimientos importados; ${r.auto_matched} se conciliaron solos.${r.invalid.length ? ` Filas no leídas: ${r.invalid.join(", ")}` : ""}`); refrescar(); },
-    onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); } });
+    onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); }, meta: { silent: true } });
   return (
     <>
       <article className="acta">

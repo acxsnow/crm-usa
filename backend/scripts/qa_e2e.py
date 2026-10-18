@@ -423,6 +423,7 @@ def flujo_campo(adm: Client, tec: Client, case_id: str, *, devolver_acta: bool, 
     expect("Equipo instalado con serial", tec.post(f"/projects/{pid}/equipment", json={
         "equipment_type": "heat_pump_outdoor", "brand": "Carrier", "model": "25HCE4", "serial_number": f"QA{RUN}",
         "quantity": 1, "unit_label": "Casa principal"}), 201)
+    expect("Guardar equipos instalados", tec.post(f"/projects/{pid}/equipment/confirm"), 200)
     expect("Firma del técnico en el acta", tec.post(f"/projects/{pid}/attestation/technician-sign",
                                                     json={"signature_base64": png_signature()}), 200, 201)
     expect("Firma del cliente en el acta", tec.post(f"/projects/{pid}/attestation/customer-sign",

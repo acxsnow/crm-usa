@@ -68,8 +68,9 @@ function MyExpenses() {
   const [aviso, setAviso] = useState<string | null>(null);
   const crear = useMutation({
     mutationFn: () => createExpense(f, recibo!),
-    onSuccess: () => { setF(vacio); setRecibo(null); setError(null); setAviso("Gasto enviado a revisión."); qc.invalidateQueries({ queryKey: ["expenses"] }); },
+    onSuccess: () => { setF(vacio); setRecibo(null); setError(null); setAviso(null); qc.invalidateQueries({ queryKey: ["expenses"] }); },
     onError: (e) => { setAviso(null); setError(apiErrorMessage(e)); },
+    meta: { successMessage: "Gasto enviado a revisión." },
   });
   const borrar = useMutation({ mutationFn: deleteExpense, onSuccess: () => qc.invalidateQueries({ queryKey: ["expenses"] }) });
   return (

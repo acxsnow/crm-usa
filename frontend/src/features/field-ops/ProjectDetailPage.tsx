@@ -444,7 +444,8 @@ export function ProjectDetailPage() {
           },
           {
             key: "equipment", title: "Equipos instalados", ...estados.equipment,
-            body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada} />,
+            body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada}
+              confirmedAt={project.equipment_confirmed_at} />,
           },
           {
             key: "close", title: "Cierre de la instalación", ...estados.close,

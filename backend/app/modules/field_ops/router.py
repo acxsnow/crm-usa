@@ -764,6 +764,18 @@ async def add_project_equipment(
     )
 
 
+@router.post("/projects/{project_id}/equipment/confirm", response_model=ProjectResponse)
+async def confirm_project_equipment(
+    project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("equipment.manage")),
+):
+    """«Guardar equipos instalados»: completa el paso del acta."""
+    return await installation_service.confirm_equipment(
+        db, organization_id=organization_id, user=current_user, project_id=project_id
+    )
+
+
 @router.delete("/equipment/{equipment_id}", status_code=204)
 async def delete_project_equipment(
     equipment_id: uuid.UUID, db: AsyncSession = Depends(get_db),

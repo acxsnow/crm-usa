@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   addEquipment,
   apiErrorMessage,
+  confirmEquipment,
   deleteEquipment,
   fieldKeys,
   listEquipment,
@@ -19,10 +20,14 @@ const VACIO: EquipmentInput = {
 
 /**
  * Equipos instalados como dato (spec D5.7): el cobro al programa necesita
- * marca, modelo y serial. Cerrar la instalación exige al menos uno, y después
- * quedan congelados.
+ * marca, modelo y serial. El paso se completa con «Guardar equipos
+ * instalados», no al agregar el primero; agregar o quitar uno pide guardar de
+ * nuevo. Cerrar la instalación exige la lista guardada, y después quedan
+ * congelados.
  */
-export function EquipmentPanel({ projectId, canManage, closed }: { projectId: string; canManage: boolean; closed: boolean }) {
+export function EquipmentPanel({ projectId, canManage, closed, confirmedAt }: {
+  projectId: string; canManage: boolean; closed: boolean; confirmedAt: string | null | undefined;
+}) {
   const { data: catalogs } = useFieldCatalogs();
   const { data: equipos } = useQuery({ queryKey: fieldKeys.equipment(projectId), queryFn: () => listEquipment(projectId) });
   const refresh = useRefreshProject(projectId);
@@ -38,12 +43,21 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
       return refresh();
     },
     onError: (err) => setError(apiErrorMessage(err)),
+    meta: { successMessage: "Equipo agregado. Cuando termines, guarda la lista." },
   });
   const remove = useMutation({
     mutationFn: deleteEquipment,
     onSuccess: refresh,
     onError: (err) => setError(apiErrorMessage(err)),
+    meta: { successMessage: "Equipo quitado." },
   });
+  const confirm = useMutation({
+    mutationFn: () => confirmEquipment(projectId),
+    onSuccess: () => { setError(null); return refresh(); },
+    onError: (err) => setError(apiErrorMessage(err)),
+    meta: { successMessage: "Equipos instalados guardados." },
+  });
+  const hayEquipos = Boolean(equipos && equipos.length > 0);
 
   return (
     <div className="acta-body">
@@ -75,6 +89,19 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
         </div>
       ) : (
         <p className="acta-empty">Sin equipos registrados.</p>
+      )}
+
+      {editable && hayEquipos && (
+        confirmedAt ? (
+          <p className="acta-hint">Lista guardada. Si agregas o quitas un equipo, tendrás que guardarla de nuevo.</p>
+        ) : (
+          <div className="equipment-save">
+            <p className="acta-hint">Cuando termines de registrar todos los equipos de esta casa, guarda la lista para completar el paso.</p>
+            <button type="button" className="acta-btn is-primary" disabled={confirm.isPending} onClick={() => confirm.mutate()}>
+              {confirm.isPending ? "Guardando…" : "Guardar equipos instalados"}
+            </button>
+          </div>
+        )
       )}
 
       {editable && (
@@ -110,7 +137,7 @@ export function EquipmentPanel({ projectId, canManage, closed }: { projectId: st
             <input id="equipment-unit" placeholder="Casa principal, Spc 14…" value={form.unit_label ?? ""}
               onChange={(e) => setForm({ ...form, unit_label: e.target.value })} />
           </div>
-          <button type="submit" className="acta-btn is-primary" disabled={add.isPending}>
+          <button type="submit" className={`acta-btn${hayEquipos ? "" : " is-primary"}`} disabled={add.isPending}>
             {add.isPending ? "Guardando…" : "Agregar equipo"}
           </button>
         </form>

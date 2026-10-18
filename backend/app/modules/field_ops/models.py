@@ -65,6 +65,10 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     # Condiciones de ESTA casa que vuelven obligatorios ciertos ítems del
     # checklist (catálogo `INSTALLATION_CONDITIONS`, requerimientos §8.3).
     installation_conditions: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    # «Guardar equipos instalados»: el técnico da por terminada la lista. Agregar
+    # o quitar un equipo lo deshace (spec 2026-10-18-guardar-equipos-y-avisos).
+    equipment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    equipment_confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
 
     # Solo lectura: la etapa del expediente viaja con el proyecto porque el
     # técnico no puede leer expedientes (`cases.*`) y aun así necesita saber si

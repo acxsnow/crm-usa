@@ -4,6 +4,7 @@ Arman el escenario real: un expediente aprobado con cliente, que crea su
 proyecto por el efecto de José, y ese proyecto asignado al técnico.
 """
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
@@ -131,6 +132,8 @@ async def add_equipment_directly(db, project) -> None:
     db.add(InstalledEquipment(organization_id=project.organization_id, project_id=project.id,
                               equipment_type="heat_pump_outdoor", brand="Carrier", model="25HCE4",
                               serial_number="SN-0001"))
+    # Lista guardada («Guardar equipos instalados»), como la deja el técnico.
+    project.equipment_confirmed_at = datetime.now(timezone.utc)
     await db.commit()
 
 

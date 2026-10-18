@@ -297,6 +297,7 @@ function Launch({ id, canal, beforeLaunch, onDone }: { id: string; canal: Campai
         : c === "sms" ? "Prueba enviada a tu celular." : `Prueba enviada a ${r.to}.`);
     },
     onError: (e) => setError(apiErrorMessage(e)),
+    meta: { silent: true },  // ya dice si la prueba salió o no
   });
   const lanzar = useMutation({
     mutationFn: async () => { await beforeLaunch(); return launchCampaign(id, cuando ? new Date(cuando).toISOString() : undefined); },

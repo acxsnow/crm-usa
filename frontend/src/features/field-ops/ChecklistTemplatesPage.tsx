@@ -96,8 +96,9 @@ function Editor({ programId, programName, template, fallback }: {
         items: items.filter((i) => i.label.trim()).map((i, n) => ({ ...i, label: i.label.trim(), sort_order: n + 1 })) };
       return template ? updateChecklistTemplate(template.id, body) : createChecklistTemplate(body);
     },
-    onSuccess: async () => { setError(null); setAviso("Guardado. Se aplica a las próximas instalaciones."); await listo(); },
+    onSuccess: async () => { setError(null); await listo(); },
     onError: (e) => setError(apiErrorMessage(e)),
+    meta: { successMessage: "Guardado. Se aplica a las próximas instalaciones." },
   });
   const borrar = useMutation({
     mutationFn: () => deleteChecklistTemplate(template!.id),

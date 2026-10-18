@@ -262,7 +262,8 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 - **Qué hacer, por pasos:**
   1. **Condiciones** de la obra (por ejemplo, «se retira furnace a gas»), que abren o cierran requisitos · `components/ConditionsPanel.tsx` · `PATCH /projects/{id}/conditions`.
   2. **Checklist técnico:** fachada, distribución, equipos viejos, proceso de gas, conductos, panel, equipos nuevos y etiquetas. Cada ítem con su foto; los condicionales admiten «No aplica» con motivo · `components/ChecklistPanel.tsx` · `GET /projects/{id}/checklist`, `PATCH /checklist-items/{id}`, `POST /projects/{id}/evidence`.
-  3. **Equipos instalados** con marca, modelo y serial · `components/EquipmentPanel.tsx` · `POST /projects/{id}/equipment`.
+  3. **Equipos instalados** con marca, modelo y serial · `components/EquipmentPanel.tsx` · `POST /projects/{id}/equipment`. Agregar el primero **no** completa el paso: queda «En curso» con «N registrados, falta guardar la lista» hasta tocar **Guardar equipos instalados** (`POST /projects/{id}/equipment/confirm`). Agregar o quitar uno después vuelve a pedir guardar, y el cierre pide «Guardar la lista de equipos instalados».
+  - **Avisos de guardado:** cada acción que guarda muestra abajo un aviso corto («Cambios guardados.», «Equipo agregado…», «Equipos instalados guardados.»), que se cierra solo o al tocarlo. Marcar avisos como leídos no lo muestra.
   4. **Materiales** usados · `components/MaterialsPanel.tsx`.
   5. **Firmas** del técnico y del cliente; la del cliente puede ser en sitio o por enlace remoto (página pública `/customer-signature` · `features/field-ops/CustomerSignaturePage.tsx`) · `POST /projects/{id}/attestation/technician-sign`, `.../customer-sign`, `.../customer-signature-request`.
   6. **Cerrar instalación** · `components/InstallationPanel.tsx` · `GET /projects/{id}/installation/gaps`, `POST /projects/{id}/installation/close`.
@@ -525,4 +526,8 @@ Anota aquí cada cosa rara, aunque no estés seguro de que sea un error: la fech
 | 15 oct | Un PDF no abría (era falso, del script de QA) | La subida rechaza PDF falsos o cortados (`7a6ef81`) |
 | 15 oct | «Mis avisos» no tenía páginas | Páginas de a 30 (`448a851`) |
 | 15 oct | El ícono de avisos era un rombo | Campana (`403d727`) |
+| 17 oct | El técnico veía «Agregar cliente» y «Editar cliente» y recibía un 403 | Solo los ve quien tiene el permiso (`ed5f578`) |
+| 17 oct | La orden atrasada en la agenda salía en rojo y sin el enlace | Arreglado el choque de estilos (`397840d`) |
+| 17 oct | El CI de main fallaba por cobertura (68,5 %) | Coverage sigue los greenlets de SQLAlchemy: 89 % (`397840d`) |
+| 18 oct | «Equipos instalados» quedaba completo con el primer equipo; casi nada avisaba al guardar | Botón «Guardar equipos instalados» y avisos de guardado en toda la app |
 |  |  |  |

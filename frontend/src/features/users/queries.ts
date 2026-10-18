@@ -10,6 +10,7 @@ export function useUpdateUserRoles() {
     mutationFn: ({ userId, roleCodes }: { userId: string; roleCodes: string[] }) =>
       updateUserRoles(userId, roleCodes),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: usersKeys.all }),
+    meta: { silent: true },  // UserEditPanel avisa una vez al terminar
   });
 }
 
@@ -19,5 +20,6 @@ export function useUpdateUser() {
     mutationFn: ({ userId, fullName }: { userId: string; fullName: string }) =>
       updateUser(userId, fullName),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: usersKeys.all }),
+    meta: { silent: true },  // UserEditPanel avisa una vez al terminar
   });
 }

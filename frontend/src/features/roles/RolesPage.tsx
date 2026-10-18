@@ -76,14 +76,12 @@ export function RolesPage() {
         });
         setCreando(false);
         setSeleccionado(creado.code);
-        setAviso("Rol creado.");
       } else if (rolActual) {
         await actualizar.mutateAsync({
           code: rolActual.code,
           name: nombre.trim(),
           permissions: permisos,
         });
-        setAviso("Cambios guardados.");
       }
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo guardar el rol."));
@@ -99,7 +97,6 @@ export function RolesPage() {
     try {
       await borrar.mutateAsync(role.code);
       if (seleccionado === role.code) setSeleccionado(null);
-      setAviso("Rol eliminado.");
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo eliminar el rol."));
     }

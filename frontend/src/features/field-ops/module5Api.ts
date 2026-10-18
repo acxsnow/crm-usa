@@ -87,6 +87,11 @@ export async function deleteEquipment(equipmentId: string): Promise<void> {
   await apiClient.delete(`/equipment/${equipmentId}`);
 }
 
+/** «Guardar equipos instalados»: completa el paso del acta. */
+export async function confirmEquipment(projectId: string): Promise<Project> {
+  return (await apiClient.post<Project>(`/projects/${projectId}/equipment/confirm`)).data;
+}
+
 export type MaterialInput = Omit<ProjectMaterial, "id" | "project_id">;
 
 export async function listMaterials(projectId: string): Promise<ProjectMaterial[]> {

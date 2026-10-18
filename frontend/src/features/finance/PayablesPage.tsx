@@ -558,8 +558,8 @@ function SettingsView() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { if (data) setS(data); }, [data]);
-  const guardar = useMutation({ mutationFn: () => putFinanceSettings(s!), onSuccess: (r) => { qc.setQueryData(["finance-settings"], r); setError(null); setMsg("Guardado."); },
-    onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); } });
+  const guardar = useMutation({ mutationFn: () => putFinanceSettings(s!), onSuccess: (r) => { qc.setQueryData(["finance-settings"], r); setError(null); setMsg(null); },
+    onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); }, meta: { successMessage: "Ajustes guardados." } });
   if (!s) return <p className="acta-empty">Cargando…</p>;
   return (
     <article className="acta">

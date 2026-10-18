@@ -29,6 +29,8 @@ export interface Project extends Address {
   case_substatus_code?: string | null;
   /** Administración confirmó la información técnica del acta (módulo 6). */
   technician_info_confirmed?: boolean;
+  /** «Guardar equipos instalados»; agregar o quitar un equipo lo vuelve null. */
+  equipment_confirmed_at?: string | null;
   /** Motivo de la última devolución al técnico, si el acta está devuelta. */
   returned_reason?: string | null;
   created_at: string;

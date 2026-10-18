@@ -92,7 +92,7 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     permit: permitsCleared || stageAtLeast(project, "ready_to_install"),
     release: released,
     checklist: checklistDone || closed,
-    equipment: data.equipment.length > 0,
+    equipment: (data.equipment.length > 0 && Boolean(project.equipment_confirmed_at)) || closed,
     close: closed,
     review: Boolean(project.technician_info_confirmed),
     inspection: inspectionPassed,
@@ -124,9 +124,11 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     },
     equipment: {
       state: state("equipment"),
-      summary: data.equipment.length
-        ? data.equipment.map((e) => `${e.brand} ${e.model}`).join(", ")
-        : "Ninguno registrado",
+      summary: !data.equipment.length
+        ? "Ninguno registrado"
+        : project.equipment_confirmed_at || closed
+          ? data.equipment.map((e) => `${e.brand} ${e.model}`).join(", ")
+          : `${data.equipment.length === 1 ? "1 registrado" : `${data.equipment.length} registrados`}, falta guardar la lista`,
     },
     close: {
       state: state("close"),
@@ -281,5 +283,8 @@ export function closeRequirements(project: Project, data: ReturnType<typeof useR
         : "Registrar al menos un equipo instalado (marca, modelo y serial)",
       done: data.equipment.length > 0,
     },
+    ...(data.equipment.length > 0
+      ? [{ label: "Guardar la lista de equipos instalados", done: Boolean(project.equipment_confirmed_at) }]
+      : []),
   ];
 }

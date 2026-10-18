@@ -28,6 +28,7 @@ export function useCreateRole() {
   return useMutation({
     mutationFn: createRole,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: rolesKeys.all }),
+    meta: { successMessage: "Rol creado." },
   });
 }
 
@@ -45,5 +46,6 @@ export function useDeleteRole() {
   return useMutation({
     mutationFn: deleteRole,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: rolesKeys.all }),
+    meta: { successMessage: "Rol eliminado." },
   });
 }

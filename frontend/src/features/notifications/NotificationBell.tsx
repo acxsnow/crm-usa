@@ -24,8 +24,8 @@ export function NotificationBell() {
   });
   const { data: lista } = useQuery({ queryKey: noticeKeys.list(false), queryFn: () => listNotices(false, 8), enabled: puede && abierto });
   const refrescar = () => { qc.invalidateQueries({ queryKey: noticeKeys.count }); qc.invalidateQueries({ queryKey: ["notices"] }); };
-  const leer = useMutation({ mutationFn: markRead, onSuccess: refrescar });
-  const leerTodo = useMutation({ mutationFn: markAllRead, onSuccess: refrescar });
+  const leer = useMutation({ mutationFn: markRead, onSuccess: refrescar, meta: { silent: true } });
+  const leerTodo = useMutation({ mutationFn: markAllRead, onSuccess: refrescar, meta: { silent: true } });
 
   useEffect(() => {
     if (!abierto) return;

@@ -8,7 +8,7 @@
   inspecciona y lo que se cobra al programa.
 """
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,6 +70,7 @@ async def add_equipment(db, *, organization_id, user, project_id, data: dict) ->
         organization_id=organization_id, project_id=project.id, recorded_by_user_id=user.id, **data
     )
     db.add(equipo)
+    _unconfirm(project)
     await db.flush()
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=user.id,
@@ -92,7 +93,33 @@ async def delete_equipment(db, *, organization_id, user, equipment_id) -> None:
         before_data={"serial_number": equipo.serial_number, "model": equipo.model},
     )
     await db.delete(equipo)
+    _unconfirm(project)
     await db.commit()
+
+
+def _unconfirm(project: Project) -> None:
+    """La lista cambió: hay que volver a guardarla."""
+    project.equipment_confirmed_at = None
+    project.equipment_confirmed_by_user_id = None
+
+
+async def confirm_equipment(db, *, organization_id, user, project_id) -> Project:
+    """«Guardar equipos instalados»: el técnico da por terminada la lista."""
+    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    ensure_installation_open(project)
+    equipos = await equipment_of(db, project.id)
+    if not equipos:
+        raise InvalidInputError("Registra al menos un equipo antes de guardar la lista.", code="no_equipment")
+    project.equipment_confirmed_at = datetime.now(timezone.utc)
+    project.equipment_confirmed_by_user_id = user.id
+    await record_audit_event(
+        db, organization_id=organization_id, actor_user_id=user.id,
+        action="equipment.confirmed", entity_type="Project", entity_id=str(project.id),
+        after_data={"equipment_count": len(equipos)},
+    )
+    await db.commit()
+    await db.refresh(project)
+    return project
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +262,8 @@ async def installation_gaps(db: AsyncSession, *, project: Project) -> list[str]:
     faltan = await checklist_gaps(db, project=project)
     if not await equipment_of(db, project.id):
         faltan.append("Registrar al menos un equipo instalado (marca, modelo y serial)")
+    elif project.equipment_confirmed_at is None:
+        faltan.append("Guardar la lista de equipos instalados")
     return faltan
 
 

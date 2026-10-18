@@ -99,6 +99,7 @@ function ProgramRow({ project, program, canCreate }: { project: Project; program
   const preview = useMutation({
     mutationFn: () => openInvoicePreview({ kind: "rebate", project_id: project.id, program_id: program.program_id }),
     onError: (err) => setError(apiErrorMessage(err)),
+    meta: { silent: true },  // abre la vista previa, no guarda
   });
 
   return (

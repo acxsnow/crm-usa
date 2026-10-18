@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUpdateUser, useUpdateUserRoles } from "../queries";
 import { useAuth } from "@/features/auth/AuthContext";
+import { toast } from "@/lib/toast";
 import type { OrgUser, Role } from "@/types/users";
 
 /**
@@ -99,7 +100,7 @@ export function UserEditPanel({
         await guardarNombre.mutateAsync({ userId: user.id, fullName: nombreLimpio });
       }
       setPersistido({ nombre: nombreLimpio, rol: seleccionado });
-      setAviso("Cambios guardados.");
+      toast("Cambios guardados.");
     } catch (err) {
       setError(mensajeDeError(err, "No se pudieron guardar los cambios."));
     }

@@ -74,8 +74,8 @@ function MyNotices() {
     params: { unread: soloSinLeer } });
   const { data: sinLeer = 0 } = useQuery({ queryKey: noticeKeys.count, queryFn: unreadCount });
   const refrescar = () => { qc.invalidateQueries({ queryKey: ["notices"] }); qc.invalidateQueries({ queryKey: noticeKeys.count }); };
-  const leer = useMutation({ mutationFn: markRead, onSuccess: refrescar });
-  const leerTodo = useMutation({ mutationFn: markAllRead, onSuccess: refrescar });
+  const leer = useMutation({ mutationFn: markRead, onSuccess: refrescar, meta: { silent: true } });
+  const leerTodo = useMutation({ mutationFn: markAllRead, onSuccess: refrescar, meta: { silent: true } });
   return (
     <article className="acta">
       <div className="notices-toolbar">
@@ -113,8 +113,9 @@ function Prefs() {
   useEffect(() => { if (data) { setEmail(data.email_enabled); setSms(data.sms_enabled); setTel(data.sms_phone ?? ""); } }, [data]);
   const guardar = useMutation({
     mutationFn: () => setPrefs({ email_enabled: email, sms_enabled: sms, sms_phone: tel || null }),
-    onSuccess: (p) => { qc.setQueryData(noticeKeys.prefs, p); setError(null); setMsg("Guardado."); },
+    onSuccess: (p) => { qc.setQueryData(noticeKeys.prefs, p); setError(null); setMsg(null); },
     onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); },
+    meta: { successMessage: "Preferencias guardadas." },
   });
   return (
     <article className="acta notices-prefs">
@@ -156,6 +157,7 @@ function Deliveries() {
   const reenviar = useMutation({
     mutationFn: resendDelivery, onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: ["notice-deliveries"] }); },
     onError: (e) => setError(apiErrorMessage(e)),
+    meta: { successMessage: "Reenviado." },
   });
   return (
     <article className="acta">
@@ -272,8 +274,9 @@ function Settings() {
   useEffect(() => { if (data) { setDias(data.approval_alert_business_days); setPermiso(data.permit_expiry_alert_days); } }, [data]);
   const guardar = useMutation({
     mutationFn: () => setNoticeSettings({ approval_alert_business_days: dias, permit_expiry_alert_days: permiso }),
-    onSuccess: (s) => { qc.setQueryData(noticeKeys.settings, s); setError(null); setMsg("Guardado. Se aplica en la próxima revisión diaria o al tocar «Revisar ahora»."); },
+    onSuccess: (s) => { qc.setQueryData(noticeKeys.settings, s); setError(null); setMsg(null); },
     onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); },
+    meta: { successMessage: "Guardado. Se aplica en la próxima revisión diaria o al tocar «Revisar ahora»." },
   });
   // Sin esperar a la revisión de las 14:00 UTC: útil al cambiar un umbral.
   const revisar = useMutation({
@@ -285,6 +288,7 @@ function Settings() {
       qc.invalidateQueries({ queryKey: ["notices"] });
     },
     onError: (e) => { setMsg(null); setError(apiErrorMessage(e)); },
+    meta: { silent: true },  // ya muestra cuántos avisos creó
   });
   return (
     <article className="acta notices-prefs">
