@@ -74,7 +74,7 @@ export function AgendaPage() {
   const siguientes = historial ? filas : filas.filter((f) => f.days_late === null && f.scheduled_date !== hoy);
 
   const orden = (fila: AgendaRow) => (
-    <li key={fila.project_id} className={fila.days_late !== null ? "is-late" : undefined}>
+    <li key={fila.project_id} className={fila.days_late !== null ? "agenda-row-late" : undefined}>
       <Link to={`/projects/${fila.project_id}`} state={{ backTo: `/my-schedule?${params.toString()}`, backLabel: "Agenda" }}>
         {fila.title}
       </Link>

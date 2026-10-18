@@ -3531,4 +3531,4 @@ fieldset.field legend {
 .agenda-late { border-left: 4px solid var(--red); }
 .agenda-late h3 { color: var(--red); }
 .agenda-today { border-left: 4px solid #1f7a4c; }
-.agenda-page .plain-list li.is-late a { font-weight: 600; }
+.agenda-page .plain-list li.agenda-row-late a { font-weight: 600; }

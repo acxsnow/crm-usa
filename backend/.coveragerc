@@ -1,0 +1,6 @@
+# Cobertura de las pruebas (CI: --cov-fail-under=70).
+# SQLAlchemy async ejecuta las consultas en greenlets; sin `greenlet` en
+# concurrency, coverage pierde el rastro tras cada `await` a la base y marca
+# como no probadas líneas que sí corren (payables.py: 31 % medido, 77 % real).
+[run]
+concurrency = greenlet,thread
