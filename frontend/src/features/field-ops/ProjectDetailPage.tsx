@@ -4,20 +4,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createTask,
   createTaskComment,
-  fetchAttestationPdfObjectUrl,
   fetchEvidenceObjectUrl,
-  getAttestation,
   getProject,
   getProjectChecklist,
   listProjectEvidencePage,
   listProjectTasks,
   listTaskComments,
-  signAsTechnician,
-  requestCustomerSignature,
   updateTask,
   uploadEvidence,
 } from "./api";
-import { SignaturePad } from "./SignaturePad";
+import { SignaturesPanel } from "./components/SignaturesPanel";
 import { PaginationControls } from "@/components/PaginationControls";
 import { type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -358,11 +354,6 @@ export function ProjectDetailPage() {
   });
   const evidence = evidenceData?.items;
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
-  const { data: attestation } = useQuery({
-    queryKey: ["project-attestation", projectId],
-    queryFn: () => getAttestation(projectId!),
-    enabled: !!projectId,
-  });
 
   useEffect(() => {
     geo.request();
@@ -373,7 +364,6 @@ export function ProjectDetailPage() {
   const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
     mutationFn: () =>
@@ -386,15 +376,6 @@ export function ProjectDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["project-evidence", projectId], exact: false });
       setFile(null);
     },
-  });
-
-  const technicianSignMutation = useMutation({
-    mutationFn: (signature: string) => signAsTechnician(projectId!, signature),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-attestation", projectId] }),
-  });
-
-  const requestSignatureMutation = useMutation({
-    mutationFn: () => requestCustomerSignature(projectId!),
   });
 
   const recordData = useRecordData(projectId!, project?.status === "completed");
@@ -448,6 +429,10 @@ export function ProjectDetailPage() {
               confirmedAt={project.equipment_confirmed_at} />,
           },
           {
+            key: "signatures", title: "Firmas del acta", ...estados.signatures,
+            body: <SignaturesPanel projectId={project.id} canSign={hasPermission("evidence.create")} />,
+          },
+          {
             key: "close", title: "Cierre de la instalación", ...estados.close,
             body: (
               <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete")}
@@ -479,7 +464,7 @@ export function ProjectDetailPage() {
         <header className="annex-header">
           <div>
             <h2 className="acta-title">Anexos</h2>
-            <p className="acta-lead">Evidencias, firmas y tareas internas de esta instalación.</p>
+            <p className="acta-lead">Evidencias y tareas internas de esta instalación. Las firmas están en el paso «Firmas del acta».</p>
           </div>
           <span className={`annex-gps ${geo.status === "granted" && geo.coords ? "is-on" : "is-off"}`}>
             <PinIcon size={16} />
@@ -547,82 +532,6 @@ export function ProjectDetailPage() {
           )}
         </section>
         )}
-
-        <section className="annex-section" aria-labelledby="anexo-firmas">
-          <div className="annex-section-head">
-            <h3 id="anexo-firmas">Firmas del acta</h3>
-            {attestation?.is_fully_signed && (
-              <button
-                type="button"
-                className="acta-btn is-primary"
-                onClick={async () => {
-                  const url = await fetchAttestationPdfObjectUrl(attestation.id);
-                  setPdfUrl(url);
-                  window.open(url, "_blank");
-                }}
-              >
-                Descargar acta firmada (PDF)
-              </button>
-            )}
-          </div>
-          <div className="annex-signatures">
-            <div className={`annex-signer ${attestation?.technician_signed_at ? "is-signed" : ""}`}>
-              <div className="annex-signer-head">
-                <strong>Técnico</strong>
-                {attestation?.technician_signed_at
-                  ? <span className="acta-chip is-done"><CheckCircleIcon size={16} /> Firmado</span>
-                  : <span className="acta-chip is-pending"><ClockIcon size={16} /> Pendiente</span>}
-              </div>
-              {attestation?.technician_signed_at ? (
-                <p className="acta-lead">
-                  Firmó el {new Date(attestation.technician_signed_at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.
-                </p>
-              ) : (
-                <>
-                  <p className="acta-lead">Firma con el dedo o el mouse dentro del recuadro.</p>
-                  <SignaturePad onCapture={(sig) => technicianSignMutation.mutate(sig)} />
-                </>
-              )}
-            </div>
-            <div className={`annex-signer ${attestation?.customer_signed_at ? "is-signed" : ""}`}>
-              <div className="annex-signer-head">
-                <strong>Cliente</strong>
-                {attestation?.customer_signed_at
-                  ? <span className="acta-chip is-done"><CheckCircleIcon size={16} /> Firmado</span>
-                  : requestSignatureMutation.data
-                    ? <span className="acta-chip is-current"><SendIcon size={14} /> Enlace enviado</span>
-                    : <span className="acta-chip is-pending"><ClockIcon size={16} /> Pendiente</span>}
-              </div>
-              {attestation?.customer_signed_at ? (
-                <p className="acta-lead">
-                  Firmó el {new Date(attestation.customer_signed_at).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.
-                </p>
-              ) : (
-                <>
-                  <p className="acta-lead">Recibe un enlace por correo y firma desde su teléfono.</p>
-                  {requestSignatureMutation.data && (
-                    <ol className="annex-timeline">
-                      <li>
-                        <span>Enviado a {requestSignatureMutation.data.recipient_email}</span>
-                        <small>Vence el {new Date(requestSignatureMutation.data.expires_at).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}</small>
-                      </li>
-                    </ol>
-                  )}
-                  <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
-                    <button type="button" className="acta-btn is-primary" onClick={() => requestSignatureMutation.mutate()}
-                      disabled={requestSignatureMutation.isPending}>
-                      {requestSignatureMutation.isPending ? "Enviando…" : requestSignatureMutation.data ? "Reenviar enlace" : "Enviar enlace de firma"}
-                    </button>
-                  </div>
-                  {requestSignatureMutation.isError && (
-                    <p className="form-error">No se pudo enviar el enlace. Verifica que el cliente tenga correo.</p>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          {pdfUrl && <p className="acta-empty">El PDF se abrió en otra pestaña.</p>}
-        </section>
 
         <TaskBoard projectId={project.id} />
       </section>

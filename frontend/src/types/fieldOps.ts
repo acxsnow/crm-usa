@@ -135,6 +135,9 @@ export interface Attestation {
   pdf_path?: string | null;
   generated_at?: string | null;
   is_fully_signed: boolean;
+  /** Enlace de firma enviado y todavía usable (spec 2026-10-18-firmas-del-acta). */
+  customer_link_sent_to?: string | null;
+  customer_link_expires_at?: string | null;
 }
 
 // --- Módulo 5 ---------------------------------------------------------------

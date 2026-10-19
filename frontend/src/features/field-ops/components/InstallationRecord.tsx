@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getProjectChecklist } from "@/features/field-ops/api";
+import { getAttestation, getProjectChecklist } from "@/features/field-ops/api";
 import {
   fieldKeys,
   getInstallationGaps,
@@ -11,6 +11,7 @@ import {
 } from "@/features/field-ops/module5Api";
 import type { Project } from "@/types/fieldOps";
 import { CheckCircleIcon, CheckIcon, ClockIcon, DotIcon, LockIcon } from "./icons";
+import { attestationKey } from "./SignaturesPanel";
 
 const STATE_CHIP: Record<StepState, { label: string; icon: ReactNode }> = {
   done: { label: "Completado", icon: <CheckCircleIcon size={16} /> },
@@ -59,6 +60,7 @@ export function useRecordData(projectId: string, closed: boolean) {
   const equipment = useQuery({ queryKey: fieldKeys.equipment(projectId), queryFn: () => listEquipment(projectId) });
   const inspections = useQuery({ queryKey: fieldKeys.inspections(projectId), queryFn: () => listInspections(projectId) });
   const checklist = useQuery({ queryKey: fieldKeys.checklist(projectId), queryFn: () => getProjectChecklist(projectId) });
+  const attestation = useQuery({ queryKey: attestationKey(projectId), queryFn: () => getAttestation(projectId) });
   const gaps = useQuery({
     queryKey: fieldKeys.gaps(projectId),
     queryFn: () => getInstallationGaps(projectId),
@@ -69,6 +71,7 @@ export function useRecordData(projectId: string, closed: boolean) {
     equipment: equipment.data ?? [],
     inspections: inspections.data ?? [],
     checklist: checklist.data ?? [],
+    attestation: attestation.data ?? null,
     gaps: gaps.data,
   };
 }
@@ -93,13 +96,16 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     release: released,
     checklist: checklistDone || closed,
     equipment: (data.equipment.length > 0 && Boolean(project.equipment_confirmed_at)) || closed,
+    // Las firmas no bloquean el cierre (decisión pendiente con Mariana): son
+    // el paso actual mientras falten, pero «Cierre» sigue disponible.
+    signatures: Boolean(data.attestation?.is_fully_signed),
     close: closed,
     review: Boolean(project.technician_info_confirmed),
     inspection: inspectionPassed,
     billing: stageAtLeast(project, "paid"),
   };
   const order: (keyof typeof done)[] = [
-    "permit", "release", "checklist", "equipment", "close", "review", "inspection", "billing",
+    "permit", "release", "checklist", "equipment", "signatures", "close", "review", "inspection", "billing",
   ];
   const current = order.find((k) => !done[k]);
 
@@ -129,6 +135,14 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
         : project.equipment_confirmed_at || closed
           ? data.equipment.map((e) => `${e.brand} ${e.model}`).join(", ")
           : `${data.equipment.length === 1 ? "1 registrado" : `${data.equipment.length} registrados`}, falta guardar la lista`,
+    },
+    signatures: {
+      state: state("signatures"),
+      summary: data.attestation?.is_fully_signed
+        ? "Firmada por el técnico y el cliente"
+        : data.attestation?.technician_signed_at
+          ? data.attestation.customer_link_sent_to ? "Falta el cliente: enlace enviado" : "Falta la firma del cliente"
+          : data.attestation?.customer_signed_at ? "Falta la firma del técnico" : "Técnico y cliente",
     },
     close: {
       state: state("close"),
@@ -167,6 +181,13 @@ const BILLING_SUBSTATUS: Record<string, string> = {
   rejected_by_program: "En cobro: rechazado, en corrección",
 };
 
+const OPEN_STEP_EVENT = "acta:open-step";
+
+/** Abre un paso del acta y baja hasta él (lo usa «Guardar equipos instalados»). */
+export function openActaStep(key: string) {
+  window.dispatchEvent(new CustomEvent(OPEN_STEP_EVENT, { detail: key }));
+}
+
 /**
  * La lista de pasos con riel numerado del acta. La usan el acta de instalación
  * y las hojas del módulo 6 (cobro y cotización): el mismo lenguaje visual para
@@ -181,6 +202,18 @@ export function ActaSteps({ steps }: { steps: RecordStep[] }) {
   useEffect(() => {
     if (currentKey) setOpen((prev) => (prev.has(currentKey) ? prev : new Set(prev).add(currentKey)));
   }, [currentKey]);
+  // Un paso puede invitar al siguiente aunque los anteriores no estén completos
+  // (al guardar los equipos se abren las firmas): ver `openActaStep`.
+  useEffect(() => {
+    const abrir = (e: Event) => {
+      const key = (e as CustomEvent<string>).detail;
+      setOpen((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+      window.setTimeout(() => document.getElementById(`acta-step-${key}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    };
+    window.addEventListener(OPEN_STEP_EVENT, abrir);
+    return () => window.removeEventListener(OPEN_STEP_EVENT, abrir);
+  }, []);
 
   const toggle = (key: string) =>
     setOpen((prev) => {
@@ -194,7 +227,7 @@ export function ActaSteps({ steps }: { steps: RecordStep[] }) {
       {steps.map((step, n) => {
         const isOpen = open.has(step.key) && step.state !== "locked";
         return (
-          <li key={step.key} className={`acta-step is-${step.state}`}>
+          <li key={step.key} id={`acta-step-${step.key}`} className={`acta-step is-${step.state}`}>
             <span className="acta-step-marker" aria-hidden="true">
               {step.state === "done" ? <CheckIcon size={16} strokeWidth={2.6} /> : n + 1}
             </span>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { openActaStep } from "./InstallationRecord";
 
 import {
   addEquipment,
@@ -53,9 +54,9 @@ export function EquipmentPanel({ projectId, canManage, closed, confirmedAt }: {
   });
   const confirm = useMutation({
     mutationFn: () => confirmEquipment(projectId),
-    onSuccess: () => { setError(null); return refresh(); },
+    onSuccess: async () => { setError(null); await refresh(); openActaStep("signatures"); },
     onError: (err) => setError(apiErrorMessage(err)),
-    meta: { successMessage: "Equipos instalados guardados." },
+    meta: { successMessage: "Equipos instalados guardados. Sigue con las firmas del acta." },
   });
   const hayEquipos = Boolean(equipos && equipos.length > 0);
 
