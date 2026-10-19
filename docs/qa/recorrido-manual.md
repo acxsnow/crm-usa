@@ -316,6 +316,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 ### 5.1 Crear el cobro al programa (Administración o Contabilidad)
 
 - **PDF:** §3.4 («Radicación de cobro»), §4.3, §6 («No enviar a cobro sin checklist completo»).
+- **Programa:** el paso solo ofrece el programa del expediente; crear un cobro a otro responde 409 (`program_not_of_case`). Un proyecto sin expediente o sin programa ve todos. El programa necesita tarifa vigente el día de la instalación.
 - **Cómo llega:** **Por revisar › Cobros por crear** (`/review?tab=cobros` · `GET /billing/to-create`): la misma lista «Por cobrar» de Facturación (actas confirmadas sin cobro). La fila abre el proyecto en el paso Cobro (`?paso=billing`). Contabilidad ve solo esta pestaña.
 - **Pantalla:** en el acta, paso **Cobro** · `components/BillingStep.tsx` → **Crear cobro**.
 - **API:** `GET /projects/{id}/billing/eligibility`, `POST /projects/{id}/claims`.
@@ -544,4 +545,5 @@ Anota aquí cada cosa rara, aunque no estés seguro de que sea un error: la fech
 | 19 oct | Administración no sabía dónde confirmar el acta; «Crear proyecto» confundía | Aviso al cerrar, bandeja «Actas por confirmar»; sale «Crear proyecto» (el proyecto nace al aprobar el expediente) |
 | 19 oct | El trabajo de Administración estaba repartido; no había lista de inspecciones por agendar | Bandeja «Por revisar» con Documentos, Actas por confirmar, Inspección municipal y Cobros por crear |
 | 19 oct | Inicio daba 403 a Administración (tablero de finanzas) | La tarjeta pide el dato solo con `dashboards.finance` |
+| 19 oct | El paso de cobro ofrecía todos los programas, no el del expediente | Solo el programa del expediente; la API rechaza otro (`program_not_of_case`) |
 |  |  |  |

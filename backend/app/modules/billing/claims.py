@@ -72,9 +72,14 @@ async def eligibility(db: AsyncSession, *, organization_id: uuid.UUID, user, pro
         db, organization_id=organization_id, city=project.address_city, zip_code=project.address_zip, on=fecha
     )
     vivos = {c.program_id: c for c in await _claims_of_project(db, project.id) if c.status != ClaimStatus.withdrawn}
+    del_expediente = await case_program_id(db, project)
     programas = []
     for programa in await program_config.list_programs(db, organization_id=organization_id):
         if not programa.active:
+            continue
+        # La instalación se cobra al programa de su expediente; los demás no se
+        # ofrecen. Un proyecto sin expediente o sin programa los ve todos.
+        if del_expediente and programa.id != del_expediente:
             continue
         tarifa = await program_config.rate_for(db, organization_id=organization_id, program_id=programa.id, on=fecha)
         jurisdiccion = aplican.get(programa.id)
@@ -93,8 +98,17 @@ async def eligibility(db: AsyncSession, *, organization_id: uuid.UUID, user, pro
         "installation_date": installation_date_of(project),
         "evaluated_on": fecha,
         "technician_info_confirmed": project.technician_info_confirmed,
+        "case_program_id": del_expediente,
         "programs": programas,
     }
+
+
+async def case_program_id(db: AsyncSession, project: Project) -> uuid.UUID | None:
+    """El programa del expediente de la instalación, si lo tiene."""
+    if not project.case_id:
+        return None
+    case = await db.get(Case, project.case_id)
+    return case.program_id if case else None
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +130,13 @@ async def create_claim(
     fecha = installation_date_of(project)
     if fecha is None:
         raise ConflictError("La instalación no tiene fecha de cierre.", code="installation_without_date")
+
+    del_expediente = await case_program_id(db, project)
+    if del_expediente and program_id != del_expediente:
+        raise ConflictError(
+            f"El expediente de esta instalación es de otro programa; no se puede cobrar a {programa.name}.",
+            code="program_not_of_case",
+        )
 
     if any(c.program_id == program_id and c.status != ClaimStatus.withdrawn
            for c in await _claims_of_project(db, project.id)):

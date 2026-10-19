@@ -46,6 +46,8 @@ class EligibilityResponse(BaseModel):
     installation_date: date | None
     evaluated_on: date
     technician_info_confirmed: bool
+    # Programa del expediente: si existe, `programs` trae solo ese.
+    case_program_id: uuid.UUID | None = None
     programs: list[EligibleProgram]
 
 

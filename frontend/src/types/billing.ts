@@ -116,6 +116,8 @@ export interface Eligibility {
   installation_date: string | null;
   evaluated_on: string;
   technician_info_confirmed: boolean;
+  /** Programa del expediente: si existe, `programs` trae solo ese. */
+  case_program_id: string | null;
   programs: EligibleProgram[];
 }
 

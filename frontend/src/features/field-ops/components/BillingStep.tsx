@@ -67,7 +67,7 @@ export function BillingStep({ project, canCreate, canRead }: {
 
       {sinCobro.length > 0 && (
         <>
-          <h4 className="acta-section-title">{vivos.length ? "Otros programas" : "Programas"}</h4>
+          <h4 className="acta-section-title">{elegibilidad.case_program_id ? "Programa del expediente" : vivos.length ? "Otros programas" : "Programas"}</h4>
           <ul className="billing-claim-list">
             {sinCobro.map((p) => (
               <ProgramRow key={p.program_id} project={project} program={p}
