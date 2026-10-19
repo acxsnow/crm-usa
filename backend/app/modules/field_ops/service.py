@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.crm.models import Customer
+from app.modules.organizations.models import Organization
 from app.modules.notifications.email import send_email
 from app.core.config import get_settings
 from app.core.security import generate_secure_token, hash_token
@@ -16,6 +17,7 @@ from app.modules.field_ops.models import (
     ChecklistTemplate,
     ChecklistTemplateItem,
     Evidence,
+    InstalledEquipment,
     Project,
     ProjectChecklistItem,
     Task,
@@ -368,9 +370,16 @@ async def _maybe_generate_pdf(db: AsyncSession, *, organization_id: uuid.UUID, p
         )
     ).scalars().all()
 
+    equipos = (
+        await db.execute(
+            select(InstalledEquipment).where(InstalledEquipment.project_id == project.id).order_by(InstalledEquipment.created_at)
+        )
+    ).scalars().all()
+    organizacion = await db.get(Organization, organization_id)
+
     pdf_bytes = build_attestation_pdf(
         project=project, customer=customer, checklist_items=checklist_items, attestation=attestation,
-        organization_name="CRM Field Ops",
+        equipment=equipos, organization_name=organizacion.name if organizacion else "",
     )
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"projects/{project.id}/attestation",
