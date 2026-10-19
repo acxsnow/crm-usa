@@ -34,6 +34,6 @@
 
 ### Task 3: Verificación
 
-- [ ] Batería completa de pytest (corriendo).
+- [x] Batería completa de pytest: 565 pasan.
 - [x] Navegador como Administración (las cuatro pestañas y sus enlaces) y como Contabilidad (solo Cobros).
 - [ ] Recorrido manual actualizado (hecho). Informar a José; commit cuando lo pida.

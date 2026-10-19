@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import httpx
@@ -25,7 +26,9 @@ from PIL import Image, ImageDraw
 API = os.getenv("QA_API", "http://localhost:8000/api/v1")
 PASSWORD = os.getenv("QA_PASSWORD", "ChangeMe123!")
 RUN = datetime.now().strftime("%m%d%H%M%S")
-HOY = date.today()
+# «Hoy» de la organización demo (seed: America/Bogota), no del reloj de la máquina: el contenedor va en
+# UTC y de noche ya es mañana, y la app rechaza pagos y gastos con fecha futura.
+HOY = datetime.now(ZoneInfo(os.getenv("QA_TZ", "America/Bogota"))).date()
 USERS = {
     "admin": "admin@demo-org.com", "adm": "administracion@demo-org.com", "vendedor": "vendedor@demo-org.com",
     "tecnico": "tecnico@demo-org.com", "conta": "contabilidad@demo-org.com", "gerencia": "gerencia@demo-org.com",
@@ -560,17 +563,18 @@ def flujo_notificaciones(v, adm, admin, tec, conta) -> None:
     section("7. Notificaciones")
     time.sleep(6)  # el worker procesa la cola
     for nombre, c in (("vendedor", v), ("administración", adm), ("técnico", tec), ("contabilidad", conta)):
-        r = c.get("/notifications", params={"limit": 100}).json()
-        eventos = {i["event"] for i in r["items"]}
-        check(f"Avisos para {nombre}: {r['unread']} sin leer ({', '.join(sorted(eventos))[:150]})", len(r["items"]) > 0)
+        items = c.get("/notifications", params={"limit": 100}).json()
+        sin_leer = c.get("/notifications/unread-count").json()["unread"]
+        eventos = {i["event"] for i in items}
+        check(f"Avisos para {nombre}: {sin_leer} sin leer ({', '.join(sorted(eventos))[:150]})", len(items) > 0)
     esperados = {"vendedor": {"case.returned", "case.approved", "case.rejected"}, "técnico": {"installation.scheduled",
                                                                                               "project.returned_to_technician"},
                  "administración": {"case.submitted"}, "contabilidad": {"claim.rejected", "claim.paid"}}
     for nombre, c in (("vendedor", v), ("administración", adm), ("técnico", tec), ("contabilidad", conta)):
-        eventos = {i["event"] for i in c.get("/notifications", params={"limit": 100}).json()["items"]}
+        eventos = {i["event"] for i in c.get("/notifications", params={"limit": 100}).json()}
         faltan = esperados[nombre] - eventos
         check(f"{nombre} recibió {sorted(esperados[nombre])}", not faltan, f"faltan {sorted(faltan)}")
-    primero = v.get("/notifications").json()["items"]
+    primero = v.get("/notifications").json()
     if primero:
         expect("Marcar un aviso como leído", v.post(f"/notifications/{primero[0]['id']}/read"), 200)
         expect("Otro usuario no puede leer ese aviso", adm.post(f"/notifications/{primero[0]['id']}/read"), 404)
@@ -592,7 +596,7 @@ def flujo_alertas(admin: Client, adm: Client, case_id: str) -> None:
     sql(f"update cases set submitted_at = now() - interval '10 days' where id = '{case_id}'")
     salida = worker("from app.modules.notifications import service\nprint(await service.daily_alerts_all(db))")
     check(f"Alertas diarias corridas por el worker: {salida.splitlines()[-1] if salida else '?'}", salida != "")
-    eventos = {i["event"] for i in adm.get("/notifications", params={"limit": 100}).json()["items"]}
+    eventos = {i["event"] for i in adm.get("/notifications", params={"limit": 100}).json()}
     check("Administración recibió «expediente sin aprobar»", "case.approval_overdue" in eventos, str(eventos))
     check("Administración recibió «permiso por vencer»", "permit.expiring" in eventos, str(eventos))
     salida2 = worker("from app.modules.notifications import service\nprint(await service.daily_alerts_all(db))")
@@ -805,10 +809,10 @@ def flujo_finanzas(c: dict, pid: str | None, pid_az: str | None) -> None:
     time.sleep(6)  # el worker procesa los avisos de gastos
     salida = worker("from app.modules.notifications import service\nprint(await service.daily_alerts_all(db))")
     check(f"Alertas diarias con finanzas: {(salida.splitlines() or ['?'])[-1]}", bool(salida))
-    eventos = {i["event"] for i in conta.get("/notifications", params={"limit": 100}).json()["items"]}
+    eventos = {i["event"] for i in conta.get("/notifications", params={"limit": 100}).json()}
     check("Contabilidad recibe «factura por vencer» y «licencia de proveedor por vencer»",
           {"payable.due_soon", "supplier.document_expiring"} <= eventos, str(sorted(eventos)))
-    eventos_t = {i["event"] for i in tec.get("/notifications", params={"limit": 100}).json()["items"]}
+    eventos_t = {i["event"] for i in tec.get("/notifications", params={"limit": 100}).json()}
     check("El técnico recibe gasto aprobado y rechazado", {"expense.approved", "expense.rejected"} <= eventos_t,
           str(sorted(eventos_t)))
     RECORDS["Proveedor"] = f"QA Ferguson HVAC {RUN} (facturas QA-{RUN}-1/2/3)"
