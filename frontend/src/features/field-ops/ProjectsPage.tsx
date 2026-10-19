@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProject, listProjectsPage, seedDefaultChecklistTemplate } from "./api";
-import { listCustomers } from "@/features/crm/api";
+import { useQuery } from "@tanstack/react-query";
+import { listProjectsPage } from "./api";
 import { listUsers } from "@/features/users/api";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -14,49 +12,19 @@ import { PROJECT_STATUS_LABELS, type Project } from "@/types/fieldOps";
 const PAGE_SIZE = 20;
 
 export function ProjectsPage() {
-  const queryClient = useQueryClient();
   const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
   const { data, isLoading } = useQuery({
     queryKey: ["projects", page, extraParams],
     queryFn: () => listProjectsPage(page, PAGE_SIZE, extraParams),
   });
   const projects = data?.items;
-  // Dropdown for the create-project form needs the full customer list, not
-  // a page of it — listCustomers() (unpaginated call, capped at the API's
-  // 100-row default) is the right fit here, separate from listCustomersPage.
   // Solo quien puede ver la lista de usuarios (`users.read` o `users.manage`)
   // la pide; el técnico, que ve solo sus proyectos, se queda sin este filtro en
   // vez de recibir un 403 en cada visita.
   const { hasPermission } = useAuth();
   const canListUsers = hasPermission("users.read") || hasPermission("users.manage");
-  // Crear proyectos a mano es de Administración (`projects.create`); el técnico
-  // veía el formulario y recibía un 403 al usarlo (revisión del 17 oct).
-  const canCreate = hasPermission("projects.create");
-  const { data: customers } = useQuery({ queryKey: ["customers-all"], queryFn: listCustomers, enabled: canCreate });
   const { data: allUsers } = useQuery({ queryKey: ["users"], queryFn: listUsers, enabled: canListUsers,
                                         retry: false, throwOnError: false });
-
-  const [customerId, setCustomerId] = useState("");
-  const [title, setTitle] = useState("");
-  const [addressStreet, setAddressStreet] = useState("");
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const template = await seedDefaultChecklistTemplate();
-      return createProject({
-        customer_id: customerId,
-        title,
-        address_street: addressStreet || undefined,
-        project_type: "hvac_install",
-        apply_checklist_template_id: template.id,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setTitle("");
-      setAddressStreet("");
-    },
-  });
 
   const filterFields: FilterFieldDef[] = [
     { key: "q", label: "Buscar", type: "text", placeholder: "Título o dirección" },
@@ -103,31 +71,10 @@ export function ProjectsPage() {
   return (
     <div>
       <h1>Proyectos</h1>
-      <p className="page-subtitle">Un proyecto por dirección/espacio — instalación, evidencia y atestación.</p>
-
-      {canCreate && (
-      <form
-        className="inline-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (customerId && title) createMutation.mutate();
-        }}
-      >
-        <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
-          <option value="">Cliente...</option>
-          {(customers ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.legal_name}
-            </option>
-          ))}
-        </select>
-        <input placeholder="Título del proyecto" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        <input placeholder="Dirección" value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} />
-        <button type="submit" disabled={createMutation.isPending}>
-          Crear proyecto
-        </button>
-      </form>
-      )}
+      {/* Sin «Crear proyecto»: el proyecto nace solo cuando el expediente pasa a
+          «Aprobado» (field_ops/case_hooks.py). Uno creado a mano quedaba sin
+          expediente, programa ni etapas (revisión del 19 oct). */}
+      <p className="page-subtitle">Cada expediente aprobado crea su proyecto de instalación: permiso, instalación, acta y cobro.</p>
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={projects ?? []} isLoading={isLoading} getRowKey={(p) => p.id} emptyMessage="Sin proyectos para mostrar." />
