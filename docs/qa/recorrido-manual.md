@@ -199,7 +199,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 - **PDF:** §3 funcionalidades («Dashboard centralizado… Kanban»), §3.1.
 - **Pantallas:**
   - **Expedientes** (`/cases`) · `features/sales/CasesBoardPage.tsx` · API `GET /case-board`.
-  - **Documentos por revisar** (`/documents`) · `features/sales/DocumentsQueuePage.tsx` · API `GET /documents/review-queue`.
+  - **Por revisar › Documentos** (`/review`; `/documents` redirige) · `features/review/ReviewInboxPage.tsx` + `features/sales/DocumentsQueuePage.tsx` · API `GET /documents/review-queue`.
 - **Qué debe pasar:** tu expediente aparece en «Pendiente de aprobación» con el contador de días (PDF §3.1 y §7, «con contador de días»): **⏱ N días hábiles** desde que se envió a revisión, en la tarjeta del tablero, en la fila de la cola y bajo «Enviado» en la revisión. Gris mientras está a tiempo; en rojo y con «· límite L» desde el límite. La cola ordena del más antiguo al más nuevo, así que los rojos quedan arriba. Una devolución al vendedor no reinicia la cuenta.
 - **El límite y la alerta:** Notificaciones → **Alertas** (Administrador y Administración). Cambia «días hábiles en Pendiente de aprobación» (por defecto 3): el color del contador cambia al recargar. La alerta a la campana («Lleva N días hábiles sin aprobar») sale en la revisión diaria de las 14:00 UTC o al tocar **Revisar ahora**, que dice cuántos avisos creó. Tocarlo otra vez el mismo día dice «No había nada nuevo para avisar»: no repite avisos. API: `POST /notifications/alerts/run`.
 
@@ -281,7 +281,10 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 ### 4.1 Confirmar o devolver el acta
 
 - **PDF:** §3.4 («Recopilación de evidencias», «Consolidación del expediente de pago»).
-- **Pantalla:** paso **Confirmación de Administración** · `components/ReviewStep.tsx`.
+- **Cómo llega Administración:**
+  - **Aviso:** al cerrar el técnico, a quien tiene `checklists.approve` le llega a la campanita «Instalación cerrada: CASE-…», con enlace directo al paso 7. El técnico que cerró no lo recibe. Necesita el worker de avisos corriendo.
+  - **Bandeja:** menú **Por revisar › Actas por confirmar** (`/review?tab=actas`; `/acta-reviews` redirige · `ActaReviewQueuePage.tsx` · `GET /acta-reviews/pending`). Muestra las instalaciones cerradas sin confirmar, la más vieja primero, con expediente, técnico, fecha de cierre y días esperando. Al confirmar, el acta sale de la bandeja; si se devuelve y el técnico vuelve a cerrar, entra de nuevo. El técnico no la ve.
+- **Pantalla:** paso **Confirmación de Administración** · `components/ReviewStep.tsx`. El enlace `?paso=review` lo abre y baja hasta él.
 - **Qué hacer:** prueba primero **Devolver** con un motivo (el técnico corrige y vuelve a cerrar) y luego **Confirmar información técnica**.
 - **API:** `POST /projects/{id}/review/return`, `POST /projects/{id}/review/confirm`.
 - **Qué debe pasar:** sin esta confirmación no se puede crear el cobro.
@@ -289,6 +292,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 ### 4.2 Inspección
 
 - **PDF:** §3.5, §7 etapa 9.
+- **Cómo llega Administración:** **Por revisar › Inspección municipal** (`/review?tab=inspecciones` · `GET /inspection-queue`). Muestra las instalaciones cerradas sin inspección aprobada como «Sin agendar», «Agendada» (con fecha) o «Falló: reagendar», la cerrada hace más tiempo primero, con los días desde el cierre. La fila abre el proyecto en el paso Inspección (`?paso=inspection`). Al aprobarse la inspección, sale.
 - **Pantalla:** paso **Inspección** · `components/InspectionsPanel.tsx`.
 - **Qué hacer:** **Agendar inspección** (exige permiso radicado) → registrar resultado **fallido** con observaciones → el expediente vuelve a **Listo para instalar** para el re-trabajo → el técnico cierra de nuevo → reagendar → **Aprobada** (exige el permiso firmado por el inspector).
 - **API:** `POST /projects/{id}/inspections`, `POST /inspections/{id}/result`, `POST /inspections/{id}/signed-permit`.
@@ -312,6 +316,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 ### 5.1 Crear el cobro al programa (Administración o Contabilidad)
 
 - **PDF:** §3.4 («Radicación de cobro»), §4.3, §6 («No enviar a cobro sin checklist completo»).
+- **Cómo llega:** **Por revisar › Cobros por crear** (`/review?tab=cobros` · `GET /billing/to-create`): la misma lista «Por cobrar» de Facturación (actas confirmadas sin cobro). La fila abre el proyecto en el paso Cobro (`?paso=billing`). Contabilidad ve solo esta pestaña.
 - **Pantalla:** en el acta, paso **Cobro** · `components/BillingStep.tsx` → **Crear cobro**.
 - **API:** `GET /projects/{id}/billing/eligibility`, `POST /projects/{id}/claims`.
 - **Qué debe pasar:** el monto sale de la **tarifa vigente el día de la instalación**. El expediente pasa a **En cobro**. Crear un segundo cobro del mismo programa debe bloquearse.
@@ -533,5 +538,10 @@ Anota aquí cada cosa rara, aunque no estés seguro de que sea un error: la fech
 | 17 oct | La orden atrasada en la agenda salía en rojo y sin el enlace | Arreglado el choque de estilos (`397840d`) |
 | 17 oct | El CI de main fallaba por cobertura (68,5 %) | Coverage sigue los greenlets de SQLAlchemy: 89 % (`397840d`) |
 | 18 oct | «Equipos instalados» quedaba completo con el primer equipo; casi nada avisaba al guardar | Botón «Guardar equipos instalados» y avisos de guardado en toda la app (`1edaf0f`) |
-| 18 oct | Las firmas confundían en «Anexos», había que recargar para ver la del cliente y no había opción sin correo | Paso «Firmas del acta», «Consultar si ya firmó» y firma en el celular del técnico; el técnico ya no firma órdenes ajenas |
+| 18 oct | Las firmas confundían en «Anexos», había que recargar para ver la del cliente y no había opción sin correo | Paso «Firmas del acta», «Consultar si ya firmó» y firma en el celular del técnico; el técnico ya no firma órdenes ajenas (`31fc27a`, `f25924d`) |
+| 18 oct | El técnico no podía descargar el acta que firmó (403) | La descarga quien ve el proyecto (`63ddc0e`) |
+| 18 oct | El PDF del acta decía «CRM Field Ops» y las firmas salían solas en otra hoja | Título del documento, expediente y equipos; firmas junto al texto en una hoja |
+| 19 oct | Administración no sabía dónde confirmar el acta; «Crear proyecto» confundía | Aviso al cerrar, bandeja «Actas por confirmar»; sale «Crear proyecto» (el proyecto nace al aprobar el expediente) |
+| 19 oct | El trabajo de Administración estaba repartido; no había lista de inspecciones por agendar | Bandeja «Por revisar» con Documentos, Actas por confirmar, Inspección municipal y Cobros por crear |
+| 19 oct | Inicio daba 403 a Administración (tablero de finanzas) | La tarjeta pide el dato solo con `dashboards.finance` |
 |  |  |  |
