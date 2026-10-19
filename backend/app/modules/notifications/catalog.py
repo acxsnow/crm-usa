@@ -40,6 +40,11 @@ NOTICES: dict[str, dict] = {
         "title": "Instalación agendada: {{fecha}}",
         "body": "Tienes una instalación el {{fecha}}: {{cliente}}, {{direccion}}.",
     },
+    "installation.closed": {
+        "label": "Instalación cerrada: acta por confirmar", "audience": "Administración (checklists.approve)",
+        "title": "Instalación cerrada: {{expediente}}",
+        "body": "{{tecnico}} cerró la instalación de {{cliente}} ({{direccion}}). Revisa y confirma el acta.",
+    },
     "project.returned_to_technician": {
         "label": "Acta devuelta al técnico", "audience": "Técnico del proyecto",
         "title": "Acta devuelta: {{proyecto}}",
@@ -100,6 +105,7 @@ NOTICES: dict[str, dict] = {
 DEFAULT_PERMISSION = {
     "case.submitted": "cases.review",
     "case.approval_overdue": "cases.review",
+    "installation.closed": "checklists.approve",
     "claim.rejected": "billing.submit",
     "claim.paid": "billing.submit",
     "permit.expiring": "permits.manage",

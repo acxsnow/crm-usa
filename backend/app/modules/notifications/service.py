@@ -163,6 +163,17 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
         ctx["fecha"] = payload.get("scheduled_date", "")
         return ("installation.scheduled", await _user(db, payload.get("technician_user_id")), ctx,
                 f"/projects/{p.id}", ("project", str(p.id)))
+    if event == "installation.closed":
+        # A Administración, para que confirme el acta (spec 2026-10-19-actas-por-confirmar).
+        p, ctx = await _project_context(db, payload["project_id"])
+        if p is None:
+            return None, [], {}, None, (None, None)
+        cerro = payload.get("closed_by_user_id")
+        tecnico = await _user(db, cerro)
+        ctx["expediente"] = p.case_number or p.title
+        ctx["tecnico"] = tecnico[0].full_name if tecnico else "El técnico"
+        revisores = [u for u in await _users_with(db, org, DEFAULT_PERMISSION[event]) if str(u.id) != str(cerro)]
+        return (event, revisores, ctx, f"/projects/{p.id}?paso=review", ("project", str(p.id)))
     if event == "project.returned_to_technician":
         p, ctx = await _project_context(db, payload["project_id"])
         if p is None:
