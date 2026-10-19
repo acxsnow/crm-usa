@@ -241,6 +241,10 @@ class AttestationResponse(BaseModel):
     pdf_path: str | None
     generated_at: datetime | None
     is_fully_signed: bool
+    # Enlace de firma enviado al cliente y todavía usable, para que la pantalla
+    # lo sepa después de recargar.
+    customer_link_sent_to: str | None = None
+    customer_link_expires_at: datetime | None = None
     model_config = {"from_attributes": True}
 
 

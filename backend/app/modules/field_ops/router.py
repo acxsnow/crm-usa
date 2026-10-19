@@ -611,6 +611,7 @@ async def sign_as_technician(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     attestation = await field_ops_service.technician_sign(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id,
         signature_base64=payload.signature_base64,
@@ -624,6 +625,7 @@ async def request_customer_signature(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     token = await field_ops_service.create_customer_signature_request(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id
     )
@@ -638,6 +640,7 @@ async def sign_as_customer(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     attestation = await field_ops_service.customer_sign(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id,
         customer_name=payload.customer_name, signature_base64=payload.signature_base64,
@@ -651,13 +654,19 @@ async def get_attestation(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     result = await db.execute(
         select(Attestation).where(Attestation.project_id == project_id, Attestation.organization_id == organization_id)
     )
     attestation = result.scalar_one_or_none()
     if not attestation:
         raise HTTPException(status_code=404, detail="No attestation started for this project yet.")
-    return AttestationResponse.model_validate(attestation)
+    respuesta = AttestationResponse.model_validate(attestation)
+    enlace = await field_ops_service.pending_signature_link(db, attestation.id)
+    if enlace:
+        respuesta.customer_link_sent_to = enlace.recipient_email
+        respuesta.customer_link_expires_at = enlace.expires_at
+    return respuesta
 
 
 @router.get("/attestations/{attestation_id}/pdf")

@@ -26,7 +26,7 @@ from app.shared.files.storage import save_bytes
 from app.shared.datetime_utils import as_utc
 from app.shared.files.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
 from app.shared.audit import record_audit_event
-from app.shared.errors import InvalidInputError
+from app.shared.errors import ConflictError, InvalidInputError
 
 settings = get_settings()
 logger = structlog.get_logger(__name__)
@@ -390,6 +390,7 @@ async def technician_sign(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
 
     attestation = await _get_or_create_attestation(db, organization_id=organization_id, project_id=project_id)
+    _ensure_not_signed(attestation.technician_signed_at, "El técnico ya firmó el acta.")
     signature_bytes = decode_signature_png(signature_base64)
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"projects/{project_id}/attestation",
@@ -420,19 +421,28 @@ async def customer_sign(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
 
     attestation = await _get_or_create_attestation(db, organization_id=organization_id, project_id=project_id)
+    _ensure_not_signed(attestation.customer_signed_at, "El cliente ya firmó el acta.")
     signature_bytes = decode_signature_png(signature_base64)
     relative_path = save_bytes(
         organization_id=organization_id, subfolder=f"projects/{project_id}/attestation",
         filename="customer_signature.png", data=signature_bytes,
     )
-    attestation.customer_name = customer_name
+    now = datetime.now(timezone.utc)
+    attestation.customer_name = customer_name.strip()
     attestation.customer_signature_path = relative_path
-    attestation.customer_signed_at = datetime.now(timezone.utc)
+    attestation.customer_signed_at = now
+    # Firmó en persona: el enlace que se le haya enviado ya no sirve.
+    pendiente = await pending_signature_link(db, attestation.id)
+    if pendiente:
+        pendiente.revoked_at = now
 
     await _maybe_generate_pdf(db, organization_id=organization_id, project=project, attestation=attestation)
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=actor_id,
         action="attestation.customer_signed", entity_type="Attestation", entity_id=str(attestation.id),
+        # En el celular del técnico (spec 2026-10-18-firmas-del-acta); la del
+        # enlace queda como `attestation.customer_signed_public`.
+        after_data={"method": "in_person", "customer_name": attestation.customer_name},
     )
     await db.commit()
     await db.refresh(attestation)
@@ -449,6 +459,7 @@ async def create_customer_signature_request(
     if not customer or not customer.email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El cliente no tiene un correo registrado.")
     attestation = await _get_or_create_attestation(db, organization_id=organization_id, project_id=project_id)
+    _ensure_not_signed(attestation.customer_signed_at, "El cliente ya firmó el acta.")
     existing = (await db.execute(select(CustomerSignatureToken).where(CustomerSignatureToken.attestation_id == attestation.id))).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     if existing and existing.signed_at is not None:
@@ -482,12 +493,30 @@ async def create_customer_signature_request(
     return token
 
 
+def _ensure_not_signed(signed_at, message: str) -> None:
+    """Una firma no se reescribe (spec 2026-10-18-firmas-del-acta)."""
+    if signed_at is not None:
+        raise ConflictError(message, code="already_signed")
+
+
+async def pending_signature_link(db: AsyncSession, attestation_id: uuid.UUID) -> CustomerSignatureToken | None:
+    """El enlace de firma enviado y todavía usable: sin firmar, sin revocar y sin vencer."""
+    token = (await db.execute(
+        select(CustomerSignatureToken).where(CustomerSignatureToken.attestation_id == attestation_id)
+    )).scalar_one_or_none()
+    if not token or token.signed_at or token.revoked_at or as_utc(token.expires_at) < datetime.now(timezone.utc):
+        return None
+    return token
+
+
 async def get_public_signature_request(db: AsyncSession, *, raw_token: str) -> tuple[CustomerSignatureToken, Attestation, Project]:
     token = (await db.execute(select(CustomerSignatureToken).where(CustomerSignatureToken.token_hash == hash_token(raw_token)))).scalar_one_or_none()
     invalid = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El enlace no es válido o ya expiró.")
     if not token or token.revoked_at or token.signed_at or as_utc(token.expires_at) < datetime.now(timezone.utc):
         raise invalid
     attestation = (await db.execute(select(Attestation).where(Attestation.id == token.attestation_id))).scalar_one()
+    if attestation.customer_signed_at:
+        raise invalid
     project = (await db.execute(select(Project).where(Project.id == attestation.project_id))).scalar_one()
     if not token.opened_at:
         token.opened_at = datetime.now(timezone.utc)
