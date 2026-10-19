@@ -379,6 +379,31 @@ class InstallationGapsResponse(BaseModel):
     missing: list[str]
 
 
+class InspectionQueueRow(BaseModel):
+    """Una fila de «Por revisar» › Inspección municipal."""
+    project_id: uuid.UUID
+    case_id: uuid.UUID | None
+    case_number: str | None
+    title: str
+    customer_name: str | None
+    completed_date: date | None
+    status: str  # unscheduled | scheduled | failed
+    scheduled_for: datetime | None
+    days_since_close: int | None
+
+
+class PendingReviewRow(BaseModel):
+    """Una fila de «Actas por confirmar»."""
+    project_id: uuid.UUID
+    case_id: uuid.UUID | None
+    case_number: str | None
+    title: str
+    customer_name: str | None
+    technician_name: str | None
+    completed_date: date | None
+    days_waiting: int | None
+
+
 # --- Módulo 5: inspección ----------------------------------------------------
 
 class InspectionCreate(BaseModel):

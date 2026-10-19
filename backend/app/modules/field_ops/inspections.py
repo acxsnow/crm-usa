@@ -11,16 +11,42 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case, case_for_project, mark_substatus
 from app.modules.field_ops.catalogs import InspectionResult
+from app.modules.cases.models import Case
+from app.modules.crm.models import Customer
 from app.modules.field_ops.models import Inspection, Project, ProjectStatus
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+
+
+def inspection_queue_stmt(organization_id) -> Select:
+    """Bandeja «Por revisar» › Inspección municipal (spec 2026-10-19-bandeja-por-revisar):
+    instalaciones cerradas cuya última inspección no está aprobada (sin agendar,
+    agendada o fallida), la cerrada hace más tiempo primero. El último intento
+    es el de `inspections_of`: el más reciente en la agenda."""
+    def ultima(columna):
+        return (
+            select(columna).where(Inspection.project_id == Project.id)
+            .order_by(Inspection.scheduled_for.desc(), Inspection.created_at.desc())
+            .limit(1).correlate(Project).scalar_subquery()
+        )
+
+    resultado = ultima(Inspection.result)
+    return (
+        select(Project.id, Project.case_id, Case.case_number, Project.title, Customer.legal_name,
+               Project.completed_date, resultado.label("result"), ultima(Inspection.scheduled_for).label("scheduled_for"))
+        .outerjoin(Case, Case.id == Project.case_id)
+        .outerjoin(Customer, Customer.id == Project.customer_id)
+        .where(Project.organization_id == organization_id, Project.status == ProjectStatus.completed,
+               or_(resultado.is_(None), resultado != InspectionResult.passed.value))
+        .order_by(Project.completed_date.asc().nulls_last(), Project.id)
+    )
 
 
 async def inspections_of(db: AsyncSession, project_id: uuid.UUID) -> list[Inspection]:

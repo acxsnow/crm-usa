@@ -70,13 +70,13 @@ const NAV_GROUPS: NavGroup[] = [
       // NO hay ítem "Pipeline": `Opportunity` se retira. Su reemplazo es el
       // tablero de expedientes por etapa, dentro de Expedientes (módulo 2).
       {
-        // Solo para quien revisa: es la cola de "todo lo que llegó pendiente".
-        // Al vendedor no le sirve una pantalla aparte — sus adjuntos viven
-        // dentro del expediente, que es donde los sube.
-        label: "Documentos por revisar",
-        to: "/documents",
+        // La bandeja diaria de Administración (spec 2026-10-19-bandeja-por-revisar):
+        // documentos, actas por confirmar, inspección municipal y cobros por
+        // crear. Se ve con cualquiera de esos permisos; al vendedor no le sirve.
+        label: "Por revisar",
+        to: "/review",
         icon: "🗎",
-        permission: "documents.review",
+        permission: ["documents.review", "checklists.approve", "inspections.manage", "billing.submit"],
       },
     ],
   },

@@ -124,6 +124,17 @@ def _aging(cobros: list[RebateClaim], hoy: date, zona) -> dict:
     return {**tramos, "open_total": money_sum(tramos.values())}
 
 
+async def claims_to_create(db: AsyncSession, *, organization_id: uuid.UUID) -> list[dict]:
+    """Solo la lista «Por cobrar», para la bandeja «Por revisar» de Administración
+    (spec 2026-10-19-bandeja-por-revisar). Misma regla que el tablero."""
+    hoy = await org_today(db, organization_id)
+    zona = await org_zone(db, organization_id)
+    cobros = list((await db.execute(
+        select(RebateClaim).where(RebateClaim.organization_id == organization_id)
+    )).scalars().all())
+    return await _to_create(db, organization_id, hoy, zona, cobros)
+
+
 async def _to_create(db, organization_id, hoy: date, zona, cobros: list[RebateClaim]) -> list[dict]:
     """Actas confirmadas sin ningún cobro vivo (y expediente sin cerrar)."""
     con_cobro = {c.project_id for c in cobros if c.status != ClaimStatus.withdrawn}

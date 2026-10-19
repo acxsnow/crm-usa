@@ -10,10 +10,14 @@ cerrar, y queda pendiente de confirmar otra vez.
 El expediente NO retrocede: se reabre el acta, no la etapa. Así el reporte de
 tiempos dice la verdad y un expediente que ya está en cobro sigue en cobro.
 """
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.cases.models import Case
+from app.modules.crm.models import Customer
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.models import Project, ProjectReview, ProjectStatus
+from app.modules.users.models import User
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError
@@ -28,6 +32,30 @@ def add_review(db: AsyncSession, *, project: Project, action: str, reason: str |
     )
     db.add(review)
     return review
+
+
+def pending_reviews_stmt(organization_id) -> Select:
+    """«Actas por confirmar» (spec 2026-10-19-actas-por-confirmar): instalaciones
+    cerradas cuya última revisión no es una confirmación, la más vieja primero.
+    Una devuelta que el técnico vuelve a cerrar entra de nuevo."""
+    ultima = (
+        select(ProjectReview.action)
+        .where(ProjectReview.project_id == Project.id)
+        .order_by(ProjectReview.created_at.desc())
+        .limit(1)
+        .correlate(Project)
+        .scalar_subquery()
+    )
+    return (
+        select(Project.id, Project.case_id, Case.case_number, Project.title, Customer.legal_name,
+               User.full_name, Project.completed_date)
+        .outerjoin(Case, Case.id == Project.case_id)
+        .outerjoin(Customer, Customer.id == Project.customer_id)
+        .outerjoin(User, User.id == Project.primary_technician_user_id)
+        .where(Project.organization_id == organization_id, Project.status == ProjectStatus.completed,
+               or_(ultima.is_(None), ultima != "confirmed"))
+        .order_by(Project.completed_date.asc().nulls_last(), Project.id)
+    )
 
 
 def reopen_for_correction(project: Project) -> None:

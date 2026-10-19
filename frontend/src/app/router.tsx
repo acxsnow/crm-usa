@@ -11,6 +11,7 @@ import { DashboardHome } from "@/app/DashboardHome";
 import { CustomersPage } from "@/features/crm/CustomersPage";
 import { CustomerDetailPage } from "@/features/crm/CustomerDetailPage";
 import { ProjectsPage } from "@/features/field-ops/ProjectsPage";
+import { REVIEW_INBOX_PERMISSIONS, ReviewInboxPage } from "@/features/review/ReviewInboxPage";
 import { ChecklistTemplatesPage } from "@/features/field-ops/ChecklistTemplatesPage";
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
@@ -32,7 +33,6 @@ import { PayablesPage } from "@/features/finance/PayablesPage";
 import { FinanceClosePage } from "@/features/finance/FinanceClosePage";
 import { ReportsPage } from "@/features/finance/ReportsPage";
 import { PermitsPage } from "@/features/finance/PermitsPage";
-import { DocumentsQueuePage } from "@/features/sales/DocumentsQueuePage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { RolesPage } from "@/features/roles/RolesPage";
@@ -84,6 +84,16 @@ export const router = createBrowserRouter([
           </RequireAccess>
         ),
       },
+      {
+        path: "review",
+        element: (
+          <RequireAccess permission={[...REVIEW_INBOX_PERMISSIONS]} moduleLabel="Por revisar">
+            <ReviewInboxPage />
+          </RequireAccess>
+        ),
+      },
+      // Las colas viven ahora como pestañas de «Por revisar».
+      { path: "acta-reviews", element: <Navigate to="/review?tab=actas" replace /> },
       {
         path: "projects/:projectId",
         element: (
@@ -214,11 +224,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "documents",
-        element: (
-          <RequireAccess permission="documents.review" moduleLabel="Documentos por revisar">
-            <DocumentsQueuePage />
-          </RequireAccess>
-        ),
+        element: <Navigate to="/review" replace />,
       },
       {
         path: "cases/:caseId/form",

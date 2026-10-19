@@ -10,6 +10,7 @@ from app.api.deps import get_effective_permissions, get_organization_id, require
 from app.db.session import get_db
 from app.shared.datetime_utils import as_utc
 from app.shared.pagination import paginate, paginate_list, pagination_params
+from app.modules.field_ops.clock import org_today
 from app.modules.field_ops import checklist as checklist_service
 from app.modules.field_ops import inspections as inspections_service
 from app.modules.field_ops import installation as installation_service
@@ -47,6 +48,8 @@ from app.modules.field_ops.schemas import (
     EquipmentCreate,
     EquipmentResponse,
     InstallationGapsResponse,
+    PendingReviewRow,
+    InspectionQueueRow,
     MaterialCreate,
     MaterialResponse,
     PermitCreate,
@@ -881,7 +884,6 @@ async def dispatch_agenda(
 ):
     """Administración ve la agenda de todos; el técnico, solo la suya.
     Vistas en spec 2026-10-16-agenda-pendientes-historial."""
-    from app.modules.field_ops.clock import org_today
 
     stmt = installation_service.agenda_query(
         organization_id=organization_id, user=current_user, date_from=date_from, date_to=date_to,
@@ -984,6 +986,49 @@ async def field_catalogs(
 
 # --- Módulo 6: revisión administrativa del acta --------------------------------
 
+@router.get("/inspection-queue", response_model=list[InspectionQueueRow])
+async def inspection_queue(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("inspections.manage")),
+):
+    """«Por revisar» › Inspección municipal: instalaciones cerradas sin
+    inspección aprobada (spec 2026-10-19-bandeja-por-revisar)."""
+    limit, offset = pagination
+    filas = await paginate(db, inspections_service.inspection_queue_stmt(organization_id), limit=limit,
+                           offset=offset, response=response, scalars=False)
+    hoy = await org_today(db, organization_id)
+    estado = {None: "unscheduled", "pending": "scheduled", "failed": "failed"}
+    return [
+        InspectionQueueRow(project_id=f[0], case_id=f[1], case_number=f[2], title=f[3], customer_name=f[4],
+                           completed_date=f[5], status=estado.get(f[6], "scheduled"), scheduled_for=f[7],
+                           days_since_close=(hoy - f[5]).days if f[5] else None)
+        for f in filas
+    ]
+
+
+@router.get("/acta-reviews/pending", response_model=list[PendingReviewRow])
+async def pending_acta_reviews(
+    response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.approve")),
+):
+    """«Actas por confirmar»: instalaciones cerradas que esperan a Administración,
+    la más vieja primero (spec 2026-10-19-actas-por-confirmar)."""
+    limit, offset = pagination
+    filas = await paginate(db, reviews_service.pending_reviews_stmt(organization_id), limit=limit, offset=offset,
+                           response=response, scalars=False)
+    hoy = await org_today(db, organization_id)
+    return [
+        PendingReviewRow(project_id=f[0], case_id=f[1], case_number=f[2], title=f[3], customer_name=f[4],
+                         technician_name=f[5], completed_date=f[6],
+                         days_waiting=(hoy - f[6]).days if f[6] else None)
+        for f in filas
+    ]
+
+
 @router.post("/projects/{project_id}/review/confirm", response_model=ProjectResponse)
 async def confirm_technician_info(
     project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
@@ -1083,7 +1128,6 @@ async def list_all_permits(
 ) -> list[dict]:
     """Todos los permisos municipales, con su estado y vencimiento."""
     from app.modules.field_ops.catalogs import PERMIT_STATUS_LABELS
-    from app.modules.field_ops.clock import org_today
     from app.modules.field_ops.models import Permit
 
     hoy = await org_today(db, organization_id)

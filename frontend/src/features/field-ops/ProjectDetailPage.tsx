@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createTask,
@@ -24,7 +24,7 @@ import { ConditionsPanel } from "./components/ConditionsPanel";
 import { EquipmentPanel } from "./components/EquipmentPanel";
 import { InspectionsPanel } from "./components/InspectionsPanel";
 import { CloseInstallationStep, ReleaseOrderStep } from "./components/InstallationPanel";
-import { InstallationRecord, closeRequirements, deriveStates, useRecordData } from "./components/InstallationRecord";
+import { InstallationRecord, closeRequirements, deriveStates, openActaStep, useRecordData } from "./components/InstallationRecord";
 import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
 import { ReviewStep } from "./components/ReviewStep";
@@ -379,6 +379,11 @@ export function ProjectDetailPage() {
   });
 
   const recordData = useRecordData(projectId!, project?.status === "completed");
+  const paso = useSearchParams()[0].get("paso");
+  const proyectoListo = Boolean(project);
+  useEffect(() => {
+    if (paso && proyectoListo) openActaStep(paso);
+  }, [paso, proyectoListo]);
   const { data: installers } = useInstallers(hasPermission("dispatch.manage"));
 
   if (projectLoading || !project) return <p>Cargando...</p>;

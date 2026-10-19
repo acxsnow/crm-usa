@@ -16,12 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_organization_id, require_permission
 from app.db.session import get_db
 from app.modules.billing import claims as claims_service
-from app.modules.billing.dashboard import project_context
+from app.modules.billing.dashboard import claims_to_create, project_context
 from app.modules.billing.models import CLAIM_STATUS_LABELS
 from app.modules.billing.schemas import InvoiceResponse, Money, invoice_response
 from app.modules.field_ops.clock import org_today
 from app.modules.users.models import User
-from app.shared.pagination import paginate, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(tags=["billing-claims"])
 
@@ -369,6 +369,17 @@ class BillingDashboardResponse(BaseModel):
     aging: DashboardAging
     by_program: list[DashboardProgram]
     particular: DashboardParticular
+
+
+@router.get("/billing/to-create", response_model=list[DashboardToCreate])
+async def billing_to_create(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                            db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            current_user: User = Depends(require_permission("billing.submit"))):
+    """«Por revisar» › Cobros por crear: la lista «Por cobrar» del tablero, sola."""
+    limit, offset = pagination
+    return paginate_list(await claims_to_create(db, organization_id=organization_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.get("/billing/dashboard", response_model=BillingDashboardResponse)
