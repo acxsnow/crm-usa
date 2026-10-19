@@ -37,7 +37,8 @@ export function DashboardHome() {
   const canSeeCases =
     hasPermission("cases.read_own") || hasPermission("cases.read_all");
   const canSeeCustomers = hasPermission("customers.read");
-  const canSeeFinance = hasPermission("invoices.read");
+  // El tablero de finanzas exige `dashboards.finance`; con `invoices.read` Administración recibía 403 en Inicio.
+  const canSeeFinance = hasPermission("dashboards.finance");
   // Quien revisa abre el expediente en la revisión; el vendedor, en su formulario.
   const abreRevision = hasPermission("cases.review") || hasPermission("cases.approve") || hasPermission("documents.review");
 
