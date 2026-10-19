@@ -265,7 +265,10 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
   3. **Equipos instalados** con marca, modelo y serial · `components/EquipmentPanel.tsx` · `POST /projects/{id}/equipment`. Agregar el primero **no** completa el paso: queda «En curso» con «N registrados, falta guardar la lista» hasta tocar **Guardar equipos instalados** (`POST /projects/{id}/equipment/confirm`). Agregar o quitar uno después vuelve a pedir guardar, y el cierre pide «Guardar la lista de equipos instalados».
   - **Avisos de guardado:** cada acción que guarda muestra abajo un aviso corto («Cambios guardados.», «Equipo agregado…», «Equipos instalados guardados.»), que se cierra solo o al tocarlo. Marcar avisos como leídos no lo muestra.
   4. **Materiales** usados · `components/MaterialsPanel.tsx`.
-  5. **Firmas** del técnico y del cliente; la del cliente puede ser en sitio o por enlace remoto (página pública `/customer-signature` · `features/field-ops/CustomerSignaturePage.tsx`) · `POST /projects/{id}/attestation/technician-sign`, `.../customer-sign`, `.../customer-signature-request`.
+  5. **Firmas del acta** (paso propio del acta, ya no en «Anexos») · `components/SignaturesPanel.tsx`. Al tocar «Guardar equipos instalados» el acta abre este paso y baja hasta él. El técnico firma en el recuadro · `POST /projects/{id}/attestation/technician-sign`. El cliente firma de dos maneras:
+     - **Enlace por correo** · `.../customer-signature-request`, página pública `/customer-signature`. Tras enviarlo, la pantalla muestra a quién y hasta cuándo (también después de recargar) y el botón **Consultar si ya firmó**, que actualiza sin recargar.
+     - **En el celular del técnico**, para quien no tiene correo ni internet: «Que firme aquí, en este celular» → nombre y firma · `.../customer-sign`. En la auditoría queda como firma en persona, y el enlace pendiente deja de servir.
+     - Una firma no se puede rehacer (409), y un técnico no ve ni firma el acta de una orden que no es suya (404). Las firmas **no** bloquean el cierre: es una decisión pendiente con Mariana.
   6. **Cerrar instalación** · `components/InstallationPanel.tsx` · `GET /projects/{id}/installation/gaps`, `POST /projects/{id}/installation/close`.
 - **Qué debe pasar:** el expediente pasa a **Instalado**.
 - **Lo que debe bloquear** (PDF §5.5, «Bloqueo de finalización»): intenta cerrar sin la foto de fachada o sin las etiquetas del equipo nuevo; no debe dejar, y debe decir qué falta.
@@ -529,5 +532,6 @@ Anota aquí cada cosa rara, aunque no estés seguro de que sea un error: la fech
 | 17 oct | El técnico veía «Agregar cliente» y «Editar cliente» y recibía un 403 | Solo los ve quien tiene el permiso (`ed5f578`) |
 | 17 oct | La orden atrasada en la agenda salía en rojo y sin el enlace | Arreglado el choque de estilos (`397840d`) |
 | 17 oct | El CI de main fallaba por cobertura (68,5 %) | Coverage sigue los greenlets de SQLAlchemy: 89 % (`397840d`) |
-| 18 oct | «Equipos instalados» quedaba completo con el primer equipo; casi nada avisaba al guardar | Botón «Guardar equipos instalados» y avisos de guardado en toda la app |
+| 18 oct | «Equipos instalados» quedaba completo con el primer equipo; casi nada avisaba al guardar | Botón «Guardar equipos instalados» y avisos de guardado en toda la app (`1edaf0f`) |
+| 18 oct | Las firmas confundían en «Anexos», había que recargar para ver la del cliente y no había opción sin correo | Paso «Firmas del acta», «Consultar si ya firmó» y firma en el celular del técnico; el técnico ya no firma órdenes ajenas |
 |  |  |  |
