@@ -673,13 +673,16 @@ async def get_attestation(
 async def download_attestation_pdf(
     attestation_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
-    current_user: User = Depends(require_permission("reports.generate")),
+    # Quien ve el proyecto descarga su acta: el técnico, la de sus órdenes
+    # (antes pedía `reports.generate` y el técnico no podía bajar el acta que firmó).
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
     result = await db.execute(select(Attestation).where(Attestation.id == attestation_id, Attestation.organization_id == organization_id))
     attestation = result.scalar_one_or_none()
     if not attestation or not attestation.pdf_path:
         raise HTTPException(status_code=404, detail="Attestation PDF not generated yet (both signatures required).")
-    return FileResponse(str(absolute_path(attestation.pdf_path)), media_type="application/pdf", filename="atestacion.pdf")
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=attestation.project_id)
+    return FileResponse(str(absolute_path(attestation.pdf_path)), media_type="application/pdf", filename="acta-de-instalacion.pdf")
 
 
 # Public customer signing endpoints. They intentionally do not use CRM auth;

@@ -77,3 +77,23 @@ async def test_the_pending_link_is_part_of_the_acta(app_client, db, seeded_org, 
     await app_client.post(f"{base}/customer-sign", json=_firma("Marge Simpson"), headers=h)
     acta = (await app_client.get(base, headers=h)).json()
     assert acta["customer_link_sent_to"] is None
+
+
+async def test_the_assigned_technician_downloads_the_signed_acta(app_client, db, seeded_org, active_technician_user):
+    project, h = await _orden(app_client, db, seeded_org, active_technician_user)
+    base = f"/api/v1/projects/{project.id}/attestation"
+    await app_client.post(f"{base}/technician-sign", json=_firma(), headers=h)
+    acta = (await app_client.post(f"{base}/customer-sign", json=_firma("Marge Simpson"), headers=h)).json()
+    pdf = await app_client.get(f"/api/v1/attestations/{acta['id']}/pdf", headers=h)
+    assert pdf.status_code == 200, pdf.text
+    assert pdf.headers["content-type"] == "application/pdf"
+
+
+async def test_a_technician_cannot_download_the_acta_of_another_order(app_client, db, seeded_org, active_technician_user, active_admin_user):
+    project, h = await _orden(app_client, db, seeded_org)  # orden de otro
+    admin = await headers_for(app_client, "admin@acme-demo.com")
+    base = f"/api/v1/projects/{project.id}/attestation"
+    await app_client.post(f"{base}/technician-sign", json=_firma(), headers=admin)
+    acta = (await app_client.post(f"{base}/customer-sign", json=_firma("Marge Simpson"), headers=admin)).json()
+    assert (await app_client.get(f"/api/v1/attestations/{acta['id']}/pdf", headers=admin)).status_code == 200
+    assert (await app_client.get(f"/api/v1/attestations/{acta['id']}/pdf", headers=h)).status_code == 404
