@@ -155,6 +155,13 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "≡",
         permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
       },
+      // Las compras por adelantado: lo presupuestado por venir menos la existencia.
+      {
+        label: "Compras sugeridas",
+        to: "/warehouse/purchasing",
+        icon: "▧",
+        permission: ["budgets.manage", "budgets.approve", "warehouse.read"],
+      },
     ],
   },
   {

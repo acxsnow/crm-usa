@@ -11,10 +11,14 @@ from app.api.deps import get_organization_id, require_any_permission, require_pe
 from app.db.session import get_db
 from app.modules.users.models import User
 from app.modules.warehouse import service as wh
+from app.modules.warehouse import budgets as budget_svc
+from app.modules.warehouse import costing as costing_svc
 from app.modules.warehouse import kits as kit_svc
 from app.modules.warehouse import releases as rel
 from app.modules.warehouse import xlsx
 from app.modules.warehouse.catalogs import (
+    BUDGET_CATEGORIES,
+    BUDGET_STATUSES,
     ITEM_CATEGORIES,
     ITEM_UNITS,
     LINE_ORIGINS,
@@ -42,13 +46,22 @@ _deliver = require_any_permission("warehouse.deliver", "warehouse.manage")
 # Las listas predefinidas: las edita quien administra la bodega, las usa quien
 # arma la orden (el técnico).
 _kits = require_permission("warehouse.kits_manage")
+# El presupuesto del proyecto: lo arma el supervisor y lo aprueba quien tenga el
+# permiso de aprobación (puede ser la misma persona, es el caso de la respuesta
+# 17 del cuestionario: Administración hace las dos cosas).
+_budget_manage = require_permission("budgets.manage")
+_budget_approve = require_permission("budgets.approve")
+# Ver el presupuesto: lo ve quien lo arma, quien lo aprueba y Gerencia, que solo
+# tiene lectura de bodega.
+_budget_read = require_any_permission("warehouse.read", "budgets.manage", "budgets.approve")
 
 
 @router.get("/warehouse/catalogs")
 async def warehouse_catalogs(current_user: User = Depends(_read)) -> dict:
     return {"categories": ITEM_CATEGORIES, "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
             "location_kinds": LOCATION_KINDS, "release_statuses": RELEASE_STATUSES,
-            "line_origins": LINE_ORIGINS}
+            "line_origins": LINE_ORIGINS, "budget_categories": BUDGET_CATEGORIES,
+            "budget_statuses": BUDGET_STATUSES}
 
 
 # ---------------------------------------------------------------------------
@@ -492,3 +505,125 @@ async def apply_kit(kit_id: uuid.UUID, payload: ApplyKitIn, db: AsyncSession = D
     return {**(await rel.orders_out(db, organization_id, [order]))[0],
             "kit_name": resultado["kit"].name, "agregadas": resultado["agregadas"],
             "omitidas": resultado["omitidas"]}
+
+
+# ---------------------------------------------------------------------------
+# Presupuesto del proyecto (punto 3 del cuestionario)
+# ---------------------------------------------------------------------------
+
+class BudgetLineIn(BaseModel):
+    category: str = "materials"
+    item_id: uuid.UUID | None = None
+    description: str | None = Field(default=None, max_length=255)
+    quantity: str = "1"
+    unit: str | None = Field(default=None, max_length=20)
+    unit_cost: str | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class BudgetIn(BaseModel):
+    project_id: uuid.UUID | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    lines: list[BudgetLineIn] = Field(default_factory=list, max_length=300)
+
+
+class ApplyBudgetKitIn(BaseModel):
+    kit_id: uuid.UUID
+
+
+@router.get("/warehouse/budgets")
+async def list_budgets(response: Response, project_id: uuid.UUID | None = None, status: str | None = None,
+                       db: AsyncSession = Depends(get_db),
+                       organization_id: uuid.UUID = Depends(get_organization_id),
+                       pag: tuple[int, int] = Depends(pagination_params),
+                       current_user: User = Depends(_budget_read)) -> list[dict]:
+    budgets = await paginate(db, budget_svc.budgets_stmt(organization_id, project_id=project_id, status=status),
+                             limit=pag[0], offset=pag[1], response=response)
+    return await budget_svc.budgets_out(db, organization_id, budgets)
+
+
+@router.get("/warehouse/budgets/{budget_id}")
+async def get_budget(budget_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_budget_read)) -> dict:
+    budget = await budget_svc.get_budget(db, organization_id, budget_id)
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
+@router.post("/warehouse/budgets", status_code=201)
+async def create_budget(payload: BudgetIn, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_budget_manage)) -> dict:
+    budget = await budget_svc.save_budget(db, organization_id=organization_id, user=current_user,
+                                          data=payload.model_dump())
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
+@router.put("/warehouse/budgets/{budget_id}")
+async def update_budget(budget_id: uuid.UUID, payload: BudgetIn, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_budget_manage)) -> dict:
+    """Reemplaza el borrador completo. El proyecto no cambia."""
+    budget = await budget_svc.save_budget(db, organization_id=organization_id, user=current_user,
+                                          data=payload.model_dump(), budget_id=budget_id)
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
+@router.delete("/warehouse/budgets/{budget_id}", status_code=204)
+async def delete_budget(budget_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_budget_manage)) -> None:
+    await budget_svc.delete_budget(db, organization_id=organization_id, user=current_user, budget_id=budget_id)
+
+
+@router.post("/warehouse/budgets/{budget_id}/approve")
+async def approve_budget(budget_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_budget_approve)) -> dict:
+    """Aprueba el presupuesto; el anterior de la obra queda `reemplazado`."""
+    budget = await budget_svc.approve_budget(db, organization_id=organization_id, user=current_user,
+                                             budget_id=budget_id)
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
+@router.post("/warehouse/budgets/{budget_id}/apply-kit")
+async def apply_kit_to_budget(budget_id: uuid.UUID, payload: ApplyBudgetKitIn, db: AsyncSession = Depends(get_db),
+                              organization_id: uuid.UUID = Depends(get_organization_id),
+                              current_user: User = Depends(_budget_manage)) -> dict:
+    """Copia una lista predefinida al borrador del presupuesto."""
+    resultado = await budget_svc.apply_kit(db, organization_id=organization_id, user=current_user,
+                                           budget_id=budget_id, kit_id=payload.kit_id)
+    budget = resultado["budget"]
+    return {**(await budget_svc.budgets_out(db, organization_id, [budget]))[0],
+            "kit_name": resultado["kit"].name, "agregadas": resultado["agregadas"],
+            "omitidas": resultado["omitidas"]}
+
+
+@router.get("/warehouse/projects/{project_id}/budget")
+async def get_project_budget(project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                             organization_id: uuid.UUID = Depends(get_organization_id),
+                             current_user: User = Depends(_budget_read)) -> dict | None:
+    """El presupuesto vigente de la obra (el aprobado, o el borrador más
+    reciente). `null` cuando la obra todavía no tiene presupuesto."""
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    budget = await budget_svc.current_budget(db, organization_id, project.id)
+    if budget is None:
+        return None
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
+@router.get("/warehouse/projects/{project_id}/budget-vs-actual")
+async def get_budget_vs_actual(project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               current_user: User = Depends(_budget_read)) -> dict:
+    """El estimado del proyecto contra lo que de verdad costó, por categoría."""
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    return await costing_svc.budget_vs_actual(db, organization_id=organization_id, project_id=project.id)
+
+
+@router.get("/warehouse/purchasing")
+async def list_purchasing(db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_budget_read)) -> dict:
+    """Compras sugeridas: lo presupuestado por venir menos lo que hay en bodega."""
+    return await costing_svc.purchasing_report(db, organization_id)

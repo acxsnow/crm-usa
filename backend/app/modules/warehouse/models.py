@@ -245,3 +245,55 @@ class WarehouseKitItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 
     template: Mapped["WarehouseKitTemplate"] = relationship(
         "WarehouseKitTemplate", back_populates="items", lazy="raise")
+
+
+class ProjectBudget(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """El presupuesto de un proyecto (punto 3): lo que el supervisor estima antes
+    de instalar.
+
+    Se puede armar a mano o copiando una lista predefinida, y queda en `borrador`
+    hasta que lo aprueban. Solo el aprobado (`aprobado`) es el que se compara con
+    lo real; si después se aprueba otro del mismo proyecto, el anterior pasa a
+    `reemplazado` en vez de borrarse, para poder ver qué se estimó al principio.
+    """
+
+    __tablename__ = "project_budgets"
+    __table_args__ = (Index("ix_project_budgets_org_project", "organization_id", "project_id"),)
+
+    project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="borrador")
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    lines: Mapped[list["ProjectBudgetLine"]] = relationship(
+        "ProjectBudgetLine", back_populates="budget", lazy="raise")
+
+
+class ProjectBudgetLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un renglón del presupuesto: categoría, qué y cuánto.
+
+    El artículo del catálogo es **opcional**: la mano de obra o un permiso se
+    presupuestan con su descripción, y solo el material y el equipo salen del
+    catálogo. `amount` se guarda y no se recalcula al leer: el presupuesto es lo
+    que se aprobó, y corregir el costo del catálogo en marzo no cambia lo que se
+    aprobó en enero.
+    """
+
+    __tablename__ = "project_budget_lines"
+    __table_args__ = (Index("ix_project_budget_lines_org_budget", "organization_id", "budget_id"),)
+
+    budget_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("project_budgets.id", ondelete="CASCADE"), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(30), nullable=False, default="materials")
+    item_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), index=True)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False, default=Decimal("1"))
+    unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unit")
+    unit_cost: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    notes: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    budget: Mapped["ProjectBudget"] = relationship("ProjectBudget", back_populates="lines", lazy="raise")

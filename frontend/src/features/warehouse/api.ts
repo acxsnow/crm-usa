@@ -15,6 +15,8 @@ export interface WarehouseCatalogs {
   location_kinds: Record<string, string>;
   release_statuses: Record<string, string>;
   line_origins: Record<string, string>;
+  budget_categories: Record<string, string>;
+  budget_statuses: Record<string, string>;
 }
 
 /** Cuánto hay de un artículo en una ubicación concreta (bodega o camioneta). */
@@ -190,6 +192,100 @@ export interface ApplyKitResult extends WarehouseRelease {
   omitidas: number;
 }
 
+/** Un renglón del presupuesto: qué se estimó, cuánto y a qué costo. */
+export interface BudgetLine {
+  id: string;
+  category: string;
+  item_id: string | null;
+  item_name: string | null;
+  sku: string | null;
+  description: string;
+  quantity: string;
+  unit: string | null;
+  unit_label: string | null;
+  unit_cost: string;
+  amount: string;
+  notes: string | null;
+}
+
+/**
+ * El presupuesto de una obra (punto 3 del cuestionario).
+ *
+ * `borrador` se edita; `aprobado` es el que cuenta para la comparación contra lo
+ * real; `reemplazado` es el que quedó atrás cuando se aprobó otro.
+ */
+export interface ProjectBudget {
+  id: string;
+  project_id: string;
+  status: string;
+  notes: string | null;
+  created_at: string | null;
+  approved_at: string | null;
+  approved_by_user_id: string | null;
+  total: string;
+  by_category: Record<string, string>;
+  lines: BudgetLine[];
+}
+
+export interface BudgetLineInput {
+  category: string;
+  item_id?: string | null;
+  description?: string | null;
+  quantity: string;
+  unit?: string | null;
+  unit_cost?: string | null;
+  notes?: string | null;
+}
+
+export interface BudgetInput {
+  project_id?: string | null;
+  notes?: string | null;
+  lines: BudgetLineInput[];
+}
+
+export interface ApplyKitToBudgetResult extends ProjectBudget {
+  kit_name: string;
+  agregadas: number;
+  omitidas: number;
+}
+
+/** Una fila de «estimado contra real»: la categoría, el estimado, el real y su desviación. */
+export interface BudgetVsActualRow {
+  category: string;
+  label: string;
+  estimated: string;
+  actual: string;
+  deviation: string;
+  deviation_pct: number | null;
+}
+
+export interface BudgetVsActual {
+  project_id: string;
+  budget_id: string | null;
+  budget_status: string | null;
+  rows: BudgetVsActualRow[];
+  totals: { estimated: string; actual: string; deviation: string; deviation_pct: number | null };
+}
+
+/** Una fila de compras sugeridas: lo presupuestado por venir menos la existencia. */
+export interface PurchasingRow {
+  item_id: string;
+  item_name: string | null;
+  sku: string | null;
+  unit: string | null;
+  budgeted: string;
+  in_stock: string;
+  to_buy: string;
+  unit_cost: string;
+  estimated_cost: string;
+  below_minimum: boolean;
+}
+
+export interface PurchasingReport {
+  rows: PurchasingRow[];
+  totals: { budgeted: string; to_buy: string; items: number };
+}
+
 export interface ImportResult {
   creados: number;
   actualizados: number;
@@ -212,6 +308,10 @@ export const warehouseKeys = {
   releases: ["warehouse-releases"] as const,
   pendingReleases: ["warehouse-releases-pending"] as const,
   kits: ["warehouse-kits"] as const,
+  budgets: ["warehouse-budgets"] as const,
+  projectBudget: (projectId: string) => ["warehouse-project-budget", projectId] as const,
+  budgetVsActual: (projectId: string) => ["warehouse-budget-vs-actual", projectId] as const,
+  purchasing: ["warehouse-purchasing"] as const,
 };
 
 export const listStockPage = (page: number, pageSize: number, params: Record<string, string | boolean | undefined> = {}) =>
@@ -270,6 +370,41 @@ export const deleteKit = async (id: string) => {
 /** Copia la lista a un borrador de orden de salida. */
 export const applyKit = async (kitId: string, releaseId: string) =>
   (await apiClient.post<ApplyKitResult>(`/warehouse/kits/${kitId}/apply`, { release_id: releaseId })).data;
+
+// --- Presupuesto del proyecto y costo real (punto 3) -------------------------
+//
+// El presupuesto es de la obra, no de la bodega: se arma aquí y el gasto real
+// sale de las salidas valoradas, los gastos aprobados y las compras directas.
+
+export const listBudgetsPage = (page: number, pageSize: number, params: Record<string, string | boolean | undefined> = {}) =>
+  fetchPage<ProjectBudget>("/warehouse/budgets", page, pageSize, params);
+
+/** El presupuesto vigente de la obra: `null` cuando todavía no hay ninguno. */
+export const getProjectBudget = async (projectId: string) =>
+  (await apiClient.get<ProjectBudget | null>(`/warehouse/projects/${projectId}/budget`)).data;
+
+/** Crea o reemplaza el borrador completo. `id` vacío = nuevo. */
+export const saveBudget = async (id: string | null, data: BudgetInput) =>
+  id
+    ? (await apiClient.put<ProjectBudget>(`/warehouse/budgets/${id}`, data)).data
+    : (await apiClient.post<ProjectBudget>("/warehouse/budgets", data)).data;
+
+export const approveBudget = async (id: string) =>
+  (await apiClient.post<ProjectBudget>(`/warehouse/budgets/${id}/approve`)).data;
+
+export const deleteBudget = async (id: string) => {
+  await apiClient.delete(`/warehouse/budgets/${id}`);
+};
+
+/** Copia una lista predefinida al borrador del presupuesto. */
+export const applyKitToBudget = async (budgetId: string, kitId: string) =>
+  (await apiClient.post<ApplyKitToBudgetResult>(`/warehouse/budgets/${budgetId}/apply-kit`, { kit_id: kitId })).data;
+
+export const getBudgetVsActual = async (projectId: string) =>
+  (await apiClient.get<BudgetVsActual>(`/warehouse/projects/${projectId}/budget-vs-actual`)).data;
+
+export const getPurchasing = async () =>
+  (await apiClient.get<PurchasingReport>("/warehouse/purchasing")).data;
 
 /** Crea o actualiza un artículo. `id` vacío = nuevo. */
 export const saveItem = async (id: string | null, data: Record<string, unknown>) =>

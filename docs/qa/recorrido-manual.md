@@ -55,6 +55,8 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | 10. Reportes | Gerencia, Contabilidad, Administración | §7 | — |
 | 11. Bodega: cargar el catálogo | Administrador | cuestionario del 19 oct, punto 2 | — |
 | 12. Bodega: salidas autorizadas | Técnico, Administración | cuestionario del 19 oct, punto 1 | — |
+| 13. Bodega: listas predefinidas | Administración, Técnico | cuestionario del 19 oct, punto 2 | — |
+| 14. Presupuesto y costo real | Administración, Gerencia | cuestionario del 19 oct, punto 3 | — |
 
 ---
 
@@ -663,11 +665,81 @@ Avisos nuevos desde el 13 de octubre: **gasto por revisar** (a quien aprueba), *
 
 ---
 
+## Fase 14. Bodega: presupuesto del proyecto y costo real
+
+> Punto 3 del cuestionario del 19 de octubre: *«en cada proyecto se pueda hacer un presupuesto o un estimado y comparar con los gastos reales»*.
+>
+> La regla es una sola: **lo que entra a bodega es inventario, no costo de la obra** (D-BOD-2). El material se vuelve costo cuando **sale** para la obra. Por eso el mismo material nunca se cuenta dos veces: ni en la factura de compra ni en la entrega de bodega.
+
+**De dónde sale el costo real:** tres cosas, y ninguna es «lo que se compró».
+
+| Origen | Qué cuenta |
+|---|---|
+| Salidas de bodega | lo entregado a la obra, valorado a **costo del catálogo** (no al precio de venta) |
+| Gastos de campo aprobados | nafta, peajes, viáticos: lo que se gasta y no se presupuesta |
+| Compras directas a la obra | material o equipo facturado a la obra que **nunca pasó por bodega** |
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Ver el presupuesto y la comparación | Administrador, Administración, Gerencia | `warehouse.read`, `budgets.manage` o `budgets.approve` |
+| Armar, editar y borrar el borrador | Administrador, Administración | `budgets.manage` |
+| Aprobar el presupuesto | Administrador, Administración | `budgets.approve` |
+
+### 14.1 Armar el presupuesto de la obra
+
+- **Quién:** `admin@demo-org.com` o `administracion@demo-org.com`.
+- **Pantalla:** Proyectos → abre la obra → anexo **Presupuesto** · `features/warehouse/ProjectBudgetPanel.tsx` → botón **Armar presupuesto**.
+- **Qué hacer:**
+  1. Cada renglón es una **categoría** (Material, Equipo, Mano de obra, Contratista, Permiso, Servicios, Otro), una **cantidad** y un **costo unitario**. El monto se calcula solo.
+  2. Si eliges un artículo del catálogo, el sistema trae su nombre, su unidad y su costo; si es algo que no es del catálogo (una cuadrilla, un permiso), escribes la descripción a mano.
+  3. El atajo **Cargar la lista** copia de golpe una lista predefinida por tipo de trabajo (punto 2): el material entra como **Material** y lo que el catálogo marca como equipo entra como **Equipo**. Aplicarla dos veces no repite el material.
+  4. Guarda el borrador. Todavía no cuenta para nada.
+- **API:** `GET /warehouse/catalogs`, `GET /warehouse/items`, `GET /warehouse/kits?active=true`, `POST /warehouse/budgets`, `PUT /warehouse/budgets/{id}`, `POST /warehouse/budgets/{id}/apply-kit`.
+- **Qué debe pasar:** el borrador queda con sus renglones y su total. Nada de la obra cambia hasta aprobarlo.
+- **Lo que no debe poder hacer:** una cantidad en cero o negativa se rechaza (`invalid_budget_quantity`, 400); una categoría que no está en el catálogo se rechaza (`invalid_budget_category`, 400); el técnico **no** arma presupuesto (403); otra organización no ve ni toca el presupuesto ajeno (404).
+
+### 14.2 Aprobar (y qué pasa con el anterior)
+
+- **Quién:** quien tenga `budgets.approve`.
+- **Pantalla:** la misma sección → botón **Aprobar presupuesto**.
+- **Qué hacer:** con el borrador listo, apruébalo (también puedes seguir editándolo antes).
+- **API:** `POST /warehouse/budgets/{id}/approve`.
+- **Qué debe pasar:**
+  - El presupuesto queda **Aprobado** con la fecha y quién lo aprobó. **Ese** es el que usa la comparación.
+  - Si apruebas **otro** presupuesto de la misma obra, el anterior **no se borra**: queda como **Reemplazado**. Así el histórico se conserva y `GET /warehouse/budgets?status=aprobado` devuelve siempre uno solo por obra.
+  - Un presupuesto **aprobado no se edita ni se borra** (`budget_not_editable`, 400): para cambiarlo hay que armar otro borrador y aprobarlo.
+  - Aprobar sin renglones responde `empty_budget` (400).
+
+### 14.3 Ver el estimado contra el real
+
+- **Quién:** cualquiera de los tres roles de arriba.
+- **Pantalla:** la sección **Presupuesto** de la obra → tabla **Estimado contra real**.
+- **Qué hacer:** lee la tabla por categoría: **Estimado**, **Real**, **Desviación** y **%**. La desviación es `real − estimado`: **positiva** quiere decir que se gastó **más** de lo presupuestado.
+- **API:** `GET /warehouse/projects/{id}/budget`, `GET /warehouse/projects/{id}/budget-vs-actual`.
+- **Qué debe pasar:**
+  - **Sin doble conteo:** compra de tubo facturada a la obra **y** ese tubo entra a bodega → **no** aparece como costo. Sale a la obra (orden de salida entregada) → **ahí sí** aparece, valorado a costo del catálogo. La prueba manual: factura de 20 pies por $100 cargada a la obra y 8 pies entregados a $5 → Material real = **$40**, no $100.
+  - **Compra directa sí cuenta:** un equipo facturado a la obra que nunca pasó por bodega es costo desde el primer día.
+  - **Los gastos de campo aprobados suman** en su propia fila (**Gastos de campo**), que no tiene estimado porque no se presupuesta. Nadie aprueba su propio gasto (`own_expense`, 403): quien sube el gasto no puede aprobarlo.
+  - La obra **sin presupuesto** muestra la comparación en cero y el aviso «Esta obra todavía no tiene presupuesto».
+
+### 14.4 Compras sugeridas del fin de semana
+
+- **Quién:** Administración (o Gerencia, que solo mira).
+- **Pantalla:** Bodega → **Compras sugeridas** (`/warehouse/purchasing`) · `features/warehouse/WarehousePurchasingPage.tsx`.
+- **Qué hacer:** mira la tabla por artículo: **Presupuestado**, **En bodega**, **Por comprar**, costo unitario y **costo estimado** de lo que falta. Arriba de todo va el total a comprar.
+- **API:** `GET /warehouse/purchasing`.
+- **Qué debe pasar:** «presupuestado por venir» son los presupuestos **aprobados** de obras que **todavía no terminaron**; lo de una obra ya terminada **no** se vuelve a comprar y un borrador **sin aprobar tampoco cuenta**. La columna **Por comprar** nunca es negativa: **sobrar no es comprar**. Si el artículo está en o bajo su mínimo, lo dice.
+- **Lo que no debe poder hacer:** otra organización no ve nada de esta obra (lista vacía).
+
+---
+
 ## Lo que todavía no existe (no lo busques)
 
 El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
 
-De bodega ya están **el catálogo, las existencias** (fase 11), **las salidas con autorización electrónica** (fase 12) y **las listas predefinidas por tipo de trabajo** (fase 13). Todavía **no** existen: el presupuesto del proyecto comparado con lo real y las compras por adelantado (punto 3), y el diario de obra día por día (punto 4).
+De bodega ya están **el catálogo, las existencias** (fase 11), **las salidas con autorización electrónica** (fase 12), **las listas predefinidas por tipo de trabajo** (fase 13) y **el presupuesto del proyecto contra el costo real, con las compras sugeridas** (fase 14). Todavía **no** existe el diario de obra día por día (punto 4).
 
 Falta cargar las listas reales del cliente: mientras no llegue su listado por tipo de trabajo, las listas se arman a mano en la pantalla.
 

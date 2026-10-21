@@ -29,6 +29,8 @@ import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
 import { ReviewStep } from "./components/ReviewStep";
 import { BillingStep } from "./components/BillingStep";
+import { ProjectBudgetPanel } from "@/features/warehouse/ProjectBudgetPanel";
+import { hasAnyPermission } from "@/config/navigation";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
@@ -328,6 +330,9 @@ export function ProjectDetailPage() {
   // Contabilidad abre el acta para cobrar pero no ve evidencias: sin esto la
   // pantalla las pedía igual y recibía 403 (QA-REG-10).
   const puedeVerEvidencias = hasPermission("evidence.read_all") || hasPermission("evidence.read_assigned");
+  // El presupuesto de la obra: lo ve quien lo arma, quien lo aprueba y quien solo
+  // tiene lectura de bodega (Gerencia). Los mismos permisos que exige la API.
+  const puedeVerPresupuesto = hasAnyPermission(["budgets.manage", "budgets.approve", "warehouse.read"], user);
   // De dónde se llegó (la Agenda o la lista de proyectos lo pasan al abrir).
   // Sin eso, por ejemplo con un enlace directo, se vuelve a Proyectos.
   const volver = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? {};
@@ -539,6 +544,8 @@ export function ProjectDetailPage() {
         )}
 
         <TaskBoard projectId={project.id} />
+
+        {puedeVerPresupuesto && <ProjectBudgetPanel projectId={project.id} />}
       </section>
     </div>
   );

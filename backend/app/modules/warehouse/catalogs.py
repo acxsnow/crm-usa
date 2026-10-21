@@ -123,6 +123,46 @@ RELEASE_TRANSITIONS: dict[str, tuple[str, ...]] = {
 }
 
 
+# El presupuesto del proyecto (punto 3). Los códigos son los mismos que ya usa
+# el costo real (`finance/models.py::COST_CATEGORIES`) más `labor`: comparar
+# estimado contra real por categoría exige que la categoría del presupuesto y la
+# del gasto sean el mismo texto, o el reporte queda con dos filas para lo mismo.
+class BudgetCategory(StrEnum):
+    MATERIALS = "materials"
+    EQUIPMENT = "equipment"
+    LABOR = "labor"
+    CONTRACTOR = "contractor"
+    PERMIT = "permit"
+    SERVICES = "services"
+    OTHER = "other"
+
+
+BUDGET_CATEGORIES: dict[str, str] = {
+    BudgetCategory.MATERIALS: "Material",
+    BudgetCategory.EQUIPMENT: "Equipo",
+    BudgetCategory.LABOR: "Mano de obra",
+    BudgetCategory.CONTRACTOR: "Contratista",
+    BudgetCategory.PERMIT: "Permiso",
+    BudgetCategory.SERVICES: "Servicios",
+    BudgetCategory.OTHER: "Otro",
+}
+
+# `borrador` se edita; `aprobado` es el que cuenta para la comparación;
+# `reemplazado` es el que quedó atrás cuando se aprobó otro: el historial no se
+# borra, pero solo un presupuesto por proyecto está vigente.
+class BudgetStatus(StrEnum):
+    BORRADOR = "borrador"
+    APROBADO = "aprobado"
+    REEMPLAZADO = "reemplazado"
+
+
+BUDGET_STATUSES: dict[str, str] = {
+    BudgetStatus.BORRADOR: "Borrador",
+    BudgetStatus.APROBADO: "Aprobado",
+    BudgetStatus.REEMPLAZADO: "Reemplazado",
+}
+
+
 def code_of(label: str | None, catalog: dict[str, str], fallback: str) -> tuple[str, bool]:
     """Código del catálogo a partir de la etiqueta que trae el Excel.
 

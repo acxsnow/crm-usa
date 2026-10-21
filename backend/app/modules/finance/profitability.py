@@ -33,8 +33,14 @@ def _spread(total_extra: Decimal, partes: list[Decimal]) -> list[Decimal]:
     return repartos
 
 
-async def project_costs(db: AsyncSession, organization_id, project_ids: set) -> dict:
-    """{project_id: {categoría: Decimal}} para los proyectos dados."""
+async def project_costs(db: AsyncSession, organization_id, project_ids: set, *,
+                        exclude_line_ids: set | None = None) -> dict:
+    """{project_id: {categoría: Decimal}} para los proyectos dados.
+
+    `exclude_line_ids` deja fuera líneas concretas: lo usa el costo real del
+    proyecto (bodega) para no contar dos veces el material que entró a bodega
+    (decisión D-BOD-2), porque ese costo llega cuando el material sale.
+    """
     costos: dict = {pid: {k: ZERO for k in COST_KEYS} for pid in project_ids}
     if not project_ids:
         return costos
@@ -44,7 +50,9 @@ async def project_costs(db: AsyncSession, organization_id, project_ids: set) -> 
             SupplierInvoiceLine.project_id.in_(project_ids)))))).scalars().all()
     for inv in facturas:
         extra = to_money(inv.tax) + to_money(inv.shipping)
-        lineas = list(inv.lines)
+        lineas = [l for l in inv.lines if exclude_line_ids is None or l.id not in exclude_line_ids]
+        if not lineas:
+            continue
         repartos = _spread(extra, [to_money(l.amount) for l in lineas])
         for l, r in zip(lineas, repartos):
             if l.project_id in costos:

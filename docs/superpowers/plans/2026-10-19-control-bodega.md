@@ -110,19 +110,20 @@
 
 ### Task 3.1: Presupuesto del proyecto
 
-- [ ] `project_budgets` y `project_budget_lines` en la migración `0030_...`.
-- [ ] Pruebas (`tests/test_project_budgets.py`): crear y aprobar presupuesto; generar desde una lista predefinida; una sola aprobación vigente; aislamiento por organización.
+- [x] `project_budgets` y `project_budget_lines` en la migración `0030_...`.
+- [x] Pruebas (`tests/test_project_budgets.py`): crear y aprobar presupuesto; generar desde una lista predefinida; una sola aprobación vigente; aislamiento por organización. (7 pruebas en verde.)
 
 ### Task 3.2: Estimado contra real
 
-- [ ] Costo real del proyecto = salidas de bodega valoradas a costo del catálogo + `expenses` + compras directas a la obra (`supplier_invoice_lines` sin paso por bodega). Sin doble conteo (D-BOD-2).
-- [ ] Pruebas: un material que entra por factura y luego sale no se cuenta dos veces; un equipo comprado directo a la obra sí cuenta; gastos aprobados del proyecto suman.
-- [ ] `GET /warehouse/projects/{id}/budget-vs-actual` con desviación por categoría y total, y `GET /warehouse/purchasing` (compras sugeridas = presupuestado por venir − existencia).
-- [ ] `WarehousePurchasingPage` (`/warehouse/purchasing`) y sección «Presupuesto» en el proyecto con la comparación.
+- [x] Costo real del proyecto = salidas de bodega valoradas a costo del catálogo (o al del artículo si el movimiento no lo guardó) + `expenses` + compras directas a la obra (`supplier_invoice_lines` sin paso por bodega). Sin doble conteo (D-BOD-2).
+- [x] Pruebas (`tests/test_project_costing.py`): un material que entra por factura y luego sale no se cuenta dos veces; un equipo comprado directo a la obra sí cuenta; gastos aprobados del proyecto suman. (6 pruebas en verde.)
+- [x] `GET /warehouse/projects/{id}/budget-vs-actual` con desviación por categoría y total, y `GET /warehouse/purchasing` (compras sugeridas = presupuestado por venir − existencia).
+- [x] `WarehousePurchasingPage` (`/warehouse/purchasing`) y sección «Presupuesto» en el proyecto con la comparación (`ProjectBudgetPanel`).
+- [x] `npm run build` y `check_hooks.py`.
 
 ### Task 3.3: Verificación
 
-- [ ] `pytest -q` y `test_finance.py` en verde (no se rompe lo que ya cuenta costos).
+- [x] `pytest -q` en verde (603 pruebas) y `test_finance.py` en verde.
 - [ ] Navegador: presupuestar un proyecto, entregar material, cerrar y ver la desviación.
 
 ---
