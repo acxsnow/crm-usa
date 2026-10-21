@@ -53,14 +53,14 @@ async def _entrada(app_client, headers, item_id, cantidad) -> dict:
     return r.json()
 
 
-async def _entregar(app_client, headers, item_id, project_id, cantidad) -> dict:
-    """Arma, manda a autorizar, autoriza y entrega: el camino del punto 1."""
+async def _entregar(app_client, headers, item_id, project_id, cantidad, *, autoriza) -> dict:
+    """Arma, manda a autorizar, autoriza (otra persona) y entrega: el camino del punto 1."""
     r = await app_client.post(f"{API}/warehouse/releases", json={
         "project_id": str(project_id), "lines": [{"item_id": item_id, "quantity": cantidad}]}, headers=headers)
     assert r.status_code == 201, r.text
     orden_id = r.json()["id"]
-    for paso in ("submit", "approve", "deliver"):
-        r = await app_client.post(f"{API}/warehouse/releases/{orden_id}/{paso}", headers=headers)
+    for paso, quien in (("submit", headers), ("approve", autoriza), ("deliver", headers)):
+        r = await app_client.post(f"{API}/warehouse/releases/{orden_id}/{paso}", headers=quien)
         assert r.status_code == 200, r.text
     return r.json()
 
@@ -119,8 +119,9 @@ def _fila(comparacion: dict, categoria: str) -> dict:
 # ---------------------------------------------------------------------------
 
 async def test_el_material_que_entra_por_factura_y_luego_sale_no_se_cuenta_dos_veces(
-        app_client, login, db, seeded_org, active_admin_user):
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
     admin = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     org = seeded_org["org"]
     org_id = org.id
     _, project = await approved_case_with_project(db, org.id)
@@ -151,7 +152,7 @@ async def test_el_material_que_entra_por_factura_y_luego_sale_no_se_cuenta_dos_v
                              source_key=costing_svc.warehouse_entry_key(linea.id))
 
     # Ahora sí sale a la obra: 8 pies. Ese es el costo del proyecto.
-    await _entregar(app_client, admin, tubo["id"], project_id, "8")
+    await _entregar(app_client, admin, tubo["id"], project_id, "8", autoriza=autoriza)
 
     comparacion = await _comparacion(app_client, admin, project_id)
     # El tubo cuenta una sola vez: los 40 de lo entregado, no los 100 de la
@@ -194,8 +195,9 @@ async def test_los_gastos_aprobados_del_proyecto_suman_al_costo_real(
 
 
 async def test_la_desviacion_por_categoria_sale_del_presupuesto_aprobado(
-        app_client, login, db, seeded_org, active_admin_user):
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
     admin = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     _, project = await approved_case_with_project(db, seeded_org["org"].id)
     tubo = await _item(app_client, admin, "Tubo cobre 3/8", costo="5.00")
     await _entrada(app_client, admin, tubo["id"], "100")
@@ -207,7 +209,7 @@ async def test_la_desviacion_por_categoria_sale_del_presupuesto_aprobado(
     ])
 
     # Y se usaron 8 pies: 40 de material, contra los 50 estimados.
-    await _entregar(app_client, admin, tubo["id"], project.id, "8")
+    await _entregar(app_client, admin, tubo["id"], project.id, "8", autoriza=autoriza)
 
     comparacion = await _comparacion(app_client, admin, project.id)
     assert _fila(comparacion, "materials") == {

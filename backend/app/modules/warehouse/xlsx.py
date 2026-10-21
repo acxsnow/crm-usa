@@ -107,12 +107,21 @@ def _read_sheet(z: zipfile.ZipFile, path: str, compartidas: list[str]) -> list[l
     return filas
 
 
+# Un .xlsx es un zip: sin estos topes, un archivo de 5 MB podría descomprimir
+# gigas en memoria (bomba zip). Un catálogo real queda muy por debajo.
+MAX_UNCOMPRESSED_MEMBER = 50 * 1024 * 1024
+MAX_UNCOMPRESSED_TOTAL = 150 * 1024 * 1024
+
+
 def read_sheets(data: bytes) -> dict[str, list[list]]:
     """Todas las hojas del libro: `{nombre: [[celda, …], …]}`."""
     try:
         z = zipfile.ZipFile(BytesIO(data))
     except zipfile.BadZipFile as exc:
         raise NotAnXlsxError("El archivo no es un Excel (.xlsx) válido.") from exc
+    tamanos = [info.file_size for info in z.infolist()]
+    if any(t > MAX_UNCOMPRESSED_MEMBER for t in tamanos) or sum(tamanos) > MAX_UNCOMPRESSED_TOTAL:
+        raise NotAnXlsxError("El Excel es demasiado grande para importarlo.")
     try:
         compartidas = _shared_strings(z)
         return {nombre: _read_sheet(z, path, compartidas) for nombre, path in _sheet_paths(z)}

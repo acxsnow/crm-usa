@@ -148,6 +148,10 @@ async def review(db, *, organization_id, user, expense_id, approve: bool, notes:
 
 async def reimburse(db, *, organization_id, user, expense_id, paid_on: date, reference: str | None) -> Expense:
     e = await get_expense(db, organization_id, expense_id)
+    # Separación de funciones: nadie se paga a sí mismo su propio gasto.
+    if e.user_id == user.id:
+        raise ForbiddenError("Otra persona debe registrar el reembolso de tu gasto.",
+                             code="expense_self_reimbursement")
     if e.status != "approved":
         raise ConflictError("Solo se reembolsa un gasto aprobado.", code="expense_not_approved")
     if e.payment_method != "own_money":

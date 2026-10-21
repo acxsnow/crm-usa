@@ -213,6 +213,8 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
                "fecha": inv.due_date.isoformat()}
         return ("payable.pending_approval", await _users_with(db, org, "payables.approve"), ctx,
                 "/payables", ("supplier_invoice", str(inv.id)))
+    if event in ("payable.paid_now", "supplier.bank_changed"):
+        return await _payables_alert(db, org, event, payload)
     if event == "warehouse.release_pending":
         return await _release_pending(db, org, payload)
     if event == "warehouse.release_delivered":
@@ -228,6 +230,31 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
                  "minimo": payload.get("minimo", "")},
                 "/warehouse?filtro=bajo", ("warehouse_item", str(item.id)))
     return None, [], {}, None, (None, None)
+
+
+async def _payables_alert(db, org, event: str, payload: dict) -> tuple:
+    """Controles de cuentas por pagar: van a quien aprueba pagos, menos a quien
+    hizo el cambio (no se avisa a sí mismo)."""
+    from app.modules.finance.models import Supplier, SupplierInvoice
+    from app.modules.users.models import User
+
+    autor = await db.get(User, uuid.UUID(str(payload["user_id"]))) if payload.get("user_id") else None
+    if event == "payable.paid_now":
+        inv = await db.get(SupplierInvoice, uuid.UUID(str(payload["invoice_id"])))
+        if inv is None:
+            return None, [], {}, None, (None, None)
+        prov = await db.get(Supplier, inv.supplier_id)
+        ctx = {"proveedor": prov.name if prov else "", "factura": inv.number, "monto": f"${inv.total}"}
+        destino, entidad = "/payables", ("supplier_invoice", str(inv.id))
+    else:
+        prov = await db.get(Supplier, uuid.UUID(str(payload["supplier_id"])))
+        if prov is None:
+            return None, [], {}, None, (None, None)
+        ctx = {"proveedor": prov.name}
+        destino, entidad = "/payables?tab=suppliers", ("supplier", str(prov.id))
+    ctx["persona"] = autor.full_name if autor else ""
+    quienes = [u for u in await _users_with(db, org, "payables.approve") if not autor or u.id != autor.id]
+    return event, quienes, ctx, destino, entidad
 
 
 async def _release_pending(db, org, payload: dict) -> tuple:

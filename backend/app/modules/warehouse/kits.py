@@ -158,7 +158,7 @@ async def apply_to_release(db: AsyncSession, *, organization_id, user, kit_id, r
     mismo calibre) no se repite: un doble clic no manda el material dos veces.
     """
     kit = await get_kit(db, organization_id, kit_id)
-    order = await rel.get_order(db, organization_id, release_id)
+    order = await rel.get_own_draft(db, organization_id, user, release_id)
     if order.status != "borrador":
         raise InvalidInputError("Una orden ya enviada no se edita; recházala y haz otra.",
                                 code="release_not_editable")

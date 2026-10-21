@@ -90,6 +90,16 @@ NOTICES: dict[str, dict] = {
         "title": "Factura por aprobar: {{proveedor}} {{factura}}",
         "body": "{{proveedor}} · factura {{factura}} por {{monto}}, vence el {{fecha}}.",
     },
+    "payable.paid_now": {
+        "label": "Factura de proveedor pagada al momento", "audience": "Quien aprueba pagos (payables.approve)",
+        "title": "Pagada al momento: {{proveedor}} {{factura}}",
+        "body": "{{persona}} registró la factura {{factura}} de {{proveedor}} por {{monto}} como pagada al momento.",
+    },
+    "supplier.bank_changed": {
+        "label": "Cambiaron los datos bancarios de un proveedor", "audience": "Quien aprueba pagos (payables.approve)",
+        "title": "Datos bancarios cambiados: {{proveedor}}",
+        "body": "{{persona}} cambió los datos bancarios de {{proveedor}}. Confírmalo con el proveedor antes del próximo pago.",
+    },
     "payable.due_soon": {
         "label": "Alerta: factura de proveedor por vencer", "audience": "Cuentas por pagar",
         "title": "Vence el {{fecha}}: {{proveedor}} {{factura}}",
@@ -128,6 +138,8 @@ DEFAULT_PERMISSION = {
     "permit.expiring": "permits.manage",
     "expense.submitted": "expenses.approve",
     "payable.pending_approval": "payables.approve",
+    "payable.paid_now": "payables.approve",
+    "supplier.bank_changed": "payables.approve",
     "supplier.document_expiring": "suppliers.manage",
     "warehouse.release_pending": "warehouse.approve_release",
     "warehouse.stock_low": "warehouse.manage",

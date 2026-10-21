@@ -18,6 +18,7 @@ EVENTS = (
     "installation.closed",
     "project.returned_to_technician", "claim.rejected", "claim.paid",
     "expense.submitted", "expense.reviewed", "payable.pending_approval",
+    "payable.paid_now", "supplier.bank_changed",
     # Bodega (cuestionario del 19 de octubre, punto 1).
     "warehouse.release_pending", "warehouse.release_delivered", "warehouse.stock_low",
 )

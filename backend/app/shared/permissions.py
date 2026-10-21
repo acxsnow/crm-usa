@@ -431,8 +431,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "dispatch.read_own",
         "expenses.create_own",
         # Pide su salida de material y llena el diario del día; no ve saldos ni
-        # costos (review focus del plan).
-        "warehouse.read",
+        # costos (review focus del plan): el catálogo le llega sin costos por
+        # `warehouse.request_release`, sin `warehouse.read` (migración 0032).
         "warehouse.request_release",
         "daylogs.manage",
         "notifications.read_own",

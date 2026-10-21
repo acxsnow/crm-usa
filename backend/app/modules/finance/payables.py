@@ -94,6 +94,12 @@ async def save_supplier(db, *, organization_id, user, data: dict, supplier_id=No
     else:
         s = Supplier(organization_id=organization_id)
         db.add(s)
+    # Cambiar la cuenta del proveedor es el fraude clásico: solo Contabilidad
+    # (`payables.manage`) lo hace, queda en la auditoría y se avisa a quien aprueba.
+    banco_cambia = "bank_details" in datos and (datos["bank_details"] or None) != (s.bank_details or None)
+    if banco_cambia and "payables.manage" not in get_effective_permissions(user):
+        raise ForbiddenError("Solo Contabilidad puede cambiar los datos bancarios del proveedor.",
+                             code="bank_details_forbidden")
     for campo in ("name", "legal_name", "tax_id", "kinds", "contact_name", "phone", "email", "address", "states",
                   "payment_terms_days", "payment_method", "bank_details", "license_number", "license_expires_on",
                   "insurance_expires_on", "w9_on_file", "notes", "active"):
@@ -102,9 +108,12 @@ async def save_supplier(db, *, organization_id, user, data: dict, supplier_id=No
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="suppliers.updated" if supplier_id else "suppliers.created",
                              entity_type="supplier", entity_id=str(s.id) if s.id else None,
-                             after_data={"name": s.name})
+                             after_data={"name": s.name, "bank_details_changed": banco_cambia})
     await db.commit()
     await db.refresh(s)
+    if banco_cambia and supplier_id:
+        domain_events.emit("supplier.bank_changed", {"supplier_id": str(s.id), "organization_id": str(organization_id),
+                                                     "user_id": str(user.id)})
     return s
 
 
@@ -313,6 +322,11 @@ async def create_invoice(db: AsyncSession, *, organization_id, user, data: dict,
     inv = await get_invoice(db, organization_id, inv.id)
     if inv.status == "pending_approval":
         domain_events.emit("payable.pending_approval", {"invoice_id": str(inv.id), "organization_id": str(organization_id)})
+    elif data.get("paid_now"):
+        # Pagada al momento sin aprobación previa: quien aprueba pagos se entera
+        # de cada una, para que no se vuelva la puerta de atrás.
+        domain_events.emit("payable.paid_now", {"invoice_id": str(inv.id), "organization_id": str(organization_id),
+                                                "user_id": str(user.id)})
     return inv
 
 

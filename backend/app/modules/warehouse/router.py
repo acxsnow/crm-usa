@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_organization_id, require_any_permission, require_permission
+from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
 from app.modules.users.models import User
 from app.modules.warehouse import service as wh
@@ -28,7 +28,7 @@ from app.modules.warehouse.catalogs import (
     RELEASE_STATUSES,
 )
 from app.modules.warehouse.models import WarehouseItem, WarehouseLocation, WarehouseMovement
-from app.shared.errors import InvalidInputError
+from app.shared.errors import InvalidInputError, NotFoundError
 from app.shared.files.validation import read_limited
 from app.shared.pagination import paginate, pagination_params
 
@@ -37,6 +37,66 @@ router = APIRouter(tags=["warehouse"])
 MAX_CATALOG_BYTES = 10 * 1024 * 1024
 
 _read = require_any_permission("warehouse.read", "warehouse.manage", "warehouse.count")
+# El catálogo (artículos, ubicaciones, listas): también lo ve el técnico, que lo
+# necesita para pedir material y llenar el diario, pero sin costos ni valores
+# (`_sin_costos`). Las existencias, movimientos y presupuestos siguen en `_read`.
+_catalog = require_any_permission("warehouse.read", "warehouse.manage", "warehouse.count",
+                                  "warehouse.request_release", "daylogs.manage")
+# Ver órdenes de salida: quien las pide (solo las suyas), autoriza o entrega.
+_release_read = require_any_permission("warehouse.read", "warehouse.manage", "warehouse.request_release",
+                                       "warehouse.approve_release", "warehouse.deliver")
+
+# Quien ve costos de bodega: lectura o administración de bodega, o presupuesto.
+_COST_PERMS = {"warehouse.read", "warehouse.manage", "budgets.manage", "budgets.approve"}
+# Quien ve todas las órdenes de salida (no solo las propias).
+_ALL_RELEASES_PERMS = {"warehouse.read", "warehouse.manage", "warehouse.approve_release", "warehouse.deliver"}
+_COST_KEYS = {"unit_cost", "value"}
+
+
+def _ve_costos(user) -> bool:
+    return bool(_COST_PERMS & get_effective_permissions(user))
+
+
+def _sin_costos(datos, user):
+    """Quita costos y valores para quien no debe verlos (el técnico)."""
+    if _ve_costos(user):
+        return datos
+    if isinstance(datos, list):
+        return [_sin_costos(d, user) for d in datos]
+    if isinstance(datos, dict):
+        return {k: _sin_costos(v, user) for k, v in datos.items() if k not in _COST_KEYS}
+    return datos
+
+
+async def _articulos_para(db, organization_id, user, filas: list[dict]) -> list[dict]:
+    """Bodega ve todo; el técnico ve el catálogo sin costos y, de existencias,
+    solo lo que lleva en su camioneta (lo que puede usar en el diario)."""
+    if _ve_costos(user):
+        return filas
+    from decimal import Decimal
+
+    from sqlalchemy import select
+
+    propias = {str(i) for i in (await db.execute(select(WarehouseLocation.id).where(
+        WarehouseLocation.organization_id == organization_id,
+        WarehouseLocation.technician_user_id == user.id))).scalars().all()}
+    salida = []
+    for fila in _sin_costos(filas, user):
+        mias = [l for l in fila.get("by_location", []) if l["location_id"] in propias]
+        total = sum((Decimal(str(l["quantity"])) for l in mias), Decimal("0"))
+        salida.append({**fila, "by_location": mias, "total_quantity": f"{total:.2f}"})
+    return salida
+
+
+def _solo_propias(user) -> bool:
+    return not (_ALL_RELEASES_PERMS & get_effective_permissions(user))
+
+
+def _check_release_access(order, user) -> None:
+    """El técnico solo ve sus órdenes (las que pidió o las que son para él);
+    las ajenas responden 404 para no confirmar que existen."""
+    if _solo_propias(user) and user.id not in (order.requested_by_user_id, order.technician_user_id):
+        raise NotFoundError("La orden de salida no existe.", code="release_order_not_found")
 _manage = require_permission("warehouse.manage")
 _count = require_permission("warehouse.count")
 # Pedir la salida: el técnico (respuesta 2 del cuestionario) o quien administra
@@ -61,8 +121,16 @@ _daylog_read = require_any_permission("warehouse.read", "daylogs.manage")
 _daylog_manage = require_permission("daylogs.manage")
 
 
+async def _visible_project(db, organization_id, user, project_id):
+    """El proyecto, si la persona lo ve: el técnico, solo los suyos (misma regla
+    que el acta de instalación). Un proyecto ajeno responde 404."""
+    from app.modules.field_ops.access import get_visible_project
+
+    return await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+
+
 @router.get("/warehouse/catalogs")
-async def warehouse_catalogs(current_user: User = Depends(_read)) -> dict:
+async def warehouse_catalogs(current_user: User = Depends(_catalog)) -> dict:
     return {"categories": ITEM_CATEGORIES, "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
             "location_kinds": LOCATION_KINDS, "release_statuses": RELEASE_STATUSES,
             "line_origins": LINE_ORIGINS, "budget_categories": BUDGET_CATEGORIES,
@@ -90,20 +158,21 @@ class ItemIn(BaseModel):
 async def list_items(response: Response, q: str | None = None, category: str | None = None, active: bool | None = None,
                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                      pag: tuple[int, int] = Depends(pagination_params),
-                     current_user: User = Depends(_read)) -> list[dict]:
+                     current_user: User = Depends(_catalog)) -> list[dict]:
     items = await paginate(db, wh.items_stmt(organization_id, q=q, category=category, active=active),
                            limit=pag[0], offset=pag[1], response=response)
     totales = await wh.totals_by_item(db, organization_id, [i.id for i in items])
-    return [wh.item_out(i, totales.get(i.id)) for i in items]
+    return await _articulos_para(db, organization_id, current_user,
+                                 [wh.item_out(i, totales.get(i.id)) for i in items])
 
 
 @router.get("/warehouse/items/{item_id}")
 async def get_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                    organization_id: uuid.UUID = Depends(get_organization_id),
-                   current_user: User = Depends(_read)) -> dict:
+                   current_user: User = Depends(_catalog)) -> dict:
     item = await wh.get_item(db, organization_id, item_id)
     totales = await wh.totals_by_item(db, organization_id, [item.id])
-    return wh.item_out(item, totales.get(item.id))
+    return (await _articulos_para(db, organization_id, current_user, [wh.item_out(item, totales.get(item.id))]))[0]
 
 
 @router.post("/warehouse/items", status_code=201)
@@ -139,7 +208,7 @@ class LocationIn(BaseModel):
 async def list_locations(response: Response, active: bool | None = None, db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          pag: tuple[int, int] = Depends(pagination_params),
-                         current_user: User = Depends(_read)) -> list[dict]:
+                         current_user: User = Depends(_catalog)) -> list[dict]:
     items = await paginate(db, wh.locations_stmt(organization_id, active=active), limit=pag[0], offset=pag[1],
                            response=response)
     return [wh.location_out(l) for l in items]
@@ -266,7 +335,10 @@ async def import_catalog(file: UploadFile = File(...), replace_stock: bool = Fal
                          current_user: User = Depends(_manage)) -> dict:
     """Sube el Excel del cliente (hoja «Catálogo») y carga artículos y existencias."""
     contenido = await read_limited(file, MAX_CATALOG_BYTES)
-    hojas = xlsx.read_sheets(contenido)
+    try:
+        hojas = xlsx.read_sheets(contenido)
+    except xlsx.NotAnXlsxError as exc:
+        raise InvalidInputError(str(exc), code="invalid_workbook") from None
     if not hojas:
         raise InvalidInputError("El Excel no tiene hojas legibles.", code="empty_workbook")
     nombre = next((n for n in hojas if n.strip().casefold().startswith(("cat", "catalog"))), list(hojas)[0])
@@ -359,18 +431,20 @@ async def list_releases(response: Response, status: str | None = None, project_i
                         q: str | None = None, db: AsyncSession = Depends(get_db),
                         organization_id: uuid.UUID = Depends(get_organization_id),
                         pag: tuple[int, int] = Depends(pagination_params),
-                        current_user: User = Depends(_read)) -> list[dict]:
-    orders = await paginate(db, rel.releases_stmt(organization_id, status=status, project_id=project_id, q=q),
-                            limit=pag[0], offset=pag[1], response=response)
-    return await rel.orders_out(db, organization_id, orders)
+                        current_user: User = Depends(_release_read)) -> list[dict]:
+    stmt = rel.releases_stmt(organization_id, status=status, project_id=project_id, q=q,
+                             own_user_id=current_user.id if _solo_propias(current_user) else None)
+    orders = await paginate(db, stmt, limit=pag[0], offset=pag[1], response=response)
+    return _sin_costos(await rel.orders_out(db, organization_id, orders), current_user)
 
 
 @router.get("/warehouse/releases/{release_id}")
 async def get_release(release_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                       organization_id: uuid.UUID = Depends(get_organization_id),
-                      current_user: User = Depends(_read)) -> dict:
+                      current_user: User = Depends(_release_read)) -> dict:
     order = await rel.get_order(db, organization_id, release_id)
-    return (await rel.orders_out(db, organization_id, [order]))[0]
+    _check_release_access(order, current_user)
+    return _sin_costos((await rel.orders_out(db, organization_id, [order]))[0], current_user)
 
 
 @router.post("/warehouse/releases", status_code=201)
@@ -379,7 +453,7 @@ async def create_release(payload: ReleaseIn, db: AsyncSession = Depends(get_db),
                          current_user: User = Depends(_request)) -> dict:
     order = await rel.create_order(db, organization_id=organization_id, user=current_user,
                                    data=payload.model_dump())
-    return (await rel.orders_out(db, organization_id, [order]))[0]
+    return _sin_costos((await rel.orders_out(db, organization_id, [order]))[0], current_user)
 
 
 @router.put("/warehouse/releases/{release_id}")
@@ -388,7 +462,7 @@ async def update_release(release_id: uuid.UUID, payload: ReleaseIn, db: AsyncSes
                          current_user: User = Depends(_request)) -> dict:
     order = await rel.update_order(db, organization_id=organization_id, user=current_user, order_id=release_id,
                                    data=payload.model_dump())
-    return (await rel.orders_out(db, organization_id, [order]))[0]
+    return _sin_costos((await rel.orders_out(db, organization_id, [order]))[0], current_user)
 
 
 @router.post("/warehouse/releases/{release_id}/submit")
@@ -396,7 +470,7 @@ async def submit_release(release_id: uuid.UUID, db: AsyncSession = Depends(get_d
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_request)) -> dict:
     order = await rel.submit_order(db, organization_id=organization_id, user=current_user, order_id=release_id)
-    return (await rel.orders_out(db, organization_id, [order]))[0]
+    return _sin_costos((await rel.orders_out(db, organization_id, [order]))[0], current_user)
 
 
 @router.post("/warehouse/releases/{release_id}/approve")
@@ -458,18 +532,18 @@ async def list_kits(response: Response, q: str | None = None, project_type: str 
                     active: bool | None = None, db: AsyncSession = Depends(get_db),
                     organization_id: uuid.UUID = Depends(get_organization_id),
                     pag: tuple[int, int] = Depends(pagination_params),
-                    current_user: User = Depends(_read)) -> list[dict]:
+                    current_user: User = Depends(_catalog)) -> list[dict]:
     kits = await paginate(db, kit_svc.kits_stmt(organization_id, q=q, project_type=project_type, active=active),
                           limit=pag[0], offset=pag[1], response=response)
-    return await kit_svc.kits_out(db, organization_id, kits)
+    return _sin_costos(await kit_svc.kits_out(db, organization_id, kits), current_user)
 
 
 @router.get("/warehouse/kits/{kit_id}")
 async def get_kit(kit_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                   organization_id: uuid.UUID = Depends(get_organization_id),
-                  current_user: User = Depends(_read)) -> dict:
+                  current_user: User = Depends(_catalog)) -> dict:
     kit = await kit_svc.get_kit(db, organization_id, kit_id)
-    return (await kit_svc.kits_out(db, organization_id, [kit]))[0]
+    return _sin_costos((await kit_svc.kits_out(db, organization_id, [kit]))[0], current_user)
 
 
 @router.post("/warehouse/kits", status_code=201)
@@ -507,9 +581,9 @@ async def apply_kit(kit_id: uuid.UUID, payload: ApplyKitIn, db: AsyncSession = D
     resultado = await kit_svc.apply_to_release(db, organization_id=organization_id, user=current_user,
                                                kit_id=kit_id, release_id=payload.release_id)
     order = resultado["order"]
-    return {**(await rel.orders_out(db, organization_id, [order]))[0],
-            "kit_name": resultado["kit"].name, "agregadas": resultado["agregadas"],
-            "omitidas": resultado["omitidas"]}
+    return _sin_costos({**(await rel.orders_out(db, organization_id, [order]))[0],
+                        "kit_name": resultado["kit"].name, "agregadas": resultado["agregadas"],
+                        "omitidas": resultado["omitidas"]}, current_user)
 
 
 # ---------------------------------------------------------------------------
@@ -671,7 +745,7 @@ async def list_day_logs(project_id: uuid.UUID, response: Response,
                         current_user: User = Depends(_daylog_read)) -> list[dict]:
     """El diario de la obra, del día más reciente al más viejo. Cada jornada
     trae su material y los gastos de ese día, que se leen de `expenses`."""
-    project = await budget_svc.get_project(db, organization_id, project_id)
+    project = await _visible_project(db, organization_id, current_user, project_id)
     logs = await paginate(db, daylog_svc.day_logs_stmt(organization_id, project_id=project.id,
                                                        date_from=date_from, date_to=date_to),
                           limit=pag[0], offset=pag[1], response=response)
@@ -684,6 +758,7 @@ async def create_day_log(project_id: uuid.UUID, payload: DayLogIn, db: AsyncSess
                          current_user: User = Depends(_daylog_manage)) -> dict:
     """Registra la jornada del día. El material que sale de una camioneta
     descuenta la existencia y queda como costo de la obra."""
+    await _visible_project(db, organization_id, current_user, project_id)
     log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
                                         project_id=project_id, data=payload.model_dump())
     return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]
@@ -696,6 +771,7 @@ async def update_day_log(project_id: uuid.UUID, log_id: uuid.UUID, payload: DayL
                          current_user: User = Depends(_daylog_manage)) -> dict:
     """Corrige la jornada. Lo que ya descontó la camioneta no se edita: para eso
     se registra la devolución a bodega."""
+    await _visible_project(db, organization_id, current_user, project_id)
     log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
                                         project_id=project_id, data=payload.model_dump(), log_id=log_id)
     return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]

@@ -426,6 +426,7 @@ function SupplierForm({ initial, onClose }: { initial: Partial<Supplier>; onClos
   const { data: cat } = useQuery({ queryKey: ["payables-catalogs"], queryFn: payablesCatalogs, staleTime: Infinity });
   const { data: detalle } = useQuery({ queryKey: ["supplier", initial.id], queryFn: () => getSupplier(initial.id!), enabled: !!initial.id });
   const [s, setS] = useState<Partial<Supplier>>({ payment_terms_days: 30, kinds: [], states: [], active: true, w9_on_file: false, ...initial });
+  const { hasPermission } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [doc, setDoc] = useState<{ kind: string; file: File | null; expires: string }>({ kind: "w9", file: null, expires: "" });
   const guardar = useMutation({ mutationFn: () => saveSupplier(s), onSuccess: () => { qc.invalidateQueries({ queryKey: ["suppliers"] }); onClose(); },
@@ -460,8 +461,12 @@ function SupplierForm({ initial, onClose }: { initial: Partial<Supplier>; onClos
             <option value="">—</option>{Object.entries(cat?.payment_methods ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select></div>
       </div>
-      <div className="form-field"><label className="form-label" htmlFor="sf-bank">Datos bancarios (solo los ve Contabilidad)</label>
-        <textarea id="sf-bank" rows={2} value={s.bank_details ?? ""} onChange={(e) => setS({ ...s, bank_details: e.target.value || null })} /></div>
+      {hasPermission("payables.manage") ? (
+        <div className="form-field"><label className="form-label" htmlFor="sf-bank">Datos bancarios (solo los ve Contabilidad)</label>
+          <textarea id="sf-bank" rows={2} value={s.bank_details ?? ""} onChange={(e) => setS({ ...s, bank_details: e.target.value || null })} /></div>
+      ) : (
+        <p className="fin-note">Datos bancarios: {s.bank_details ? "registrados" : "sin registrar"}. Solo Contabilidad los cambia.</p>
+      )}
       <div className="fin-row">{txt("license_number", "Licencia de contratista")}
         <div className="form-field"><label className="form-label" htmlFor="sf-lic">Vence la licencia</label>
           <input id="sf-lic" type="date" value={s.license_expires_on ?? ""} onChange={(e) => setS({ ...s, license_expires_on: e.target.value || null })} /></div></div>

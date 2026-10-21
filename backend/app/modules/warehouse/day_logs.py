@@ -28,7 +28,7 @@ from app.modules.finance.models import Expense
 from app.modules.users.models import User
 from app.modules.warehouse import service as wh
 from app.modules.warehouse.budgets import get_project
-from app.modules.warehouse.catalogs import ITEM_UNITS, MovementType
+from app.modules.warehouse.catalogs import ITEM_UNITS, LocationKind, MovementType
 from app.modules.warehouse.models import ProjectDayLog, ProjectDayLogMaterial
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError, NotFoundError
@@ -156,6 +156,20 @@ async def _names(db: AsyncSession, organization_id, *, item_ids, location_ids, u
 # Guardar
 # ---------------------------------------------------------------------------
 
+def _check_truck(ubicacion, usuario, descripcion: str) -> None:
+    """El material del día descuenta de lo que la camioneta llevó. Sacarlo de la
+    bodega es una orden de salida, que pasa por autorización; y el técnico solo
+    descuenta de su propia camioneta. Bodega (`warehouse.manage`) puede corregir."""
+    from app.api.deps import get_effective_permissions
+
+    if "warehouse.manage" in get_effective_permissions(usuario):
+        return
+    if ubicacion.kind != LocationKind.TRUCK or ubicacion.technician_user_id != usuario.id:
+        raise InvalidInputError(
+            f"«{descripcion}» solo puede salir de tu camioneta; lo de bodega se pide con una orden de salida.",
+            code="day_log_location_not_own_truck")
+
+
 async def _material_de_linea(db, organization_id, *, log, usuario, linea: ProjectDayLogMaterial, datos: dict,
                              posicion: int) -> None:
     """Deja la línea lista y, si salió de una ubicación, descuenta la existencia.
@@ -192,6 +206,7 @@ async def _material_de_linea(db, organization_id, *, log, usuario, linea: Projec
         return
 
     ubicacion = await wh.get_location(db, organization_id, ubicacion_id)
+    _check_truck(ubicacion, usuario, descripcion)
     movimiento = await wh.record_movement(
         db, organization_id=organization_id, user=usuario, item_id=item.id, location_id=ubicacion.id,
         movement_type=MovementType.SALIDA, quantity=cantidad,

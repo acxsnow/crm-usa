@@ -35,7 +35,7 @@ from app.modules.warehouse.models import (
 )
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
-from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.errors import ForbiddenError, InvalidInputError, NotFoundError
 
 Q2 = Decimal("0.01")
 
@@ -78,8 +78,11 @@ async def lines_of(db: AsyncSession, organization_id, order_ids) -> dict:
 
 
 def releases_stmt(organization_id, *, status: str | None = None, project_id=None, q: str | None = None,
-                  pending_only: bool = False):
+                  pending_only: bool = False, own_user_id=None):
     stmt = select(WarehouseReleaseOrder).where(WarehouseReleaseOrder.organization_id == organization_id)
+    if own_user_id:
+        stmt = stmt.where(or_(WarehouseReleaseOrder.requested_by_user_id == own_user_id,
+                              WarehouseReleaseOrder.technician_user_id == own_user_id))
     if pending_only:
         stmt = stmt.where(WarehouseReleaseOrder.status == ReleaseStatus.POR_AUTORIZAR)
     elif status:
@@ -96,6 +99,36 @@ def releases_stmt(organization_id, *, status: str | None = None, project_id=None
 # ---------------------------------------------------------------------------
 # Armar la orden
 # ---------------------------------------------------------------------------
+
+def _check_owner(order: WarehouseReleaseOrder, user) -> None:
+    """El borrador lo arma quien lo pidió; bodega (`warehouse.manage`) puede
+    corregir cualquiera. Así un técnico no edita ni envía la orden de otro."""
+    from app.api.deps import get_effective_permissions
+
+    if order.requested_by_user_id != user.id and "warehouse.manage" not in get_effective_permissions(user):
+        raise ForbiddenError("Solo quien pidió la orden (o bodega) puede cambiarla.", code="release_not_owner")
+
+
+async def get_own_draft(db: AsyncSession, organization_id, user, order_id) -> WarehouseReleaseOrder:
+    order = await get_order(db, organization_id, order_id)
+    _check_owner(order, user)
+    return order
+
+
+async def _check_refs(db: AsyncSession, organization_id, user, data: dict) -> None:
+    """La obra tiene que ser una que la persona ve y el técnico, una persona
+    activa de la organización: nada de ids ajenos colados en la orden."""
+    from app.modules.field_ops.access import get_visible_project
+    from app.modules.users.models import User, UserStatus
+
+    if data.get("project_id"):
+        await get_visible_project(db, organization_id=organization_id, user=user, project_id=data["project_id"])
+    tecnico_id = data.get("technician_user_id")
+    if tecnico_id and tecnico_id != user.id:
+        tecnico = await db.get(User, tecnico_id)
+        if tecnico is None or tecnico.organization_id != organization_id or tecnico.status != UserStatus.active:
+            raise InvalidInputError("El técnico no existe o no está activo.", code="invalid_technician")
+
 
 async def _item_for_line(db, organization_id, item_id) -> WarehouseItem:
     return await wh.get_item(db, organization_id, item_id)
@@ -121,6 +154,7 @@ async def create_order(db: AsyncSession, *, organization_id, user, data: dict) -
     lineas = _normalizar_lineas(data["lines"])
     for linea in lineas:
         await _item_for_line(db, organization_id, linea["item_id"])
+    await _check_refs(db, organization_id, user, data)
 
     ubicacion = await wh.get_location(db, organization_id, data["location_id"]) if data.get("location_id") \
         else await wh.default_location(db, organization_id)
@@ -151,13 +185,14 @@ async def update_order(db: AsyncSession, *, organization_id, user, order_id, dat
     """Se puede corregir mientras sea borrador. Una vez enviada, la orden es lo
     que el autorizador está mirando: cambiarla por debajo lo volvería un blanco
     móvil."""
-    order = await get_order(db, organization_id, order_id)
+    order = await get_own_draft(db, organization_id, user, order_id)
     if order.status != ReleaseStatus.BORRADOR:
         raise InvalidInputError("Una orden ya enviada no se edita; recházala y haz otra.",
                                 code="release_not_editable")
     lineas = _normalizar_lineas(data["lines"])
     for linea in lineas:
         await _item_for_line(db, organization_id, linea["item_id"])
+    await _check_refs(db, organization_id, user, data)
 
     for previa in (await lines_of(db, organization_id, [order.id])).get(order.id, []):
         await db.delete(previa)
@@ -183,7 +218,7 @@ async def update_order(db: AsyncSession, *, organization_id, user, order_id, dat
 # ---------------------------------------------------------------------------
 
 async def submit_order(db: AsyncSession, *, organization_id, user, order_id) -> WarehouseReleaseOrder:
-    order = await get_order(db, organization_id, order_id)
+    order = await get_own_draft(db, organization_id, user, order_id)
     if order.status != ReleaseStatus.BORRADOR:
         raise InvalidInputError("Solo un borrador se manda a autorizar.", code="release_not_draft")
     lineas = (await lines_of(db, organization_id, [order.id])).get(order.id, [])
@@ -208,6 +243,10 @@ async def authorize_order(db: AsyncSession, *, organization_id, user, order_id) 
     order = await get_order(db, organization_id, order_id)
     if order.status != ReleaseStatus.POR_AUTORIZAR:
         raise InvalidInputError("Esta orden no está esperando autorización.", code="release_not_pending")
+    # Separación de funciones: quien pide el material no se lo autoriza.
+    if user.id in (order.requested_by_user_id, order.technician_user_id):
+        raise ForbiddenError("Otra persona debe autorizar esta salida: tú la pediste.",
+                             code="release_self_authorization")
     order.status = ReleaseStatus.AUTORIZADA
     order.authorized_by_user_id = user.id
     order.authorized_at = _now()

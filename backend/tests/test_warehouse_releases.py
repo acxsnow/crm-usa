@@ -150,11 +150,12 @@ async def test_rechazar_exige_el_motivo_y_no_deja_entregar(app_client, login, ac
 # Sin existencia: avisa, no bloquea (D-BOD-4)
 # ---------------------------------------------------------------------------
 
-async def test_sin_existencia_avisa_y_deja_el_motivo(app_client, login, active_admin_user):
+async def test_sin_existencia_avisa_y_deja_el_motivo(app_client, login, active_admin_user, active_admin_staff_user):
     bodega = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega)  # sin entrada: la bodega está en cero
     orden = await _enviar(app_client, bodega, (await _orden(app_client, bodega, item["id"], "5"))["id"])
-    await _autorizar(app_client, bodega, orden["id"])
+    await _autorizar(app_client, autoriza, orden["id"])
 
     entrega = await _entregar(app_client, bodega, orden["id"])
     assert entrega.status_code == 200, entrega.text
@@ -166,12 +167,13 @@ async def test_sin_existencia_avisa_y_deja_el_motivo(app_client, login, active_a
     assert await _existencia(app_client, bodega, item["id"]) == "0.00"
 
 
-async def test_alcanza_solo_para_parte_y_dice_cuanto_faltó(app_client, login, active_admin_user):
+async def test_alcanza_solo_para_parte_y_dice_cuanto_faltó(app_client, login, active_admin_user, active_admin_staff_user):
     bodega = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega)
     await _entrada(app_client, bodega, item["id"], "3")
     orden = await _enviar(app_client, bodega, (await _orden(app_client, bodega, item["id"], "10"))["id"])
-    await _autorizar(app_client, bodega, orden["id"])
+    await _autorizar(app_client, autoriza, orden["id"])
 
     cuerpo = (await _entregar(app_client, bodega, orden["id"])).json()
     assert cuerpo["lines"][0]["quantity_delivered"] == "3.00"
@@ -185,12 +187,13 @@ async def test_alcanza_solo_para_parte_y_dice_cuanto_faltó(app_client, login, a
 # La entrega es única
 # ---------------------------------------------------------------------------
 
-async def test_entregar_dos_veces_no_descuenta_dos_veces(app_client, login, active_admin_user):
+async def test_entregar_dos_veces_no_descuenta_dos_veces(app_client, login, active_admin_user, active_admin_staff_user):
     bodega = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega)
     await _entrada(app_client, bodega, item["id"], "100")
     orden = await _enviar(app_client, bodega, (await _orden(app_client, bodega, item["id"], "30"))["id"])
-    await _autorizar(app_client, bodega, orden["id"])
+    await _autorizar(app_client, autoriza, orden["id"])
 
     primera = await _entregar(app_client, bodega, orden["id"])
     assert primera.status_code == 200, primera.text
@@ -207,15 +210,16 @@ async def test_entregar_dos_veces_no_descuenta_dos_veces(app_client, login, acti
 # Lo entregado queda en la obra
 # ---------------------------------------------------------------------------
 
-async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, login, active_admin_user, seeded_org):
+async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, login, active_admin_user, active_admin_staff_user, seeded_org):
     bodega = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
     await _entrada(app_client, bodega, item["id"], "50")
 
     _, project = await approved_case_with_project(db, seeded_org["org"].id)
     orden = await _enviar(app_client, bodega,
                           (await _orden(app_client, bodega, item["id"], "12", project_id=str(project.id)))["id"])
-    await _autorizar(app_client, bodega, orden["id"])
+    await _autorizar(app_client, autoriza, orden["id"])
     await _entregar(app_client, bodega, orden["id"])
 
     materiales = (await app_client.get(f"{API}/projects/{project.id}/materials", headers=bodega)).json()

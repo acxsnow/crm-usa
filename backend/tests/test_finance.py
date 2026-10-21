@@ -111,8 +111,9 @@ async def _factura(app_client, headers, supplier_id, numero, total=None, lines=N
 
 
 async def test_suppliers_and_bank_details_visibility(app_client, sesion):
-    s = await _proveedor(app_client, (await sesion("gerencia")))
-    assert s["bank_details"] == "•••"  # Gerencia (Aldo) no ve datos bancarios; Contabilidad sí
+    s = await _proveedor(app_client, (await sesion("conta")))
+    vista = (await app_client.get(f"{API}/payables/suppliers/{s['id']}", headers=(await sesion("gerencia")))).json()
+    assert vista["bank_details"] == "•••"  # Gerencia (Aldo) no ve datos bancarios; Contabilidad sí
     lista = (await app_client.get(f"{API}/payables/suppliers", headers=(await sesion("conta")))).json()
     assert lista[0]["bank_details"] == "Chase 1234"
     assert (await app_client.post(f"{API}/payables/suppliers", json={"name": "Ferguson HVAC Supply"},
@@ -312,3 +313,62 @@ async def test_permits_and_inspections_overview(app_client, db, seeded_org, sesi
     assert (await app_client.get(f"{API}/permits?expiring_within_days=5", headers=(await sesion("adm")))).json() == []
     assert (await app_client.get(f"{API}/inspections", headers=(await sesion("adm")))).status_code == 200
     assert (await app_client.get(f"{API}/permits", headers=(await sesion("vendedor")))).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Separación de funciones (revisión de seguridad del 21 de octubre)
+# ---------------------------------------------------------------------------
+
+async def test_nadie_se_reembolsa_su_propio_gasto(app_client, sesion):
+    propio = (await _gasto(app_client, (await sesion("admin")))).json()
+    assert (await app_client.post(f"{API}/expenses/{propio['id']}/review", json={"approve": True},
+                                  headers=(await sesion("conta")))).status_code == 200
+    url = f"{API}/expenses/{propio['id']}/reimburse"
+    r = await app_client.post(url, json={"paid_on": HOY.isoformat()}, headers=(await sesion("admin")))
+    assert (r.status_code, r.json()["code"]) == (403, "expense_self_reimbursement")
+    r = await app_client.post(url, json={"paid_on": HOY.isoformat()}, headers=(await sesion("conta")))
+    assert r.json()["status"] == "reimbursed"
+
+
+async def test_solo_contabilidad_cambia_los_datos_bancarios(app_client, sesion):
+    gerencia, conta = await sesion("gerencia"), await sesion("conta")
+    # Gerencia puede dar de alta y editar el proveedor, pero no su cuenta.
+    r = await app_client.post(f"{API}/payables/suppliers", json={
+        "name": "Proveedor Nuevo", "kinds": ["equipment"], "states": ["AZ"], "bank_details": "Cuenta X"}, headers=gerencia)
+    assert (r.status_code, r.json()["code"]) == (403, "bank_details_forbidden")
+    s = await _proveedor(app_client, conta)
+    base = {"name": s["name"], "kinds": ["equipment"], "states": ["AZ"], "payment_terms_days": 30}
+    # Lo que Gerencia ve enmascarado no se toca al guardar.
+    r = await app_client.put(f"{API}/payables/suppliers/{s['id']}", json={**base, "phone": "602-555-0101",
+                                                                         "bank_details": "•••"}, headers=gerencia)
+    assert r.status_code == 200, r.text
+    r = await app_client.put(f"{API}/payables/suppliers/{s['id']}", json={**base, "bank_details": "Otra cuenta"},
+                             headers=gerencia)
+    assert (r.status_code, r.json()["code"]) == (403, "bank_details_forbidden")
+    r = await app_client.put(f"{API}/payables/suppliers/{s['id']}", json={**base, "bank_details": "Wells 9876"},
+                             headers=conta)
+    assert r.json()["bank_details"] == "Wells 9876"
+
+
+async def test_cambio_de_banco_y_pago_al_momento_avisan_a_quien_aprueba(db, seeded_org, app_client, sesion,
+                                                                       active_accounting_user,
+                                                                       active_management_user):
+    from sqlalchemy import select
+
+    from app.modules.notifications import service as avisos
+    from app.modules.notifications.models import Notification
+
+    org = seeded_org["org"].id
+    s = await _proveedor(app_client, (await sesion("conta")))
+    f = (await _factura(app_client, (await sesion("conta")), s["id"], "T-77", total="50", paid_now=True)).json()
+    base = {"organization_id": str(org), "user_id": str(active_accounting_user.id)}
+    await avisos.process_event(db, "supplier.bank_changed", {**base, "supplier_id": s["id"]})
+    await avisos.process_event(db, "payable.paid_now", {**base, "invoice_id": f["id"]})
+
+    async def titulos(user_id):
+        return sorted(n.title for n in (await db.execute(select(Notification).where(
+            Notification.user_id == user_id))).scalars().all())
+
+    assert await titulos(active_management_user.id) == [
+        "Datos bancarios cambiados: Ferguson HVAC Supply", "Pagada al momento: Ferguson HVAC Supply T-77"]
+    assert await titulos(active_accounting_user.id) == []  # quien hizo el cambio no se avisa a sí mismo
