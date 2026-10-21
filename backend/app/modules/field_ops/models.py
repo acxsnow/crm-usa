@@ -386,6 +386,10 @@ class ProjectMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     quantity: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     unit: Mapped[str | None] = mapped_column(String(30))
     notes: Mapped[str | None] = mapped_column(Text)
+    # La línea de la orden de salida que lo entregó, cuando vino de bodega: es
+    # lo que deja decir de qué orden salió cada material (punto 1 del
+    # cuestionario del 19 de octubre). Nulo = lo agregó una persona a mano.
+    warehouse_release_line_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
 
 
 class ProjectReview(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):

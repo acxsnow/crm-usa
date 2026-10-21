@@ -1,0 +1,197 @@
+"""Bodega: catálogo de materiales, ubicaciones, existencias y movimientos.
+
+Diseño: `docs/superpowers/specs/2026-10-19-control-bodega-design.md`.
+
+Tres ideas sostienen el módulo:
+
+- El **saldo** (`warehouse_stock`) es la suma de los movimientos de una
+  ubicación. Se guarda para no sumar el libro entero en cada pantalla, y se
+  actualiza en la misma transacción que el movimiento: nunca se toca solo.
+- El **libro** (`warehouse_movements`) no se edita ni se borra. Corregir un
+  error es registrar el movimiento contrario.
+- La **ubicación** separa la bodega de la camioneta de cada técnico, que es lo
+  que permite «el sobrante queda en la camioneta» en las obras de más de dos
+  días (respuesta 5 del cuestionario).
+
+Dinero con `Numeric(12, 2)` y `Decimal` (`billing/money.py`); cantidades con
+`Numeric(10, 2)`.
+"""
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
+from app.db.types import GUID
+
+MONEY = Numeric(12, 2)
+QUANTITY = Numeric(10, 2)
+
+
+class WarehouseLocation(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Dónde está el material: la bodega (una sola) o la camioneta de un técnico."""
+
+    __tablename__ = "warehouse_locations"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_warehouse_location_name"),
+    )
+
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="warehouse")
+    # Solo para las camionetas: a quién pertenece.
+    technician_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"), index=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class WarehouseItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un material del catálogo, con lo que cuesta y cuándo hay que reponer."""
+
+    __tablename__ = "warehouse_items"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "sku", name="uq_warehouse_item_sku"),
+        Index("ix_warehouse_items_org_category", "organization_id", "category"),
+    )
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Referencia del proveedor. Puede venir vacía en el Excel; cuando está, es
+    # lo que evita duplicar el artículo al importar dos veces.
+    sku: Mapped[str | None] = mapped_column(String(80))
+    category: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
+    unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unit")
+    unit_cost: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    supplier_name: Mapped[str | None] = mapped_column(String(255))
+    # Los equipos con serial propio (respuesta 12: «TODOS»).
+    has_serial: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    min_quantity: Mapped[Decimal | None] = mapped_column(QUANTITY)
+    notes: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    movements: Mapped[list["WarehouseMovement"]] = relationship(
+        "WarehouseMovement", back_populates="item", lazy="raise")
+
+
+class WarehouseStock(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Saldo por (artículo, ubicación). Lo mueve solo `warehouse/service.py`."""
+
+    __tablename__ = "warehouse_stock"
+    __table_args__ = (
+        UniqueConstraint("item_id", "location_id", name="uq_warehouse_stock_item_location"),
+    )
+
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    location_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_locations.id", ondelete="CASCADE"), nullable=False, index=True)
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False, default=Decimal("0"))
+
+
+class WarehouseMovement(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Libro de entradas y salidas. Append-only: nunca se edita ni se borra."""
+
+    __tablename__ = "warehouse_movements"
+    __table_args__ = (
+        Index("ix_warehouse_movements_org_date", "organization_id", "movement_date"),
+        Index("ix_warehouse_movements_org_item", "organization_id", "item_id"),
+        # Con qué documento se hizo: la misma factura o el mismo conteo no se
+        # aplican dos veces. Nulo = movimiento libre (a mano), y en Postgres y
+        # SQLite varios nulos conviven sin chocar.
+        UniqueConstraint("organization_id", "source_key", name="uq_warehouse_movement_source"),
+    )
+
+    item_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_items.id"), nullable=False, index=True)
+    location_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_locations.id"), nullable=False, index=True)
+    # A dónde llegó el material en un traslado (bodega → camioneta).
+    to_location_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_locations.id"))
+    movement_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Con signo: positiva sube el saldo, negativa lo baja (ver `catalogs.py`).
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False)
+    unit_cost: Mapped[Decimal | None] = mapped_column(MONEY)
+    movement_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # Factura, orden de salida o conteo del que nace el movimiento.
+    reference: Mapped[str | None] = mapped_column(String(120))
+    note: Mapped[str | None] = mapped_column(Text)
+    # La obra a la que se carga lo que sale (costo real, punto 3).
+    project_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("projects.id"), index=True)
+    source_key: Mapped[str | None] = mapped_column(String(160))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    item: Mapped["WarehouseItem"] = relationship("WarehouseItem", back_populates="movements", lazy="raise")
+
+
+class WarehouseReleaseOrder(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """La orden de salida del punto 1: sin autorización el material no sale.
+
+    El número (`SAL-2026-0001`) se asigna al mandarla a autorizar y no antes: un
+    borrador que nadie envió no consume un número de la serie.
+
+    Autorizar y rechazar comparten los mismos dos campos (`authorized_*`): son la
+    misma decisión, y mirar el `status` dice cuál de las dos fue.
+    """
+
+    __tablename__ = "warehouse_release_orders"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "number", name="uq_warehouse_release_number"),
+        Index("ix_warehouse_release_org_status", "organization_id", "status"),
+    )
+
+    number: Mapped[str | None] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="borrador")
+    project_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("projects.id"), index=True)
+    # De dónde sale el material: la bodega (respuesta 1: hay una sola).
+    location_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_locations.id"), nullable=False,
+                                                   index=True)
+    # Quien arma la orden (el técnico) y a quién se le entrega si es otro.
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    technician_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    needed_on: Mapped[date | None] = mapped_column(Date)
+    note: Mapped[str | None] = mapped_column(Text)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    authorized_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    authorized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reject_reason: Mapped[str | None] = mapped_column(Text)
+    delivered_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # D-BOD-4: sin existencias no se bloquea la entrega; el motivo queda escrito.
+    shortage_note: Mapped[str | None] = mapped_column(Text)
+
+    lines: Mapped[list["WarehouseReleaseLine"]] = relationship(
+        "WarehouseReleaseLine", back_populates="order", lazy="raise")
+
+
+class WarehouseReleaseLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un material pedido. Lo pedido y lo entregado se guardan por separado:
+    cuando no había existencia, `quantity_delivered` queda por debajo."""
+
+    __tablename__ = "warehouse_release_lines"
+    __table_args__ = (Index("ix_warehouse_release_lines_org_order", "organization_id", "order_id"),)
+
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_release_orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), nullable=False, index=True)
+    quantity_requested: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False)
+    # Nulo hasta que Bodega entrega.
+    quantity_delivered: Mapped[Decimal | None] = mapped_column(QUANTITY)
+    # El calibre: lo que cambia entre un trabajo y otro («3/8», «1/2»).
+    spec_label: Mapped[str | None] = mapped_column(String(60))
+    notes: Mapped[str | None] = mapped_column(Text)
+    origin: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    order: Mapped["WarehouseReleaseOrder"] = relationship(
+        "WarehouseReleaseOrder", back_populates="lines", lazy="raise")

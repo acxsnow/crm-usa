@@ -206,6 +206,8 @@ export interface ProjectMaterial {
   quantity: number;
   unit: string | null;
   notes: string | null;
+  /** La línea de la orden de salida que lo entregó, cuando vino de bodega. */
+  warehouse_release_line_id?: string | null;
 }
 
 export interface InstallationGaps {

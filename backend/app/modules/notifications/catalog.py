@@ -100,6 +100,23 @@ NOTICES: dict[str, dict] = {
         "title": "{{documento}} de {{proveedor}} vence el {{fecha}}",
         "body": "Pide a {{proveedor}} la renovación de su {{documento}} (vence el {{fecha}}).",
     },
+    "warehouse.release_pending": {
+        "label": "Salida de bodega por autorizar",
+        "audience": "Quien autoriza salidas (warehouse.approve_release)",
+        "title": "Salida por autorizar: {{orden}}",
+        "body": "{{solicitante}} pidió material de bodega para {{obra}} ({{lineas}} renglones). "
+                "Apruébala o recházala.",
+    },
+    "warehouse.release_delivered": {
+        "label": "Salida de bodega entregada", "audience": "Quien pidió la salida",
+        "title": "Salida entregada: {{orden}}",
+        "body": "Bodega entregó la orden {{orden}}. {{faltantes}}",
+    },
+    "warehouse.stock_low": {
+        "label": "Alerta: artículo en su mínimo", "audience": "Bodega (warehouse.manage)",
+        "title": "Por reponer: {{articulo}}",
+        "body": "{{articulo}} quedó en {{existencia}} (mínimo {{minimo}}). Hay que reponerlo.",
+    },
 }
 
 DEFAULT_PERMISSION = {
@@ -112,6 +129,8 @@ DEFAULT_PERMISSION = {
     "expense.submitted": "expenses.approve",
     "payable.pending_approval": "payables.approve",
     "supplier.document_expiring": "suppliers.manage",
+    "warehouse.release_pending": "warehouse.approve_release",
+    "warehouse.stock_low": "warehouse.manage",
 }
 
 

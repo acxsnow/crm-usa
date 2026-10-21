@@ -37,6 +37,10 @@ import { UsersPage } from "@/features/users/UsersPage";
 import { AuditLogPage } from "@/features/audit/AuditLogPage";
 import { RolesPage } from "@/features/roles/RolesPage";
 import { CustomerSignaturePage } from "@/features/field-ops/CustomerSignaturePage";
+import { WarehouseStockPage } from "@/features/warehouse/WarehouseStockPage";
+import { WarehouseItemsPage } from "@/features/warehouse/WarehouseItemsPage";
+import { WarehouseReleasesPage } from "@/features/warehouse/WarehouseReleasesPage";
+import { WarehouseMovementsPage } from "@/features/warehouse/WarehouseMovementsPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -179,6 +183,39 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={"reports.view"} moduleLabel="Reportes">
             <ReportsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.manage", "warehouse.count"]} moduleLabel="Bodega">
+            <WarehouseStockPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/items",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.manage", "warehouse.count"]} moduleLabel="Bodega">
+            <WarehouseItemsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/releases",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.request_release", "warehouse.approve_release",
+            "warehouse.deliver", "warehouse.manage"]} moduleLabel="Bodega">
+            <WarehouseReleasesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/movements",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.manage", "warehouse.count"]} moduleLabel="Bodega">
+            <WarehouseMovementsPage />
           </RequireAccess>
         ),
       },

@@ -76,6 +76,8 @@ export function MaterialsPanel({ projectId, canManage, closed }: { projectId: st
                 <td>
                   <strong>{m.description}</strong>
                   {m.sku && <small>Ref. {m.sku}</small>}
+                  {/* Lo que entregó la bodega: se ve de qué orden de salida vino. */}
+                  {m.warehouse_release_line_id && m.notes && <small>{m.notes}</small>}
                 </td>
                 <td className="is-num">{cantidadLegible(m.quantity)} {m.unit ?? ""}</td>
                 {editable && (

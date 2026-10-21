@@ -53,6 +53,8 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | 8. Proveedores y pagos | Contabilidad, Gerencia, Administrador | §4.4 | — |
 | 9. Conciliación y rentabilidad | Contabilidad | §4.5 | — |
 | 10. Reportes | Gerencia, Contabilidad, Administración | §7 | — |
+| 11. Bodega: cargar el catálogo | Administrador | cuestionario del 19 oct, punto 2 | — |
+| 12. Bodega: salidas autorizadas | Técnico, Administración | cuestionario del 19 oct, punto 1 | — |
 
 ---
 
@@ -511,9 +513,111 @@ Avisos nuevos desde el 13 de octubre: **gasto por revisar** (a quien aprueba), *
 
 ---
 
+## Fase 11. Bodega: cargar el catálogo
+
+> El cliente respondió el cuestionario de control de bodega el 19 de octubre. **Esta fase es solo lo primero**: tener el catálogo y las existencias dentro del sistema. Las órdenes de salida autorizadas vienen en la fase 12; las listas predefinidas, el presupuesto del proyecto y el diario de obra vienen después (ver «Lo que todavía no existe»).
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Ver existencias y artículos | Administrador, Administración, Contabilidad, Técnico | `warehouse.read` |
+| Crear y editar artículos, cargar el Excel, mover el saldo a mano | Administrador, Administración | `warehouse.manage` |
+| Registrar el conteo físico | Administrador, Administración | `warehouse.count` |
+
+### 11.1 Importar el catálogo del Excel
+
+- **Quién:** `admin@demo-org.com`.
+- **Pantalla:** Bodega → **Existencias** (`/warehouse`) · `features/warehouse/WarehouseStockPage.tsx` → botón **Importar catálogo**.
+- **Qué hacer:**
+  1. Sube el `.xlsx` del catálogo. Se leen las filas con nombre de artículo; la primera fila de encabezados se reconoce sola.
+  2. Deja marcada la casilla «Corregir la existencia con la cantidad del archivo» la primera vez: la cantidad de cada fila queda como **conteo inicial** (un movimiento de entrada con ese motivo). Si la dejas desmarcada, los artículos entran con saldo en cero.
+  3. Vuelve a subir **el mismo archivo**: no debe duplicar artículos (la llave es la referencia `SKU`), debe reportarlos como actualizados y **no** volver a sumar el saldo.
+- **API:** `GET /warehouse/catalogs`, `POST /warehouse/import` (multipart), `POST /warehouse/import/rows` (mismo resultado sin archivo, para pegar filas).
+- **Qué debe pasar:** el aviso dice la hoja leída, cuántas filas se leyeron, cuántos artículos se crearon, cuántos se actualizaron y cuántos quedaron con la existencia corregida. Las filas malas **no abortan la carga**: aparecen listadas con su número y el motivo (por ejemplo, una cantidad que no es número).
+- **Lo que no debe poder hacer:** el técnico no ve el botón (le falta `warehouse.manage`).
+
+### 11.2 Existencias y aviso de lo que está bajo el mínimo
+
+- **Pantalla:** Bodega → **Existencias** (`/warehouse`).
+- **Qué hacer:** deja un artículo con el mínimo en 50 y existencia en 10. Filtra por categoría y por «Solo los que están en o bajo el mínimo».
+- **API:** `GET /warehouse/stock`, `GET /warehouse/stock/summary` (`low_count`), `GET /warehouse/items`, `GET /warehouse/movements`.
+- **Qué debe pasar:** el artículo sale con el chip **Bajo mínimo** y la fila resaltada; el indicador **En o bajo el mínimo** cuenta los que están así. La columna **Dónde** dice cuánto hay en cada ubicación. El técnico no ve costos ni valores.
+
+### 11.3 El artículo y sus ubicaciones
+
+- **Pantalla:** Bodega → **Artículos** (`/warehouse/items`) · `features/warehouse/WarehouseItemsPage.tsx`.
+- **Qué hacer:** crea un artículo (nombre, referencia, categoría, unidad, costo, mínimo, proveedor, si lleva serial). Crea una ubicación y registra una entrada y una salida.
+- **API:** `GET/POST/PUT /warehouse/items`, `GET/POST/PUT /warehouse/locations`, `POST /warehouse/movements`.
+- **Qué debe pasar:** una **entrada** sube el saldo y una **salida** lo baja; el libro de movimientos guarda ambos con su fecha y su motivo. **La salida no se registra a mano por esta vía:** sale con un 400 — la salida la autoriza el sistema por una orden (fase siguiente), no cualquiera tecleando el saldo.
+- **Anulación:** volver a registrar el mismo movimiento con la misma clave no descuenta dos veces.
+
+### 11.4 Conteo físico (fin de semana)
+
+- **Quién:** `administracion@demo-org.com` (`warehouse.count`).
+- **Qué hacer:** con la existencia del sistema en 10, registra un **conteo** de 7 en esa ubicación.
+- **API:** `GET /warehouse/locations`, `POST /warehouse/counts`.
+- **Qué debe pasar:** queda un movimiento de **ajuste** por −3 con el motivo «Conteo físico» y el saldo pasa a 7. Registrar el mismo conteo otra vez **no** vuelve a ajustar (lo reporta como «sin cambio»).
+- **Lo que no debe poder hacer:** quien no tiene `warehouse.count` no entra a la pantalla de conteo.
+
+---
+
+## Fase 12. Bodega: salidas autorizadas
+
+> Punto 1 del cuestionario del 19 de octubre: *«para el retiro de los productos de la bodega el sistema da una orden de salida autorizada electrónicamente, ya sea por él o por el supervisor»*.
+>
+> La regla es una sola: **el material no sale a mano**. Sale de una orden que el técnico pide, un supervisor autoriza y Bodega entrega. Sin autorización no hay movimiento de salida.
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Pedir la salida y ver las órdenes | Técnico, Administrador, Administración | `warehouse.request_release` (pedir) · `warehouse.read` (ver) |
+| Autorizar o rechazar la salida | Administrador, Administración (supervisor) | `warehouse.approve_release` |
+| Entregar el material | Administrador, Administración | `warehouse.deliver` |
+
+### 12.1 El técnico pide la salida
+
+- **Quién:** `tecnico@demo-org.com`.
+- **Pantalla:** Bodega → **Salidas** (`/warehouse/releases`) · `features/warehouse/WarehouseReleasesPage.tsx` → botón **Nueva salida**.
+- **Qué hacer:**
+  1. Elige la obra (para que el material quede cargado al proyecto), la fecha en que se necesita y una nota para quien entrega.
+  2. Agrega los renglones: artículo, cantidad, medida o calibre y notas del renglón. Puedes agregar o quitar renglones; las cantidades, el calibre y las notas se escriben a mano.
+  3. Guarda. Queda como **borrador sin número** y **no mueve ninguna existencia**.
+  4. Cuando esté completa, toca **Enviar a autorizar**: ahí sí se asigna el número (`SAL-2026-0001`) y pasa a **Por autorizar**.
+- **API:** `GET /warehouse/catalogs`, `GET /warehouse/items`, `GET /projects`, `POST /warehouse/releases`, `POST /warehouse/releases/{id}/submit`.
+- **Qué debe pasar:** antes de enviarla el número está vacío y el saldo del artículo **no** cambia. Al enviarla aparece el número y la orden salta a la bandeja del supervisor.
+
+### 12.2 El supervisor autoriza (o rechaza con motivo)
+
+- **Quién:** `admin@demo-org.com` o `administracion@demo-org.com`.
+- **Pantalla:** Bodega → **Salidas** → pestaña **Salidas por autorizar** (con el contador de pendientes encima).
+- **Qué hacer:**
+  1. Abre la orden y revisa los renglones (el desplegable «N renglones» muestra artículo, cantidad, calibre y lo entregado).
+  2. **Autorizar** la deja lista para entregar. **Rechazar** exige un motivo escrito: ese texto le queda al técnico.
+- **API:** `GET /warehouse/releases/pending`, `POST /warehouse/releases/{id}/approve`, `POST /warehouse/releases/{id}/reject`.
+- **Qué debe pasar:** autorizar no mueve todavía el saldo. Una orden **rechazada** no se puede entregar (responde 400) y el motivo queda guardado en la orden.
+- **Lo que no debe poder hacer:** el técnico que pidió la salida **no** puede autorizarla (responde 403): el sistema separa pedir de autorizar.
+
+### 12.3 Bodega entrega y el saldo baja
+
+- **Quién:** quien entrega el material (`warehouse.deliver`).
+- **Qué hacer:** con la orden **autorizada**, toca **Entregar**.
+- **API:** `POST /warehouse/releases/{id}/deliver`.
+- **Qué debe pasar:**
+  - El saldo baja en la ubicación de entrega y queda un movimiento de **salida** en el libro con el número de la orden como referencia (`GET /warehouse/movements`, pantalla Bodega → **Movimientos**).
+  - Si hay obra, el material entregado aparece en «Lo que la orden necesita» del proyecto, con la nota «De bodega · SAL-…»: se ve de qué orden salió cada cosa.
+  - **Sin existencia no se bloquea:** la orden queda **entregada** y el aviso dice qué faltó («No había existencia en bodega.» o «Solo había 3.00 de 10.00.»); ese texto queda guardado en la orden.
+  - **Entregar dos veces no descuenta dos veces:** la orden solo se entrega desde el estado **autorizada**, así que el segundo intento responde 400 y el saldo queda igual.
+- **Lo que no debe poder hacer:** otra organización no ve ni puede autorizar/entregar la orden (404). La salida a mano por `POST /warehouse/movements` sigue rechazada con 400.
+
+---
+
 ## Lo que todavía no existe (no lo busques)
 
-El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, el inventario de bodega, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
+El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
+
+De bodega ya están **el catálogo, las existencias** (fase 11) y **las salidas con autorización electrónica** (fase 12). Todavía **no** existen: las listas predefinidas por tipo de trabajo con campos ajustables (punto 2 del cuestionario), el presupuesto del proyecto comparado con lo real y las compras por adelantado (punto 3), y el diario de obra día por día (punto 4).
 
 ---
 

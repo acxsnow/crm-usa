@@ -115,6 +115,42 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Bodega",
+    items: [
+      // Existencias: saldo por artículo y por ubicación, aviso de lo que está en
+      // o bajo el mínimo y el botón para cargar el catálogo del Excel. La
+      // pantalla la ve quien lea, cuente o administre.
+      {
+        label: "Existencias",
+        to: "/warehouse",
+        icon: "⬓",
+        permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
+      },
+      // El catálogo de artículos (SKU, categoría, unidad, costo, mínimo).
+      {
+        label: "Artículos",
+        to: "/warehouse/items",
+        icon: "⬒",
+        permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
+      },
+      // Las órdenes de salida: el técnico las pide y el supervisor las autoriza.
+      {
+        label: "Salidas",
+        to: "/warehouse/releases",
+        icon: "⇥",
+        permission: ["warehouse.read", "warehouse.request_release", "warehouse.approve_release",
+          "warehouse.deliver", "warehouse.manage"],
+      },
+      // El libro de movimientos: de dónde salió cada cosa y para qué obra.
+      {
+        label: "Movimientos",
+        to: "/warehouse/movements",
+        icon: "≡",
+        permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
+      },
+    ],
+  },
+  {
     label: "Finanzas",
     items: [
       { label: "Facturación y cobros", to: "/invoices", icon: "$", permission: "invoices.read" },

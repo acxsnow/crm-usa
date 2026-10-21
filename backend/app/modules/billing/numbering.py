@@ -23,6 +23,8 @@ SERIES = {
     "REB": "Factura de rebate (cobro a un programa)",
     "FAC": "Factura de trabajo particular",
     "COT": "Cotización de trabajo particular",
+    # Orden de salida de material de bodega (cuestionario del 19 de octubre, punto 1).
+    "SAL": "Orden de salida de bodega",
 }
 
 

@@ -345,6 +345,9 @@ class MaterialResponse(MaterialCreate):
     id: uuid.UUID
     project_id: uuid.UUID
     created_at: datetime
+    # La línea de la orden de salida de bodega que lo entregó, cuando vino de
+    # allí: es lo que deja marcado en el acta de dónde salió cada cosa.
+    warehouse_release_line_id: uuid.UUID | None = None
     model_config = {"from_attributes": True}
 
 

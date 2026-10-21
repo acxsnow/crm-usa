@@ -129,6 +129,17 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("zones.manage", "Administrar zonas y asignación de vendedores"),
     ("settings.manage", "Administrar la configuración de la organización"),
     ("organization.manage", "Administrar la organización"),
+    # Bodega (cuestionario del 19 de octubre de 2026, punto 1 a 4)
+    ("warehouse.read", "Ver el catálogo, las existencias y los movimientos de bodega"),
+    ("warehouse.manage", "Administrar el catálogo, ubicaciones, entradas y cargas del Excel"),
+    ("warehouse.kits_manage", "Administrar las listas predefinidas por tipo de trabajo"),
+    ("warehouse.request_release", "Pedir una salida de material de bodega"),
+    ("warehouse.approve_release", "Autorizar o rechazar una salida de material"),
+    ("warehouse.deliver", "Entregar el material de una salida autorizada"),
+    ("warehouse.count", "Registrar el conteo físico de la bodega"),
+    ("budgets.manage", "Armar el presupuesto de un proyecto"),
+    ("budgets.approve", "Aprobar el presupuesto de un proyecto"),
+    ("daylogs.manage", "Registrar el diario de obra (jornadas de un proyecto)"),
     # Usuarios y roles
     ("users.manage", "Administrar usuarios"),
     # Solo listar: lo necesitan pantallas que eligen o muestran personas
@@ -223,6 +234,26 @@ DEFAULT_MODULES: dict[str, Module] = {
     "permits": Module(
         "Permisos e inspecciones",
         ["permits.manage", "inspections.manage"],
+    ),
+    # --- Bodega ---
+    # El módulo del cuestionario del 19 de octubre: existencias, salidas
+    # autorizadas, listas predefinidas, presupuesto del proyecto y diario de
+    # obra. Los permisos de presupuesto y diario viven aquí porque son el mismo
+    # trabajo de bodega visto desde el proyecto (decisiones D-BOD-1 a D-BOD-5).
+    "warehouse": Module(
+        "Bodega",
+        [
+            "warehouse.read",
+            "warehouse.manage",
+            "warehouse.kits_manage",
+            "warehouse.request_release",
+            "warehouse.approve_release",
+            "warehouse.deliver",
+            "warehouse.count",
+            "budgets.manage",
+            "budgets.approve",
+            "daylogs.manage",
+        ],
     ),
     # --- Finanzas ---
     "billing": Module(
@@ -359,6 +390,17 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "dashboards.operations",
         "permits.manage",
         "inspections.manage",
+        # Bodega completa: es donde entra Ricardo, el encargado (respuestas 2 y 17).
+        "warehouse.read",
+        "warehouse.manage",
+        "warehouse.kits_manage",
+        "warehouse.request_release",
+        "warehouse.approve_release",
+        "warehouse.deliver",
+        "warehouse.count",
+        "budgets.manage",
+        "budgets.approve",
+        "daylogs.manage",
         "invoices.read",
         "billing.submit",
         "quotes.manage",
@@ -388,6 +430,11 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "equipment.manage",
         "dispatch.read_own",
         "expenses.create_own",
+        # Pide su salida de material y llena el diario del día; no ve saldos ni
+        # costos (review focus del plan).
+        "warehouse.read",
+        "warehouse.request_release",
+        "daylogs.manage",
         "notifications.read_own",
         "profile.manage",
     ],
@@ -408,6 +455,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "expenses.approve",
         "suppliers.manage",
         "payables.manage",
+        # Ve existencias y movimientos para cruzar compras con lo que hay.
+        "warehouse.read",
         "reconciliation.manage",
         "profitability.read",
         "accounting.export",
@@ -435,6 +484,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "payables.approve",
         "audit.read",
         "users.read",
+        # Lectura de bodega y de lo que hay que comprar (Gerencia).
+        "warehouse.read",
         "notifications.read_own",
         "profile.manage",
     ],

@@ -213,7 +213,59 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
                "fecha": inv.due_date.isoformat()}
         return ("payable.pending_approval", await _users_with(db, org, "payables.approve"), ctx,
                 "/payables", ("supplier_invoice", str(inv.id)))
+    if event == "warehouse.release_pending":
+        return await _release_pending(db, org, payload)
+    if event == "warehouse.release_delivered":
+        return await _release_delivered(db, payload)
+    if event == "warehouse.stock_low":
+        from app.modules.warehouse.models import WarehouseItem
+
+        item = await db.get(WarehouseItem, uuid.UUID(str(payload["item_id"])))
+        if item is None:
+            return None, [], {}, None, (None, None)
+        return ("warehouse.stock_low", await _users_with(db, org, "warehouse.manage"),
+                {"articulo": item.name, "existencia": payload.get("existencia", ""),
+                 "minimo": payload.get("minimo", "")},
+                "/warehouse?filtro=bajo", ("warehouse_item", str(item.id)))
     return None, [], {}, None, (None, None)
+
+
+async def _release_pending(db, org, payload: dict) -> tuple:
+    """La salida que espera autorización: va a quien tiene el permiso, no al
+    técnico que la pidió."""
+    from app.modules.users.models import User
+    from app.modules.warehouse.models import WarehouseReleaseLine, WarehouseReleaseOrder
+
+    orden = await db.get(WarehouseReleaseOrder, uuid.UUID(str(payload["release_id"])))
+    if orden is None:
+        return None, [], {}, None, (None, None)
+    obra = ""
+    if orden.project_id:
+        _, ctx_proyecto = await _project_context(db, orden.project_id)
+        obra = ctx_proyecto.get("proyecto", "")
+    solicitante = await db.get(User, orden.requested_by_user_id) if orden.requested_by_user_id else None
+    renglones = len((await db.execute(select(WarehouseReleaseLine.id).where(
+        WarehouseReleaseLine.order_id == orden.id))).all())
+    ctx = {"orden": orden.number or "borrador", "obra": obra or "sin obra",
+           "solicitante": solicitante.full_name if solicitante else "El técnico", "lineas": renglones}
+    return ("warehouse.release_pending", await _users_with(db, org, DEFAULT_PERMISSION["warehouse.release_pending"]),
+            ctx, "/warehouse/releases", ("warehouse_release", str(orden.id)))
+
+
+async def _release_delivered(db, payload: dict) -> tuple:
+    """Lo entregado (y lo que faltó) vuelve a quien armó la orden."""
+    from app.modules.warehouse.models import WarehouseReleaseOrder
+
+    orden = await db.get(WarehouseReleaseOrder, uuid.UUID(str(payload["release_id"])))
+    if orden is None:
+        return None, [], {}, None, (None, None)
+    obra = ""
+    if orden.project_id:
+        _, ctx_proyecto = await _project_context(db, orden.project_id)
+        obra = ctx_proyecto.get("proyecto", "")
+    ctx = {"orden": orden.number or "", "obra": obra, "faltantes": orden.shortage_note or ""}
+    return ("warehouse.release_delivered", await _user(db, orden.requested_by_user_id), ctx,
+            f"/warehouse/releases/{orden.id}", ("warehouse_release", str(orden.id)))
 
 
 # ---------------------------------------------------------------------------
