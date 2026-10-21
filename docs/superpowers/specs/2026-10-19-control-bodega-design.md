@@ -75,7 +75,7 @@ Permisos nuevos (solo líneas nuevas en `shared/permissions.py`): `warehouse.rea
 Módulo nuevo en `DEFAULT_MODULES`: **Bodega**. Asignación por defecto, según las respuestas 2 y 17:
 
 - `admin_staff` (Administración, donde entra Ricardo): bodega completo, presupuesto y diario.
-- `field_technician` (Técnico): `warehouse.request_release`, `warehouse.read`, `daylogs.manage`.
+- `field_technician` (Técnico): `warehouse.request_release` y `daylogs.manage`. Sin `warehouse.read` desde el 21 oct (migración 0032): ve el catálogo sin costos, solo la existencia de su camioneta y solo sus órdenes.
 - `accounting` (Contabilidad): `warehouse.read` y las entradas por compra.
 - `management` (Gerencia): lectura de bodega, presupuestos y compras sugeridas.
 

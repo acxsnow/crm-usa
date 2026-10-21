@@ -818,6 +818,204 @@ def flujo_finanzas(c: dict, pid: str | None, pid_az: str | None) -> None:
     RECORDS["Proveedor"] = f"QA Ferguson HVAC {RUN} (facturas QA-{RUN}-1/2/3)"
 
 
+def xlsx_catalogo(filas: list[list]) -> bytes:
+    """Un .xlsx mínimo con la hoja «Catálogo», como el Excel que llena el cliente."""
+    import zipfile
+    from xml.sax.saxutils import escape
+
+    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    def celda(col: int, fila: int, valor) -> str:
+        ref = f"{chr(65 + col)}{fila}"
+        if isinstance(valor, (int, float)):
+            return f'<c r="{ref}"><v>{valor}</v></c>'
+        return f'<c r="{ref}" t="inlineStr"><is><t>{escape(str(valor))}</t></is></c>'
+
+    filas_xml = "".join(f'<row r="{i}">' + "".join(celda(j, i, v) for j, v in enumerate(f) if v is not None) + "</row>"
+                        for i, f in enumerate(filas, start=1))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml",
+                   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>')
+        z.writestr("xl/workbook.xml", f'<workbook xmlns="{ns}" xmlns:r="{rel}"><sheets>'
+                                      f'<sheet name="Catálogo" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels",
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{ns}"><sheetData>{filas_xml}</sheetData></worksheet>')
+    return buf.getvalue()
+
+
+def flujo_bodega(c: dict, pid: str | None) -> None:
+    """Bodega (cuestionario del 19 oct): catálogo, salidas autorizadas, listas,
+    presupuesto contra costo real y diario de obra, con lo que cada rol NO puede."""
+    adm, tec, admin, ger, conta, v = c["adm"], c["tecnico"], c["admin"], c["gerencia"], c["conta"], c["vendedor"]
+    xlsx_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    section("16. Bodega: catálogo desde el Excel del cliente y conteo")
+    sku_tubo, sku_cap, sku_cinta = f"QA{RUN}-CU38", f"QA{RUN}-CAP", f"QA{RUN}-CIN"
+    libro = xlsx_catalogo([
+        ["Nombre del material", "Referencia / SKU", "Categoría", "Unidad", "Costo unitario", "Proveedor habitual",
+         "Cantidad en bodega hoy", "Cantidad mínima", "¿Lleva serial?"],
+        ["Ejemplo: no se carga", "X", "Otro", "unidades", 1, None, 1, None, "No"],
+        [f"QA {RUN} Tubo cobre 3/8", sku_tubo, "Tubería y cobre", "pies (ft)", 3.25, "Ferguson", 200, 50, "No"],
+        [f"QA {RUN} Capacitor 35/5", sku_cap, "Eléctrico", "unidades", 18.5, "CED", 4, 5, "No"],
+        [f"QA {RUN} Cinta de aluminio", sku_cinta, "Consumibles", "rollos", 7, None, 30, 10, "No"],
+    ])
+    archivo = {"file": (f"catalogo-qa-{RUN}.xlsx", libro, xlsx_mime)}
+    r = expect("Administración sube el Excel del catálogo", adm.post("/warehouse/import", files=archivo), 200) or {}
+    check("Carga 3 artículos y su conteo inicial; la fila de ejemplo no entra",
+          (r.get("creados"), r.get("conteo_inicial")) == (3, 3), json.dumps(r)[:200])
+    r = adm.post("/warehouse/import", files={"file": (f"catalogo-qa-{RUN}.xlsx", libro, xlsx_mime)}).json()
+    check("Subir el mismo Excel otra vez no suma la existencia dos veces",
+          (r.get("creados"), r.get("conteo_inicial"), r.get("actualizados")) == (0, 0, 3), json.dumps(r)[:200])
+    r = adm.post("/warehouse/import", files={"file": ("malo.xlsx", b"no soy un excel", xlsx_mime)})
+    check("Un archivo que no es Excel → 400", r.status_code == 400, f"{r.status_code} {r.text[:120]}")
+    expect("El técnico no puede importar el catálogo", tec.post("/warehouse/import", files=archivo), 403)
+
+    items = {i["sku"]: i for i in adm.get("/warehouse/items", params={"q": f"QA {RUN}", "page_size": 50}).json()}
+    tubo, cap, cinta = items.get(sku_tubo), items.get(sku_cap), items.get(sku_cinta)
+    if not check("Los tres artículos quedaron en el catálogo", all((tubo, cap, cinta)), str(list(items))):
+        return
+    check("Existencia inicial del tubo: 200 ft", tubo["total_quantity"] == "200.00", tubo["total_quantity"])
+    resumen = adm.get("/warehouse/stock/summary").json()
+    check("El capacitor (4, mínimo 5) cuenta como «por reponer»", resumen.get("low_count", 0) >= 1, json.dumps(resumen))
+    bodega = next((u for u in adm.get("/warehouse/locations", params={"page_size": 50}).json()
+                   if u["kind"] == "warehouse"), None)
+    expect("Conteo mensual: la cinta tenía 28, no 30",
+           adm.post("/warehouse/counts", json={"location_id": bodega["id"] if bodega else None, "note": f"QA {RUN}",
+                                               "lines": [{"item_id": cinta["id"], "counted_quantity": "28"}]}), 200, 201)
+    check("El conteo cuadra el saldo con un ajuste",
+          adm.get(f"/warehouse/items/{cinta['id']}").json()["total_quantity"] == "28.00")
+    ajustes = adm.get("/warehouse/movements", params={"item_id": cinta["id"], "movement_type": "ajuste"}).json()
+    check("El ajuste queda en el libro de movimientos", len(ajustes) == 1, json.dumps(ajustes)[:150])
+    RECORDS["Bodega · artículos"] = f"{sku_tubo}, {sku_cap}, {sku_cinta}"
+
+    section("17. Bodega: camioneta del técnico y lo que el técnico ve")
+    camioneta = expect("Administración crea la camioneta del técnico", adm.post("/warehouse/locations", json={
+        "name": f"QA {RUN} Camioneta", "kind": "truck", "technician_user_id": tec.me["id"]}), 201) or {}
+    expect("Carga 20 ft de tubo a la camioneta (traslado)", adm.post("/warehouse/movements", json={
+        "item_id": tubo["id"], "movement_type": "traslado", "quantity": "20", "to_location_id": camioneta.get("id"),
+        "reference": f"QA {RUN}"}), 201)
+    expect("Una salida manual por fuera de una orden → 400", adm.post("/warehouse/movements", json={
+        "item_id": tubo["id"], "movement_type": "salida", "quantity": "5"}), 400)
+    visto = tec.get(f"/warehouse/items/{tubo['id']}").json()
+    check("El técnico ve el artículo sin costo", "unit_cost" not in visto and "value" not in visto, json.dumps(visto)[:150])
+    check("De existencias, el técnico solo ve su camioneta (20 ft)",
+          [(l["name"], l["quantity"]) for l in visto.get("by_location", [])] == [(f"QA {RUN} Camioneta", "20.00")],
+          json.dumps(visto.get("by_location"))[:200])
+    for ruta in ("/warehouse/stock", "/warehouse/movements", "/warehouse/purchasing", "/warehouse/budgets"):
+        expect(f"técnico GET {ruta} → 403", tec.get(ruta), 403)
+    expect("El vendedor no entra a bodega", v.get("/warehouse/items"), 403)
+    expect("Contabilidad ve existencias (las entradas por compra son suyas)", conta.get("/warehouse/stock"), 200)
+    expect("Gerencia ve existencias", ger.get("/warehouse/stock"), 200)
+    expect("Gerencia no mueve existencias", ger.post("/warehouse/movements", json={
+        "item_id": tubo["id"], "movement_type": "entrada", "quantity": "1"}), 403)
+
+    section("18. Bodega: listas predefinidas y órdenes de salida")
+    kit = expect("Administración arma la lista «Mini split 12k»", adm.post("/warehouse/kits", json={
+        "name": f"QA {RUN} Mini split 12k", "project_type": "mini_split", "items": [
+            {"item_id": tubo["id"], "quantity": "25", "spec_label": "3/8", "section": "Tubería"},
+            {"item_id": cinta["id"], "quantity": "2", "section": "Consumibles"}]}), 201) or {}
+    expect("El técnico no puede crear listas", tec.post("/warehouse/kits", json={
+        "name": "x", "items": [{"item_id": tubo["id"]}]}), 403)
+    orden = expect("El técnico arma su borrador para la obra", tec.post("/warehouse/releases", json={
+        "project_id": pid, "note": f"QA {RUN}", "lines": [{"item_id": cap["id"], "quantity": "6"}]}), 201) or {}
+    aplicada = expect("Aplica la lista a su borrador", tec.post(f"/warehouse/kits/{kit.get('id')}/apply",
+                                                                json={"release_id": orden.get("id")}), 200) or {}
+    check("La lista agrega sus 2 renglones", aplicada.get("agregadas") == 2, json.dumps(aplicada)[:150])
+    check("La orden del técnico no muestra costos",
+          all("unit_cost" not in l for l in aplicada.get("lines", [])), json.dumps(aplicada.get("lines"))[:150])
+    enviada = expect("El técnico la manda a autorizar", tec.post(f"/warehouse/releases/{orden.get('id')}/submit"), 200) or {}
+    check("Recibe número de la serie SAL", str(enviada.get("number", "")).startswith("SAL-"), str(enviada.get("number")))
+    expect("El técnico no puede autorizar", tec.post(f"/warehouse/releases/{orden.get('id')}/approve"), 403)
+    pendientes = [o["id"] for o in adm.get("/warehouse/releases/pending", params={"page_size": 100}).json()]
+    check("La orden aparece en «Por autorizar»", orden.get("id") in pendientes)
+    expect("Administración la autoriza", adm.post(f"/warehouse/releases/{orden.get('id')}/approve"), 200)
+    entrega = expect("Administración la entrega", adm.post(f"/warehouse/releases/{orden.get('id')}/deliver",
+                                                            json={"note": f"QA {RUN}"}), 200) or {}
+    faltan = entrega.get("faltantes", [])
+    check("Se entrega aunque falte capacitor, con aviso de faltante (pidió 6, había 4)",
+          entrega.get("status") == "entregada" and len(faltan) == 1, json.dumps(faltan)[:200])
+    r = adm.post(f"/warehouse/releases/{orden.get('id')}/deliver", json={})
+    saldo = adm.get(f"/warehouse/items/{tubo['id']}").json()["total_quantity"]
+    check("Entregar dos veces no descuenta dos veces (tubo 200 − 25 = 175)",
+          r.status_code in (200, 400, 409) and saldo == "175.00", f"{r.status_code} · tubo {saldo}")
+    RECORDS["Bodega · orden entregada"] = str(enviada.get("number"))
+
+    otra = expect("Segunda orden del técnico", tec.post("/warehouse/releases", json={
+        "project_id": pid, "lines": [{"item_id": tubo["id"], "quantity": "500"}]}), 201) or {}
+    tec.post(f"/warehouse/releases/{otra.get('id')}/submit")
+    expect("Rechazar exige motivo", adm.post(f"/warehouse/releases/{otra.get('id')}/reject", json={"reason": ""}), 400, 422)
+    rech = expect("Administración la rechaza con motivo", adm.post(f"/warehouse/releases/{otra.get('id')}/reject",
+                                                                   json={"reason": "500 ft es demasiado para un mini split"}),
+                  200) or {}
+    check("Queda rechazada con su motivo", rech.get("status") == "rechazada", str(rech.get("status")))
+
+    propia = expect("Administración arma una orden para sí", adm.post("/warehouse/releases", json={
+        "lines": [{"item_id": cinta["id"], "quantity": "1"}]}), 201) or {}
+    adm.post(f"/warehouse/releases/{propia.get('id')}/submit")
+    r = adm.post(f"/warehouse/releases/{propia.get('id')}/approve")
+    check("Nadie autoriza la salida que pidió → 403", r.status_code == 403, f"{r.status_code} {r.text[:120]}")
+    expect("El técnico no ve la orden de otra persona", tec.get(f"/warehouse/releases/{propia.get('id')}"), 404)
+    expect("El Administrador sí la autoriza", admin.post(f"/warehouse/releases/{propia.get('id')}/approve"), 200)
+    mias = {o["id"] for o in tec.get("/warehouse/releases", params={"page_size": 100}).json()}
+    check("El técnico solo lista sus órdenes", propia.get("id") not in mias and orden.get("id") in mias)
+
+    if not pid:
+        check("Hay proyecto para presupuesto y diario", False, "el flujo de campo no dejó proyecto")
+        return
+    section("19. Bodega: presupuesto de la obra contra costo real y compras sugeridas")
+    presupuesto = expect("Administración arma el presupuesto de la obra", adm.post("/warehouse/budgets", json={
+        "project_id": pid, "notes": f"QA {RUN}", "lines": [
+            {"category": "materials", "item_id": cap["id"], "quantity": "10"},
+            {"category": "labor", "description": "Mano de obra 2 técnicos", "quantity": "16", "unit_cost": "35"}]}),
+        201) or {}
+    expect("Le agrega la lista «Mini split 12k»", adm.post(f"/warehouse/budgets/{presupuesto.get('id')}/apply-kit",
+                                                         json={"kit_id": kit.get("id")}), 200)
+    expect("Gerencia solo lee: no aprueba presupuestos", ger.post(f"/warehouse/budgets/{presupuesto.get('id')}/approve"), 403)
+    expect("El Administrador aprueba el presupuesto", admin.post(f"/warehouse/budgets/{presupuesto.get('id')}/approve"), 200)
+    comp = expect("Presupuesto contra costo real de la obra",
+                  ger.get(f"/warehouse/projects/{pid}/budget-vs-actual"), 200) or {}
+    fila = next((f for f in comp.get("rows", []) if f["category"] == "materials"), {})
+    check("El material entregado ya cuenta como costo real de la obra",
+          float(fila.get("actual") or 0) > 0 and comp.get("budget_status") == "aprobado", json.dumps(fila)[:200])
+    compras = expect("Compras sugeridas", adm.get("/warehouse/purchasing"), 200) or {}
+    sug = next((f for f in compras.get("rows", []) if f["item_id"] == cap["id"]), None)
+    estado = (adm.get(f"/projects/{pid}").json() or {}).get("status")
+    if estado in ("completed", "cancelled"):
+        # Lo ya instalado no vuelve a comprarse: una obra terminada no pide compras.
+        check(f"Obra {estado}: su presupuesto ya no pide comprar capacitor", sug is None, json.dumps(sug)[:200])
+    else:
+        check("Sugiere comprar el capacitor que falta", sug is not None and float(sug["to_buy"]) > 0,
+              json.dumps(sug)[:200])
+
+    section("20. Bodega: diario de obra")
+    r = tec.post(f"/warehouse/projects/{pid}/day-logs", json={
+        "log_date": HOY.isoformat(), "materials": [{"item_id": tubo["id"], "quantity": "3", "location_id": bodega["id"]}]})
+    check("El material del diario no puede salir de la bodega principal → 400",
+          r.status_code == 400, f"{r.status_code} {r.text[:120]}")
+    jornada = expect("El técnico registra la jornada con material de su camioneta",
+                     tec.post(f"/warehouse/projects/{pid}/day-logs", json={
+                         "log_date": HOY.isoformat(), "technician_user_id": tec.me["id"], "hours": "8",
+                         "crew": f"QA {RUN} ayudante", "work_done": "Se instaló la condensadora y se probó presión",
+                         "progress_note": "70%", "missing_materials": "2 codos de 3/8",
+                         "next_day_plan": "Cableado y arranque",
+                         "materials": [{"item_id": tubo["id"], "quantity": "6", "location_id": camioneta.get("id")},
+                                       {"description": "Silicona comprada en la obra", "quantity": "1"}]}), 201) or {}
+    lineas = jornada.get("materials", [])
+    check("Lo de la camioneta descuenta; lo comprado en la obra solo se anota",
+          [l.get("descontada") for l in lineas] == [True, False], json.dumps(lineas)[:200])
+    check("La camioneta bajó de 20 a 14 ft", [l["quantity"] for l in tec.get(f"/warehouse/items/{tubo['id']}").json()
+                                                ["by_location"]] == ["14.00"])
+    r = tec.post(f"/warehouse/projects/{pid}/day-logs", json={"log_date": HOY.isoformat(), "hours": "2"})
+    check("Una sola jornada por día y obra → 400", r.status_code == 400, f"{r.status_code} {r.text[:120]}")
+    diario = expect("Gerencia lee el diario de la obra", ger.get(f"/warehouse/projects/{pid}/day-logs"), 200) or []
+    check("El diario trae la jornada con su avance", any(d.get("progress_note") == "70%" for d in diario))
+    RECORDS["Bodega · diario"] = f"proyecto {pid}, {HOY.isoformat()}"
+
+
 def reporte() -> Path:
     total, malos = len(RESULTS), [r for r in RESULTS if not r["ok"]]
     salida = Path(__file__).resolve().parents[2] / "docs" / "qa" / f"qa-e2e-{date.today().isoformat()}-{RUN}.md"
@@ -882,6 +1080,7 @@ def main() -> int:
     seguro("Particular", flujo_particular, conta, admin)
     seguro("Permisos", flujo_permisos_por_rol, c)
     seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
+    seguro("Bodega", flujo_bodega, c, pid_az)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")

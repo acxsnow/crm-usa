@@ -227,3 +227,49 @@ async def test_el_conteo_cuadra_el_saldo_con_un_ajuste(app_client, login, active
         "lines": [{"item_id": item["id"], "counted_quantity": "7"}]}, headers=h)
     assert (repetido.json()["ajustes"], repetido.json()["sin_cambio"]) == ([], 1)
     assert await _existencia(app_client, h, item["id"]) == "7.00"
+
+
+def _xlsx(filas: list[list]) -> bytes:
+    """Un .xlsx mínimo con la hoja «Catálogo»: números como celdas numéricas,
+    igual que los guarda Excel."""
+    import io
+    import zipfile
+
+    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    def celda(col, fila, valor):
+        ref = f"{chr(65 + col)}{fila}"
+        if isinstance(valor, (int, float)):
+            return f'<c r="{ref}"><v>{valor}</v></c>'
+        return f'<c r="{ref}" t="inlineStr"><is><t>{valor}</t></is></c>'
+
+    hoja = "".join(f'<row r="{i}">' + "".join(celda(j, i, v) for j, v in enumerate(f)) + "</row>"
+                   for i, f in enumerate(filas, start=1))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("xl/workbook.xml", f'<workbook xmlns="{ns}" xmlns:r="{rel}"><sheets>'
+                                      f'<sheet name="Catálogo" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels",
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{ns}"><sheetData>{hoja}</sheetData></worksheet>')
+    return buf.getvalue()
+
+
+async def test_el_excel_con_costos_con_centavos_se_carga_completo(app_client, login, active_admin_user):
+    """Falla real del QA del 21 oct: Excel guarda 3.25 como número, el lector lo
+    devolvía como float y el dinero (que no acepta floats) rechazaba la fila."""
+    h = await login(active_admin_user.email)
+    libro = _xlsx([
+        ["Nombre del material", "Referencia / SKU", "Categoría", "Unidad", "Costo unitario", "Cantidad en bodega hoy"],
+        ["Tubo cobre 3/8", "CU-38", "Tubería y cobre", "pies (ft)", 3.25, 120.5],
+        ["Capacitor 35/5", "CAP-355", "Eléctrico", "unidades", 18, 4],
+    ])
+    r = await app_client.post(f"{API}/warehouse/import", files={
+        "file": ("catalogo.xlsx", libro, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=h)
+    assert r.status_code == 200, r.text
+    assert (r.json()["creados"], r.json()["errores"]) == (2, [])
+    items = {i["sku"]: i for i in (await app_client.get(f"{API}/warehouse/items", headers=h)).json()}
+    assert (items["CU-38"]["unit_cost"], items["CU-38"]["total_quantity"]) == ("3.25", "120.50")

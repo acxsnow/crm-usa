@@ -14,6 +14,7 @@ formatos.
 import re
 import zipfile
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from xml.etree import ElementTree as ET
 
@@ -86,11 +87,15 @@ def _cell_value(celda, compartidas: list[str]):
     texto = valor.text.strip()
     if not texto:
         return None
+    # Decimal y no float: el costo 3.25 del Excel va directo a dinero
+    # (`billing/money.py` rechaza floats) sin errores de redondeo.
     try:
-        numero = float(texto)
-    except ValueError:
+        numero = Decimal(texto)
+    except InvalidOperation:
         return valor.text
-    return int(numero) if numero.is_integer() else numero
+    if not numero.is_finite() or numero.adjusted() > 15:  # «1E999999» no se vuelve un entero gigante
+        return valor.text
+    return int(numero) if numero == numero.to_integral_value() else numero
 
 
 # Topes del contenido: un archivo chico con una celda «ZZZZZZ1» haría crecer la
