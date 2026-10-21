@@ -225,3 +225,23 @@ async def test_una_bomba_zip_se_rechaza_sin_descomprimirla(app_client, login, ac
         "file": ("catalogo.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         headers=admin)
     assert (r.status_code, r.json()["code"]) == (400, "invalid_workbook")
+
+
+async def test_una_celda_en_una_columna_imposible_no_infla_la_memoria(app_client, login, active_admin_user):
+    """Unos bytes con la celda «ZZZZZZ1» pedirían una fila de cientos de millones de huecos."""
+    admin = await login(active_admin_user.email)
+    ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("xl/workbook.xml", f'<workbook xmlns="{ns}" xmlns:r="{rel}"><sheets>'
+                                      f'<sheet name="Catálogo" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels",
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{ns}"><sheetData><row r="1">'
+                                               f'<c r="ZZZZZZ1"><v>1</v></c></row></sheetData></worksheet>')
+    r = await app_client.post(f"{API}/warehouse/import", files={
+        "file": ("catalogo.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=admin)
+    assert (r.status_code, r.json()["code"]) == (400, "invalid_workbook")

@@ -93,15 +93,28 @@ def _cell_value(celda, compartidas: list[str]):
     return int(numero) if numero.is_integer() else numero
 
 
-def _read_sheet(z: zipfile.ZipFile, path: str, compartidas: list[str]) -> list[list]:
+# Topes del contenido: un archivo chico con una celda «ZZZZZZ1» haría crecer la
+# fila a millones de huecos. Excel no pasa de la columna XFD (16.384).
+MAX_COLUMNS = 16_384
+MAX_CELLS = 2_000_000
+MAX_SHEETS = 50
+
+
+def _read_sheet(z: zipfile.ZipFile, path: str, compartidas: list[str], presupuesto: list[int]) -> list[list]:
+    """`presupuesto` es [celdas que aún se pueden leer], compartido entre hojas."""
     raiz = ET.fromstring(z.read(path))
     filas: list[list] = []
     for fila in raiz.iter(f"{NS}row"):
         celdas: list = []
         for celda in fila.findall(f"{NS}c"):
             indice = _column_index(celda.get("r", ""))
-            while len(celdas) <= indice:
-                celdas.append(None)
+            if indice >= MAX_COLUMNS:
+                raise NotAnXlsxError("El Excel tiene celdas fuera de las columnas válidas.")
+            relleno = max(0, indice + 1 - len(celdas))
+            presupuesto[0] -= max(relleno, 1)
+            if presupuesto[0] < 0:
+                raise NotAnXlsxError("El Excel tiene demasiadas celdas para importarlo.")
+            celdas.extend([None] * relleno)
             celdas[indice] = _cell_value(celda, compartidas)
         filas.append(celdas)
     return filas
@@ -124,7 +137,15 @@ def read_sheets(data: bytes) -> dict[str, list[list]]:
         raise NotAnXlsxError("El Excel es demasiado grande para importarlo.")
     try:
         compartidas = _shared_strings(z)
-        return {nombre: _read_sheet(z, path, compartidas) for nombre, path in _sheet_paths(z)}
+        hojas = _sheet_paths(z)
+        if len(hojas) > MAX_SHEETS:
+            raise NotAnXlsxError("El Excel tiene demasiadas hojas para importarlo.")
+        presupuesto = [MAX_CELLS]
+        leidas: dict[str, list[list]] = {}  # una hoja repetida en el libro se lee una sola vez
+        for _, path in hojas:
+            if path not in leidas:
+                leidas[path] = _read_sheet(z, path, compartidas, presupuesto)
+        return {nombre: leidas[path] for nombre, path in hojas}
     except (KeyError, ET.ParseError) as exc:
         raise NotAnXlsxError("No se pudo leer el contenido del Excel.") from exc
 
