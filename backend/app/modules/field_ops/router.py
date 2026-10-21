@@ -78,7 +78,9 @@ from app.modules.field_ops.schemas import (
     PublicSignatureResponse,
 )
 from app.shared.files.storage import absolute_path
+from app.modules.field_ops.reviews import was_reopened_for_correction
 from app.modules.users.models import Role, User, UserRole, UserStatus
+from app.modules.warehouse import day_logs as day_logs_service
 
 router = APIRouter(tags=["field-ops"])
 
@@ -892,6 +894,8 @@ async def dispatch_agenda(
     limit, offset = pagination
     filas = await paginate(db, stmt, limit=limit, offset=offset, response=response, scalars=False)
     hoy = await org_today(db, organization_id)
+    # Las jornadas del diario marcan las obras de varios días (punto 4).
+    jornadas = await day_logs_service.day_count_by_project(db, organization_id, [p.id for p, _ in filas])
     return [
         AgendaRow(
             project_id=p.id, title=p.title, status=p.status, scheduled_date=p.scheduled_date,
@@ -900,6 +904,7 @@ async def dispatch_agenda(
             case_id=c.id if c else None, case_number=c.case_number if c else None,
             stage_code=c.stage_code if c else None, substatus_code=c.substatus_code if c else None,
             days_late=installation_service.days_late(p, hoy),
+            day_count=jornadas.get(p.id, 0),
         )
         for p, c in filas
     ]

@@ -230,4 +230,6 @@ export interface AgendaRow {
   substatus_code: string | null;
   /** Días de atraso si sigue sin cerrar y su fecha ya pasó (lo calcula el servidor). */
   days_late: number | null;
+  /** Jornadas del diario de obra. Más de una = obra de varios días. */
+  day_count: number;
 }

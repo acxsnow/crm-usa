@@ -132,19 +132,19 @@
 
 ### Task 4.1: Jornadas
 
-- [ ] `project_day_logs` y `project_day_log_materials` en la migración `0031_...`.
-- [ ] Pruebas (`tests/test_project_day_logs.py`): registrar la jornada con su técnico, horas y avance; material usado descuenta de la camioneta; los gastos del día se leen de `expenses` por fecha; dos jornadas con técnicos distintos; aislamiento por organización.
+- [x] `project_day_logs` y `project_day_log_materials` en la migración `0031_...`.
+- [x] Pruebas (`tests/test_project_day_logs.py`): registrar la jornada con su técnico, horas y avance; material usado descuenta de la camioneta; los gastos del día se leen de `expenses` por fecha; dos jornadas con técnicos distintos; aislamiento por organización. (6 pruebas en verde.)
 
 ### Task 4.2: API y pantallas
 
-- [ ] Rutas `GET/POST/PUT /projects/{id}/day-logs` (permiso `daylogs.manage`).
-- [ ] Sección «Diario» en `ProjectDetailPage`: una línea por día con técnico, qué se hizo, avance, qué faltó, qué llevar al día siguiente y gastos del día.
-- [ ] La Agenda marca las obras de varios días (más de una jornada).
-- [ ] `npm run build` y `check_hooks.py`.
+- [x] Rutas `GET/POST/PUT /projects/{id}/day-logs` (permiso `daylogs.manage`).
+- [x] Sección «Diario» en `ProjectDetailPage`: una línea por día con técnico, qué se hizo, avance, qué faltó, qué llevar al día siguiente y gastos del día (`ProjectDayLogPanel`).
+- [x] La Agenda marca las obras de varios días (más de una jornada), con el `day_count` del servidor.
+- [x] `npm run build` y `check_hooks.py`.
 
 ### Task 4.3: Verificación
 
-- [ ] `pytest -q` en verde.
+- [x] `pytest -q` en verde (609 pruebas).
 - [ ] Navegador: registrar tres jornadas de un mismo proyecto con dos técnicos y ver el diario y los gastos por día.
 
 ---

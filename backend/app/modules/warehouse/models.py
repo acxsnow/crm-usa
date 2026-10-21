@@ -297,3 +297,71 @@ class ProjectBudgetLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     budget: Mapped["ProjectBudget"] = relationship("ProjectBudget", back_populates="lines", lazy="raise")
+
+
+class ProjectDayLog(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """La jornada del punto 4: un día de trabajo de una obra.
+
+    Los trabajos fuera de rebate duran varios días y no siempre con el mismo
+    técnico, así que el técnico vive **en la jornada** y no en el proyecto: la
+    misma obra tiene una jornada distinta cada día, con gente distinta. Que una
+    obra tenga más de una jornada es justo lo que la vuelve «de varios días»,
+    que es lo que la Agenda marca.
+
+    Los gastos del día no se capturan acá: se **leen** de `expenses` por fecha,
+    porque ya están cargados y volver a escribirlos sería contarlos dos veces.
+    """
+
+    __tablename__ = "project_day_logs"
+    __table_args__ = (
+        # Una línea por día: el diario se lee como una jornada por renglón.
+        UniqueConstraint("organization_id", "project_id", "log_date", name="uq_project_day_log_date"),
+        Index("ix_project_day_logs_org_project", "organization_id", "project_id"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id"), nullable=False, index=True)
+    log_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # El técnico del día, que no tiene por qué ser el asignado al proyecto.
+    technician_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"), index=True)
+    # Con quién más estuvo. Texto libre: la cuadrilla no siempre son usuarios.
+    crew: Mapped[str | None] = mapped_column(String(255))
+    hours: Mapped[Decimal | None] = mapped_column(QUANTITY)
+    work_done: Mapped[str | None] = mapped_column(Text)
+    # Hasta dónde se avanzó, en una línea: es lo que se lee de un vistazo.
+    progress_note: Mapped[str | None] = mapped_column(String(255))
+    missing_materials: Mapped[str | None] = mapped_column(Text)
+    next_day_plan: Mapped[str | None] = mapped_column(Text)
+    incidents: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+    materials: Mapped[list["ProjectDayLogMaterial"]] = relationship(
+        "ProjectDayLogMaterial", back_populates="day_log", lazy="raise")
+
+
+class ProjectDayLogMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """El material que se usó ese día.
+
+    Cuando la línea apunta a un artículo del catálogo y dice de qué camioneta
+    salió, registrar la jornada **descuenta la existencia**: ese material se usó
+    y ya no está en la camioneta. Si es algo que se compró directo a la obra,
+    la línea va sin artículo ni ubicación y queda solo como anotación del día.
+    """
+
+    __tablename__ = "project_day_log_materials"
+    __table_args__ = (Index("ix_project_day_log_materials_org_log", "organization_id", "day_log_id"),)
+
+    day_log_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("project_day_logs.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), index=True)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False, default=Decimal("1"))
+    unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unit")
+    # De dónde salió (la camioneta). Nulo = la línea no movió existencia.
+    location_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_locations.id"))
+    # El movimiento que la descontó, para poder seguirle la pista.
+    movement_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_movements.id"))
+    notes: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    day_log: Mapped["ProjectDayLog"] = relationship("ProjectDayLog", back_populates="materials", lazy="raise")

@@ -57,6 +57,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | 12. Bodega: salidas autorizadas | Técnico, Administración | cuestionario del 19 oct, punto 1 | — |
 | 13. Bodega: listas predefinidas | Administración, Técnico | cuestionario del 19 oct, punto 2 | — |
 | 14. Presupuesto y costo real | Administración, Gerencia | cuestionario del 19 oct, punto 3 | — |
+| 15. Diario de obra día por día | Técnico, Administración | cuestionario del 19 oct, punto 4 | — |
 
 ---
 
@@ -735,13 +736,81 @@ Avisos nuevos desde el 13 de octubre: **gasto por revisar** (a quien aprueba), *
 
 ---
 
+## Fase 15. Diario de obra día por día
+
+> Punto 4 del cuestionario del 19 de octubre: *«un calendario donde se vea qué se realiza en cada día»*, porque **los trabajos fuera de rebate duran varios días, con técnicos distintos cada día**.
+>
+> Tres reglas sostienen el diario:
+>
+> 1. **El técnico vive en la jornada, no en el proyecto.** La misma obra tiene uno distinto cada día; por eso la obra puede tener varias jornadas con técnicos diferentes.
+> 2. **Los gastos del día no se digitan aquí.** Se leen de los gastos de la obra por fecha: volver a escribirlos sería contarlos dos veces.
+> 3. **El material que salió de la camioneta no se edita ni se borra.** Registrar la jornada descuenta la existencia con un movimiento de bodega y ese material cuenta como **costo de la obra**; el libro de movimientos no se toca (para corregir se registra la devolución a bodega). Lo que solo se anota (texto libre) sí se edita.
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Ver el diario | Administrador, Administración, Gerencia, Técnico | `daylogs.manage` o `warehouse.read` |
+| Registrar y corregir jornadas | Administrador, Administración, Técnico | `daylogs.manage` |
+| Elegir a otro técnico para el día | Administrador, Administración | `dispatch.manage` (el listado de técnicos) |
+
+### 15.1 Registrar la jornada
+
+- **Quién:** `tecnico@demo-org.com` (o Administración, que además puede elegir a otro técnico).
+- **Pantalla:** Proyectos → abre la obra → anexo **Diario de obra** · `features/warehouse/ProjectDayLogPanel.tsx` → botón **Registrar la jornada**.
+- **Qué hacer:**
+  1. **Día** (viene con la fecha de hoy), **técnico del día**, **cuadrilla** y **horas**.
+  2. Lo que se cuenta del día: **qué se hizo**, **hasta dónde se avanzó**, **qué material faltó**, **qué llevar al día siguiente** y **novedades del día**. Todo menos «qué se hizo» es opcional.
+  3. **Material del día:** elige el artículo del catálogo, la cantidad y **de dónde sale** (la camioneta, con su existencia disponible). Si el material se compró directo en la obra y no pasó por ninguna ubicación, deja «Solo anotar» y escríbelo en la descripción.
+  4. Guarda.
+- **API:** `POST /warehouse/projects/{id}/day-logs`, `GET /warehouse/projects/{id}/day-logs`, `GET /warehouse/items`, `GET /dispatch/technicians`.
+- **Qué debe pasar:** la jornada queda en el diario con su técnico, sus horas y su material, del día más reciente al más viejo.
+- **Lo que no debe poder hacer:**
+  - **Dos jornadas del mismo día en la misma obra** → `day_log_date_taken` (400). Es un día por obra; para cambiar algo se corrige la jornada.
+  - Un rol sin `daylogs.manage` (Contabilidad, Revisor, solo lectura) recibe **403** al intentar registrar.
+  - Otra organización no ve ni toca el diario ajeno (`project_not_found`, 404).
+  - Una línea sin artículo y sin descripción → `day_log_material_description_required` (400); cantidad en cero → `invalid_day_log_quantity` (400).
+
+### 15.2 El material del día descuenta la camioneta y cuesta a la obra
+
+- **Quién:** quien registró la jornada.
+- **Qué hacer:** en el material del día, elige un artículo **y** su ubicación (la camioneta), por ejemplo 8 pies de tubo de los 20 que lleva la camioneta.
+- **API:** `POST /warehouse/projects/{id}/day-logs`.
+- **Qué debe pasar:**
+  - La existencia de **esa camioneta** baja: 20 → 12. La bodega no se toca.
+  - En **Movimientos de bodega** aparece una **salida** de −8.00 valorada a **costo del catálogo**, con la referencia `Diario de obra AAAA-MM-DD` y la **obra** como destino. Ese material entra al **costo real** de la obra (fase 14, fila **Material**): es la regla D-BOD-2, el material se vuelve costo cuando **sale**.
+  - **Repetir el guardado no descuenta dos veces:** el movimiento lleva una clave por línea del diario. Corregir solo el texto del día (qué se hizo, horas, avance) no vuelve a descontar nada.
+  - Una línea **sin** ubicación no mueve nada: solo queda escrita, y se marca **Solo anotado** en el diario (las que sí movieron quedan **Descontado**).
+
+### 15.3 Corregir la jornada
+
+- **Quién:** quien tenga `daylogs.manage`.
+- **Pantalla:** el diario de la obra → **Corregir** en la jornada del día.
+- **Qué hacer:** cambia el técnico, las horas, los textos o los renglones que **no** movieron existencia (agregar, editar o quitar).
+- **API:** `PUT /warehouse/projects/{id}/day-logs/{log_id}`.
+- **Qué debe pasar:** lo que no movió existencia se corrige sin problema; la fecha y el técnico se cambian libremente.
+- **Lo que no debe poder hacer:**
+  - Cambiar la **cantidad** o el **artículo** de una línea que ya descontó la camioneta → `day_log_line_locked` (400); el mensaje dice qué hacer: registrar la devolución a bodega en su lugar.
+  - **Quitar** del diario una línea que ya descontó → `day_log_line_locked` (400). Las líneas bloqueadas se ven congeladas en el formulario y sin botón «Quitar».
+  - Editar la jornada de **otra obra** por la URL → `day_log_not_found` (404).
+
+### 15.4 La Agenda marca las obras de varios días
+
+- **Quién:** cualquiera que abra la Agenda.
+- **Pantalla:** Mi agenda / Agenda de instalaciones (`/my-schedule`) · `features/field-ops/AgendaPage.tsx`.
+- **Qué hacer:** mira las órdenes: además del estado y el atraso, las obras con **más de una jornada** muestran la píldora **«N jornadas»**.
+- **API:** `GET /dispatch/agenda` (campo `day_count`).
+- **Qué debe pasar:** registrar la segunda jornada de una obra hace aparecer la marca **«2 jornadas»** en su fila de la Agenda; con una sola jornada no se marca nada.
+
+---
+
 ## Lo que todavía no existe (no lo busques)
 
 El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
 
-De bodega ya están **el catálogo, las existencias** (fase 11), **las salidas con autorización electrónica** (fase 12), **las listas predefinidas por tipo de trabajo** (fase 13) y **el presupuesto del proyecto contra el costo real, con las compras sugeridas** (fase 14). Todavía **no** existe el diario de obra día por día (punto 4).
+De bodega ya están **el catálogo, las existencias** (fase 11), **las salidas con autorización electrónica** (fase 12), **las listas predefinidas por tipo de trabajo** (fase 13), **el presupuesto del proyecto contra el costo real, con las compras sugeridas** (fase 14) y **el diario de obra día por día** (fase 15). Los cuatro puntos del cuestionario del 19 de octubre quedan cubiertos.
 
-Falta cargar las listas reales del cliente: mientras no llegue su listado por tipo de trabajo, las listas se arman a mano en la pantalla.
+Falta cargar las listas reales del cliente: mientras no llegue su listado por tipo de trabajo, las listas se arman a mano en la pantalla. También faltan, del lado del cliente, el Excel definitivo del catálogo, la lista de categorías y calibres y la lista de herramientas que sí entran al inventario.
 
 ---
 

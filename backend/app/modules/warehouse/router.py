@@ -13,6 +13,7 @@ from app.modules.users.models import User
 from app.modules.warehouse import service as wh
 from app.modules.warehouse import budgets as budget_svc
 from app.modules.warehouse import costing as costing_svc
+from app.modules.warehouse import day_logs as daylog_svc
 from app.modules.warehouse import kits as kit_svc
 from app.modules.warehouse import releases as rel
 from app.modules.warehouse import xlsx
@@ -54,6 +55,10 @@ _budget_approve = require_permission("budgets.approve")
 # Ver el presupuesto: lo ve quien lo arma, quien lo aprueba y Gerencia, que solo
 # tiene lectura de bodega.
 _budget_read = require_any_permission("warehouse.read", "budgets.manage", "budgets.approve")
+# El diario de obra: lo llena el técnico desde la obra (`daylogs.manage`) y lo
+# lee cualquiera que vea la bodega, que es quien mira los gastos del día.
+_daylog_read = require_any_permission("warehouse.read", "daylogs.manage")
+_daylog_manage = require_permission("daylogs.manage")
 
 
 @router.get("/warehouse/catalogs")
@@ -627,3 +632,70 @@ async def list_purchasing(db: AsyncSession = Depends(get_db),
                           current_user: User = Depends(_budget_read)) -> dict:
     """Compras sugeridas: lo presupuestado por venir menos lo que hay en bodega."""
     return await costing_svc.purchasing_report(db, organization_id)
+
+
+# ---------------------------------------------------------------------------
+# Diario de obra (punto 4 del cuestionario)
+# ---------------------------------------------------------------------------
+
+class DayLogMaterialIn(BaseModel):
+    id: uuid.UUID | None = None
+    item_id: uuid.UUID | None = None
+    description: str | None = Field(default=None, max_length=255)
+    quantity: str = "1"
+    unit: str | None = Field(default=None, max_length=20)
+    # De dónde salió: la camioneta. Sin ubicación la línea no mueve existencia.
+    location_id: uuid.UUID | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class DayLogIn(BaseModel):
+    log_date: date
+    technician_user_id: uuid.UUID | None = None
+    crew: str | None = Field(default=None, max_length=255)
+    hours: str | None = None
+    work_done: str | None = Field(default=None, max_length=4000)
+    progress_note: str | None = Field(default=None, max_length=255)
+    missing_materials: str | None = Field(default=None, max_length=4000)
+    next_day_plan: str | None = Field(default=None, max_length=4000)
+    incidents: str | None = Field(default=None, max_length=4000)
+    materials: list[DayLogMaterialIn] = Field(default_factory=list, max_length=100)
+
+
+@router.get("/warehouse/projects/{project_id}/day-logs")
+async def list_day_logs(project_id: uuid.UUID, response: Response,
+                        date_from: date | None = None, date_to: date | None = None,
+                        db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        pag: tuple[int, int] = Depends(pagination_params),
+                        current_user: User = Depends(_daylog_read)) -> list[dict]:
+    """El diario de la obra, del día más reciente al más viejo. Cada jornada
+    trae su material y los gastos de ese día, que se leen de `expenses`."""
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    logs = await paginate(db, daylog_svc.day_logs_stmt(organization_id, project_id=project.id,
+                                                       date_from=date_from, date_to=date_to),
+                          limit=pag[0], offset=pag[1], response=response)
+    return await daylog_svc.day_logs_out(db, organization_id, logs)
+
+
+@router.post("/warehouse/projects/{project_id}/day-logs", status_code=201)
+async def create_day_log(project_id: uuid.UUID, payload: DayLogIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_daylog_manage)) -> dict:
+    """Registra la jornada del día. El material que sale de una camioneta
+    descuenta la existencia y queda como costo de la obra."""
+    log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
+                                        project_id=project_id, data=payload.model_dump())
+    return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]
+
+
+@router.put("/warehouse/projects/{project_id}/day-logs/{log_id}")
+async def update_day_log(project_id: uuid.UUID, log_id: uuid.UUID, payload: DayLogIn,
+                         db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_daylog_manage)) -> dict:
+    """Corrige la jornada. Lo que ya descontó la camioneta no se edita: para eso
+    se registra la devolución a bodega."""
+    log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
+                                        project_id=project_id, data=payload.model_dump(), log_id=log_id)
+    return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]

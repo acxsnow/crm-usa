@@ -375,6 +375,9 @@ class AgendaRow(BaseModel):
     substatus_code: str | None
     # Días de atraso si sigue sin cerrar y su fecha ya pasó (spec 2026-10-16).
     days_late: int | None = None
+    # Jornadas del diario de obra. Más de una = obra de varios días, que es lo
+    # que la Agenda marca (punto 4 del cuestionario).
+    day_count: int = 0
 
 
 class InstallationGapsResponse(BaseModel):

@@ -286,6 +286,73 @@ export interface PurchasingReport {
   totals: { budgeted: string; to_buy: string; items: number };
 }
 
+/** Un material de la jornada: lo que se usó ese día y de dónde salió. */
+export interface DayLogMaterial {
+  id: string;
+  item_id: string | null;
+  item_name: string | null;
+  sku: string | null;
+  description: string;
+  quantity: string;
+  unit: string | null;
+  unit_label: string | null;
+  location_id: string | null;
+  location_name: string | null;
+  movement_id: string | null;
+  /** Ya descontó la camioneta: el movimiento quedó en el libro y la línea no se edita. */
+  descontada: boolean;
+  notes: string | null;
+}
+
+/**
+ * Una jornada del diario de obra (punto 4 del cuestionario).
+ *
+ * El técnico vive en la jornada y no en el proyecto: la misma obra tiene uno
+ * distinto cada día, y más de una jornada es una obra de varios días. Los
+ * gastos del día se leen de los gastos de la obra, no se capturan aquí.
+ */
+export interface DayLog {
+  id: string;
+  project_id: string;
+  log_date: string | null;
+  technician_user_id: string | null;
+  technician_name: string | null;
+  crew: string | null;
+  hours: string | null;
+  work_done: string | null;
+  progress_note: string | null;
+  missing_materials: string | null;
+  next_day_plan: string | null;
+  incidents: string | null;
+  created_at: string | null;
+  materials: DayLogMaterial[];
+  expenses: { count: number; amount: string };
+}
+
+export interface DayLogMaterialInput {
+  id?: string | null;
+  item_id?: string | null;
+  description?: string | null;
+  quantity: string;
+  unit?: string | null;
+  /** De dónde salió: la camioneta. Sin ubicación la línea solo se anota. */
+  location_id?: string | null;
+  notes?: string | null;
+}
+
+export interface DayLogInput {
+  log_date: string;
+  technician_user_id?: string | null;
+  crew?: string | null;
+  hours?: string | null;
+  work_done?: string | null;
+  progress_note?: string | null;
+  missing_materials?: string | null;
+  next_day_plan?: string | null;
+  incidents?: string | null;
+  materials: DayLogMaterialInput[];
+}
+
 export interface ImportResult {
   creados: number;
   actualizados: number;
@@ -311,6 +378,7 @@ export const warehouseKeys = {
   budgets: ["warehouse-budgets"] as const,
   projectBudget: (projectId: string) => ["warehouse-project-budget", projectId] as const,
   budgetVsActual: (projectId: string) => ["warehouse-budget-vs-actual", projectId] as const,
+  dayLogs: (projectId: string) => ["warehouse-day-logs", projectId] as const,
   purchasing: ["warehouse-purchasing"] as const,
 };
 
@@ -405,6 +473,20 @@ export const getBudgetVsActual = async (projectId: string) =>
 
 export const getPurchasing = async () =>
   (await apiClient.get<PurchasingReport>("/warehouse/purchasing")).data;
+
+// --- Diario de obra (punto 4) -----------------------------------------------
+//
+// Las jornadas de la obra: qué se hizo cada día, con qué técnico, qué material
+// salió de la camioneta y qué quedó pendiente para el día siguiente.
+
+export const listDayLogsPage = (projectId: string, page: number, pageSize: number) =>
+  fetchPage<DayLog>(`/warehouse/projects/${projectId}/day-logs`, page, pageSize);
+
+/** Registra o corrige la jornada. `id` vacío = nueva. */
+export const saveDayLog = async (projectId: string, id: string | null, data: DayLogInput) =>
+  id
+    ? (await apiClient.put<DayLog>(`/warehouse/projects/${projectId}/day-logs/${id}`, data)).data
+    : (await apiClient.post<DayLog>(`/warehouse/projects/${projectId}/day-logs`, data)).data;
 
 /** Crea o actualiza un artículo. `id` vacío = nuevo. */
 export const saveItem = async (id: string | null, data: Record<string, unknown>) =>

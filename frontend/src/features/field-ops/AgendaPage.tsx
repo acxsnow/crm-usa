@@ -81,6 +81,10 @@ export function AgendaPage() {
       {" · "}
       {[fila.address_street, fila.address_unit, fila.address_city].filter(Boolean).join(", ")}
       {esDespacho && <> · {nombre(fila.primary_technician_user_id)}</>}{" "}
+      {/* Obra de varios días: tiene más de una jornada en el diario. */}
+      {fila.day_count > 1 && (
+        <span className="status-pill">{fila.day_count} jornadas</span>
+      )}{" "}
       {fila.days_late !== null ? (
         <span className="status-pill status-overdue">
           ⏱ {fila.days_late === 1 ? "1 día" : `${fila.days_late} días`} de atraso · {diaLargo(fila.scheduled_date ?? "")}
