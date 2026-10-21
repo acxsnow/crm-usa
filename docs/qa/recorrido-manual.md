@@ -613,11 +613,63 @@ Avisos nuevos desde el 13 de octubre: **gasto por revisar** (a quien aprueba), *
 
 ---
 
+## Fase 13. Bodega: listas predefinidas por tipo de trabajo
+
+> Punto 2 del cuestionario del 19 de octubre: *«esas órdenes tengan una lista ya predefinida de acuerdo al tipo de trabajo; las aires y pedestales siempre llevan el mismo material, a veces cambian algunas cantidades o calibres»*.
+>
+> La regla es una sola: **la lista es una plantilla, no un documento**. Al aplicarla, sus renglones se **copian** a la orden: cambiar la lista después no toca nada de lo que ya se pidió.
+
+**Quién hace qué:**
+
+| Acción | Rol | Permiso |
+|---|---|---|
+| Ver las listas | Técnico, Administrador, Administración | `warehouse.read` |
+| Crear, editar y borrar listas | Administrador, Administración | `warehouse.kits_manage` |
+| Aplicar una lista a una orden | quien pide la salida | `warehouse.request_release` |
+
+### 13.1 Armar la lista
+
+- **Quién:** `admin@demo-org.com` o `administracion@demo-org.com`.
+- **Pantalla:** Bodega → **Listas** (`/warehouse/kits`) · `features/warehouse/WarehouseKitsPage.tsx` → botón **Nueva lista**.
+- **Qué hacer:**
+  1. Ponle el nombre (`Instalación de aire — estándar`), el tipo de trabajo (`hvac_install`) y para qué sirve.
+  2. Agrega los renglones: artículo, cantidad sugerida, medida o calibre (`3/8`, `1/4`, `12.000 BTU`), sección (`Líneas`, `Unidad exterior`) y notas. El desplegable de artículos solo muestra los activos del catálogo.
+  3. El interruptor de cada renglón lo deja **opcional** (lo que se lleva solo cuando el trabajo lo pide); por defecto es obligatorio.
+  4. Guarda. La lista aparece en el listado con el desplegable «N renglones».
+- **API:** `GET /warehouse/catalogs`, `GET /warehouse/items`, `GET /warehouse/kits`, `POST /warehouse/kits`, `PUT /warehouse/kits/{id}`, `DELETE /warehouse/kits/{id}`.
+- **Qué debe pasar:** la lista se ve con su material. **Ninguna cantidad con cero** (`invalid_kit_quantity`, 400) y **ninguna lista sin renglones**.
+- **Lo que no debe poder hacer:** el técnico **no** crea ni edita listas (403); otra organización no ve ni usa la lista ajena (404).
+
+### 13.2 Aplicar la lista al pedir la salida
+
+- **Quién:** `tecnico@demo-org.com`.
+- **Pantalla:** Bodega → **Salidas** → **Nueva salida**.
+- **Qué hacer:**
+  1. Elige la obra, la fecha y la nota; arriba de los renglones aparece el selector **«Aplicar una lista predefinida»** (solo con las listas activas).
+  2. Elige la lista (por ejemplo «Instalación de aire — estándar»): sus renglones caen en el formulario con su cantidad y su calibre, y un texto recuerda cuál se aplicó. Nada se guarda todavía.
+  3. Ajusta lo que el trabajo pida (**35** en vez de 20, calibre **1/2** en vez de 3/8), agrega un extra a mano y deja las notas de la línea.
+  4. Guarda el borrador y luego **Enviar a autorizar**.
+- **API:** `GET /warehouse/kits?active=true`, `POST /warehouse/releases`.
+- **Qué debe pasar:** el borrador queda con los renglones de la lista más los extras. Si aplicas la misma lista dos veces en la misma orden, **no repite** el material (compara artículo + calibre); lo que ya estaba se queda quieto.
+- **Lo que no debe poder hacer:** aplicar una lista de otra organización (404). Una lista sin material guardado no se aplica (`empty_kit`, 400).
+
+### 13.3 La copia es de la orden, no de la lista
+
+- **Quién:** quien pide la salida, con un borrador abierto.
+- **Qué hacer:** edita las cantidades, los calibres y las notas de **su** orden, o borra renglones. El formulario de la orden también permite aplicar la lista desde arriba de los renglones.
+- **API:** `PUT /warehouse/releases/{id}`.
+- **Qué debe pasar:** **la plantilla no se toca**. Se puede cambiar la lista a 30 y calibre 1/2 y la orden ya armada sigue con lo suyo. Las líneas que vinieron de una lista quedan marcadas con origen **lista** y las escritas a mano con **manual**, para saber qué se siguió y qué se salió del guion.
+- **Lo que no debe poder hacer:** editar una orden que ya salió de borrador (`release_not_editable`, 400): hay que rechazarla y hacer otra.
+
+---
+
 ## Lo que todavía no existe (no lo busques)
 
 El autollenado de formularios municipales (§3.2), la sincronización con Microsoft Forms (§3), pagar desde la plataforma (conexión bancaria), la sincronización automática con QuickBooks, los 1099, las órdenes de compra y la lista de precios por proveedor. La comisión del vendedor tampoco entra todavía en la rentabilidad.
 
-De bodega ya están **el catálogo, las existencias** (fase 11) y **las salidas con autorización electrónica** (fase 12). Todavía **no** existen: las listas predefinidas por tipo de trabajo con campos ajustables (punto 2 del cuestionario), el presupuesto del proyecto comparado con lo real y las compras por adelantado (punto 3), y el diario de obra día por día (punto 4).
+De bodega ya están **el catálogo, las existencias** (fase 11), **las salidas con autorización electrónica** (fase 12) y **las listas predefinidas por tipo de trabajo** (fase 13). Todavía **no** existen: el presupuesto del proyecto comparado con lo real y las compras por adelantado (punto 3), y el diario de obra día por día (punto 4).
+
+Falta cargar las listas reales del cliente: mientras no llegue su listado por tipo de trabajo, las listas se arman a mano en la pantalla.
 
 ---
 

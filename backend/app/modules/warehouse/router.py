@@ -11,6 +11,7 @@ from app.api.deps import get_organization_id, require_any_permission, require_pe
 from app.db.session import get_db
 from app.modules.users.models import User
 from app.modules.warehouse import service as wh
+from app.modules.warehouse import kits as kit_svc
 from app.modules.warehouse import releases as rel
 from app.modules.warehouse import xlsx
 from app.modules.warehouse.catalogs import (
@@ -38,6 +39,9 @@ _count = require_permission("warehouse.count")
 _request = require_any_permission("warehouse.request_release", "warehouse.manage")
 _approve = require_permission("warehouse.approve_release")
 _deliver = require_any_permission("warehouse.deliver", "warehouse.manage")
+# Las listas predefinidas: las edita quien administra la bodega, las usa quien
+# arma la orden (el técnico).
+_kits = require_permission("warehouse.kits_manage")
 
 
 @router.get("/warehouse/catalogs")
@@ -404,3 +408,87 @@ async def deliver_release(release_id: uuid.UUID, payload: DeliverIn | None = Non
                                         order_id=release_id, note=payload.note if payload else None)
     order = resultado["order"]
     return {**(await rel.orders_out(db, organization_id, [order]))[0], "faltantes": resultado["faltantes"]}
+
+
+# ---------------------------------------------------------------------------
+# Listas predefinidas por tipo de trabajo (punto 2 del cuestionario)
+# ---------------------------------------------------------------------------
+
+class KitItemIn(BaseModel):
+    item_id: uuid.UUID
+    quantity: str = "1"
+    spec_label: str | None = Field(default=None, max_length=60)
+    section: str | None = Field(default=None, max_length=120)
+    is_required: bool = True
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class KitIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    project_type: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=2000)
+    active: bool = True
+    items: list[KitItemIn] = Field(min_length=1, max_length=300)
+
+
+class ApplyKitIn(BaseModel):
+    release_id: uuid.UUID
+
+
+@router.get("/warehouse/kits")
+async def list_kits(response: Response, q: str | None = None, project_type: str | None = None,
+                    active: bool | None = None, db: AsyncSession = Depends(get_db),
+                    organization_id: uuid.UUID = Depends(get_organization_id),
+                    pag: tuple[int, int] = Depends(pagination_params),
+                    current_user: User = Depends(_read)) -> list[dict]:
+    kits = await paginate(db, kit_svc.kits_stmt(organization_id, q=q, project_type=project_type, active=active),
+                          limit=pag[0], offset=pag[1], response=response)
+    return await kit_svc.kits_out(db, organization_id, kits)
+
+
+@router.get("/warehouse/kits/{kit_id}")
+async def get_kit(kit_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                  organization_id: uuid.UUID = Depends(get_organization_id),
+                  current_user: User = Depends(_read)) -> dict:
+    kit = await kit_svc.get_kit(db, organization_id, kit_id)
+    return (await kit_svc.kits_out(db, organization_id, [kit]))[0]
+
+
+@router.post("/warehouse/kits", status_code=201)
+async def create_kit(payload: KitIn, db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_kits)) -> dict:
+    kit = await kit_svc.save_kit(db, organization_id=organization_id, user=current_user,
+                                 data=payload.model_dump())
+    return (await kit_svc.kits_out(db, organization_id, [kit]))[0]
+
+
+@router.put("/warehouse/kits/{kit_id}")
+async def update_kit(kit_id: uuid.UUID, payload: KitIn, db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_kits)) -> dict:
+    """Reemplaza la lista completa. No toca las órdenes que ya la usaron: cada una
+    tiene su copia."""
+    kit = await kit_svc.save_kit(db, organization_id=organization_id, user=current_user,
+                                 data=payload.model_dump(), kit_id=kit_id)
+    return (await kit_svc.kits_out(db, organization_id, [kit]))[0]
+
+
+@router.delete("/warehouse/kits/{kit_id}", status_code=204)
+async def delete_kit(kit_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_kits)) -> None:
+    await kit_svc.delete_kit(db, organization_id=organization_id, user=current_user, kit_id=kit_id)
+
+
+@router.post("/warehouse/kits/{kit_id}/apply")
+async def apply_kit(kit_id: uuid.UUID, payload: ApplyKitIn, db: AsyncSession = Depends(get_db),
+                    organization_id: uuid.UUID = Depends(get_organization_id),
+                    current_user: User = Depends(_request)) -> dict:
+    """Copia la lista a un borrador de orden de salida."""
+    resultado = await kit_svc.apply_to_release(db, organization_id=organization_id, user=current_user,
+                                               kit_id=kit_id, release_id=payload.release_id)
+    order = resultado["order"]
+    return {**(await rel.orders_out(db, organization_id, [order]))[0],
+            "kit_name": resultado["kit"].name, "agregadas": resultado["agregadas"],
+            "omitidas": resultado["omitidas"]}

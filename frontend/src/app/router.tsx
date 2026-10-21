@@ -41,6 +41,7 @@ import { WarehouseStockPage } from "@/features/warehouse/WarehouseStockPage";
 import { WarehouseItemsPage } from "@/features/warehouse/WarehouseItemsPage";
 import { WarehouseReleasesPage } from "@/features/warehouse/WarehouseReleasesPage";
 import { WarehouseMovementsPage } from "@/features/warehouse/WarehouseMovementsPage";
+import { WarehouseKitsPage } from "@/features/warehouse/WarehouseKitsPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -216,6 +217,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["warehouse.read", "warehouse.manage", "warehouse.count"]} moduleLabel="Bodega">
             <WarehouseMovementsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/kits",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.kits_manage", "warehouse.manage"]} moduleLabel="Bodega">
+            <WarehouseKitsPage />
           </RequireAccess>
         ),
       },

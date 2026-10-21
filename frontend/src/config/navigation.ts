@@ -133,6 +133,13 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "⬒",
         permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
       },
+      // Las listas predefinidas: lo que cada tipo de trabajo siempre lleva.
+      {
+        label: "Listas",
+        to: "/warehouse/kits",
+        icon: "☰",
+        permission: ["warehouse.read", "warehouse.kits_manage", "warehouse.manage"],
+      },
       // Las órdenes de salida: el técnico las pide y el supervisor las autoriza.
       {
         label: "Salidas",

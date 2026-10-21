@@ -195,3 +195,53 @@ class WarehouseReleaseLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 
     order: Mapped["WarehouseReleaseOrder"] = relationship(
         "WarehouseReleaseOrder", back_populates="lines", lazy="raise")
+
+
+class WarehouseKitTemplate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """La lista predefinida del punto 2: lo que un tipo de trabajo siempre lleva.
+
+    Es una plantilla, no un documento: al aplicarla sus renglones se **copian** a
+    la orden de salida (o al presupuesto, fase 3). Por eso editarla después no
+    cambia nada de lo ya pedido — igual que `checklist_templates` y
+    `project_checklist_items`.
+    """
+
+    __tablename__ = "warehouse_kit_templates"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_warehouse_kit_name"),
+    )
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # El tipo de trabajo del proyecto («hvac_install», «pedestal»...). Es texto
+    # libre, el mismo que ya guarda `projects.project_type`.
+    project_type: Mapped[str | None] = mapped_column(String(100), index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    items: Mapped[list["WarehouseKitItem"]] = relationship(
+        "WarehouseKitItem", back_populates="template", cascade="all, delete-orphan",
+        order_by="WarehouseKitItem.sort_order", lazy="raise")
+
+
+class WarehouseKitItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un renglón de la lista: qué material, cuánto y de qué calibre."""
+
+    __tablename__ = "warehouse_kit_items"
+    __table_args__ = (Index("ix_warehouse_kit_items_org_template", "organization_id", "template_id"),)
+
+    template_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_kit_templates.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), nullable=False, index=True)
+    # La cantidad sugerida: se cambia en cada copia sin tocar la plantilla.
+    quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False, default=Decimal("1"))
+    # El calibre sugerido («3/8», «1/2»).
+    spec_label: Mapped[str | None] = mapped_column(String(60))
+    # En qué parte del trabajo va («Unidad exterior», «Líneas»).
+    section: Mapped[str | None] = mapped_column(String(120))
+    # Lo que sí o sí hay que llevar: la lista funciona como chequeo.
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    template: Mapped["WarehouseKitTemplate"] = relationship(
+        "WarehouseKitTemplate", back_populates="items", lazy="raise")

@@ -88,20 +88,21 @@
 
 ### Task 2.1: Plantillas de materiales
 
-- [ ] `warehouse_kit_templates` y `warehouse_kit_items` en la migración `0029_...`.
-- [ ] Pruebas (`tests/test_warehouse_kits.py`): crear lista; aplicarla a una orden de salida copia las líneas (snapshot); editar la plantilla no cambia las órdenes ya creadas; cantidades y calibres se pueden ajustar en la copia; agregar extras libres; aislamiento por organización.
+- [x] `warehouse_kit_templates` y `warehouse_kit_items` en la migración `0029_...`.
+- [x] Pruebas (`tests/test_warehouse_kits.py`): crear lista; aplicarla a una orden de salida copia las líneas (snapshot); editar la plantilla no cambia las órdenes ya creadas; cantidades y calibres se pueden ajustar en la copia; agregar extras libres; aislamiento por organización. (8 pruebas en verde.)
 
 ### Task 2.2: API y pantallas
 
-- [ ] Rutas `GET/POST/PUT/DELETE /warehouse/kits` y `POST /warehouse/kits/{id}/apply` (permiso `warehouse.kits_manage`).
-- [ ] `WarehouseKitsPage` (`/warehouse/kits`), al estilo de `ChecklistTemplatesPage`.
-- [ ] En la orden de salida, botón «Aplicar lista» y campos por línea: cantidad, calibre (`spec_label`) y notas.
+- [x] Rutas `GET/POST/PUT/DELETE /warehouse/kits` y `POST /warehouse/kits/{id}/apply` (permiso `warehouse.kits_manage`).
+- [x] `WarehouseKitsPage` (`/warehouse/kits`), al estilo de `ChecklistTemplatesPage`.
+- [x] En la orden de salida, botón «Aplicar lista» y campos por línea: cantidad, calibre (`spec_label`) y notas.
 - [ ] Seed con las listas reales cuando el cliente envíe el listado.
-- [ ] `npm run build` y `check_hooks.py`.
+- [x] `npm run build` y `check_hooks.py`.
 
 ### Task 2.3: Verificación
 
-- [ ] `pytest -q` en verde; navegador: aplicar «Aire — estándar», ajustar un calibre y agregar un extra.
+- [x] `pytest -q` en verde (590 pruebas).
+- [ ] Navegador: aplicar «Aire — estándar», ajustar un calibre y agregar un extra.
 
 ---
 

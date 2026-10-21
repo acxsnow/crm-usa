@@ -16,6 +16,7 @@ import {
   createRelease,
   deliverRelease,
   listItemsPage,
+  listKitsPage,
   rejectRelease,
   submitRelease,
   warehouseCatalogs,
@@ -257,20 +258,24 @@ function EntregaBanner({ resultado, onClose }: { resultado: DeliverResult; onClo
 
 /**
  * Armar la orden. Todavía es un borrador: no tiene número ni mueve saldo hasta
- * que se manda a autorizar. Las cantidades y la referencia de cada renglón se
- * escriben a mano; la lista predefinida que el cliente va a mandar (punto 2 del
- * cuestionario) se monta encima de esto.
+ * que se manda a autorizar. Se puede partir de una lista predefinida (punto 2
+ * del cuestionario) y de ahí ajustar cantidades, calibres y extras a mano.
  */
 function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [projectId, setProjectId] = useState("");
   const [necesaria, setNecesaria] = useState("");
   const [nota, setNota] = useState("");
   const [lineas, setLineas] = useState<ReleaseLineInput[]>([{ item_id: "", quantity: "1", spec_label: "", notes: "" }]);
+  const [deLista, setDeLista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: articulos } = useQuery({
     queryKey: [...warehouseKeys.items, "para-salida"],
     queryFn: () => listItemsPage(1, 200, { active: true }).then((p) => p.items),
+  });
+  const { data: listas } = useQuery({
+    queryKey: [...warehouseKeys.kits, "para-salida"],
+    queryFn: () => listKitsPage(1, 200, { active: true }).then((p) => p.items),
   });
   const { data: proyectos } = useQuery({
     queryKey: ["projects", "para-salida"],
@@ -295,12 +300,46 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
     setLineas((actuales) => actuales.map((l, j) => (j === i ? { ...l, ...campos } : l)));
   }
 
+  /** Copia los renglones de la lista encima de lo que ya hay escrito, sin repetir
+   * el mismo material con el mismo calibre. */
+  function aplicarLista(kitId: string) {
+    const lista = (listas ?? []).find((k) => k.id === kitId);
+    if (!lista) return;
+    setLineas((actuales) => {
+      const puestas = actuales.filter((l) => l.item_id);
+      const claves = new Set(puestas.map((l) => `${l.item_id}|${l.spec_label ?? ""}`));
+      const nuevas = lista.items
+        .filter((r) => !claves.has(`${r.item_id}|${r.spec_label ?? ""}`))
+        .map((r) => ({ item_id: r.item_id, quantity: r.quantity, spec_label: r.spec_label ?? "", notes: r.notes ?? "" }));
+      return [...puestas, ...nuevas];
+    });
+    setDeLista(lista.name);
+  }
+
   const renglones = lineas.filter((l) => l.item_id);
 
   return (
     <form className="acta fin-form fin-box" onSubmit={(e) => { e.preventDefault(); guardar.mutate(); }}>
       <h3 className="acta-section-title">Nueva salida de bodega</h3>
       <p className="acta-lead">Queda como borrador: puedes revisarla y enviarla a autorizar cuando esté completa.</p>
+
+      {(listas ?? []).length > 0 && (
+        <div className="form-field">
+          <label className="form-label" htmlFor="rel-lista">Aplicar una lista predefinida</label>
+          <select id="rel-lista" value="" onChange={(e) => aplicarLista(e.target.value)}>
+            <option value="">— Elegir una lista —</option>
+            {(listas ?? []).map((k) => (
+              <option key={k.id} value={k.id}>{k.name} ({k.items.length} renglones)</option>
+            ))}
+          </select>
+          <small>
+            {deLista
+              ? `Se agregaron los renglones de «${deLista}». Ajústalos abajo: cada orden se queda con su copia.`
+              : "Trae el material del tipo de trabajo; después se ajustan las cantidades y los calibres."}
+          </small>
+        </div>
+      )}
+
       <div className="fin-row">
         <div className="form-field">
           <label className="form-label" htmlFor="rel-obra">Obra (para cargar el material al proyecto)</label>

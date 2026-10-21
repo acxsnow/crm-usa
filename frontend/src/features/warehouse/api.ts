@@ -134,6 +134,62 @@ export interface ReleaseInput {
   lines: ReleaseLineInput[];
 }
 
+/** Un renglón de la lista predefinida: el material, cuánto y de qué calibre. */
+export interface WarehouseKitItem {
+  id: string;
+  item_id: string;
+  item_name: string | null;
+  sku: string | null;
+  unit: string | null;
+  unit_label: string | null;
+  quantity: string;
+  unit_cost: string | null;
+  spec_label: string | null;
+  section: string | null;
+  is_required: boolean;
+  notes: string | null;
+}
+
+/**
+ * Una lista predefinida por tipo de trabajo (punto 2 del cuestionario).
+ *
+ * Es una plantilla: al aplicarla, sus renglones se copian a la orden de salida y
+ * de ahí en adelante se ajustan en la copia. Cambiar la lista no cambia lo que
+ * ya se pidió.
+ */
+export interface WarehouseKit {
+  id: string;
+  name: string;
+  project_type: string | null;
+  description: string | null;
+  active: boolean;
+  created_at: string | null;
+  items: WarehouseKitItem[];
+}
+
+export interface KitItemInput {
+  item_id: string;
+  quantity: string;
+  spec_label?: string | null;
+  section?: string | null;
+  is_required?: boolean;
+  notes?: string | null;
+}
+
+export interface KitInput {
+  name: string;
+  project_type?: string | null;
+  description?: string | null;
+  active?: boolean;
+  items: KitItemInput[];
+}
+
+export interface ApplyKitResult extends WarehouseRelease {
+  kit_name: string;
+  agregadas: number;
+  omitidas: number;
+}
+
 export interface ImportResult {
   creados: number;
   actualizados: number;
@@ -155,6 +211,7 @@ export const warehouseKeys = {
   movements: ["warehouse-movements"] as const,
   releases: ["warehouse-releases"] as const,
   pendingReleases: ["warehouse-releases-pending"] as const,
+  kits: ["warehouse-kits"] as const,
 };
 
 export const listStockPage = (page: number, pageSize: number, params: Record<string, string | boolean | undefined> = {}) =>
@@ -189,6 +246,30 @@ export const deliverRelease = async (id: string, note?: string | null) =>
 
 export const getItem = async (id: string) =>
   (await apiClient.get<WarehouseItem>(`/warehouse/items/${id}`)).data;
+
+// --- Listas predefinidas por tipo de trabajo (punto 2) -----------------------
+//
+// Igual que las órdenes: el listado se pide con `usePaginatedQuery`.
+
+export const listKitsPage = (page: number, pageSize: number, params: Record<string, string | boolean | undefined> = {}) =>
+  fetchPage<WarehouseKit>("/warehouse/kits", page, pageSize, params);
+
+export const getKit = async (id: string) =>
+  (await apiClient.get<WarehouseKit>(`/warehouse/kits/${id}`)).data;
+
+/** Crea o reemplaza la lista completa. `id` vacío = nueva. */
+export const saveKit = async (id: string | null, data: KitInput) =>
+  id
+    ? (await apiClient.put<WarehouseKit>(`/warehouse/kits/${id}`, data)).data
+    : (await apiClient.post<WarehouseKit>("/warehouse/kits", data)).data;
+
+export const deleteKit = async (id: string) => {
+  await apiClient.delete(`/warehouse/kits/${id}`);
+};
+
+/** Copia la lista a un borrador de orden de salida. */
+export const applyKit = async (kitId: string, releaseId: string) =>
+  (await apiClient.post<ApplyKitResult>(`/warehouse/kits/${kitId}/apply`, { release_id: releaseId })).data;
 
 /** Crea o actualiza un artículo. `id` vacío = nuevo. */
 export const saveItem = async (id: string | null, data: Record<string, unknown>) =>
