@@ -14,13 +14,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.money import ZERO, to_money
 from app.modules.warehouse import budgets as budget_svc
+from app.modules.field_ops.clock import org_today
 from app.modules.warehouse.catalogs import (
+    BUDGET_CATEGORIES,
+    COST_ENTRY_CATEGORIES,
     TARGET_PROFIT,
     TEMPLATE_APPLIES_TO,
     TEMPLATE_CATEGORIES,
     TEMPLATE_MODES,
 )
-from app.modules.warehouse.models import CostTemplate, CostTemplateLine, ProjectBudget, ProjectBudgetLine
+from app.modules.warehouse.models import (
+    CostTemplate,
+    CostTemplateLine,
+    ProjectBudget,
+    ProjectBudgetLine,
+    ProjectCostEntry,
+)
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 
@@ -217,7 +226,6 @@ async def default_expected_revenue(db: AsyncSession, organization_id, project) -
     from app.modules.billing.models import Quote
     from app.modules.billing.program_config import rate_for
     from app.modules.cases.models import Case
-    from app.modules.field_ops.clock import org_today
 
     if project.case_id is not None:
         caso = await db.get(Case, project.case_id)
@@ -284,3 +292,101 @@ async def apply_template(db: AsyncSession, *, organization_id, user, budget_id, 
     await db.commit()
     await db.refresh(budget)
     return budget
+
+
+# ---------------------------------------------------------------------------
+# Costos reales anotados a mano
+# ---------------------------------------------------------------------------
+
+async def get_cost_entry(db: AsyncSession, organization_id, project_id, entry_id) -> ProjectCostEntry:
+    e = await db.get(ProjectCostEntry, entry_id)
+    if e is None or e.organization_id != organization_id or e.project_id != project_id:
+        raise NotFoundError("Ese costo no existe.", code="cost_entry_not_found")
+    return e
+
+
+def cost_entries_stmt(organization_id, project_id):
+    return select(ProjectCostEntry).where(ProjectCostEntry.organization_id == organization_id,
+                                          ProjectCostEntry.project_id == project_id) \
+        .order_by(ProjectCostEntry.entry_date.desc(), ProjectCostEntry.created_at.desc())
+
+
+async def _person(db: AsyncSession, organization_id, user_id):
+    from app.modules.users.models import User, UserStatus
+
+    persona = await db.get(User, user_id)
+    if persona is None or persona.organization_id != organization_id or persona.status != UserStatus.active:
+        raise InvalidInputError("La persona no existe o no está activa.", code="invalid_cost_person")
+    return persona
+
+
+async def save_cost_entry(db: AsyncSession, *, organization_id, user, project_id, data: dict,
+                          entry_id=None) -> ProjectCostEntry:
+    """La mano de obra del técnico o del subcontratista, o el pago del
+    representante: lo que en Housecall Pro es «Labor». Interno: el cliente nunca
+    lo ve. Cada trabajo elige si el pago de Luis va como `sales_rep` o `labor`."""
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    categoria = (data.get("category") or "").strip()
+    if categoria not in COST_ENTRY_CATEGORIES:
+        raise InvalidInputError(f"«{categoria}» no es una categoría de costo.", code="invalid_cost_category")
+    monto = to_money(data.get("amount") or ZERO)
+    if monto <= ZERO:
+        raise InvalidInputError("El costo tiene que ser mayor que cero.", code="invalid_cost_amount")
+    descripcion = (data.get("description") or "").strip() or BUDGET_CATEGORIES[categoria]
+    persona_id = data.get("person_user_id")
+    if persona_id:
+        await _person(db, organization_id, persona_id)
+    if entry_id is not None:
+        e = await get_cost_entry(db, organization_id, project.id, entry_id)
+    else:
+        e = ProjectCostEntry(organization_id=organization_id, project_id=project.id, created_by_user_id=user.id)
+        db.add(e)
+    e.entry_date = data.get("entry_date") or await org_today(db, organization_id)
+    e.category, e.description, e.amount = categoria, descripcion[:255], monto
+    e.person_user_id = persona_id or None
+    e.person_name = (data.get("person_name") or "").strip()[:255] or None
+    e.notes = (data.get("notes") or "").strip() or None
+    await db.flush()
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="cost_entry.saved", entity_type="project_cost_entry", entity_id=str(e.id),
+                             after_data={"project_id": str(project.id), "category": categoria, "amount": str(monto)})
+    await db.commit()
+    await db.refresh(e)
+    return e
+
+
+async def delete_cost_entry(db: AsyncSession, *, organization_id, user, project_id, entry_id) -> None:
+    e = await get_cost_entry(db, organization_id, project_id, entry_id)
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="cost_entry.deleted", entity_type="project_cost_entry", entity_id=str(e.id),
+                             before_data={"category": e.category, "amount": str(e.amount)})
+    await db.delete(e)
+    await db.commit()
+
+
+async def cost_entries_out(db: AsyncSession, entradas: list[ProjectCostEntry]) -> list[dict]:
+    from app.modules.users.models import User
+
+    ids = {e.person_user_id for e in entradas if e.person_user_id}
+    nombres = {u.id: u.full_name for u in (await db.execute(select(User).where(User.id.in_(ids)))).scalars()} \
+        if ids else {}
+    return [{
+        "id": str(e.id), "project_id": str(e.project_id), "entry_date": e.entry_date.isoformat(),
+        "category": e.category, "category_label": BUDGET_CATEGORIES.get(e.category, e.category),
+        "description": e.description, "amount": str(to_money(e.amount)),
+        "person_user_id": str(e.person_user_id) if e.person_user_id else None,
+        "person_name": nombres.get(e.person_user_id) or e.person_name, "notes": e.notes,
+    } for e in entradas]
+
+
+async def cost_entries_by_category(db: AsyncSession, organization_id, project_ids: set) -> dict:
+    """{project_id: {categoría: Decimal}} de lo anotado a mano."""
+    if not project_ids:
+        return {}
+    resultado: dict = {}
+    for e in (await db.execute(select(ProjectCostEntry).where(
+            ProjectCostEntry.organization_id == organization_id,
+            ProjectCostEntry.project_id.in_(project_ids)))).scalars().all():
+        por = resultado.setdefault(e.project_id, {})
+        por[e.category] = to_money(por.get(e.category, ZERO) + e.amount)
+    return resultado

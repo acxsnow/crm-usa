@@ -181,3 +181,83 @@ async def test_aplicar_plantilla_conserva_el_material_de_la_lista(app_client, lo
 async def test_el_tecnico_no_ve_plantillas(app_client, login, active_technician_user):
     tecnico = await login(active_technician_user.email)
     assert (await app_client.get(f"{API}/warehouse/cost-templates", headers=tecnico)).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Costos reales anotados a mano (Task 3)
+# ---------------------------------------------------------------------------
+
+async def _anotar(app_client, headers, project_id, categoria, monto, **extra):
+    return await app_client.post(f"{API}/warehouse/projects/{project_id}/cost-entries", json={
+        "entry_date": "2026-10-22", "category": categoria, "description": extra.pop("description", "Instalación"),
+        "amount": monto, **extra}, headers=headers)
+
+
+async def _real(app_client, headers, project_id) -> dict:
+    r = await app_client.get(f"{API}/warehouse/projects/{project_id}/budget-vs-actual", headers=headers)
+    assert r.status_code == 200, r.text
+    return {f["category"]: f["actual"] for f in r.json()["rows"]}
+
+
+async def test_la_mano_de_obra_anotada_suma_al_costo_real(app_client, login, db, seeded_org, active_admin_user,
+                                                          active_technician_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await _anotar(app_client, h, project.id, "labor", "600", person_user_id=str(active_technician_user.id))
+    assert r.status_code == 201, r.text
+    assert r.json()["person_name"] == "Tom Technician"
+    assert (await _real(app_client, h, project.id))["labor"] == "600.00"
+    lista = (await app_client.get(f"{API}/warehouse/projects/{project.id}/cost-entries", headers=h)).json()
+    assert [e["amount"] for e in lista] == ["600.00"]
+
+
+async def test_el_pago_de_luis_puede_ir_como_representante_o_como_mano_de_obra(app_client, login, db, seeded_org,
+                                                                              active_admin_user):
+    h = await login(active_admin_user.email)
+    _, una = await approved_case_with_project(db, seeded_org["org"].id)
+    _, otra = await approved_case_with_project(db, seeded_org["org"].id)
+    await _anotar(app_client, h, una.id, "sales_rep", "800", person_name="Luis", description="Representante")
+    await _anotar(app_client, h, otra.id, "labor", "800", person_name="Luis", description="Representante")
+    assert (await _real(app_client, h, una.id))["sales_rep"] == "800.00"
+    assert (await _real(app_client, h, otra.id))["labor"] == "800.00"
+
+
+async def test_monto_cero_o_categoria_inventada_da_400(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await _anotar(app_client, h, project.id, "labor", "0")
+    assert (r.status_code, r.json()["code"]) == (400, "invalid_cost_amount")
+    r = await _anotar(app_client, h, project.id, "propina", "10")
+    assert (r.status_code, r.json()["code"]) == (400, "invalid_cost_category")
+
+
+async def test_corregir_y_borrar_una_entrada(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    entrada = (await _anotar(app_client, h, project.id, "contractor", "1000", person_name="HVAC Pros LLC")).json()
+    url = f"{API}/warehouse/projects/{project.id}/cost-entries/{entrada['id']}"
+    r = await app_client.put(url, json={"entry_date": "2026-10-22", "category": "contractor",
+                                        "description": "Subcontrato", "amount": "1050",
+                                        "person_name": "HVAC Pros LLC"}, headers=h)
+    assert r.json()["amount"] == "1050.00"
+    assert (await app_client.delete(url, headers=h)).status_code == 204
+    assert (await _real(app_client, h, project.id))["contractor"] == "0.00"
+
+
+async def test_el_tecnico_no_puede_anotar_ni_ver_costos(app_client, login, db, seeded_org, active_technician_user):
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    assert (await app_client.get(f"{API}/warehouse/projects/{project.id}/cost-entries",
+                                 headers=tecnico)).status_code == 403
+    assert (await _anotar(app_client, tecnico, project.id, "labor", "600")).status_code == 403
+
+
+async def test_otra_organizacion_no_ve_las_entradas(app_client, login, db, seeded_org, active_admin_user,
+                                                    second_org_admin_user):
+    h = await login(active_admin_user.email)
+    ajeno = await login(second_org_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    await _anotar(app_client, h, project.id, "labor", "600")
+    assert (await app_client.get(f"{API}/warehouse/projects/{project.id}/cost-entries",
+                                 headers=ajeno)).status_code == 404
+    assert (await _anotar(app_client, ajeno, project.id, "labor", "600")).status_code == 404
