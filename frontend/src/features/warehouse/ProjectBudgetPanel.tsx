@@ -45,7 +45,7 @@ const RENGLON_VACIO: BudgetLineInput = { category: "materials", item_id: "", qua
  * las salidas de bodega valoradas, los gastos aprobados y las compras cargadas
  * directo a la obra, así que solo se muestra.
  */
-export function ProjectBudgetPanel({ projectId }: { projectId: string }) {
+export function ProjectBudgetPanel({ projectId, embedded = false }: { projectId: string; embedded?: boolean }) {
   const { hasPermission } = useAuth();
   const qc = useQueryClient();
   const puedeArmar = hasPermission("budgets.manage");
@@ -68,6 +68,7 @@ export function ProjectBudgetPanel({ projectId }: { projectId: string }) {
     qc.invalidateQueries({ queryKey: warehouseKeys.budgetVsActual(projectId) });
     qc.invalidateQueries({ queryKey: warehouseKeys.budgets });
     qc.invalidateQueries({ queryKey: warehouseKeys.purchasing });
+    qc.invalidateQueries({ queryKey: warehouseKeys.jobCosting(projectId) });
   }
 
   const aprobar = useMutation({
@@ -85,15 +86,17 @@ export function ProjectBudgetPanel({ projectId }: { projectId: string }) {
   const etiqueta = presupuesto ? ESTADOS[presupuesto.status] ?? presupuesto.status : "Sin presupuesto";
 
   return (
-    <section className="annex-section" aria-labelledby="anexo-presupuesto">
+    <section className={embedded ? "jobcost-detail" : "annex-section"} aria-labelledby="anexo-presupuesto">
       <div className="annex-section-head">
-        <h3 id="anexo-presupuesto">Presupuesto</h3>
+        <h3 id="anexo-presupuesto">{embedded ? "Detalle del estimado" : "Presupuesto"}</h3>
         <span className="annex-count">{etiqueta}</span>
       </div>
-      <p className="acta-lead">
-        El estimado de la obra contra lo que de verdad costó. El costo real sale de las salidas de bodega
-        valoradas a costo del catálogo, los gastos aprobados y las compras cargadas directo a la obra.
-      </p>
+      {!embedded && (
+        <p className="acta-lead">
+          El estimado de la obra contra lo que de verdad costó. El costo real sale de las salidas de bodega
+          valoradas a costo del catálogo, los gastos aprobados y las compras cargadas directo a la obra.
+        </p>
+      )}
 
       {error && <p className="form-error" role="alert">{error}</p>}
 
@@ -156,12 +159,18 @@ export function ProjectBudgetPanel({ projectId }: { projectId: string }) {
                 <td colSpan={4}><strong>Total estimado</strong></td>
                 <td><strong>{dinero(presupuesto.total)}</strong></td>
               </tr>
+              {presupuesto.expected_revenue && (
+                <tr>
+                  <td colSpan={4}>Precio esperado · ganancia esperada</td>
+                  <td>{dinero(presupuesto.expected_revenue)} · {dinero(presupuesto.expected_profit)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </>
       )}
 
-      {presupuesto && comparacion && <ComparisonTable comparacion={comparacion} />}
+      {!embedded && presupuesto && comparacion && <ComparisonTable comparacion={comparacion} />}
     </section>
   );
 }
@@ -215,6 +224,7 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
 }) {
   const qc = useQueryClient();
   const [notas, setNotas] = useState(initial?.notes ?? "");
+  const [precio, setPrecio] = useState(initial?.expected_revenue ?? "");
   const [kitId, setKitId] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -243,6 +253,7 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
     mutationFn: () => saveBudget(initial?.id ?? null, {
       project_id: projectId,
       notes: notas.trim() || null,
+      expected_revenue: precio.trim() || null,
       lines: renglones.map((r) => ({
         category: r.category, item_id: r.item_id || null, description: r.description?.trim() || null,
         quantity: r.quantity, unit: r.unit || null, unit_cost: r.unit_cost || null, notes: r.notes?.trim() || null,
@@ -258,7 +269,7 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
       let id = initial?.id ?? null;
       if (!id) {
         const creado = await saveBudget(null, {
-          project_id: projectId, notes: notas.trim() || null,
+          project_id: projectId, notes: notas.trim() || null, expected_revenue: precio.trim() || null,
           lines: renglones.map((r) => ({ ...r, item_id: r.item_id || null, unit: r.unit || null, unit_cost: r.unit_cost || null })),
         });
         id = creado.id;
@@ -318,6 +329,13 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
         <div className="form-field">
           <label className="form-label" htmlFor="pres-notas">Notas</label>
           <input id="pres-notas" value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={2000} />
+        </div>
+      </div>
+      <div className="fin-row">
+        <div className="form-field">
+          <label className="form-label" htmlFor="pres-precio">Precio esperado (USD)</label>
+          <input id="pres-precio" inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)}
+            placeholder="En rebate, lo que paga el programa" />
         </div>
       </div>
 

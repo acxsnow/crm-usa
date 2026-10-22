@@ -225,6 +225,13 @@ export interface ProjectBudget {
   total: string;
   by_category: Record<string, string>;
   lines: BudgetLine[];
+  /** Costo del trabajo: precio esperado, ganancia esperada y si queda bajo el objetivo. */
+  expected_revenue: string | null;
+  expected_profit: string | null;
+  expected_margin_pct: number | null;
+  target_profit_pct: number | null;
+  below_target: boolean;
+  template_id: string | null;
 }
 
 export interface BudgetLineInput {
@@ -240,6 +247,8 @@ export interface BudgetLineInput {
 export interface BudgetInput {
   project_id?: string | null;
   notes?: string | null;
+  /** El PUT reemplaza el borrador completo: hay que reenviar el precio o queda vacío. */
+  expected_revenue?: string | null;
   lines: BudgetLineInput[];
 }
 
@@ -379,6 +388,11 @@ export const warehouseKeys = {
   projectBudget: (projectId: string) => ["warehouse-project-budget", projectId] as const,
   budgetVsActual: (projectId: string) => ["warehouse-budget-vs-actual", projectId] as const,
   dayLogs: (projectId: string) => ["warehouse-day-logs", projectId] as const,
+  jobCosting: (projectId: string) => ["warehouse-job-costing", projectId] as const,
+  costEntries: (projectId: string) => ["warehouse-cost-entries", projectId] as const,
+  extraCharges: (projectId: string) => ["warehouse-extra-charges", projectId] as const,
+  pendingExtras: ["warehouse-extra-charges-pending"] as const,
+  costTemplates: ["warehouse-cost-templates"] as const,
   purchasing: ["warehouse-purchasing"] as const,
 };
 
@@ -507,3 +521,141 @@ export const importCatalog = async (file: File, replaceStock: boolean) => {
   });
   return data;
 };
+
+
+// --- Costo del trabajo (spec 2026-10-22) -------------------------------------
+//
+// Estimado desde plantillas, costos reales anotados a mano (mano de obra,
+// representante), cobros adicionales en efectivo y el resumen del trabajo.
+
+export interface CostTemplateLine {
+  category: string;
+  category_label?: string;
+  description: string;
+  mode: "percent" | "amount";
+  value: string;
+}
+
+export interface CostTemplate {
+  id: string;
+  name: string;
+  job_type: string | null;
+  applies_to: "rebate" | "particular" | "both";
+  applies_to_label?: string | null;
+  active: boolean;
+  lines: CostTemplateLine[];
+}
+
+export type CostTemplateInput = Omit<CostTemplate, "id" | "applies_to_label">;
+
+export const listCostTemplatesPage = (page: number, pageSize: number, params: Record<string, string | boolean | undefined> = {}) =>
+  fetchPage<CostTemplate>("/warehouse/cost-templates", page, pageSize, params);
+
+export const saveCostTemplate = async (id: string | null, data: CostTemplateInput) =>
+  id
+    ? (await apiClient.put<CostTemplate>(`/warehouse/cost-templates/${id}`, data)).data
+    : (await apiClient.post<CostTemplate>("/warehouse/cost-templates", data)).data;
+
+export const deleteCostTemplate = async (id: string) => {
+  await apiClient.delete(`/warehouse/cost-templates/${id}`);
+};
+
+/** Llena el estimado en borrador con la plantilla. Sin precio, el servidor usa la tarifa del programa. */
+export const applyCostTemplate = async (budgetId: string, templateId: string, expectedRevenue?: string | null) =>
+  (await apiClient.post<ProjectBudget>(`/warehouse/budgets/${budgetId}/apply-template`, {
+    template_id: templateId, expected_revenue: expectedRevenue || null,
+  })).data;
+
+export interface CostEntry {
+  id: string;
+  project_id: string;
+  entry_date: string;
+  category: string;
+  category_label: string;
+  description: string;
+  amount: string;
+  person_user_id: string | null;
+  person_name: string | null;
+  notes: string | null;
+}
+
+export interface CostEntryInput {
+  entry_date?: string | null;
+  category: string;
+  description?: string | null;
+  amount: string;
+  person_user_id?: string | null;
+  person_name?: string | null;
+  notes?: string | null;
+}
+
+export const saveCostEntry = async (projectId: string, id: string | null, data: CostEntryInput) =>
+  id
+    ? (await apiClient.put<CostEntry>(`/warehouse/projects/${projectId}/cost-entries/${id}`, data)).data
+    : (await apiClient.post<CostEntry>(`/warehouse/projects/${projectId}/cost-entries`, data)).data;
+
+export const deleteCostEntry = async (projectId: string, id: string) => {
+  await apiClient.delete(`/warehouse/projects/${projectId}/cost-entries/${id}`);
+};
+
+export interface ExtraCharge {
+  id: string;
+  project_id: string;
+  charge_date: string;
+  description: string;
+  amount: string;
+  payment_method: string;
+  payment_method_label: string | null;
+  received_by_user_id: string | null;
+  received_by_name: string | null;
+  status: "por_entregar" | "recibido";
+  delivered_at: string | null;
+  delivered_to_name: string | null;
+}
+
+export interface ExtraChargeInput {
+  description: string;
+  amount: string;
+  payment_method?: string;
+  charge_date?: string | null;
+  received_by_user_id?: string | null;
+}
+
+export const createExtraCharge = async (projectId: string, data: ExtraChargeInput) =>
+  (await apiClient.post<ExtraCharge>(`/warehouse/projects/${projectId}/extra-charges`, data)).data;
+
+export const deliverExtraCharge = async (id: string) =>
+  (await apiClient.post<ExtraCharge>(`/warehouse/extra-charges/${id}/deliver`)).data;
+
+export interface JobCostConcept {
+  label: string;
+  estimated: string;
+  actual: string;
+  deviation: string;
+  source: string;
+}
+
+export interface JobCosting {
+  project_id: string;
+  kind: "rebate" | "particular";
+  budget_id: string | null;
+  budget_status: string | null;
+  revenue: {
+    invoiced: string; program: string; customer: string; extras: string; collected: string;
+    total: string; is_estimate: boolean;
+  };
+  costs: {
+    total: string; estimated_total: string;
+    by_concept: Record<string, JobCostConcept>;
+    by_category: Record<string, string>;
+  };
+  profit: {
+    actual: string | null; margin_pct: number | null; estimated: string | null;
+    estimated_margin_pct: number | null; target_pct: number | null; below_target: boolean;
+  };
+  extras_pending: ExtraCharge[];
+  warnings: string[];
+}
+
+export const getJobCosting = async (projectId: string) =>
+  (await apiClient.get<JobCosting>(`/warehouse/projects/${projectId}/job-costing`)).data;

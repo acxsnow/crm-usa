@@ -43,6 +43,7 @@ import { WarehouseReleasesPage } from "@/features/warehouse/WarehouseReleasesPag
 import { WarehouseMovementsPage } from "@/features/warehouse/WarehouseMovementsPage";
 import { WarehouseKitsPage } from "@/features/warehouse/WarehouseKitsPage";
 import { WarehousePurchasingPage } from "@/features/warehouse/WarehousePurchasingPage";
+import { CostTemplatesPage } from "@/features/warehouse/CostTemplatesPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -234,6 +235,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["budgets.manage", "budgets.approve", "warehouse.read"]} moduleLabel="Bodega">
             <WarehousePurchasingPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/cost-templates",
+        element: (
+          <RequireAccess permission={["budgets.manage"]} moduleLabel="Bodega">
+            <CostTemplatesPage />
           </RequireAccess>
         ),
       },

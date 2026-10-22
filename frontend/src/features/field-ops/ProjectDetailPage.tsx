@@ -29,7 +29,8 @@ import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
 import { ReviewStep } from "./components/ReviewStep";
 import { BillingStep } from "./components/BillingStep";
-import { ProjectBudgetPanel } from "@/features/warehouse/ProjectBudgetPanel";
+import { JobCostPanel } from "@/features/warehouse/JobCostPanel";
+import { ExtraChargeForm } from "@/features/warehouse/ExtraChargeForm";
 import { ProjectDayLogPanel } from "@/features/warehouse/ProjectDayLogPanel";
 import { hasAnyPermission } from "@/config/navigation";
 
@@ -336,6 +337,8 @@ export function ProjectDetailPage() {
   const puedeVerPresupuesto = hasAnyPermission(["budgets.manage", "budgets.approve", "warehouse.read"], user);
   // El diario de obra: lo escribe el técnico y lo lee quien mira la bodega.
   const puedeVerDiario = hasAnyPermission(["daylogs.manage", "warehouse.read"], user);
+  // El técnico anota el cobro adicional que recibió en la obra; la oficina lo ve en «Costo del trabajo».
+  const puedeAnotarExtra = !puedeVerPresupuesto && hasAnyPermission(["daylogs.manage"], user);
   // De dónde se llegó (la Agenda o la lista de proyectos lo pasan al abrir).
   // Sin eso, por ejemplo con un enlace directo, se vuelve a Proyectos.
   const volver = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? {};
@@ -548,7 +551,17 @@ export function ProjectDetailPage() {
 
         <TaskBoard projectId={project.id} />
 
-        {puedeVerPresupuesto && <ProjectBudgetPanel projectId={project.id} />}
+        {puedeVerPresupuesto && <JobCostPanel projectId={project.id} />}
+        {puedeAnotarExtra && (
+          <section className="annex-section" aria-labelledby="anexo-extra">
+            <div className="annex-section-head"><h3 id="anexo-extra">Cobro adicional del cliente</h3></div>
+            <p className="acta-lead">
+              Si el dueño de casa pidió algo extra (un breaker, más cable, mover algo) y lo pagó aparte, anótalo
+              aquí y entrégale el efectivo a la oficina.
+            </p>
+            <ExtraChargeForm projectId={project.id} />
+          </section>
+        )}
 
         {puedeVerDiario && <ProjectDayLogPanel projectId={project.id} />}
       </section>

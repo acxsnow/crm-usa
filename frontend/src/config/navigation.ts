@@ -162,6 +162,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "▧",
         permission: ["budgets.manage", "budgets.approve", "warehouse.read"],
       },
+      {
+        label: "Plantillas de costo",
+        to: "/warehouse/cost-templates",
+        icon: "◫",
+        permission: ["budgets.manage"],
+      },
     ],
   },
   {
