@@ -135,3 +135,62 @@ async def delete_cost_entry(project_id: uuid.UUID, entry_id: uuid.UUID, db: Asyn
                             current_user: User = Depends(_manage)) -> None:
     await svc.delete_cost_entry(db, organization_id=organization_id, user=current_user, project_id=project_id,
                                 entry_id=entry_id)
+
+
+# ---------------------------------------------------------------------------
+# Cobros adicionales
+# ---------------------------------------------------------------------------
+
+_extra = require_any_permission("daylogs.manage", "budgets.manage", "budgets.approve", "warehouse.read")
+
+
+class ExtraChargeIn(BaseModel):
+    charge_date: date | None = None
+    description: str = Field(default="", max_length=255)
+    amount: str
+    payment_method: str = "cash"
+    received_by_user_id: uuid.UUID | None = None
+
+
+@router.get("/warehouse/projects/{project_id}/extra-charges")
+async def list_extra_charges(project_id: uuid.UUID, response: Response, db: AsyncSession = Depends(get_db),
+                             organization_id: uuid.UUID = Depends(get_organization_id),
+                             pag: tuple[int, int] = Depends(pagination_params),
+                             current_user: User = Depends(_extra)) -> list[dict]:
+    """La oficina ve todos los de la obra; el técnico, solo los que cobró él."""
+    from app.modules.field_ops.access import get_visible_project
+
+    project = await get_visible_project(db, organization_id=organization_id, user=current_user,
+                                        project_id=project_id)
+    stmt = svc.extra_charges_stmt(organization_id, project_id=project.id,
+                                  own_user_id=None if svc.sees_all(current_user) else current_user.id)
+    cobros = await paginate(db, stmt, limit=pag[0], offset=pag[1], response=response)
+    return await svc.extra_charges_out(db, cobros)
+
+
+@router.post("/warehouse/projects/{project_id}/extra-charges", status_code=201)
+async def create_extra_charge(project_id: uuid.UUID, payload: ExtraChargeIn, db: AsyncSession = Depends(get_db),
+                              organization_id: uuid.UUID = Depends(get_organization_id),
+                              current_user: User = Depends(_extra)) -> dict:
+    c = await svc.create_extra_charge(db, organization_id=organization_id, user=current_user,
+                                      project_id=project_id, data=payload.model_dump())
+    return (await svc.extra_charges_out(db, [c]))[0]
+
+
+@router.get("/warehouse/extra-charges/pending")
+async def pending_extra_charges(response: Response, db: AsyncSession = Depends(get_db),
+                                organization_id: uuid.UUID = Depends(get_organization_id),
+                                pag: tuple[int, int] = Depends(pagination_params),
+                                current_user: User = Depends(_manage)) -> list[dict]:
+    """El efectivo que los técnicos cobraron y todavía no llega a la oficina."""
+    cobros = await paginate(db, svc.extra_charges_stmt(organization_id, pending_only=True),
+                            limit=pag[0], offset=pag[1], response=response)
+    return await svc.extra_charges_out(db, cobros)
+
+
+@router.post("/warehouse/extra-charges/{charge_id}/deliver")
+async def deliver_extra_charge(charge_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               current_user: User = Depends(_manage)) -> dict:
+    c = await svc.mark_delivered(db, organization_id=organization_id, user=current_user, charge_id=charge_id)
+    return (await svc.extra_charges_out(db, [c]))[0]

@@ -18,6 +18,7 @@ from app.modules.field_ops.clock import org_today
 from app.modules.warehouse.catalogs import (
     BUDGET_CATEGORIES,
     COST_ENTRY_CATEGORIES,
+    EXTRA_CHARGE_METHODS,
     TARGET_PROFIT,
     TEMPLATE_APPLIES_TO,
     TEMPLATE_CATEGORIES,
@@ -29,6 +30,7 @@ from app.modules.warehouse.models import (
     ProjectBudget,
     ProjectBudgetLine,
     ProjectCostEntry,
+    ProjectExtraCharge,
 )
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
@@ -390,3 +392,101 @@ async def cost_entries_by_category(db: AsyncSession, organization_id, project_id
         por = resultado.setdefault(e.project_id, {})
         por[e.category] = to_money(por.get(e.category, ZERO) + e.amount)
     return resultado
+
+
+# ---------------------------------------------------------------------------
+# Cobros adicionales (efectivo del dueño de casa)
+# ---------------------------------------------------------------------------
+
+# Quien ve todos los cobros adicionales de una obra (y los costos): la oficina.
+VIEW_PERMS = {"budgets.manage", "budgets.approve", "warehouse.read"}
+
+
+def sees_all(user) -> bool:
+    from app.api.deps import get_effective_permissions
+
+    return bool(VIEW_PERMS & get_effective_permissions(user))
+
+
+def extra_charges_stmt(organization_id, *, project_id=None, own_user_id=None, pending_only: bool = False):
+    stmt = select(ProjectExtraCharge).where(ProjectExtraCharge.organization_id == organization_id)
+    if project_id is not None:
+        stmt = stmt.where(ProjectExtraCharge.project_id == project_id)
+    if own_user_id is not None:
+        stmt = stmt.where(ProjectExtraCharge.received_by_user_id == own_user_id)
+    if pending_only:
+        stmt = stmt.where(ProjectExtraCharge.delivered_at.is_(None))
+    return stmt.order_by(ProjectExtraCharge.charge_date.desc(), ProjectExtraCharge.created_at.desc())
+
+
+async def create_extra_charge(db: AsyncSession, *, organization_id, user, project_id, data: dict) -> ProjectExtraCharge:
+    """Lo que el dueño de casa paga aparte (un breaker, más cable, mover algo).
+
+    No va en la factura al programa. El técnico lo recibe en la obra, casi
+    siempre en efectivo, y queda «por entregar» hasta que la oficina lo recibe.
+    El técnico solo lo anota en sus obras; la oficina puede decir quién lo cobró.
+    """
+    from app.modules.field_ops.access import get_visible_project
+
+    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    monto = to_money(data.get("amount") or ZERO)
+    if monto <= ZERO:
+        raise InvalidInputError("El cobro adicional tiene que ser mayor que cero.", code="invalid_extra_amount")
+    descripcion = (data.get("description") or "").strip()
+    if not descripcion:
+        raise InvalidInputError("Di qué se le cobró al cliente.", code="extra_description_required")
+    metodo = data.get("payment_method") or "cash"
+    if metodo not in EXTRA_CHARGE_METHODS:
+        raise InvalidInputError("Forma de pago desconocida.", code="invalid_payment_method")
+    quien = user.id
+    if sees_all(user) and data.get("received_by_user_id"):
+        quien = (await _person(db, organization_id, data["received_by_user_id"])).id
+    c = ProjectExtraCharge(organization_id=organization_id, project_id=project.id,
+                           charge_date=data.get("charge_date") or await org_today(db, organization_id),
+                           description=descripcion[:255], amount=monto, payment_method=metodo,
+                           received_by_user_id=quien, created_by_user_id=user.id)
+    db.add(c)
+    await db.flush()
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="extra_charge.created", entity_type="project_extra_charge", entity_id=str(c.id),
+                             after_data={"project_id": str(project.id), "amount": str(monto), "method": metodo})
+    await db.commit()
+    await db.refresh(c)
+    return c
+
+
+async def mark_delivered(db: AsyncSession, *, organization_id, user, charge_id) -> ProjectExtraCharge:
+    """La oficina recibió el efectivo. Marcarlo dos veces no cambia la fecha."""
+    from datetime import datetime, timezone
+
+    c = await db.get(ProjectExtraCharge, charge_id)
+    if c is None or c.organization_id != organization_id:
+        raise NotFoundError("Ese cobro adicional no existe.", code="extra_charge_not_found")
+    if c.delivered_at is None:
+        c.delivered_at = datetime.now(timezone.utc)
+        c.delivered_to_user_id = user.id
+        await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                                 action="extra_charge.delivered", entity_type="project_extra_charge",
+                                 entity_id=str(c.id), after_data={"amount": str(c.amount)})
+        await db.commit()
+        await db.refresh(c)
+    return c
+
+
+async def extra_charges_out(db: AsyncSession, cobros: list[ProjectExtraCharge]) -> list[dict]:
+    from app.modules.users.models import User
+
+    ids = {c.received_by_user_id for c in cobros if c.received_by_user_id} | \
+          {c.delivered_to_user_id for c in cobros if c.delivered_to_user_id}
+    nombres = {u.id: u.full_name for u in (await db.execute(select(User).where(User.id.in_(ids)))).scalars()} \
+        if ids else {}
+    return [{
+        "id": str(c.id), "project_id": str(c.project_id), "charge_date": c.charge_date.isoformat(),
+        "description": c.description, "amount": str(to_money(c.amount)), "payment_method": c.payment_method,
+        "payment_method_label": EXTRA_CHARGE_METHODS.get(c.payment_method),
+        "received_by_user_id": str(c.received_by_user_id) if c.received_by_user_id else None,
+        "received_by_name": nombres.get(c.received_by_user_id),
+        "status": "recibido" if c.delivered_at else "por_entregar",
+        "delivered_at": c.delivered_at.isoformat() if c.delivered_at else None,
+        "delivered_to_name": nombres.get(c.delivered_to_user_id),
+    } for c in cobros]

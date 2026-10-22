@@ -261,3 +261,76 @@ async def test_otra_organizacion_no_ve_las_entradas(app_client, login, db, seede
     assert (await app_client.get(f"{API}/warehouse/projects/{project.id}/cost-entries",
                                  headers=ajeno)).status_code == 404
     assert (await _anotar(app_client, ajeno, project.id, "labor", "600")).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Cobros adicionales en efectivo (Task 4)
+# ---------------------------------------------------------------------------
+
+async def _extra(app_client, headers, project_id, monto="150", **extra):
+    return await app_client.post(f"{API}/warehouse/projects/{project_id}/extra-charges", json={
+        "description": extra.pop("description", "Breaker 30A y 10 ft de cable"), "amount": monto, **extra},
+        headers=headers)
+
+
+async def test_el_tecnico_anota_el_extra_y_queda_por_entregar(app_client, login, db, seeded_org,
+                                                              active_technician_user):
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    r = await _extra(app_client, tecnico, project.id)
+    assert r.status_code == 201, r.text
+    c = r.json()
+    assert (c["status"], c["payment_method"], c["amount"], c["received_by_user_id"]) == (
+        "por_entregar", "cash", "150.00", str(active_technician_user.id))
+
+
+async def test_aldo_marca_recibido_y_deja_de_estar_pendiente(app_client, login, db, seeded_org, active_admin_user,
+                                                             active_technician_user):
+    h = await login(active_admin_user.email)
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    c = (await _extra(app_client, tecnico, project.id)).json()
+    pendientes = (await app_client.get(f"{API}/warehouse/extra-charges/pending", headers=h)).json()
+    assert [p["id"] for p in pendientes] == [c["id"]]
+
+    r = await app_client.post(f"{API}/warehouse/extra-charges/{c['id']}/deliver", headers=h)
+    assert r.status_code == 200, r.text
+    recibido = r.json()
+    assert recibido["status"] == "recibido"
+    assert (await app_client.get(f"{API}/warehouse/extra-charges/pending", headers=h)).json() == []
+    otra_vez = (await app_client.post(f"{API}/warehouse/extra-charges/{c['id']}/deliver", headers=h)).json()
+    assert otra_vez["delivered_at"] == recibido["delivered_at"]
+
+
+async def test_el_tecnico_no_anota_extras_en_obra_ajena(app_client, login, db, seeded_org, active_technician_user):
+    tecnico = await login(active_technician_user.email)
+    _, ajena = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await _extra(app_client, tecnico, ajena.id)
+    assert (r.status_code, r.json()["code"]) == (404, "project_not_found")
+
+
+async def test_el_tecnico_solo_ve_sus_extras(app_client, login, db, seeded_org, active_admin_user,
+                                             active_technician_user):
+    h = await login(active_admin_user.email)
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    mio = (await _extra(app_client, tecnico, project.id)).json()
+    await _extra(app_client, h, project.id, "40", description="Mover el termostato")
+    url = f"{API}/warehouse/projects/{project.id}/extra-charges"
+    assert [c["id"] for c in (await app_client.get(url, headers=tecnico)).json()] == [mio["id"]]
+    assert len((await app_client.get(url, headers=h)).json()) == 2
+
+
+async def test_el_tecnico_no_puede_marcar_recibido(app_client, login, db, seeded_org, active_technician_user):
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    c = (await _extra(app_client, tecnico, project.id)).json()
+    assert (await app_client.post(f"{API}/warehouse/extra-charges/{c['id']}/deliver",
+                                  headers=tecnico)).status_code == 403
+
+
+async def test_un_extra_sin_monto_da_400(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await _extra(app_client, h, project.id, "0")
+    assert (r.status_code, r.json()["code"]) == (400, "invalid_extra_amount")
