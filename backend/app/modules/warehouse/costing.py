@@ -246,3 +246,151 @@ async def purchasing_report(db: AsyncSession, organization_id) -> dict:
     return {"rows": renglones, "totals": {"budgeted": str(to_money(total_presupuestado)),
                                           "to_buy": str(to_money(total_por_comprar)),
                                           "items": len(renglones)}}
+
+
+# ---------------------------------------------------------------------------
+# Costo del trabajo: el resumen que Aldo mira al cerrar (spec 2026-10-22)
+# ---------------------------------------------------------------------------
+
+# De dónde sale lo real de cada concepto: se muestra en el panel para que nadie
+# tenga que adivinar por qué un número es el que es.
+CONCEPT_SOURCES: dict[str, str] = {
+    "sales_rep": "Pago del representante anotado en el trabajo",
+    "permits": "Facturas de permisos y lo anotado",
+    "materials": "Salidas de bodega, compras a la obra y consumibles",
+    "labor": "Mano de obra anotada y facturas de subcontratistas",
+    "other": "Gastos de campo y otros",
+}
+DUPLICATE_TOLERANCE = Decimal("1.00")
+
+
+def _pct(parte, base) -> float | None:
+    if base is None or base <= ZERO:
+        return None
+    return float((parte / base * 100).quantize(Decimal("0.1")))
+
+
+async def project_revenue(db: AsyncSession, organization_id, project_ids: set) -> dict:
+    """{project_id: {"invoiced", "collected", "extras", "extras_received"}}.
+
+    Facturado = facturas del proyecto sin anular (en rebate, el cobro al
+    programa; en particular, la factura al cliente). Los cobros adicionales en
+    efectivo suman aparte: no están en ninguna factura.
+    """
+    from app.modules.billing.models import Invoice
+    from app.modules.warehouse.models import ProjectExtraCharge
+
+    resultado = {pid: {"invoiced": ZERO, "collected": ZERO, "extras": ZERO, "extras_received": ZERO}
+                 for pid in project_ids}
+    if not project_ids:
+        return resultado
+    for f in (await db.execute(select(Invoice).where(
+            Invoice.organization_id == organization_id, Invoice.project_id.in_(project_ids),
+            Invoice.document_status != "void"))).scalars().all():
+        resultado[f.project_id]["invoiced"] += to_money(f.amount)
+        resultado[f.project_id]["collected"] += to_money(f.paid_amount)
+    for c in (await db.execute(select(ProjectExtraCharge).where(
+            ProjectExtraCharge.organization_id == organization_id,
+            ProjectExtraCharge.project_id.in_(project_ids)))).scalars().all():
+        resultado[c.project_id]["extras"] += to_money(c.amount)
+        if c.delivered_at is not None:
+            resultado[c.project_id]["extras_received"] += to_money(c.amount)
+    return resultado
+
+
+async def _possible_duplicates(db: AsyncSession, organization_id, project_id) -> bool:
+    """Un subcontratista o un permiso que llegó por factura de proveedor **y**
+    además se anotó a mano por el mismo monto. Se suman los dos (puede haber dos
+    pagos de verdad), pero el panel avisa."""
+    from app.modules.warehouse.models import ProjectCostEntry
+
+    manuales = (await db.execute(select(ProjectCostEntry).where(
+        ProjectCostEntry.organization_id == organization_id, ProjectCostEntry.project_id == project_id,
+        ProjectCostEntry.category.in_(("contractor", "permit"))))).scalars().all()
+    if not manuales:
+        return False
+    facturadas = (await db.execute(select(SupplierInvoiceLine).join(
+        SupplierInvoice, SupplierInvoice.id == SupplierInvoiceLine.invoice_id).where(
+        SupplierInvoice.organization_id == organization_id, SupplierInvoice.status != "void",
+        SupplierInvoiceLine.project_id == project_id,
+        SupplierInvoiceLine.category.in_(("contractor", "permit"))))).scalars().all()
+    return any(m.category == f.category and abs(to_money(m.amount) - to_money(f.amount)) <= DUPLICATE_TOLERANCE
+               for m in manuales for f in facturadas)
+
+
+async def job_costing(db: AsyncSession, *, organization_id, project_id) -> dict:
+    """Ingreso, costo real por concepto, estimado y margen de un trabajo.
+
+    Mientras el trabajo no tiene ingreso real, el ingreso que se muestra es el
+    precio esperado del estimado (`is_estimate`), y el margen real queda vacío:
+    no se divide entre cero ni se inventa una ganancia.
+    """
+    from app.modules.field_ops.models import Project as _Project
+    from app.modules.warehouse.budgets import estimate_summary
+    from app.modules.warehouse.catalogs import CONCEPT_OF_CATEGORY, JOB_CONCEPTS
+    from app.modules.warehouse.jobcost import extra_charges_out, extra_charges_stmt, is_rebate, target_profit_of
+
+    project = await db.get(_Project, project_id)
+    real = (await project_actual_costs(db, organization_id, {project_id}))[project_id]
+    ingreso = (await project_revenue(db, organization_id, {project_id}))[project_id]
+    budget = await current_budget(db, organization_id, project_id)
+    renglones = (await budget_lines_of(db, organization_id, [budget.id])).get(budget.id, []) if budget else []
+    estimado = budget_totals(renglones)
+    objetivo = (await target_profit_of(db, {budget.template_id})).get(budget.template_id) \
+        if budget and budget.template_id else None
+    resumen = estimate_summary(budget, estimado["total"], objetivo) if budget else {
+        "expected_revenue": None, "expected_profit": None, "expected_margin_pct": None,
+        "target_profit_pct": None, "below_target": False}
+
+    por_concepto = {c: {"label": etiqueta, "estimated": ZERO, "actual": ZERO} for c, etiqueta in JOB_CONCEPTS.items()}
+    for categoria, valor in estimado["by_category"].items():
+        por_concepto[CONCEPT_OF_CATEGORY.get(categoria, "other")]["estimated"] += to_money(valor)
+    for categoria, valor in real.items():
+        por_concepto[CONCEPT_OF_CATEGORY.get(categoria, "other")]["actual"] += to_money(valor)
+    costo_real = to_money(sum((c["actual"] for c in por_concepto.values()), ZERO))
+
+    total_real = to_money(ingreso["invoiced"] + ingreso["extras"])
+    precio_estimado = to_money(budget.expected_revenue) if budget and budget.expected_revenue is not None else None
+    es_estimado = total_real == ZERO and precio_estimado is not None
+    rebate = await is_rebate(db, project)
+    ganancia = to_money(total_real - costo_real) if total_real > ZERO else None
+    pendientes = (await db.execute(extra_charges_stmt(organization_id, project_id=project_id,
+                                                      pending_only=True))).scalars().all()
+    avisos = ["possible_duplicate"] if await _possible_duplicates(db, organization_id, project_id) else []
+    if resumen["below_target"]:
+        avisos.append("below_target")
+
+    return {
+        "project_id": str(project_id),
+        "kind": "rebate" if rebate else "particular",
+        "budget_id": str(budget.id) if budget else None,
+        "budget_status": budget.status if budget else None,
+        "revenue": {
+            "invoiced": str(to_money(ingreso["invoiced"])),
+            "program": str(to_money(ingreso["invoiced"])) if rebate else "0.00",
+            "customer": "0.00" if rebate else str(to_money(ingreso["invoiced"])),
+            "extras": str(to_money(ingreso["extras"])),
+            "collected": str(to_money(ingreso["collected"] + ingreso["extras_received"])),
+            "total": str(precio_estimado if es_estimado else total_real),
+            "is_estimate": es_estimado,
+        },
+        "costs": {
+            "total": str(costo_real),
+            "estimated_total": str(to_money(estimado["total"])),
+            "by_concept": {c: {"label": v["label"], "estimated": str(to_money(v["estimated"])),
+                               "actual": str(to_money(v["actual"])),
+                               "deviation": str(to_money(v["actual"] - v["estimated"])),
+                               "source": CONCEPT_SOURCES[c]} for c, v in por_concepto.items()},
+            "by_category": {c: str(to_money(v)) for c, v in real.items()},
+        },
+        "profit": {
+            "actual": str(ganancia) if ganancia is not None else None,
+            "margin_pct": _pct(ganancia, total_real) if ganancia is not None else None,
+            "estimated": resumen["expected_profit"],
+            "estimated_margin_pct": resumen["expected_margin_pct"],
+            "target_pct": resumen["target_profit_pct"],
+            "below_target": resumen["below_target"],
+        },
+        "extras_pending": await extra_charges_out(db, list(pendientes)),
+        "warnings": avisos,
+    }

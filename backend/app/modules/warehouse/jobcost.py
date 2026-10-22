@@ -408,6 +408,14 @@ def sees_all(user) -> bool:
     return bool(VIEW_PERMS & get_effective_permissions(user))
 
 
+def can_attribute(user) -> bool:
+    """Decir que otra persona cobró el efectivo la deja debiéndolo: solo la
+    oficina que lleva los costos (`budgets.manage`), no quien solo lee."""
+    from app.api.deps import get_effective_permissions
+
+    return "budgets.manage" in get_effective_permissions(user)
+
+
 def extra_charges_stmt(organization_id, *, project_id=None, own_user_id=None, pending_only: bool = False):
     stmt = select(ProjectExtraCharge).where(ProjectExtraCharge.organization_id == organization_id)
     if project_id is not None:
@@ -439,7 +447,7 @@ async def create_extra_charge(db: AsyncSession, *, organization_id, user, projec
     if metodo not in EXTRA_CHARGE_METHODS:
         raise InvalidInputError("Forma de pago desconocida.", code="invalid_payment_method")
     quien = user.id
-    if sees_all(user) and data.get("received_by_user_id"):
+    if can_attribute(user) and data.get("received_by_user_id"):
         quien = (await _person(db, organization_id, data["received_by_user_id"])).id
     c = ProjectExtraCharge(organization_id=organization_id, project_id=project.id,
                            charge_date=data.get("charge_date") or await org_today(db, organization_id),

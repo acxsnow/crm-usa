@@ -83,21 +83,29 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
         stmt = stmt.where(Project.case_id.in_(select(Case.id).where(Case.program_id == program_id)))
     proyectos = (await db.execute(stmt.order_by(Project.completed_date.desc().nulls_last()).limit(1000))).scalars().all()
     ids = {p.id for p in proyectos}
-    facturas = (await db.execute(select(Invoice).where(
-        Invoice.organization_id == organization_id, Invoice.project_id.in_(ids),
-        Invoice.document_status != "void"))).scalars().all() if ids else []
-    esperado: dict = {pid: ZERO for pid in ids}
-    cobrado: dict = {pid: ZERO for pid in ids}
-    for f in facturas:
-        esperado[f.project_id] += to_money(f.amount)
-        cobrado[f.project_id] += f.paid_amount
-    costos = await project_costs(db, organization_id, ids)
+    # Misma suma que el panel «Costo del trabajo» (spec 2026-10-22): ingreso
+    # facturado más cobros adicionales, y el costo real completo (bodega, compras,
+    # gastos y lo anotado a mano), para que el reporte y el panel nunca difieran.
+    from app.modules.warehouse.budgets import budget_lines_of, budget_totals, current_budget, estimate_summary
+    from app.modules.warehouse.costing import ACTUAL_LABELS, project_actual_costs, project_revenue
+
+    ingresos = await project_revenue(db, organization_id, ids)
+    esperado: dict = {pid: to_money(i["invoiced"] + i["extras"]) for pid, i in ingresos.items()}
+    cobrado: dict = {pid: to_money(i["collected"] + i["extras_received"]) for pid, i in ingresos.items()}
+    costos = await project_actual_costs(db, organization_id, ids)
+    margen_estimado: dict = {}
+    for pid in ids:
+        presupuesto = await current_budget(db, organization_id, pid)
+        if presupuesto is not None:
+            renglones = (await budget_lines_of(db, organization_id, [presupuesto.id])).get(presupuesto.id, [])
+            margen_estimado[pid] = estimate_summary(presupuesto, budget_totals(renglones)["total"],
+                                                    None)["expected_margin_pct"]
     casos = {c.id: c for c in (await db.execute(select(Case).where(
         Case.id.in_({p.case_id for p in proyectos if p.case_id})))).scalars().all()} if proyectos else {}
     programas = {p.id: p.name for p in (await db.execute(select(Program).where(
         Program.organization_id == organization_id))).scalars().all()}
     filas = []
-    tot = {"expected": ZERO, "collected": ZERO, "costs": ZERO, **{k: ZERO for k in COST_KEYS}}
+    tot = {"expected": ZERO, "collected": ZERO, "costs": ZERO, **{k: ZERO for k in ACTUAL_LABELS}}
     for p in proyectos:
         c = costos[p.id]
         total_costos = money_sum(c.values())
@@ -111,6 +119,7 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
             "expected": str(esperado[p.id]), "collected": str(cobrado[p.id]), "costs": str(total_costos),
             "cost_breakdown": {k: str(v) for k, v in c.items()},
             "margin": str(margen), "expected_margin": str(esperado[p.id] - total_costos),
+            "estimated_margin_pct": margen_estimado.get(p.id),
             "margin_pct": float((margen / cobrado[p.id] * 100).quantize(Decimal("0.1"))) if cobrado[p.id] > 0 else None,
         })
         tot["expected"] += esperado[p.id]
@@ -120,7 +129,7 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
             tot[k] += v
     margen_total = tot["collected"] - tot["costs"]
     return {
-        "cost_labels": COST_LABELS, "rows": filas,
+        "cost_labels": ACTUAL_LABELS, "rows": filas,
         "totals": {**{k: str(v) for k, v in tot.items()}, "margin": str(margen_total),
                    "expected_margin": str(tot["expected"] - tot["costs"]),
                    "margin_pct": float((margen_total / tot["collected"] * 100).quantize(Decimal("0.1")))

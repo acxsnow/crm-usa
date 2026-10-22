@@ -142,6 +142,8 @@ async def delete_cost_entry(project_id: uuid.UUID, entry_id: uuid.UUID, db: Asyn
 # ---------------------------------------------------------------------------
 
 _extra = require_any_permission("daylogs.manage", "budgets.manage", "budgets.approve", "warehouse.read")
+# Anotar un cobro: el técnico en la obra o la oficina; leer bodega no alcanza.
+_extra_write = require_any_permission("daylogs.manage", "budgets.manage")
 
 
 class ExtraChargeIn(BaseModel):
@@ -171,7 +173,7 @@ async def list_extra_charges(project_id: uuid.UUID, response: Response, db: Asyn
 @router.post("/warehouse/projects/{project_id}/extra-charges", status_code=201)
 async def create_extra_charge(project_id: uuid.UUID, payload: ExtraChargeIn, db: AsyncSession = Depends(get_db),
                               organization_id: uuid.UUID = Depends(get_organization_id),
-                              current_user: User = Depends(_extra)) -> dict:
+                              current_user: User = Depends(_extra_write)) -> dict:
     c = await svc.create_extra_charge(db, organization_id=organization_id, user=current_user,
                                       project_id=project_id, data=payload.model_dump())
     return (await svc.extra_charges_out(db, [c]))[0]
@@ -194,3 +196,14 @@ async def deliver_extra_charge(charge_id: uuid.UUID, db: AsyncSession = Depends(
                                current_user: User = Depends(_manage)) -> dict:
     c = await svc.mark_delivered(db, organization_id=organization_id, user=current_user, charge_id=charge_id)
     return (await svc.extra_charges_out(db, [c]))[0]
+
+
+@router.get("/warehouse/projects/{project_id}/job-costing")
+async def get_job_costing(project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_view)) -> dict:
+    """El costo del trabajo: ingreso, costo real por concepto, estimado y margen."""
+    from app.modules.warehouse import costing
+
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    return await costing.job_costing(db, organization_id=organization_id, project_id=project.id)

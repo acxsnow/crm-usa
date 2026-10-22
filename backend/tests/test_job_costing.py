@@ -334,3 +334,154 @@ async def test_un_extra_sin_monto_da_400(app_client, login, db, seeded_org, acti
     _, project = await approved_case_with_project(db, seeded_org["org"].id)
     r = await _extra(app_client, h, project.id, "0")
     assert (r.status_code, r.json()["code"]) == (400, "invalid_extra_amount")
+
+
+# ---------------------------------------------------------------------------
+# El resumen del trabajo (Task 5)
+# ---------------------------------------------------------------------------
+
+async def _cobro_programa(db, org_id, project, monto="4200.00", pagado=None):
+    """La factura del cobro al programa (lo que registra Facturación)."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.modules.billing.models import Invoice, InvoicePayment
+
+    pagos = [InvoicePayment(amount=Decimal(pagado), paid_at=date.today())] if pagado else []
+    db.add(Invoice(organization_id=org_id, kind="rebate", project_id=project.id, customer_id=project.customer_id,
+                   invoice_number=f"REB-{project.id.hex[:6]}", amount=Decimal(monto), payments=pagos))
+    await db.commit()
+
+
+async def _compra(app_client, headers, project_id, lineas):
+    """Factura de proveedor con renglones cargados directo a la obra."""
+    import json
+    from datetime import date
+
+    r = await app_client.post(f"{API}/payables/suppliers", json={
+        "name": f"Proveedor {len(lineas)}-{lineas[0]['unit_cost']}", "kinds": ["equipment"],
+        "payment_terms_days": 30, "states": ["AZ"]}, headers=headers)
+    assert r.status_code == 201, r.text
+    r = await app_client.post(f"{API}/payables/invoices", data={"data": json.dumps({
+        "supplier_id": r.json()["id"], "number": f"F-{lineas[0]['unit_cost']}",
+        "invoice_date": date.today().isoformat(),
+        "lines": [{"quantity": "1", "project_id": str(project_id), **l} for l in lineas]})}, headers=headers)
+    assert r.status_code == 201, r.text
+
+
+async def _resumen(app_client, headers, project_id) -> dict:
+    r = await app_client.get(f"{API}/warehouse/projects/{project_id}/job-costing", headers=headers)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+async def _estimado_pedestal(app_client, h, project_id):
+    propio = (await _plantillas(app_client, h))["Pedestal (rebate) con personal propio"]
+    budget = await _presupuesto(app_client, h, project_id)
+    return (await _aplicar(app_client, h, budget["id"], propio["id"], "4200")).json()
+
+
+async def test_el_pedestal_cierra_con_su_ganancia_real(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    org_id = seeded_org["org"].id
+    _, project = await approved_case_with_project(db, org_id)
+    await _estimado_pedestal(app_client, h, project.id)
+    await _cobro_programa(db, org_id, project)
+    await _compra(app_client, h, project.id, [
+        {"description": "Material del pedestal", "category": "materials", "unit_cost": "1180"},
+        {"description": "Permiso de la ciudad", "category": "permit", "unit_cost": "238"}])
+    await _anotar(app_client, h, project.id, "labor", "600", person_name="Tom")
+    await _anotar(app_client, h, project.id, "sales_rep", "800", person_name="Luis")
+
+    r = await _resumen(app_client, h, project.id)
+    assert (r["kind"], r["revenue"]["total"], r["revenue"]["is_estimate"]) == ("particular", "4200.00", False)
+    assert (r["costs"]["total"], r["profit"]["actual"], r["profit"]["margin_pct"]) == ("2818.00", "1382.00", 32.9)
+    assert (r["profit"]["estimated"], r["profit"]["estimated_margin_pct"]) == ("1500.00", 35.7)
+    materiales = r["costs"]["by_concept"]["materials"]
+    assert (materiales["estimated"], materiales["actual"], materiales["deviation"]) == ("1062.00", "1180.00", "118.00")
+    assert list(r["costs"]["by_concept"]) == ["sales_rep", "permits", "materials", "labor", "other"]
+
+
+async def test_sin_factura_el_panel_muestra_el_estimado(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    await _estimado_pedestal(app_client, h, project.id)
+    r = await _resumen(app_client, h, project.id)
+    assert (r["revenue"]["is_estimate"], r["revenue"]["total"]) == (True, "4200.00")
+    assert r["profit"]["margin_pct"] is None  # sin ingreso real no hay margen real
+    assert r["profit"]["estimated_margin_pct"] == 35.7
+
+
+async def test_sin_estimado_ni_ingreso_no_divide_entre_cero(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await _resumen(app_client, h, project.id)
+    assert (r["revenue"]["total"], r["profit"]["margin_pct"], r["profit"]["estimated_margin_pct"]) == (
+        "0.00", None, None)
+    assert {c["actual"] for c in r["costs"]["by_concept"].values()} == {"0.00"}
+
+
+async def test_el_extra_en_efectivo_suma_al_ingreso(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    org_id = seeded_org["org"].id
+    programa = await _programa_con_tarifa(db, org_id)
+    _, project = await approved_case_with_project(db, org_id, program_id=programa.id)
+    await _cobro_programa(db, org_id, project)
+    await _extra(app_client, h, project.id, "150")
+    r = await _resumen(app_client, h, project.id)
+    assert (r["kind"], r["revenue"]["program"], r["revenue"]["extras"], r["revenue"]["total"]) == (
+        "rebate", "4200.00", "150.00", "4350.00")
+    assert [c["amount"] for c in r["extras_pending"]] == ["150.00"]
+
+
+async def test_subcontratista_por_factura_y_a_mano_avisa_posible_duplicado(app_client, login, db, seeded_org,
+                                                                          active_admin_user):
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    await _compra(app_client, h, project.id, [{"description": "HVAC Pros LLC", "category": "contractor",
+                                               "unit_cost": "1050"}])
+    await _anotar(app_client, h, project.id, "contractor", "1050", person_name="HVAC Pros LLC")
+    r = await _resumen(app_client, h, project.id)
+    assert r["costs"]["by_concept"]["labor"]["actual"] == "2100.00"
+    assert "possible_duplicate" in r["warnings"]
+
+
+async def test_rentabilidad_y_panel_dan_el_mismo_costo(app_client, login, db, seeded_org, active_admin_user):
+    h = await login(active_admin_user.email)
+    org_id = seeded_org["org"].id
+    _, project = await approved_case_with_project(db, org_id)
+    await _estimado_pedestal(app_client, h, project.id)
+    await _cobro_programa(db, org_id, project)
+    await _anotar(app_client, h, project.id, "labor", "600")
+    r = await _resumen(app_client, h, project.id)
+    rep = (await app_client.get(f"{API}/finance/profitability?project_id={project.id}", headers=h)).json()
+    fila = rep["rows"][0]
+    assert fila["costs"] == r["costs"]["total"] == "600.00"
+    assert fila["estimated_margin_pct"] == r["profit"]["estimated_margin_pct"] == 35.7
+
+
+async def test_el_tecnico_no_ve_el_costo_del_trabajo(app_client, login, db, seeded_org, active_technician_user):
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    r = await app_client.get(f"{API}/warehouse/projects/{project.id}/job-costing", headers=tecnico)
+    assert r.status_code == 403
+
+
+async def test_quien_solo_lee_no_anota_cobros_ni_los_carga_a_otro(app_client, login, db, seeded_org,
+                                                                   active_management_user, active_technician_user,
+                                                                   active_admin_staff_user):
+    """Revisión de seguridad: leer bodega no da para anotar efectivo a nombre de
+    un técnico (quedaría debiéndolo). Solo la oficina (`budgets.manage`) atribuye."""
+    gerencia = await login(active_management_user.email)
+    oficina = await login(active_admin_staff_user.email)
+    tecnico = await login(active_technician_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    r = await _extra(app_client, gerencia, project.id, received_by_user_id=str(active_technician_user.id))
+    assert r.status_code == 403
+    # El técnico no puede cargárselo a otro: queda a su nombre.
+    propio = (await _extra(app_client, tecnico, project.id,
+                           received_by_user_id=str(active_admin_staff_user.id))).json()
+    assert propio["received_by_user_id"] == str(active_technician_user.id)
+    # La oficina sí registra quién lo cobró.
+    r = await _extra(app_client, oficina, project.id, received_by_user_id=str(active_technician_user.id))
+    assert r.json()["received_by_user_id"] == str(active_technician_user.id)
