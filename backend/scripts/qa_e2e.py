@@ -1016,6 +1016,72 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
     RECORDS["Bodega · diario"] = f"proyecto {pid}, {HOY.isoformat()}"
 
 
+def flujo_costo_del_trabajo(c: dict, pid: str | None) -> None:
+    """Costo del trabajo (spec 2026-10-22): estimado desde plantilla, mano de obra
+    y representante, cobro adicional en efectivo y el resumen estimado contra real."""
+    adm, tec, admin, ger = c["adm"], c["tecnico"], c["admin"], c["gerencia"]
+    section("21. Costo del trabajo: estimado, mano de obra, efectivo y resumen")
+    if not check("Hay obra para el costo del trabajo", pid is not None, "el flujo de campo no dejó proyecto"):
+        return
+    plantillas = {t["name"]: t for t in (expect("Administración ve las plantillas de costo",
+                                                adm.get("/warehouse/cost-templates"), 200) or [])}
+    check("Arrancan las tres plantillas del cliente", {"Trabajo particular ideal",
+          "Pedestal (rebate) con personal propio", "Pedestal (rebate) con subcontratista"} <= set(plantillas),
+          str(list(plantillas)))
+    expect("El técnico no ve plantillas de costo", tec.get("/warehouse/cost-templates"), 403)
+    actual = adm.get(f"/warehouse/projects/{pid}/budget").json()
+    if actual and actual.get("status") != "borrador":
+        check("La obra ya tenía estimado aprobado (se usa ese)", True)
+    else:
+        if not actual:
+            actual = expect("Administración abre el estimado de la obra", adm.post("/warehouse/budgets", json={
+                "project_id": pid, "notes": f"QA {RUN} costo del trabajo", "lines": []}), 201) or {}
+        propio = plantillas.get("Pedestal (rebate) con personal propio", {})
+        b = expect("Aplica «Pedestal con personal propio» sobre 4.200",
+                   adm.post(f"/warehouse/budgets/{actual.get('id')}/apply-template",
+                            json={"template_id": propio.get("id"), "expected_revenue": "4200"}), 200) or {}
+        check("El estimado deja 1.500 de ganancia (35,7%)",
+              (b.get("expected_profit"), b.get("expected_margin_pct")) == ("1500.00", 35.7), json.dumps(b)[:200])
+        expect("El Administrador aprueba el estimado", admin.post(f"/warehouse/budgets/{actual.get('id')}/approve"), 200)
+
+    antes = adm.get(f"/warehouse/projects/{pid}/job-costing").json()
+    costo_antes = float(antes["costs"]["total"])
+    extras_antes = float(antes["revenue"]["extras"])
+    expect("Anota la mano de obra del técnico (600)", adm.post(f"/warehouse/projects/{pid}/cost-entries", json={
+        "category": "labor", "amount": "600", "person_user_id": tec.me["id"], "description": f"QA {RUN} instalación"}), 201)
+    expect("Anota el pago de Luis como representante (800)", adm.post(f"/warehouse/projects/{pid}/cost-entries", json={
+        "category": "sales_rep", "amount": "800", "person_name": "Luis", "description": f"QA {RUN} representante"}), 201)
+    expect("El técnico no puede anotar costos", tec.post(f"/warehouse/projects/{pid}/cost-entries", json={
+        "category": "labor", "amount": "1"}), 403)
+    extra = expect("El técnico anota 150 en efectivo que pagó el cliente aparte",
+                   tec.post(f"/warehouse/projects/{pid}/extra-charges", json={
+                       "description": f"QA {RUN} breaker 30A y cable", "amount": "150"}), 201) or {}
+    check("Queda «por entregar»", extra.get("status") == "por_entregar", str(extra.get("status")))
+    expect("Gerencia (solo lee) no anota efectivo a nombre de otro", ger.post(
+        f"/warehouse/projects/{pid}/extra-charges", json={"description": "x", "amount": "1",
+                                                           "received_by_user_id": tec.me["id"]}), 403)
+    pendientes = [p["id"] for p in adm.get("/warehouse/extra-charges/pending", params={"page_size": 100}).json()]
+    check("Aparece en el efectivo por entregar de la oficina", extra.get("id") in pendientes)
+    expect("El técnico no puede marcarlo recibido", tec.post(f"/warehouse/extra-charges/{extra.get('id')}/deliver"), 403)
+    r = expect("Administración lo recibe", adm.post(f"/warehouse/extra-charges/{extra.get('id')}/deliver"), 200) or {}
+    check("Queda «recibido»", r.get("status") == "recibido", str(r.get("status")))
+
+    resumen = expect("Gerencia ve el costo del trabajo", ger.get(f"/warehouse/projects/{pid}/job-costing"), 200) or {}
+    check("El costo real suma la mano de obra y el representante (+1.400)",
+          round(float(resumen["costs"]["total"]) - costo_antes, 2) == 1400.0,
+          f'{costo_antes} → {resumen.get("costs", {}).get("total")}')
+    check("El ingreso suma los 150 en efectivo", round(float(resumen["revenue"]["extras"]) - extras_antes, 2) == 150.0,
+          json.dumps(resumen.get("revenue"))[:200])
+    check("Hay margen real y estimado", resumen["profit"]["margin_pct"] is not None
+          and resumen["profit"]["estimated_margin_pct"] is not None, json.dumps(resumen.get("profit"))[:200])
+    expect("El técnico no ve el costo del trabajo", tec.get(f"/warehouse/projects/{pid}/job-costing"), 403)
+    rep = adm.get("/finance/profitability", params={"project_id": pid}).json()
+    fila = (rep.get("rows") or [{}])[0]
+    check("Rentabilidad y panel dan el mismo costo", fila.get("costs") == resumen["costs"]["total"],
+          f'{fila.get("costs")} vs {resumen["costs"]["total"]}')
+    RECORDS["Costo del trabajo"] = f"proyecto {pid}: estimado pedestal propio, mano de obra 600, Luis 800, efectivo 150"
+
+
 def reporte() -> Path:
     total, malos = len(RESULTS), [r for r in RESULTS if not r["ok"]]
     salida = Path(__file__).resolve().parents[2] / "docs" / "qa" / f"qa-e2e-{date.today().isoformat()}-{RUN}.md"
@@ -1081,6 +1147,7 @@ def main() -> int:
     seguro("Permisos", flujo_permisos_por_rol, c)
     seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
     seguro("Bodega", flujo_bodega, c, pid_az)
+    seguro("Costo del trabajo", flujo_costo_del_trabajo, c, pid)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")
