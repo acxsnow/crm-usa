@@ -126,6 +126,8 @@ export interface ProfitRow {
   project_id: string; title: string; status: string; completed_date: string | null; case_number: string | null;
   program: string | null; expected: string; collected: string; costs: string; cost_breakdown: Dict; margin: string;
   expected_margin: string; margin_pct: number | null;
+  /** Margen del estimado de la obra (costo del trabajo); null si no tiene estimado o precio. */
+  estimated_margin_pct: number | null;
 }
 export interface Profitability { cost_labels: Dict; rows: ProfitRow[]; totals: Record<string, string | number | null> }
 export const profitabilityReport = async (params: Record<string, string | undefined>) =>

@@ -90,6 +90,22 @@ def budgets_stmt(organization_id, *, project_id=None, status: str | None = None)
     return stmt.order_by(ProjectBudget.created_at.desc())
 
 
+async def current_budgets(db: AsyncSession, organization_id, project_ids) -> dict:
+    """{project_id: presupuesto vigente} de muchas obras en una consulta, con la
+    misma regla que `current_budget`: el aprobado, y si no el borrador más reciente."""
+    ids = list(project_ids)
+    if not ids:
+        return {}
+    vigentes: dict = {}
+    for b in (await db.execute(select(ProjectBudget).where(
+            ProjectBudget.organization_id == organization_id, ProjectBudget.project_id.in_(ids))
+            .order_by(ProjectBudget.created_at.desc()))).scalars().all():
+        actual = vigentes.get(b.project_id)
+        if actual is None or (b.status == BudgetStatus.APROBADO and actual.status != BudgetStatus.APROBADO):
+            vigentes[b.project_id] = b
+    return vigentes
+
+
 async def current_budget(db: AsyncSession, organization_id, project_id) -> ProjectBudget | None:
     """El presupuesto vigente de la obra: el aprobado si lo hay, y si no el
     borrador más reciente. Es el que la pantalla del proyecto abre por defecto."""

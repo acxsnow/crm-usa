@@ -600,6 +600,15 @@ class BudgetLineIn(BaseModel):
     notes: str | None = Field(default=None, max_length=1000)
 
 
+def _budget_data(payload: "BudgetIn") -> dict:
+    """El PUT reemplaza el borrador, pero el precio esperado solo cambia si viene:
+    omitirlo lo deja igual; un `null` explícito lo borra."""
+    data = payload.model_dump()
+    if "expected_revenue" not in payload.model_fields_set:
+        data.pop("expected_revenue")
+    return data
+
+
 class BudgetIn(BaseModel):
     project_id: uuid.UUID | None = None
     notes: str | None = Field(default=None, max_length=2000)
@@ -635,7 +644,7 @@ async def create_budget(payload: BudgetIn, db: AsyncSession = Depends(get_db),
                         organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_budget_manage)) -> dict:
     budget = await budget_svc.save_budget(db, organization_id=organization_id, user=current_user,
-                                          data=payload.model_dump())
+                                          data=_budget_data(payload))
     return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
 
 
@@ -645,7 +654,7 @@ async def update_budget(budget_id: uuid.UUID, payload: BudgetIn, db: AsyncSessio
                         current_user: User = Depends(_budget_manage)) -> dict:
     """Reemplaza el borrador completo. El proyecto no cambia."""
     budget = await budget_svc.save_budget(db, organization_id=organization_id, user=current_user,
-                                          data=payload.model_dump(), budget_id=budget_id)
+                                          data=_budget_data(payload), budget_id=budget_id)
     return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
 
 

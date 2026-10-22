@@ -485,3 +485,44 @@ async def test_quien_solo_lee_no_anota_cobros_ni_los_carga_a_otro(app_client, lo
     # La oficina sí registra quién lo cobró.
     r = await _extra(app_client, oficina, project.id, received_by_user_id=str(active_technician_user.id))
     assert r.json()["received_by_user_id"] == str(active_technician_user.id)
+
+
+# ---------------------------------------------------------------------------
+# Revisión final
+# ---------------------------------------------------------------------------
+
+async def test_guardar_el_estimado_sin_mandar_el_precio_no_lo_borra(app_client, login, db, seeded_org,
+                                                                    active_admin_user):
+    """I-4: un PUT que no trae `expected_revenue` lo deja como estaba; un `null`
+    explícito sí lo borra."""
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    b = await _estimado_pedestal(app_client, h, project.id)
+    url = f"{API}/warehouse/budgets/{b['id']}"
+    lineas = [{"category": "labor", "description": "Instalación", "quantity": "1", "unit_cost": "600"}]
+    r = await app_client.put(url, json={"lines": lineas}, headers=h)
+    assert r.json()["expected_revenue"] == "4200.00"
+    r = await app_client.put(url, json={"lines": lineas, "expected_revenue": None}, headers=h)
+    assert r.json()["expected_revenue"] is None
+
+
+async def test_la_rentabilidad_no_hace_una_consulta_por_proyecto(app_client, login, db, seeded_org,
+                                                                 active_admin_user):
+    """I-3: el margen estimado del reporte se carga en lote, no presupuesto por presupuesto."""
+    from sqlalchemy import event
+
+    h = await login(active_admin_user.email)
+    for _ in range(6):
+        _, project = await approved_case_with_project(db, seeded_org["org"].id)
+        await _estimado_pedestal(app_client, h, project.id)
+    engine = db.bind.sync_engine if hasattr(db.bind, "sync_engine") else db.bind
+    consultas = []
+    oyente = lambda *a, **k: consultas.append(1)  # noqa: E731
+    event.listen(engine, "before_cursor_execute", oyente)
+    try:
+        r = await app_client.get(f"{API}/finance/profitability", headers=h)
+    finally:
+        event.remove(engine, "before_cursor_execute", oyente)
+    assert r.status_code == 200
+    assert {f["estimated_margin_pct"] for f in r.json()["rows"]} == {35.7}
+    assert len(consultas) < 30, len(consultas)

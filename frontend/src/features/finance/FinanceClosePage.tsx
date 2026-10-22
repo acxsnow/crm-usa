@@ -79,7 +79,7 @@ function Profit() {
       )}
       {isLoading ? <p className="acta-empty">Cargando…</p> : (data?.rows ?? []).length === 0 ? <p className="acta-empty">Sin proyectos en el periodo.</p> : (
         <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proyecto</th><th>Esperado</th><th>Cobrado</th><th>Costos</th><th>Margen</th></tr></thead>
+          <thead><tr><th>Proyecto</th><th>Esperado</th><th>Cobrado</th><th>Costos</th><th>Margen</th><th>Margen estimado</th></tr></thead>
           <tbody>{data!.rows.map((r) => (
             <tr key={r.project_id} className={Number(r.margin) < 0 ? "fin-overdue" : ""}>
               <td><Link to={`/projects/${r.project_id}`} className="acta-link"><strong>{r.title}</strong></Link>
@@ -89,11 +89,15 @@ function Profit() {
               <td className="mono">{money(r.costs)}
                 <small>{Object.entries(r.cost_breakdown).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${data!.cost_labels[k]} ${money(v)}`).join(" · ")}</small></td>
               <td className="mono"><strong>{money(r.margin)}</strong>{r.margin_pct !== null && <small>{r.margin_pct}%</small>}</td>
+              <td className={`mono${r.estimated_margin_pct !== null && r.margin_pct !== null && r.margin_pct < r.estimated_margin_pct ? " fin-danger" : ""}`}>
+                {r.estimated_margin_pct !== null ? `${r.estimated_margin_pct}%` : "—"}
+                {r.estimated_margin_pct !== null && r.margin_pct !== null && r.margin_pct < r.estimated_margin_pct && <small>por debajo</small>}
+              </td>
             </tr>
           ))}</tbody>
         </table></div>
       )}
-      <p className="notices-hint">Margen = cobrado − (facturas de proveedor asignadas al proyecto, con su parte de impuestos y envío, + gastos de campo aprobados). La comisión del vendedor no está incluida.</p>
+      <p className="notices-hint">Margen = cobrado − (facturas de proveedor asignadas al proyecto, con su parte de impuestos y envío, + gastos de campo aprobados). La comisión del vendedor no está incluida. Margen estimado = el del estimado de la obra (Costo del trabajo); en rojo si el real quedó por debajo.</p>
     </article>
   );
 }

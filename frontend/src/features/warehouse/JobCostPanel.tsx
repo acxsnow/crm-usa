@@ -119,7 +119,9 @@ export function JobCostPanel({ projectId }: { projectId: string }) {
 
 function Resumen({ r }: { r: JobCosting }) {
   const ingreso = Number(r.revenue.total);
-  const costos = Number(r.costs.total);
+  // Mientras no hay ingreso real, todo el tablero muestra el estimado (spec §6):
+  // mezclar el precio esperado con el costo real daría cifras que no cuadran.
+  const costos = Number(r.revenue.is_estimate ? r.costs.estimated_total : r.costs.total);
   const etiquetaEstimado = r.revenue.is_estimate ? " (estimado)" : "";
   const conceptos = Object.entries(r.costs.by_concept);
   const ganancia = r.profit.actual ?? r.profit.estimated;
@@ -145,9 +147,9 @@ function Resumen({ r }: { r: JobCosting }) {
           )}
         </div>
         <div className="fin-kpi">
-          <small><span className="jobcost-dot" style={{ background: DONUT_COLORS.cost }} /> Costos del trabajo</small>
-          <strong>{dinero(r.costs.total)}</strong>
-          <small>estimado {dinero(r.costs.estimated_total)}</small>
+          <small><span className="jobcost-dot" style={{ background: DONUT_COLORS.cost }} /> Costos del trabajo{etiquetaEstimado}</small>
+          <strong>{dinero(r.revenue.is_estimate ? r.costs.estimated_total : r.costs.total)}</strong>
+          <small>{r.revenue.is_estimate ? `real hasta hoy ${dinero(r.costs.total)}` : `estimado ${dinero(r.costs.estimated_total)}`}</small>
         </div>
         <div className="fin-kpi">
           <small><span className="jobcost-dot" style={{ background: DONUT_COLORS.profit }} /> Ganancia{r.profit.actual === null ? " estimada" : ""}</small>

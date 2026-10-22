@@ -86,20 +86,19 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
     # Misma suma que el panel «Costo del trabajo» (spec 2026-10-22): ingreso
     # facturado más cobros adicionales, y el costo real completo (bodega, compras,
     # gastos y lo anotado a mano), para que el reporte y el panel nunca difieran.
-    from app.modules.warehouse.budgets import budget_lines_of, budget_totals, current_budget, estimate_summary
+    from app.modules.warehouse.budgets import budget_lines_of, budget_totals, current_budgets, estimate_summary
     from app.modules.warehouse.costing import ACTUAL_LABELS, project_actual_costs, project_revenue
 
     ingresos = await project_revenue(db, organization_id, ids)
     esperado: dict = {pid: to_money(i["invoiced"] + i["extras"]) for pid, i in ingresos.items()}
     cobrado: dict = {pid: to_money(i["collected"] + i["extras_received"]) for pid, i in ingresos.items()}
     costos = await project_actual_costs(db, organization_id, ids)
-    margen_estimado: dict = {}
-    for pid in ids:
-        presupuesto = await current_budget(db, organization_id, pid)
-        if presupuesto is not None:
-            renglones = (await budget_lines_of(db, organization_id, [presupuesto.id])).get(presupuesto.id, [])
-            margen_estimado[pid] = estimate_summary(presupuesto, budget_totals(renglones)["total"],
-                                                    None)["expected_margin_pct"]
+    # El margen estimado de cada obra, en lote: una consulta de presupuestos y una de renglones.
+    vigentes = await current_budgets(db, organization_id, ids)
+    renglones = await budget_lines_of(db, organization_id, [b.id for b in vigentes.values()])
+    margen_estimado: dict = {
+        pid: estimate_summary(b, budget_totals(renglones.get(b.id, []))["total"], None)["expected_margin_pct"]
+        for pid, b in vigentes.items()}
     casos = {c.id: c for c in (await db.execute(select(Case).where(
         Case.id.in_({p.case_id for p in proyectos if p.case_id})))).scalars().all()} if proyectos else {}
     programas = {p.id: p.name for p in (await db.execute(select(Program).where(
