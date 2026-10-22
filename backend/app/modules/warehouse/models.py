@@ -263,6 +263,10 @@ class ProjectBudget(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id"), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="borrador")
     notes: Mapped[str | None] = mapped_column(Text)
+    # Costo del trabajo: el precio que se espera cobrar (en rebate, la tarifa del
+    # programa) y de qué plantilla salió. La ganancia esperada es precio − total.
+    expected_revenue: Mapped[Decimal | None] = mapped_column(MONEY)
+    template_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("cost_templates.id"))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -365,3 +369,75 @@ class ProjectDayLogMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     day_log: Mapped["ProjectDayLog"] = relationship("ProjectDayLog", back_populates="materials", lazy="raise")
+
+
+
+# ---------------------------------------------------------------------------
+# Costo del trabajo (spec 2026-10-22)
+# ---------------------------------------------------------------------------
+
+class CostTemplate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Plantilla de costos: cómo se reparte el precio de un tipo de trabajo
+    (por % o por monto fijo). Arma el estimado; después se ajusta a mano."""
+
+    __tablename__ = "cost_templates"
+    __table_args__ = (UniqueConstraint("organization_id", "name", name="uq_cost_template_name"),)
+
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    job_type: Mapped[str | None] = mapped_column(String(100))
+    applies_to: Mapped[str] = mapped_column(String(20), nullable=False, default="both")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    lines: Mapped[list["CostTemplateLine"]] = relationship(
+        "CostTemplateLine", back_populates="template", lazy="raise")
+
+
+class CostTemplateLine(UUIDPKMixin, TimestampMixin, Base):
+    __tablename__ = "cost_template_lines"
+
+    template_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cost_templates.id", ondelete="CASCADE"), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    mode: Mapped[str] = mapped_column(String(10), nullable=False, default="amount")
+    value: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    template: Mapped["CostTemplate"] = relationship("CostTemplate", back_populates="lines", lazy="raise")
+
+
+class ProjectCostEntry(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Costo real anotado a mano: la mano de obra del técnico o del
+    subcontratista, el pago del representante. Interno: el cliente no lo ve."""
+
+    __tablename__ = "project_cost_entries"
+    __table_args__ = (Index("ix_project_cost_entries_org_project", "organization_id", "project_id"),)
+
+    project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id"), nullable=False, index=True)
+    entry_date: Mapped[date] = mapped_column(Date, nullable=False)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    person_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    person_name: Mapped[str | None] = mapped_column(String(255))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
+class ProjectExtraCharge(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Cobro adicional al dueño de casa (fuera de la factura al programa).
+    El técnico lo recibe en la obra; queda «por entregar» hasta que Oficina
+    marca que lo recibió (`delivered_at`)."""
+
+    __tablename__ = "project_extra_charges"
+    __table_args__ = (Index("ix_project_extra_charges_org_project", "organization_id", "project_id"),)
+
+    project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id"), nullable=False, index=True)
+    charge_date: Mapped[date] = mapped_column(Date, nullable=False)
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    payment_method: Mapped[str] = mapped_column(String(20), nullable=False, default="cash")
+    received_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_to_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
