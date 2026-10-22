@@ -110,6 +110,16 @@ async def current_budget(db: AsyncSession, organization_id, project_id) -> Proje
 # Armar el presupuesto
 # ---------------------------------------------------------------------------
 
+def _precio(valor) -> Decimal | None:
+    """El precio esperado del trabajo: vacío es «sin precio», nunca cero."""
+    if valor is None or str(valor).strip() == "":
+        return None
+    precio = to_money(valor)
+    if precio <= ZERO:
+        raise InvalidInputError("El precio esperado tiene que ser mayor que cero.", code="invalid_expected_revenue")
+    return precio
+
+
 def _editable(budget: ProjectBudget) -> None:
     if budget.status != BudgetStatus.BORRADOR:
         raise InvalidInputError("Un presupuesto aprobado no se edita: haz uno nuevo y apruébalo.",
@@ -169,6 +179,8 @@ async def save_budget(db: AsyncSession, *, organization_id, user, data: dict,
                                created_by_user_id=user.id)
         db.add(budget)
     budget.notes = (data.get("notes") or "").strip() or None
+    if "expected_revenue" in data:
+        budget.expected_revenue = _precio(data.get("expected_revenue"))
     await db.flush()
 
     for previo in (await budget_lines_of(db, organization_id, [budget.id])).get(budget.id, []):
@@ -298,11 +310,37 @@ def budget_line_out(renglon: ProjectBudgetLine, *, item: WarehouseItem | None = 
     }
 
 
+def _pct(parte: Decimal, base: Decimal) -> float | None:
+    if base is None or base <= ZERO:
+        return None
+    return float((parte / base * 100).quantize(Decimal("0.1")))
+
+
+def estimate_summary(budget: ProjectBudget, total_cost: Decimal, target_profit_pct: Decimal | None) -> dict:
+    """Lo que el estimado promete: precio, ganancia esperada y margen, y si queda
+    por debajo de la ganancia objetivo de su plantilla. La ganancia no es un
+    renglón: es lo que sobra del precio."""
+    precio = to_money(budget.expected_revenue) if budget.expected_revenue is not None else None
+    ganancia = to_money(precio - total_cost) if precio is not None else None
+    margen = _pct(ganancia, precio) if precio is not None else None
+    objetivo = float(target_profit_pct) if target_profit_pct is not None else None
+    return {
+        "expected_revenue": str(precio) if precio is not None else None,
+        "expected_profit": str(ganancia) if ganancia is not None else None,
+        "expected_margin_pct": margen,
+        "target_profit_pct": objetivo,
+        "below_target": margen is not None and objetivo is not None and margen < objetivo,
+    }
+
+
 def budget_out(budget: ProjectBudget, renglones: list[ProjectBudgetLine], *,
-               items: dict | None = None, totals: dict | None = None) -> dict:
+               items: dict | None = None, totals: dict | None = None,
+               target_profit_pct: Decimal | None = None) -> dict:
     catalogo = items or {}
     total = to_money((totals or {}).get("total", ZERO))
     return {
+        **estimate_summary(budget, total, target_profit_pct),
+        "template_id": str(budget.template_id) if budget.template_id else None,
         "id": str(budget.id), "project_id": str(budget.project_id), "status": budget.status,
         "notes": budget.notes,
         "created_at": budget.created_at.isoformat() if budget.created_at else None,
@@ -322,7 +360,11 @@ async def budgets_out(db: AsyncSession, organization_id, budgets: list[ProjectBu
     item_ids = {r.item_id for rs in agrupados.values() for r in rs if r.item_id is not None}
     items = {i.id: i for i in (await db.execute(select(WarehouseItem).where(
         WarehouseItem.id.in_(item_ids)))).scalars().all()} if item_ids else {}
-    return [budget_out(b, agrupados.get(b.id, []), items=items, totals=budget_totals(agrupados.get(b.id, [])))
+    from app.modules.warehouse.jobcost import target_profit_of
+
+    objetivos = await target_profit_of(db, {b.template_id for b in budgets if b.template_id})
+    return [budget_out(b, agrupados.get(b.id, []), items=items, totals=budget_totals(agrupados.get(b.id, [])),
+                       target_profit_pct=objetivos.get(b.template_id))
             for b in budgets]
 
 

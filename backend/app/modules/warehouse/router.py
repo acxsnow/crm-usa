@@ -603,6 +603,7 @@ class BudgetLineIn(BaseModel):
 class BudgetIn(BaseModel):
     project_id: uuid.UUID | None = None
     notes: str | None = Field(default=None, max_length=2000)
+    expected_revenue: str | None = None
     lines: list[BudgetLineIn] = Field(default_factory=list, max_length=300)
 
 
