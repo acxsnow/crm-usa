@@ -366,12 +366,15 @@ async def save_cost_entry(db: AsyncSession, *, organization_id, user, project_id
     persona_id = data.get("person_user_id")
     if persona_id:
         await _person(db, organization_id, persona_id)
+    # La fecha se resuelve antes de agregar la entrada: buscar «hoy» consulta la
+    # base, y el autoflush guardaría la entrada todavía sin fecha.
+    fecha = data.get("entry_date") or await org_today(db, organization_id)
     if entry_id is not None:
         e = await get_cost_entry(db, organization_id, project.id, entry_id)
     else:
         e = ProjectCostEntry(organization_id=organization_id, project_id=project.id, created_by_user_id=user.id)
         db.add(e)
-    e.entry_date = data.get("entry_date") or await org_today(db, organization_id)
+    e.entry_date = fecha
     e.category, e.description, e.amount = categoria, descripcion[:255], monto
     e.person_user_id = persona_id or None
     e.person_name = (data.get("person_name") or "").strip()[:255] or None

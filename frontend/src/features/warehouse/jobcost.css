@@ -10,7 +10,7 @@
 .jobcost-dot { display: inline-block; width: 0.65rem; height: 0.65rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: middle; }
 .jobcost-table td small { color: var(--ink-soft); }
 .jobcost-total td { border-top: 2px solid var(--line); }
-.jobcost-detail { margin-top: 1rem; }
+.jobcost-detail { margin-top: 1rem; overflow-x: auto; max-width: 100%; }
 .jobcost-status { font-size: 0.75rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 999px; }
 .jobcost-status.is-pending { background: var(--warn-wash); color: var(--warn); }
 .jobcost-status.is-ok { background: var(--ok-wash); color: var(--ok); }
@@ -18,4 +18,16 @@
 @media (max-width: 640px) {
   .jobcost-charts { grid-template-columns: minmax(0, 1fr); }
   .jobcost-donut { width: 7rem; height: 7rem; }
+  /* Igual que la tabla común en el celular: una tarjeta por concepto, sin desbordar. */
+  .jobcost-table { min-width: 0; width: 100%; }
+  .jobcost-table thead { display: none; }
+  .jobcost-table tbody, .jobcost-table tr, .jobcost-table td { display: block; width: 100%; }
+  .jobcost-table tbody tr { border: 1px solid var(--line-soft); border-radius: var(--radius-lg); margin-bottom: 0.6rem; padding: 0.3rem 0; }
+  .jobcost-table td { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 0; padding: 0.35rem 0.9rem; text-align: right; }
+  .jobcost-table td::before {
+    content: attr(data-label); flex: none; text-align: left;
+    font-family: var(--mono-font); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft);
+  }
+  .jobcost-table td:first-child { display: block; text-align: left; font-weight: 700; border-bottom: 1px solid var(--line-soft); }
+  .jobcost-table td:first-child::before, .jobcost-table td:empty { display: none; }
 }

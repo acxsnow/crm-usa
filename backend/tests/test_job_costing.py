@@ -580,3 +580,14 @@ async def test_sin_precio_esperado_el_margen_estimado_usa_lo_facturado(app_clien
     r = await _resumen(app_client, h, project.id)
     assert (r["revenue"]["expected"], r["profit"]["estimated"], r["profit"]["estimated_margin_pct"]) == (
         "4200.00", "1500.00", 35.7)
+
+
+async def test_anotar_un_costo_sin_fecha_usa_la_de_hoy(app_client, login, db, seeded_org, active_admin_user):
+    """Falla real del QA del 22 oct en Postgres: sin `entry_date` la entrada se
+    guardaba con la fecha vacía (500). Sin fecha, es la de hoy de la organización."""
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    r = await app_client.post(f"{API}/warehouse/projects/{project.id}/cost-entries", json={
+        "category": "labor", "amount": "600", "description": "Instalación"}, headers=h)
+    assert r.status_code == 201, r.text
+    assert r.json()["entry_date"]
