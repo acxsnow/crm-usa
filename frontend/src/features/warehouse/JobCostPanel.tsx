@@ -11,13 +11,12 @@ import { CONCEPT_COLORS, CostBar, DONUT_COLORS, RevenueDonut } from "./JobCostCh
 import { ExtraChargeForm } from "./ExtraChargeForm";
 import { ProjectBudgetPanel } from "./ProjectBudgetPanel";
 import {
-  applyCostTemplate,
+  applyTemplateToProject,
   deleteCostEntry,
   deliverExtraCharge,
   getJobCosting,
   getProjectBudget,
   listCostTemplatesPage,
-  saveBudget,
   saveCostEntry,
   warehouseKeys,
   type CostEntry,
@@ -196,7 +195,7 @@ function Resumen({ r }: { r: JobCosting }) {
           </thead>
           <tbody>
             {conceptos.map(([key, c]) => {
-              const precio = Number(r.revenue.total);
+              const precio = Number(r.revenue.expected ?? 0);
               const sube = Number(c.deviation) > 0;
               return (
                 <tr key={key}>
@@ -246,10 +245,7 @@ function ArmarEstimado({ projectId, onDone, onError }: {
   const editable = !presupuesto || presupuesto.status === "borrador";
 
   const aplicar = useMutation({
-    mutationFn: async () => {
-      const id = presupuesto?.id ?? (await saveBudget(null, { project_id: projectId, lines: [] })).id;
-      return applyCostTemplate(id, templateId, precio.trim() || null);
-    },
+    mutationFn: () => applyTemplateToProject(projectId, templateId, precio.trim() || null),
     onSuccess: () => { onError(null); setTemplateId(""); onDone(); },
     onError: (e) => onError(apiErrorMessage(e)),
   });
@@ -276,7 +272,13 @@ function ArmarEstimado({ projectId, onDone, onError }: {
       </div>
       <div className="acta-actions">
         <button type="button" className="acta-btn is-primary" disabled={!editable || !templateId || aplicar.isPending}
-          onClick={() => aplicar.mutate()}>
+          onClick={() => {
+            const manuales = (presupuesto?.lines ?? []).filter((l) => !l.item_id).length;
+            if (manuales > 0 && !window.confirm(
+              `La plantilla reemplaza los ${manuales} renglones escritos a mano del estimado (el material del catálogo se queda). ¿Seguir?`,
+            )) return;
+            aplicar.mutate();
+          }}>
           {aplicar.isPending ? "Aplicando…" : "Aplicar plantilla"}
         </button>
       </div>

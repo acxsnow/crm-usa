@@ -190,7 +190,7 @@ function TemplateForm({ initial, onClose }: { initial: CostTemplate | null; onCl
           onClick={() => guardar.mutate()}>{guardar.isPending ? "Guardando…" : "Guardar plantilla"}</button>
         {initial && (
           <button type="button" className="acta-btn is-quiet" disabled={borrar.isPending}
-            onClick={() => { if (window.confirm("¿Borrar la plantilla? Si ya armó algún estimado, solo se desactiva.")) borrar.mutate(); }}>
+            onClick={() => { if (window.confirm("¿Borrar la plantilla? Deja de salir para armar estimados; los que ya la usaron no cambian.")) borrar.mutate(); }}>
             Borrar
           </button>
         )}

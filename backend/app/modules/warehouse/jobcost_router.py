@@ -75,6 +75,19 @@ async def delete_template(template_id: uuid.UUID, db: AsyncSession = Depends(get
     await svc.delete_template(db, organization_id=organization_id, user=current_user, template_id=template_id)
 
 
+@router.post("/warehouse/projects/{project_id}/apply-template")
+async def apply_template_to_project(project_id: uuid.UUID, payload: ApplyTemplateIn,
+                                    db: AsyncSession = Depends(get_db),
+                                    organization_id: uuid.UUID = Depends(get_organization_id),
+                                    current_user: User = Depends(_manage)) -> dict:
+    """Arma el estimado de la obra con la plantilla, abriendo el borrador si no hay;
+    si falla, no queda un borrador vacío."""
+    budget = await svc.apply_template_to_project(db, organization_id=organization_id, user=current_user,
+                                                 project_id=project_id, template_id=payload.template_id,
+                                                 expected_revenue=payload.expected_revenue)
+    return (await budget_svc.budgets_out(db, organization_id, [budget]))[0]
+
+
 @router.post("/warehouse/budgets/{budget_id}/apply-template")
 async def apply_template(budget_id: uuid.UUID, payload: ApplyTemplateIn, db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),

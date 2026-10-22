@@ -10,6 +10,7 @@ cada trabajo es distinto.
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.money import ZERO, to_money
@@ -86,7 +87,11 @@ async def ensure_default_templates(db: AsyncSession, organization_id) -> None:
             db.add(CostTemplateLine(template_id=t.id, category=linea["category"],
                                     description=linea["description"], mode=linea["mode"],
                                     value=Decimal(linea["value"]), sort_order=posicion))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Dos pantallas las pidieron a la vez la primera vez: la otra ya las sembró.
+        await db.rollback()
 
 
 async def get_template(db: AsyncSession, organization_id, template_id) -> CostTemplate:
@@ -176,16 +181,14 @@ async def save_template(db: AsyncSession, *, organization_id, user, data: dict, 
 
 
 async def delete_template(db: AsyncSession, *, organization_id, user, template_id) -> None:
+    """Borrar una plantilla la desactiva: sale de la lista para armar estimados,
+    pero los estimados que la nombran la conservan, y las iniciales no vuelven a
+    sembrarse (solo se siembran a una organización que nunca tuvo plantillas)."""
     t = await get_template(db, organization_id, template_id)
-    usada = (await db.execute(select(ProjectBudget.id).where(ProjectBudget.template_id == t.id).limit(1))).first()
-    if usada:
-        # Un estimado ya armado con ella la nombra: se desactiva en vez de borrarse.
-        t.active = False
-    else:
-        await db.delete(t)
+    t.active = False
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="cost_template.deleted", entity_type="cost_template", entity_id=str(t.id),
-                             after_data={"name": t.name, "desactivada": bool(usada)})
+                             after_data={"name": t.name})
     await db.commit()
 
 
@@ -241,6 +244,31 @@ async def default_expected_revenue(db: AsyncSession, organization_id, project) -
         Quote.organization_id == organization_id, Quote.project_id == project.id, Quote.status == "accepted",
     ).order_by(Quote.created_at.desc()))).scalars().first()
     return to_money(cotizacion.total) if cotizacion else None
+
+
+async def apply_template_to_project(db: AsyncSession, *, organization_id, user, project_id, template_id,
+                                    expected_revenue=None) -> ProjectBudget:
+    """Armar el estimado de la obra en una sola operación: valida plantilla y
+    precio **antes** de abrir el borrador, para no dejar uno vacío si algo falla."""
+    project = await budget_svc.get_project(db, organization_id, project_id)
+    plantilla = await get_template(db, organization_id, template_id)
+    lineas = (await template_lines_of(db, [plantilla.id])).get(plantilla.id, [])
+    budget = await budget_svc.current_budget(db, organization_id, project.id)
+    if budget is not None:
+        budget_svc._editable(budget)
+    precio = budget_svc._precio(expected_revenue)
+    if precio is None and budget is not None:
+        precio = budget.expected_revenue
+    if precio is None:
+        precio = await default_expected_revenue(db, organization_id, project)
+    if precio is None and any(l.mode == "percent" and l.category != TARGET_PROFIT for l in lineas):
+        raise InvalidInputError("Esta plantilla reparte el precio por porcentaje: escribe el precio esperado.",
+                                code="expected_revenue_required")
+    if budget is None:
+        budget = await budget_svc.save_budget(db, organization_id=organization_id, user=user,
+                                              data={"project_id": project.id, "lines": []})
+    return await apply_template(db, organization_id=organization_id, user=user, budget_id=budget.id,
+                                template_id=plantilla.id, expected_revenue=precio)
 
 
 async def apply_template(db: AsyncSession, *, organization_id, user, budget_id, template_id,

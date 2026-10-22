@@ -560,9 +560,8 @@ export const deleteCostTemplate = async (id: string) => {
   await apiClient.delete(`/warehouse/cost-templates/${id}`);
 };
 
-/** Llena el estimado en borrador con la plantilla. Sin precio, el servidor usa la tarifa del programa. */
-export const applyCostTemplate = async (budgetId: string, templateId: string, expectedRevenue?: string | null) =>
-  (await apiClient.post<ProjectBudget>(`/warehouse/budgets/${budgetId}/apply-template`, {
+export const applyTemplateToProject = async (projectId: string, templateId: string, expectedRevenue?: string | null) =>
+  (await apiClient.post<ProjectBudget>(`/warehouse/projects/${projectId}/apply-template`, {
     template_id: templateId, expected_revenue: expectedRevenue || null,
   })).data;
 
@@ -643,6 +642,8 @@ export interface JobCosting {
   revenue: {
     invoiced: string; program: string; customer: string; extras: string; collected: string;
     total: string; is_estimate: boolean;
+    /** El precio contra el que se lee el estimado: el escrito o, si no hay, lo facturado. */
+    expected: string | null;
   };
   costs: {
     total: string; estimated_total: string;

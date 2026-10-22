@@ -526,3 +526,57 @@ async def test_la_rentabilidad_no_hace_una_consulta_por_proyecto(app_client, log
     assert r.status_code == 200
     assert {f["estimated_margin_pct"] for f in r.json()["rows"]} == {35.7}
     assert len(consultas) < 30, len(consultas)
+
+
+# ---------------------------------------------------------------------------
+# Detalles menores de la revisión final (M-1 … M-5)
+# ---------------------------------------------------------------------------
+
+async def test_borrar_las_plantillas_iniciales_no_las_hace_volver(app_client, login, active_admin_user):
+    """M-1: borrar es desactivar; las iniciales no reaparecen en el siguiente GET."""
+    h = await login(active_admin_user.email)
+    for t in (await _plantillas(app_client, h)).values():
+        assert (await app_client.delete(f"{API}/warehouse/cost-templates/{t['id']}", headers=h)).status_code == 204
+    activas = (await app_client.get(f"{API}/warehouse/cost-templates?active=true", headers=h)).json()
+    assert activas == []
+    assert len(await _plantillas(app_client, h)) == 3  # siguen ahí, inactivas; no se sembraron otras
+
+
+async def test_el_porcentaje_del_precio_se_calcula_sobre_el_precio_esperado(app_client, login, db, seeded_org,
+                                                                            active_admin_user):
+    """M-3: el resumen trae el precio esperado aunque ya haya factura por otro monto."""
+    h = await login(active_admin_user.email)
+    org_id = seeded_org["org"].id
+    _, project = await approved_case_with_project(db, org_id)
+    await _estimado_pedestal(app_client, h, project.id)
+    await _cobro_programa(db, org_id, project, "4350.00")
+    r = await _resumen(app_client, h, project.id)
+    assert (r["revenue"]["expected"], r["revenue"]["total"]) == ("4200.00", "4350.00")
+
+
+async def test_aplicar_plantilla_sin_precio_no_deja_un_borrador_vacio(app_client, login, db, seeded_org,
+                                                                      active_admin_user):
+    """M-4: armar el estimado desde la obra es una sola operación: si falla, no queda nada."""
+    h = await login(active_admin_user.email)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    ideal = (await _plantillas(app_client, h))["Trabajo particular ideal"]
+    url = f"{API}/warehouse/projects/{project.id}/apply-template"
+    r = await app_client.post(url, json={"template_id": ideal["id"]}, headers=h)
+    assert (r.status_code, r.json()["code"]) == (400, "expected_revenue_required")
+    assert (await app_client.get(f"{API}/warehouse/projects/{project.id}/budget", headers=h)).json() is None
+    r = await app_client.post(url, json={"template_id": ideal["id"], "expected_revenue": "10000"}, headers=h)
+    assert (r.status_code, r.json()["expected_profit"]) == (200, "4000.00")
+
+
+async def test_sin_precio_esperado_el_margen_estimado_usa_lo_facturado(app_client, login, db, seeded_org,
+                                                                       active_admin_user):
+    """M-5 (spec §4.1): estimado sin precio + factura de 4.200 → margen estimado sobre lo facturado."""
+    h = await login(active_admin_user.email)
+    org_id = seeded_org["org"].id
+    _, project = await approved_case_with_project(db, org_id)
+    await _presupuesto(app_client, h, project.id, [
+        {"category": "labor", "description": "Instalación", "quantity": "1", "unit_cost": "2700"}])
+    await _cobro_programa(db, org_id, project)
+    r = await _resumen(app_client, h, project.id)
+    assert (r["revenue"]["expected"], r["profit"]["estimated"], r["profit"]["estimated_margin_pct"]) == (
+        "4200.00", "1500.00", 35.7)

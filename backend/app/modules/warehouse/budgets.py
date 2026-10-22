@@ -332,11 +332,18 @@ def _pct(parte: Decimal, base: Decimal) -> float | None:
     return float((parte / base * 100).quantize(Decimal("0.1")))
 
 
-def estimate_summary(budget: ProjectBudget, total_cost: Decimal, target_profit_pct: Decimal | None) -> dict:
+def estimate_summary(budget: ProjectBudget, total_cost: Decimal, target_profit_pct: Decimal | None,
+                     fallback_revenue: Decimal | None = None) -> dict:
     """Lo que el estimado promete: precio, ganancia esperada y margen, y si queda
     por debajo de la ganancia objetivo de su plantilla. La ganancia no es un
     renglón: es lo que sobra del precio."""
-    precio = to_money(budget.expected_revenue) if budget.expected_revenue is not None else None
+    # Sin precio escrito, lo facturado hace de precio esperado (spec §4.1).
+    if budget.expected_revenue is not None:
+        precio = to_money(budget.expected_revenue)
+    elif fallback_revenue is not None and fallback_revenue > ZERO:
+        precio = to_money(fallback_revenue)
+    else:
+        precio = None
     ganancia = to_money(precio - total_cost) if precio is not None else None
     margen = _pct(ganancia, precio) if precio is not None else None
     objetivo = float(target_profit_pct) if target_profit_pct is not None else None

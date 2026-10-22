@@ -338,7 +338,8 @@ async def job_costing(db: AsyncSession, *, organization_id, project_id) -> dict:
     estimado = budget_totals(renglones)
     objetivo = (await target_profit_of(db, {budget.template_id})).get(budget.template_id) \
         if budget and budget.template_id else None
-    resumen = estimate_summary(budget, estimado["total"], objetivo) if budget else {
+    facturado = to_money(ingreso["invoiced"] + ingreso["extras"])
+    resumen = estimate_summary(budget, estimado["total"], objetivo, fallback_revenue=facturado) if budget else {
         "expected_revenue": None, "expected_profit": None, "expected_margin_pct": None,
         "target_profit_pct": None, "below_target": False}
 
@@ -372,6 +373,9 @@ async def job_costing(db: AsyncSession, *, organization_id, project_id) -> dict:
             "extras": str(to_money(ingreso["extras"])),
             "collected": str(to_money(ingreso["collected"] + ingreso["extras_received"])),
             "total": str(precio_estimado if es_estimado else total_real),
+            # El precio contra el que se lee el estimado («% del precio»): el escrito,
+            # o lo facturado si nadie lo escribió.
+            "expected": resumen["expected_revenue"],
             "is_estimate": es_estimado,
         },
         "costs": {

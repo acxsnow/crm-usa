@@ -83,9 +83,11 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
         stmt = stmt.where(Project.case_id.in_(select(Case.id).where(Case.program_id == program_id)))
     proyectos = (await db.execute(stmt.order_by(Project.completed_date.desc().nulls_last()).limit(1000))).scalars().all()
     ids = {p.id for p in proyectos}
-    # Misma suma que el panel «Costo del trabajo» (spec 2026-10-22): ingreso
-    # facturado más cobros adicionales, y el costo real completo (bodega, compras,
-    # gastos y lo anotado a mano), para que el reporte y el panel nunca difieran.
+    # Mismo costo que el panel «Costo del trabajo» (spec 2026-10-22): el costo
+    # real completo (bodega, compras, gastos y lo anotado a mano) y el ingreso
+    # facturado más cobros adicionales. Ojo con los nombres: aquí `margin` es
+    # **cobrado** − costo (lo que de verdad entró a caja) y `expected_margin` es
+    # facturado − costo, que es lo que el panel llama «Ganancia».
     from app.modules.warehouse.budgets import budget_lines_of, budget_totals, current_budgets, estimate_summary
     from app.modules.warehouse.costing import ACTUAL_LABELS, project_actual_costs, project_revenue
 
@@ -97,7 +99,8 @@ async def report(db: AsyncSession, *, organization_id, date_from: date | None = 
     vigentes = await current_budgets(db, organization_id, ids)
     renglones = await budget_lines_of(db, organization_id, [b.id for b in vigentes.values()])
     margen_estimado: dict = {
-        pid: estimate_summary(b, budget_totals(renglones.get(b.id, []))["total"], None)["expected_margin_pct"]
+        pid: estimate_summary(b, budget_totals(renglones.get(b.id, []))["total"], None,
+                              fallback_revenue=esperado.get(pid))["expected_margin_pct"]
         for pid, b in vigentes.items()}
     casos = {c.id: c for c in (await db.execute(select(Case).where(
         Case.id.in_({p.case_id for p in proyectos if p.case_id})))).scalars().all()} if proyectos else {}
