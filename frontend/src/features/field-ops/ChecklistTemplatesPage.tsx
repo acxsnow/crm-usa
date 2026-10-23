@@ -14,6 +14,7 @@ import {
   updateChecklistTemplate,
 } from "./api";
 import { apiErrorMessage, useFieldCatalogs } from "./module5Api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 type Item = Omit<ChecklistTemplateItem, "id">;
 const DEFAULT = "__default__";
@@ -198,7 +199,7 @@ function Editor({ programId, programName, template, fallback }: {
         <div className="checklists-footer">
           {template && (
             <button type="button" className="acta-btn is-quiet review-danger" disabled={borrar.isPending}
-              onClick={() => { if (window.confirm(programId ? "¿Borrar este checklist? El programa volverá a usar el por defecto." : "¿Borrar el checklist por defecto?")) borrar.mutate(); }}>
+              onClick={async () => { if (await confirmAction(programId ? { title: "¿Borrar este checklist?", message: "El programa volverá a usar el por defecto.", confirmLabel: "Borrar", danger: true } : { title: "¿Borrar el checklist por defecto?", confirmLabel: "Borrar", danger: true })) borrar.mutate(); }}>
               Borrar checklist</button>
           )}
           <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending || !nombre.trim()}>

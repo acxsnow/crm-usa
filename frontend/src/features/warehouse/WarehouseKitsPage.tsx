@@ -20,6 +20,7 @@ import {
   type KitItemInput,
   type WarehouseKit,
 } from "./api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 const PAGE_SIZE = 25;
 
@@ -127,7 +128,8 @@ export function WarehouseKitsPage() {
                         <button type="button" className="acta-link" onClick={() => setEditando(k)}>Editar</button>
                         <button type="button" className="acta-link" disabled={borrar.isPending}
                           onClick={() => {
-                            if (window.confirm(`¿Borrar «${k.name}»? Las órdenes que ya la usaron no cambian.`)) borrar.mutate(k.id);
+                            void confirmAction({ title: `¿Borrar «${k.name}»?`, message: "Las órdenes que ya la usaron no cambian.", confirmLabel: "Borrar", danger: true })
+                              .then((ok) => { if (ok) borrar.mutate(k.id); });
                           }}>Borrar</button>
                       </>
                     )}

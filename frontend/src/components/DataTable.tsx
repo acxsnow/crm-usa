@@ -1,9 +1,13 @@
 import { Fragment, type ReactNode } from "react";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 
 export interface Column<T> {
   key: string;
   header: string;
   render?: (row: T) => ReactNode;
+  /** Clase extra de la celda; `is-hide-mobile` la quita de la tarjeta del celular
+   * cuando su dato ya va en el título (propuesta UI/UX V1). */
+  className?: string;
 }
 
 interface DataTableProps<T> {
@@ -26,7 +30,7 @@ export function DataTable<T>({
   getRowKey,
   renderDetailRow,
 }: DataTableProps<T>) {
-  if (isLoading) return <p>Cargando...</p>;
+  if (isLoading) return <SkeletonRows rows={5} />;
 
   function cellValue(row: T, key: string): ReactNode {
     const value = (row as Record<string, unknown>)[key];
@@ -51,7 +55,8 @@ export function DataTable<T>({
               <tr>
                 {columns.map((col, i) => (
                   <td key={col.key} data-label={col.header}
-                    className={i === 0 ? "is-title" : col.header === "" ? "is-actions" : undefined}>
+                    className={[i === 0 ? "is-title" : col.header === "" ? "is-actions" : "", col.className ?? ""]
+                      .filter(Boolean).join(" ") || undefined}>
                     {col.render ? col.render(row) : cellValue(row, col.key)}
                   </td>
                 ))}

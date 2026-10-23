@@ -6,6 +6,7 @@ import { listCaseActivity, listCasesPage, type CaseActivityItem } from "@/featur
 import { listCustomersPage } from "@/features/crm/api";
 import { listProjectsPage } from "@/features/field-ops/api";
 import { getFinanceDashboard } from "@/features/billing/api";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 /** «hace 12 min», «hace 3 h», «hace 2 días». */
 function haceCuanto(iso: string): string {
@@ -59,7 +60,7 @@ export function DashboardHome() {
 
   // Expedientes que siguen en juego: los que ya abrieron la puerta y todavía
   // no se cerraron. Reemplaza el conteo de prospectos del modelo anterior.
-  const { data: activeCases } = useQuery({
+  const { data: activeCases, isLoading: cargandoExpedientes } = useQuery({
     queryKey: ["dashboard-active-cases"],
     queryFn: async () => {
       const etapas = await Promise.all(
@@ -71,14 +72,14 @@ export function DashboardHome() {
     },
     enabled: canSeeCases,
   });
-  const { data: customers } = useQuery({
+  const { data: customers, isLoading: cargandoClientes } = useQuery({
     queryKey: ["dashboard-customers"],
     queryFn: () => listCustomersPage(1, 1),
     enabled: canSeeCustomers,
   });
   // Solo totales: la base cuenta y no se traen listas completas (antes se
   // descargaban todas las páginas de proyectos y facturas para contar).
-  const { data: activeProjects } = useQuery({
+  const { data: activeProjects, isLoading: cargandoProyectos } = useQuery({
     queryKey: ["dashboard-active-projects"],
     queryFn: async () => {
       const porEstado = await Promise.all(
@@ -87,7 +88,7 @@ export function DashboardHome() {
     },
     enabled: canSeeTasks,
   });
-  const { data: finanzas } = useQuery({
+  const { data: finanzas, isLoading: cargandoFinanzas } = useQuery({
     queryKey: ["dashboard-finance"],
     queryFn: getFinanceDashboard,
     enabled: canSeeFinance,
@@ -107,12 +108,19 @@ export function DashboardHome() {
 
   return (
     <div className="dashboard-page">
-      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.toUpperCase()}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div>{hasPermission("cases.create") && <Link className="primary-button" to="/sales/visit">+ Tocar una puerta</Link>}</div>
+      <div className="page-heading dashboard-heading"><div><p className="eyebrow">{formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)}</p><h1>Buenos días, {user?.full_name?.split(" ")[0] || "equipo"} <span className="wave">✦</span></h1><p className="page-subtitle">Aquí tienes lo que está pasando hoy en tu operación.</p></div>{hasPermission("cases.create") && <Link className="primary-button" to="/sales/visit">+ Tocar una puerta</Link>}</div>
+      {/* Solo los indicadores que este rol puede ver: antes salían todos, con «—»
+          en los que no tenía permiso (propuesta UI/UX V1: sin datos de relleno). */}
       <section className="metric-grid" aria-label="Resumen de operación">
-        <article className="metric-card"><div className="metric-icon coral">✦</div><div><span>Expedientes activos</span><strong>{activeCases ?? "—"}</strong><small className="neutral">• En prospecto, revisión o aprobados</small></div></article>
-        <article className="metric-card"><div className="metric-icon purple">♙</div><div><span>Clientes registrados</span><strong>{customers?.total ?? "—"}</strong><small className="neutral">• Total en tu cartera</small></div></article>
-        <article className="metric-card"><div className="metric-icon blue">▣</div><div><span>Proyectos en curso</span><strong>{activeProjects ?? "—"}</strong><small className="neutral">• Planificados, programados o activos</small></div></article>
-        <article className="metric-card"><div className="metric-icon green">$</div><div><span>Cobrado este mes</span><strong>{canSeeFinance && finanzas ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(finanzas.paid_this_month) : "—"}</strong><small className="neutral">• Pagos registrados en {monthName}</small></div></article>
+        {canSeeCases && <KpiCard icon="✓" label="Expedientes activos" value={activeCases ?? "—"} loading={cargandoExpedientes}
+          note="En prospecto, revisión o aprobados" to="/cases" />}
+        {canSeeCustomers && <KpiCard icon="♙" label="Clientes registrados" value={customers?.total ?? "—"} loading={cargandoClientes}
+          note="Total en tu cartera" to="/customers" />}
+        {canSeeTasks && <KpiCard icon="▣" label="Proyectos en curso" value={activeProjects ?? "—"} loading={cargandoProyectos}
+          note="Planificados, programados o activos" to="/projects" />}
+        {canSeeFinance && <KpiCard icon="$" label="Cobrado este mes" loading={cargandoFinanzas}
+          value={finanzas ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(finanzas.paid_this_month) : "—"}
+          note={`Pagos registrados en ${monthName}`} />}
       </section>
       <div className="dashboard-columns">
         {canSeeCases && (

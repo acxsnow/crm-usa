@@ -18,6 +18,7 @@ import {
   type BudgetVsActual,
   type ProjectBudget,
 } from "./api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 const MONEDA = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -134,7 +135,7 @@ export function ProjectBudgetPanel({ projectId, embedded = false }: { projectId:
             )}
             {esBorrador && puedeArmar && (
               <button type="button" className="acta-btn is-quiet" disabled={borrar.isPending}
-                onClick={() => { if (window.confirm("¿Borrar el borrador del presupuesto?")) borrar.mutate(presupuesto.id); }}>
+                onClick={async () => { if (await confirmAction({ title: "¿Borrar el borrador del presupuesto?", confirmLabel: "Borrar", danger: true })) borrar.mutate(presupuesto.id); }}>
                 Borrar
               </button>
             )}

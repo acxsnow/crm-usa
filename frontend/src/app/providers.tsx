@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/features/auth/AuthContext";
 import { Toaster } from "@/components/Toaster";
+import { ConfirmHost } from "@/components/ui/ConfirmDialog";
 import { toast } from "@/lib/toast";
 
 declare module "@tanstack/react-query" {
@@ -32,6 +33,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{children}</AuthProvider>
       <Toaster />
+      <ConfirmHost />
     </QueryClientProvider>
   );
 }

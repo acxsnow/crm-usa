@@ -1,33 +1,68 @@
 /* ==========================================================================
-   PAP CRM — visual system
-   Industrial field-service identity: black steel panels, warning-red signal
-   accents, condensed expanded display type (hazard-signage vernacular), and
-   monospace numeric readouts (gauge/control-panel vernacular).
+   PAP CRM — sistema visual (propuesta UI/UX V1, docs/PAP_Ventas_Propuesta_UIUX_V1.md)
+   Fondo claro, barra lateral oscura, acentos rojos, tarjetas de bordes suaves
+   e Inter en todo. Los tokens viven solo aquí: los módulos usan var(--…).
    ========================================================================== */
 
 :root {
   color-scheme: light;
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv11", "ss01";
 
-  --display-font: "Archivo Expanded", "Inter", system-ui, sans-serif;
-  --mono-font: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Tipografía: Inter en títulos y cifras (cifras tabulares); la mono queda
+     solo para códigos (CASE-…, seriales). */
+  --display-font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono-font: "Inter", system-ui, sans-serif;
+  --code-font: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  --red: #cf1d2b;
-  --red-dark: #9c121e;
-  --red-wash: #fbe7e5;
-  --ink: #171514;
-  --ink-soft: #6c6660;
-  --ink-faint: #a29c95;
-  --line: #e6e0d8;
-  --line-soft: #efeae3;
+  /* Marca y texto */
+  --red: #dc182c;
+  --red-dark: #b91325;
+  --red-wash: #fdecee;
+  --brand: #dc182c;
+  --ink: #17202b;
+  --ink-soft: #697586;
+  --ink-faint: #98a2b3;
+
+  /* Superficies */
+  --canvas: #f6f7f9;
   --surface: #ffffff;
-  --canvas: #f3efe9;
-  --sidebar: #121110;
-  --sidebar-soft: #1c1917;
-  --radius: 7px;
-  --radius-lg: 10px;
-  --shadow-sm: 0 1px 2px rgba(23, 21, 20, 0.06);
-  --shadow-md: 0 10px 26px rgba(23, 21, 20, 0.12);
+  --card-soft: #f8f9fb;
+  --line: #e7eaf0;
+  --line-soft: #eef0f4;
+  --line-input: #d5dae3;
+  --sidebar: #151719;
+  --sidebar-soft: #151719;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-text: #a6adb8;
+
+  /* Estados semánticos (no todo en rojo) */
+  --ok: #16845b;
+  --ok-wash: #e7f5ee;
+  --warn: #c87a12;
+  --warn-wash: #fdf3e2;
+  --info: #2563eb;
+  --info-wash: #e9f0fe;
+  --muted-wash: #f1f3f6;
+
+  /* Forma y profundidad */
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.08);
+
+  /* Espaciado 4/8/12/16/24/32 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Alturas del armazón */
+  --topbar-h: 64px;
+  --tabbar-h: 64px;
 }
 
 * {
@@ -54,10 +89,14 @@ h1, h2, h3 {
 
 h1 {
   font-family: var(--display-font);
-  font-weight: 800;
-  font-size: 1.7rem;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 1.625rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+@media (max-width: 767px) {
+  h1 { font-size: 1.375rem; }
 }
 
 h2 {
@@ -1817,10 +1856,7 @@ fieldset.field legend {
    campo en orden; el riel numerado muestra dónde va la orden. La numeración
    es información: el trabajo es una secuencia real.
 --------------------------------------------------------------------------- */
-:root {
-  --ok: #1f7a4d;
-  --ok-wash: #e6f2eb;
-}
+/* --ok y --ok-wash: en :root (inicio del archivo). */
 
 /* El acta y sus anexos comparten ancho: se leen como un solo documento. */
 .acta-page {
@@ -2745,12 +2781,7 @@ fieldset.field legend {
    Los botones de acción conservan el rojo de la app.
 =========================================================================== */
 
-:root {
-  --warn: #b45309;
-  --warn-wash: #fdf1e3;
-  --card-soft: #f7f7f8;
-  --line-input: #d9d6d1;
-}
+/* --warn, --warn-wash, --card-soft y --line-input: en :root (inicio del archivo). */
 
 /* --- Inputs dentro del acta ---------------------------------------------------- */
 
@@ -3354,7 +3385,7 @@ fieldset.field legend {
   display: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1023px) {
   .app-sidebar {
     position: fixed;
     top: 0;
@@ -3467,7 +3498,7 @@ fieldset.field legend {
   }
 }
 
-@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+@media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
   .app-sidebar {
     transition: transform 0.22s ease, visibility 0.22s;
   }
@@ -3559,3 +3590,635 @@ fieldset.field legend {
 .signature-actions { justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
 .annex-signer .field { margin: 0.5rem 0 0.75rem; }
 .annex-signer .acta-hint .link-button { padding: 0; font-size: inherit; }
+
+/* ==========================================================================
+   Propuesta UI/UX V1 — fase 1 (spec 2026-10-22-uiux-propuesta-v1-design).
+   Armazón, navegación y patrones comunes. Va al final a propósito: corrige la
+   identidad anterior (mayúsculas, monoespaciada, KPI negros) sin tocar los
+   módulos, que se migran uno por uno en las fases siguientes.
+   ========================================================================== */
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+code, .mono { font-family: var(--code-font); }
+
+/* --- Barra lateral --------------------------------------------------------- */
+.app-sidebar {
+  width: 248px;
+  background: var(--sidebar);
+  padding: 20px 12px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+.app-brand {
+  font-family: var(--display-font);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  padding: 4px 10px 0;
+}
+.brand-mark { width: 30px; height: 30px; border-radius: 8px; font-family: var(--display-font); font-weight: 800; }
+.sidebar-caption { display: none; }
+.app-sidebar nav { gap: 2px; margin-top: 22px; }
+.nav-group + .nav-group { margin-top: 18px; }
+.nav-group-label {
+  padding: 0 12px;
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #7c8593;
+  opacity: 1;
+}
+.nav-link {
+  min-height: 40px;
+  gap: 12px;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius);
+  border-left: 0;
+  color: var(--sidebar-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.nav-link:hover { background: var(--sidebar-hover); color: #fff; }
+.nav-link.active {
+  background: rgba(220, 24, 44, 0.16);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--red);
+}
+.nav-icon { width: 18px; color: #7c8593; opacity: 1; }
+.nav-link.active .nav-icon { color: #ff5a6a; }
+.nav-link:not(.active) .nav-icon { color: #7c8593; }
+
+/* --- Barra superior y contenido ---------------------------------------------- */
+.app-topbar {
+  height: var(--topbar-h);
+  padding: 0 32px;
+  gap: 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-search {
+  width: min(420px, 40vw);
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card-soft);
+  color: var(--ink-faint);
+}
+.topbar-search:focus-within { border-color: var(--line-input); background: var(--surface); }
+.topbar-search span { font-size: 1.05rem; }
+.topbar-search input { font-size: 0.875rem; }
+.user-menu { gap: 10px; font-size: 0.85rem; font-weight: 600; }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--ink); font-family: var(--display-font); font-weight: 600; font-size: 0.85rem; }
+.user-role { color: var(--ink-soft); font-weight: 500; font-size: 0.75rem; }
+.sign-out, .app-topbar button { border-radius: var(--radius-sm) !important; }
+.app-content {
+  max-width: 1440px;
+  padding: 32px 32px 56px;
+}
+
+/* --- Encabezado de página ------------------------------------------------------ */
+.page-heading { align-items: flex-end; margin-bottom: 24px; }
+.page-heading h1 { font-size: 1.625rem; margin: 0.15rem 0 0.25rem; }
+.page-subtitle { color: var(--ink-soft); font-size: 0.9375rem; }
+.eyebrow {
+  font-family: var(--display-font);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+/* --- Botones ---------------------------------------------------------------------- */
+.primary-button {
+  min-height: 40px;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.05rem;
+  font: 600 0.875rem/1.2 var(--display-font);
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 0 1px 2px rgba(220, 24, 44, 0.25);
+}
+.primary-button:hover { background: var(--red-dark); }
+.acta-btn { border-radius: var(--radius-sm); border-color: var(--line); min-height: 36px; }
+
+/* --- Chips de estado: semántica uniforme, no todo en rojo ------------------------- */
+.status-pill {
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-family: var(--display-font);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: var(--muted-wash);
+  color: var(--ink-soft);
+}
+.status-converted, .status-active, .status-completed, .status-done, .status-paid { background: var(--ok-wash); color: var(--ok); }
+.status-disqualified, .status-inactive, .status-cancelled { background: var(--muted-wash); color: var(--ink-soft); }
+.status-overdue { background: var(--red-wash); color: var(--red-dark); }
+.status-in_progress, .status-scheduled, .status-sent, .status-contacted { background: var(--info-wash); color: var(--info); }
+.status-planning, .status-new, .status-pending { background: var(--warn-wash); color: var(--warn); }
+
+/* --- Paneles y KPI ------------------------------------------------------------------- */
+.panel, .overdue-section { border-color: var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.panel { padding: 24px; }
+.panel-heading { border-bottom-color: var(--line-soft); }
+.metric-grid { gap: 16px; }
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+}
+.metric-card span { color: var(--ink-soft); font-size: 0.8125rem; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.metric-card strong { font-family: var(--display-font); color: var(--ink); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.metric-card small { font-family: var(--display-font); font-size: 0.8125rem; color: var(--ink-soft); }
+
+/* --- Tablas y su versión en tarjetas ---------------------------------------------- */
+.data-table { border-color: var(--line); }
+.data-table th {
+  background: var(--card-soft);
+  font-family: var(--display-font);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+.data-table td { color: var(--ink); font-size: 0.875rem; }
+@media (max-width: 767px) {
+  .data-table.is-cards tbody tr { border-color: var(--line); border-radius: var(--radius-lg); padding: 6px 0 4px; }
+  .data-table.is-cards td { font-size: 0.9375rem; min-height: 36px; }
+  .data-table.is-cards td::before {
+    font-family: var(--display-font); font-size: 0.8125rem; font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+  }
+  .data-table.is-cards td.is-title { font-size: 1rem; padding: 12px 16px 10px; }
+  .data-table.is-cards td.is-actions > a, .data-table.is-cards td.is-actions > button {
+    min-height: 44px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center;
+  }
+}
+
+/* --- Cajón del menú (por debajo de 1024 px) -------------------------------------- */
+@media (max-width: 1023px) {
+  .app-topbar { padding: 0 16px; }
+  .menu-toggle { min-height: 40px; border-radius: var(--radius); }
+  .app-content { padding: 24px 24px 40px; }
+}
+
+/* --- Celular (hasta 767 px): barra inferior y márgenes de 16 px ------------------- */
+.tabbar { display: none; }
+@media (max-width: 767px) {
+  .app-topbar { height: 56px; gap: 10px; }
+  .user-identity { display: none; }
+  .app-content { padding: 20px 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom, 0px)); }
+  .page-heading { margin-bottom: 18px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric-card { padding: 14px; }
+  .metric-card strong { font-size: 1.375rem; overflow-wrap: anywhere; }
+  .primary-button { min-height: 44px; }
+  .toaster { bottom: calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom, 0px)); }
+
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--surface); border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(16, 24, 40, 0.06);
+  }
+  .tabbar-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    min-height: 44px; border: 0; background: none; padding: 6px 2px;
+    color: var(--ink-soft); text-decoration: none; font: 500 0.6875rem/1.1 var(--display-font); cursor: pointer;
+  }
+  .tabbar-item .tabbar-icon { font-size: 1.15rem; line-height: 1; }
+  .tabbar-item.active { color: var(--red); font-weight: 600; }
+}
+@media (max-width: 359px) {
+  .metric-grid { grid-template-columns: 1fr; }
+}
+
+/* --- Componentes base (src/components/ui) -------------------------------------- */
+.ui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.ui-page-header h1 { margin: 0; }
+.ui-page-header p { margin: 6px 0 0; color: var(--ink-soft); font-size: 0.9375rem; max-width: 70ch; }
+.ui-page-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 767px) {
+  .ui-page-header { flex-direction: column; align-items: stretch; margin-bottom: 18px; }
+  .ui-page-header-actions > * { width: 100%; }
+}
+
+.ui-kpi-card { color: inherit; text-decoration: none; }
+.ui-kpi-head { display: flex; align-items: center; gap: 8px; }
+.metric-card .ui-kpi-icon {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px;
+  background: var(--red-wash); color: var(--red); font-size: 0.9rem; flex: none;
+}
+a.ui-kpi-card:hover { border-color: var(--line-input); }
+
+.ui-status { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.ui-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ui-status.is-neutral { background: var(--muted-wash); color: var(--ink-soft); }
+.ui-status.is-ok { background: var(--ok-wash); color: var(--ok); }
+.ui-status.is-warn { background: var(--warn-wash); color: var(--warn); }
+.ui-status.is-info { background: var(--info-wash); color: var(--info); }
+.ui-status.is-danger { background: var(--red-wash); color: var(--red-dark); }
+
+.ui-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 32px 16px; color: var(--ink-soft); }
+.ui-empty-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--muted-wash); color: var(--ink-faint); font-size: 1.2rem; }
+.ui-empty strong { color: var(--ink); font-size: 0.9375rem; }
+.ui-empty p { margin: 0; max-width: 42ch; font-size: 0.875rem; }
+.ui-empty .primary-button { margin-top: 8px; }
+
+.ui-skeleton { display: block; border-radius: 8px; background: linear-gradient(90deg, #eef0f4 25%, #f6f7f9 37%, #eef0f4 63%); background-size: 400% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-skeleton { animation: ui-shimmer 1.4s ease infinite; }
+}
+@keyframes ui-shimmer { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+.ui-skeleton-rows { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+
+.ui-dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 16px; background: rgba(16, 24, 40, 0.45); }
+.ui-dialog {
+  width: min(440px, 100%); background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: 0 24px 48px rgba(16, 24, 40, 0.2); padding: 24px;
+}
+.ui-dialog h2 { font-size: 1.125rem; margin: 0 0 8px; }
+.ui-dialog p { margin: 0; color: var(--ink-soft); font-size: 0.9375rem; }
+.ui-dialog label { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
+.ui-dialog input {
+  font: inherit; font-weight: 400; padding: 0.6rem 0.75rem; border: 1px solid var(--line-input); border-radius: var(--radius-sm);
+}
+.ui-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.ui-dialog-actions .is-danger { background: var(--red); border-color: var(--red); color: #fff; }
+@media (max-width: 767px) {
+  .ui-dialog-backdrop { align-items: end; padding: 0; }
+  .ui-dialog { border-radius: 18px 18px 0 0; padding: 22px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .ui-dialog-actions { flex-direction: column-reverse; }
+  .ui-dialog-actions > * { width: 100%; min-height: 44px; }
+}
+
+/* Fase 1 — ajustes tras las capturas del 22 oct. */
+.ghost-button { white-space: nowrap; }
+@media (max-width: 767px) {
+  .page-heading { flex-direction: column; align-items: stretch; gap: 14px; }
+  .page-heading > .primary-button, .page-heading > a.primary-button { width: 100%; }
+  .page-heading .page-subtitle { margin-bottom: 0; }
+}
+
+/* ================================================================================
+   Propuesta UI/UX V1 — fase 2 (pantallas comerciales). Sigue el tablero de
+   referencia: íconos de línea, avatares con iniciales, pestañas con subrayado
+   rojo, listas en tarjeta blanca y botón flotante en el celular. Solo estilo:
+   las páginas de billing/notifications cargan su CSS después, por eso aquí se
+   sube la especificidad con `.app-content`.
+   ================================================================================ */
+
+/* --- Íconos de línea ----------------------------------------------------------- */
+.ui-icon { display: block; flex: none; }
+.nav-icon { display: grid; place-items: center; width: 20px; height: 20px; font-size: 0.95rem; }
+.topbar-search .ui-icon { color: var(--ink-faint); }
+.tabbar-item .tabbar-icon .ui-icon { width: 22px; height: 22px; }
+
+/* --- Avatar con iniciales ----------------------------------------------------- */
+.ui-avatar {
+  display: inline-grid; place-items: center; flex: none; border-radius: 50%;
+  width: 36px; height: 36px; font: 600 0.8125rem/1 var(--display-font); letter-spacing: 0.01em;
+}
+.ui-avatar.is-sm { width: 32px; height: 32px; font-size: 0.75rem; }
+.ui-avatar.is-lg { width: 72px; height: 72px; font-size: 1.5rem; }
+.ui-avatar.is-t0 { background: #fdecee; color: #b91325; }
+.ui-avatar.is-t1 { background: #e8f0fe; color: #1d4ed8; }
+.ui-avatar.is-t2 { background: #e7f6ef; color: #12704d; }
+.ui-avatar.is-t3 { background: #fff3e0; color: #a35f0a; }
+.ui-avatar.is-t4 { background: #f1ecfd; color: #6d3fd1; }
+.ui-avatar.is-t5 { background: #eef0f4; color: #475467; }
+.ui-avatar.is-door { background: var(--muted-wash); color: var(--ink-soft); }
+
+/* Nombre con avatar en la primera columna de una tabla. */
+.ui-person { display: inline-flex; align-items: center; gap: 12px; min-width: 0; color: inherit; text-decoration: none; }
+.ui-person-text { display: grid; min-width: 0; }
+.ui-person-name { font-weight: 600; color: var(--ink); }
+a.ui-person:hover .ui-person-name { color: var(--red); }
+.ui-person small { color: var(--ink-soft); font-size: 0.8125rem; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-only-mobile { display: none !important; }
+
+/* --- Tablas: tarjeta blanca como en la referencia --------------------------------- */
+.table-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: auto; }
+.table-wrap .data-table { border: 0; box-shadow: none; border-radius: 0; }
+.data-table td { padding-top: 14px; padding-bottom: 14px; }
+.data-table tbody tr:hover { background: var(--card-soft); }
+
+/* --- Filtros: una sola franja dentro de una tarjeta -------------------------------- */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 16px 20px; border-color: var(--line); }
+.filter-bar-toggle { font-family: var(--display-font); font-size: 0.8125rem; font-weight: 600; letter-spacing: 0; color: var(--ink); text-transform: none; flex-basis: 100%; text-align: left; }
+.filter-bar-fields { margin-top: 0; gap: 12px 16px; flex: 1 1 auto; }
+.filter-bar-field { font-size: 0.8125rem; font-weight: 500; flex: 1 1 200px; max-width: 360px; }
+.filter-bar-field input, .filter-bar-field select { min-height: 40px; border-color: var(--line-input); background: var(--surface); }
+.filter-bar-field input:focus, .filter-bar-field select:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px var(--red-wash); }
+.filter-bar-actions { margin-top: 0; align-items: center; }
+
+/* --- Alta rápida (Clientes) ------------------------------------------------------- */
+.ui-quick-create {
+  display: grid; gap: 8px; margin-bottom: 16px; padding: 16px 20px; background: var(--surface);
+  border: 1px solid var(--line); border-left: 3px solid var(--red); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.ui-quick-create label { font-size: 0.8125rem; font-weight: 600; }
+.ui-quick-create-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ui-quick-create input {
+  flex: 1 1 260px; max-width: 420px; min-height: 40px; padding: 0 12px; font: inherit;
+  border: 1px solid var(--line-input); border-radius: var(--radius-sm);
+}
+.ui-quick-create input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px var(--red-wash); }
+
+/* --- Pestañas: texto con subrayado rojo (cliente, campañas, por revisar) ---------- */
+.ui-tabs { display: flex; gap: 4px; margin: 0 0 20px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.ui-tabs::-webkit-scrollbar { display: none; }
+.ui-tab {
+  display: inline-flex; align-items: center; gap: 8px; flex: none; min-height: 44px; padding: 0 14px;
+  border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none;
+  font: 500 0.875rem/1 var(--display-font); color: var(--ink-soft); cursor: pointer; white-space: nowrap;
+}
+.ui-tab:hover { color: var(--ink); }
+.ui-tab.is-active { color: var(--red); font-weight: 600; border-bottom-color: var(--red); }
+.ui-tab:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; border-radius: 6px 6px 0 0; }
+.ui-tab-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--muted-wash); color: var(--ink-soft); font-size: 0.6875rem; font-weight: 600; }
+.ui-tab.is-active .ui-tab-count { background: var(--red-wash); color: var(--red); }
+
+.app-content .billing-tabs { gap: 4px; margin-bottom: 20px; scrollbar-width: none; }
+.app-content .billing-tab { min-height: 44px; padding: 0 14px; border-bottom-width: 2px; margin-bottom: -1px; font: 500 0.875rem/1 var(--display-font); display: inline-flex; align-items: center; }
+.app-content .billing-tab.is-active { color: var(--red); font-weight: 600; }
+.app-content .billing-tab .billing-count { background: var(--muted-wash); color: var(--ink-soft); }
+.app-content .billing-tab.is-active .billing-count { background: var(--red); color: #fff; }
+.app-content .notices-tabs { gap: 4px; flex-wrap: nowrap; overflow-x: auto; border-bottom: 1px solid var(--line); margin-bottom: 20px; scrollbar-width: none; }
+.app-content .notices-tabs button {
+  flex: none; min-height: 44px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  margin-bottom: -1px; background: none; font: 500 0.875rem/1 var(--display-font); color: var(--ink-soft);
+}
+.app-content .notices-tabs button:hover { color: var(--ink); }
+.app-content .notices-tabs button.is-on { background: none; color: var(--red); font-weight: 600; border-bottom-color: var(--red); }
+
+/* --- Encabezado de las páginas de cobro, revisión y campañas ----------------------- */
+.app-content .billing-page { max-width: 1200px; }
+.app-content .board-page { max-width: none; }
+.app-content .billing-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.app-content .billing-head h1 { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.01em; }
+.app-content .billing-head p { font-size: 0.9375rem; }
+.app-content .billing-head .acta-btn.is-primary { min-height: 40px; padding: 0 16px; border-radius: var(--radius); font-weight: 600; }
+.app-content .acta { border-color: var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+
+/* Campañas: cada fila con su miniatura, como la lista de la referencia. */
+.campaign-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.campaign-thumb { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--red-wash); color: var(--red); }
+.campaign-text { display: grid; gap: 2px; min-width: 0; }
+.campaign-text small { color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-content .campaigns-list button { padding: 14px 4px; }
+
+/* --- Ficha del cliente ------------------------------------------------------------- */
+.ui-profile { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; }
+.ui-profile-text { flex: 1 1 240px; min-width: 0; }
+.ui-profile-text h1 { margin: 2px 0 8px; }
+.ui-profile-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink-soft); font-size: 0.875rem; }
+.ui-profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 20px; align-items: start; }
+.ui-card-title { font-size: 1rem; margin: 0 0 14px; }
+.ui-info-card { display: grid; gap: 4px; }
+.ui-info-row { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.ui-info-row:last-child { border-bottom: 0; }
+.ui-info-row small { display: block; color: var(--ink-soft); font-size: 0.75rem; margin-bottom: 2px; }
+.ui-info-row span { overflow-wrap: anywhere; }
+.ui-info-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--card-soft); border: 1px solid var(--line-soft); color: var(--ink-soft); }
+.ui-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ui-timeline li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.ui-timeline li:last-child { border-bottom: 0; }
+.ui-timeline-dot { width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--red-wash); box-shadow: inset 0 0 0 2px var(--red); flex: none; }
+.ui-timeline strong { display: block; font-size: 0.9375rem; }
+.ui-timeline small { color: var(--ink-soft); font-size: 0.8125rem; }
+.ui-contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.ui-contact-list li { display: flex; gap: 12px; align-items: center; padding: 16px; }
+.ui-contact-list strong { margin-right: 8px; }
+.ui-contact-list small { display: block; color: var(--ink-soft); margin-top: 4px; }
+
+/* --- Ingreso ------------------------------------------------------------------------- */
+.auth-page {
+  background-color: #0f1114;
+  background-image:
+    radial-gradient(1200px 600px at 15% 10%, rgba(220, 24, 44, 0.18), transparent 60%),
+    linear-gradient(180deg, rgba(15, 17, 20, 0.2), rgba(15, 17, 20, 0.85)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 36px);
+  background-size: auto;
+}
+.auth-card { border-top: 0; border-radius: 18px; padding: 36px 32px; gap: 16px; max-width: 400px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35); }
+.auth-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 4px; }
+.auth-logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--red); color: #fff; font: 800 1.6rem/1 var(--display-font); box-shadow: 0 8px 20px rgba(220, 24, 44, 0.35); }
+.auth-brand-name { font: 700 1.25rem/1 var(--display-font); color: var(--ink); }
+.auth-card h1 { text-align: center; font-size: 1rem; font-weight: 500; color: var(--ink-soft); margin: 0 0 4px; }
+.auth-card label { font-size: 0.8125rem; color: var(--ink); font-weight: 500; }
+.auth-input { position: relative; display: block; }
+.auth-input > .ui-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); pointer-events: none; z-index: 1; }
+.auth-input input { width: 100%; box-sizing: border-box; padding-left: 40px; min-height: 44px; border-radius: var(--radius); border-color: var(--line-input); background: var(--surface); }
+.auth-card button[type="submit"] { min-height: 46px; border-radius: var(--radius); text-transform: none; letter-spacing: 0; font-size: 0.9375rem; font-weight: 600; }
+@media (max-width: 480px) {
+  .auth-page { align-items: flex-end; padding: 0; }
+  .auth-card { max-width: none; border-radius: 22px 22px 0 0; padding: 32px 20px calc(28px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* --- Expedientes (kanban) -------------------------------------------------------------- */
+.app-content .board { gap: 16px; }
+.app-content .board-col { background: var(--card-soft); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; }
+.app-content .board-col h2 { font-size: 0.875rem; font-weight: 600; padding-bottom: 10px; margin: 0 2px 10px; border-bottom: 2px solid var(--line); }
+.app-content .board-col:nth-child(4n+1) h2 { border-bottom-color: #f2b9bf; }
+.app-content .board-col:nth-child(4n+2) h2 { border-bottom-color: #f6d4a3; }
+.app-content .board-col:nth-child(4n+3) h2 { border-bottom-color: #bcd0fb; }
+.app-content .board-col:nth-child(4n+4) h2 { border-bottom-color: #b5e2cd; }
+.app-content .board-col h2 .billing-count { background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
+.app-content .board-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow-sm); }
+.app-content .board-card:hover { border-color: var(--line-input); box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08); }
+.app-content .board-filters { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 12px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
+.app-content .board-filters input, .app-content .board-filters select { min-height: 40px; border-color: var(--line-input); }
+.board-stages { display: none; }
+@media (max-width: 767px) {
+  /* En el celular: una etapa a la vez, elegida con los chips (antes las 15
+     columnas quedaban apiladas en una página de más de 4.000 px). */
+  .board-stages { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 12px; padding: 2px 16px 4px; scrollbar-width: none; }
+  .board-stages::-webkit-scrollbar { display: none; }
+  .board-stage {
+    display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 40px; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+    font: 500 0.8125rem/1 var(--display-font); color: var(--ink-soft); cursor: pointer;
+  }
+  .board-stage span { font-weight: 600; color: var(--ink-faint); }
+  .board-stage.is-active { background: var(--red); border-color: var(--red); color: #fff; }
+  .board-stage.is-active span { color: rgba(255, 255, 255, 0.85); }
+  .app-content .board { display: block; }
+  .app-content .board-col:not(.is-current) { display: none; }
+  .app-content .board-col { background: transparent; border: 0; padding: 0; }
+  .app-content .board-col-scroll { max-height: none; overflow: visible; }
+  .app-content .board-filters { padding: 10px; }
+  .app-content .board-filters input[type="search"], .app-content .board-filters select { flex: 1 1 100%; max-width: none; }
+}
+
+/* --- Mi día ----------------------------------------------------------------------------- */
+.app-content .sales-page { max-width: 880px; }
+.app-content .sales-knock { border-radius: var(--radius-lg); box-shadow: 0 8px 20px rgba(220, 24, 44, 0.22); }
+.sales-knock-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: rgba(255, 255, 255, 0.16); }
+.app-content .sales-cases a { justify-content: flex-start; gap: 12px; }
+.sales-case-text { flex: 1; min-width: 0; }
+.sales-case-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sales-case-go { color: var(--ink-faint); }
+
+/* --- Botón flotante de la acción principal (celular) ----------------------------------- */
+.ui-fab { display: none; }
+@media (max-width: 767px) {
+  .ui-fab {
+    position: fixed; right: 16px; bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom, 0px)); z-index: 45;
+    display: grid; place-items: center; width: 56px; height: 56px; border: 0; border-radius: 50%;
+    background: var(--red); color: #fff; box-shadow: 0 10px 24px rgba(220, 24, 44, 0.35); cursor: pointer;
+  }
+  .ui-fab:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  /* Con el botón flotante, el de arriba sobra en el celular (misma acción). */
+  .list-page:has(.ui-fab) .page-heading > .primary-button[aria-expanded="false"] { display: none; }
+}
+
+/* --- Tarjetas del celular más compactas ------------------------------------------------- */
+@media (max-width: 767px) {
+  .ui-only-mobile { display: block !important; }
+  .data-table.is-cards td.is-hide-mobile { display: none; }
+  .data-table.is-cards tbody tr { position: relative; }
+  .data-table.is-cards td.is-title { border-bottom: 0; margin-bottom: 0; padding-right: 96px; }
+  .data-table.is-cards td.is-corner { position: absolute; top: 14px; right: 12px; width: auto; padding: 0; min-height: 0; }
+  .data-table.is-cards td.is-corner::before { content: none; }
+  .table-wrap:has(.data-table.is-cards) { background: transparent; border: 0; box-shadow: none; }
+  .filter-bar { padding: 12px 14px; }
+  .filter-bar-field { max-width: none; flex-basis: 100%; }
+  .ui-profile { gap: 14px; }
+  .ui-profile .ui-avatar.is-lg { width: 56px; height: 56px; font-size: 1.15rem; }
+  .ui-profile-action { width: 100%; }
+  .ui-profile-grid { grid-template-columns: 1fr; }
+  .ui-tabs { margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+  .app-content .billing-tabs, .app-content .notices-tabs { margin-left: -16px; margin-right: -16px; padding: 0 16px; }
+}
+
+/* Fase 2 — ajustes tras las capturas. */
+.ui-pagination { justify-content: space-between; box-shadow: none; background: transparent; border: 0; padding: 4px 0; }
+.ui-pagination button {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line-input); border-radius: var(--radius-sm);
+  text-transform: none; letter-spacing: 0; font-weight: 600; font-size: 0.875rem; min-height: 40px;
+}
+.ui-pagination button:hover:not(:disabled) { background: var(--card-soft); border-color: var(--ink-faint); }
+.ui-pagination button:disabled { opacity: 0.45; }
+.app-content .billing-head .acta-btn { display: inline-flex; align-items: center; justify-content: center; }
+.app-content .billing-head .acta-actions { align-items: center; }
+@media (max-width: 767px) {
+  .app-content .board-col.is-current > h2 { display: none; }
+  .app-content .billing-head .acta-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .app-content .billing-head .acta-btn.is-primary { flex: 1 1 100%; min-height: 44px; }
+}
+.app-content .campaigns-list button > .campaign-main { display: flex; flex: 1 1 auto; }
+@media (max-width: 767px) {
+  .app-content .campaigns-list button { flex-wrap: wrap; gap: 8px; }
+  .app-content .campaigns-list .queue-counts { flex: 1 1 100%; justify-content: flex-start; padding-left: 58px; }
+}
+
+/* ================================================================================
+   Propuesta UI/UX V1 — fases 3 a 6 (campo, bodega, finanzas y administración).
+   Las pantallas ya usaban las piezas comunes (acta, billing, notices, data-table);
+   aquí se terminan de llevar al lenguaje de la referencia. `:not(#_)` sube la
+   especificidad sobre los CSS de cada módulo, que se cargan después.
+   ================================================================================ */
+
+/* Encabezados de tabla: sin mayúsculas ni monoespaciada, en todas las tablas. */
+.app-content table th:not(#_) {
+  font-family: var(--display-font); font-size: 0.75rem; font-weight: 600;
+  text-transform: none; letter-spacing: 0.01em; color: var(--ink-soft);
+}
+/* Cifras: Inter con números tabulares, no monoespaciada. */
+.app-content .mono:not(#_), .app-content .money:not(#_) { font-family: var(--display-font); font-variant-numeric: tabular-nums; }
+/* Tablas sueltas que no cabían en el celular: se desplazan dentro de su caja. */
+.tablewrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Sin líneas negras gruesas: el corte entre encabezado y contenido es una línea suave. */
+.app-content .acta-header:not(#_), .app-content .annex-header:not(#_),
+.app-content .billing-list-head:not(#_), .app-content .preview-head:not(#_) { border-bottom: 1px solid var(--line); }
+
+/* Encabezado de módulo: título y texto a la izquierda, acciones a la derecha. */
+.app-content .billing-head:not(#_) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: end; }
+.app-content .billing-head:not(#_) > * { grid-column: 1; }
+.app-content .billing-head:not(#_) > .acta-actions, .app-content .billing-head:not(#_) > button,
+.app-content .billing-head:not(#_) > a { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
+@media (max-width: 767px) {
+  .app-content .billing-head:not(#_) { grid-template-columns: minmax(0, 1fr); row-gap: 12px; }
+  .app-content .billing-head:not(#_) > .acta-actions, .app-content .billing-head:not(#_) > button,
+  .app-content .billing-head:not(#_) > a { grid-column: 1; grid-row: auto; }
+}
+
+/* Botones de formulario en línea (invitar usuario, paginación, alta rápida): sin mayúsculas. */
+.inline-form button { text-transform: none; letter-spacing: 0; font-size: 0.875rem; font-weight: 600; border-radius: var(--radius-sm); min-height: 40px; }
+.inline-form input, .inline-form select { min-height: 40px; border: 1px solid var(--line-input); background: var(--surface); border-radius: var(--radius-sm); }
+.ui-invite { gap: 10px; padding: 16px 20px; border-color: var(--line); border-radius: var(--radius-lg); }
+.ui-invite input { flex: 1 1 220px; }
+
+/* Acciones de cada fila («Ver», «Editar»): botón discreto, no un enlace subrayado. */
+.data-table td.is-actions a, .data-table td.is-actions .link-button, .row-actions .link-button {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line-input);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-size: 0.8125rem; font-weight: 600; text-decoration: none;
+}
+.data-table td.is-actions a:hover, .data-table td.is-actions .link-button:hover:not(:disabled), .row-actions .link-button:hover:not(:disabled) {
+  border-color: var(--ink-faint); background: var(--card-soft); color: var(--ink);
+}
+.row-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 767px) {
+  .data-table.is-cards td.is-actions .row-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); width: 100%; }
+  .data-table.is-cards td.is-actions .row-actions .link-button { justify-content: center; min-height: 44px; }
+}
+
+/* Indicadores de Reportes y Finanzas con el mismo aspecto que las tarjetas KPI. */
+.app-content .fin-kpi:not(#_) { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.app-content .fin-filters .acta-link:not(#_) {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--surface); color: var(--ink-soft); font-size: 0.8125rem; font-weight: 500; text-decoration: none;
+}
+.app-content .fin-filters .acta-link:not(#_):hover { border-color: var(--red); color: var(--red); }
+.app-content .fin-filters input[type="date"] { min-height: 40px; border: 1px solid var(--line-input); border-radius: var(--radius-sm); padding: 0 10px; }
+
+/* Camino del cobro en el celular: los cinco pasos caben sin partir palabras. */
+@media (max-width: 767px) {
+  .app-content .flow-title:not(#_) { font-size: 0.6875rem; overflow-wrap: normal; word-break: keep-all; hyphens: none; }
+  .app-content .flow-note:not(#_) { display: none; }
+  .app-content .flow-rail:not(#_) { gap: 2px; }
+}
+
+/* Selectores sueltos dentro de las actas (filtros de permisos, bodega, etc.). */
+.app-content .acta select:not(#_), .app-content .notices-toolbar select:not(#_) { min-height: 40px; border: 1px solid var(--line-input); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface); }
+.app-content .billing-head:not(#_) > h1 { margin: 0; }
+.app-content .billing-head:not(#_) > p { margin: 6px 0 0; }
+@media (max-width: 767px) {
+  /* Tablas de las actas (cobros por programa, materiales, etc.): se desplazan en su caja. */
+  .app-content .acta table:not(.data-table):not(#_) { display: block; max-width: 100%; overflow-x: auto; }
+  .app-content .acta { min-width: 0; max-width: 100%; }
+}
+.primary-button { white-space: nowrap; }
+/* Avisos sin leer: fondo claro con el punto rojo; el rosado entero cansaba en listas largas. */
+.app-content .notice-list li.is-unread button:not(#_) { background: var(--surface); box-shadow: inset 3px 0 0 var(--red); }
+.app-content .notice-list li:not(.is-unread) button:not(#_) { color: var(--ink-soft); }
+/* Las etiquetas de estado ya vienen escritas en español: sin «Capitalizar Cada Palabra». */
+.status-pill { text-transform: none; }
+.status-pill::first-letter { text-transform: uppercase; }
+/* QA de anchos (22 oct): lo que se salía por la derecha en el celular. */
+.app-content .checklists-fields:not(#_) { min-width: 0; }
+.app-content .checklists-row:not(#_) > input, .app-content .checklists-row:not(#_) > select { min-width: 0; width: 100%; box-sizing: border-box; }
+@media (max-width: 767px) {
+  .app-content .acta-actions:not(#_) { flex-wrap: wrap; }
+  .app-content .acta-actions:not(#_) > .acta-btn { white-space: normal; text-align: center; }
+  .app-content .notices-toolbar:not(#_) > *, .app-content .notices-toolbar:not(#_) select { max-width: 100%; min-width: 0; }
+}

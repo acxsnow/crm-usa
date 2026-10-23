@@ -23,6 +23,7 @@ import {
   type ExtraCharge,
   type JobCosting,
 } from "./api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 const MONEDA = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const dinero = (v: string | null | undefined) => (v === null || v === undefined ? "—" : MONEDA.format(Number(v)));
@@ -272,11 +273,13 @@ function ArmarEstimado({ projectId, onDone, onError }: {
       </div>
       <div className="acta-actions">
         <button type="button" className="acta-btn is-primary" disabled={!editable || !templateId || aplicar.isPending}
-          onClick={() => {
+          onClick={async () => {
             const manuales = (presupuesto?.lines ?? []).filter((l) => !l.item_id).length;
-            if (manuales > 0 && !window.confirm(
-              `La plantilla reemplaza los ${manuales} renglones escritos a mano del estimado (el material del catálogo se queda). ¿Seguir?`,
-            )) return;
+            if (manuales > 0 && !(await confirmAction({
+              title: "¿Aplicar la plantilla?",
+              message: `La plantilla reemplaza los ${manuales} renglones escritos a mano del estimado (el material del catálogo se queda).`,
+              confirmLabel: "Aplicar plantilla",
+            }))) return;
             aplicar.mutate();
           }}>
           {aplicar.isPending ? "Aplicando…" : "Aplicar plantilla"}
@@ -376,7 +379,7 @@ function CostosAnotados({ projectId, onChange }: { projectId: string; onChange: 
               <div className="fin-card-head">
                 <strong>{e.category_label} · {dinero(e.amount)}</strong>
                 <button type="button" className="acta-btn is-quiet" disabled={borrar.isPending}
-                  onClick={() => { if (window.confirm("¿Borrar este costo?")) borrar.mutate(e.id); }}>Borrar</button>
+                  onClick={async () => { if (await confirmAction({ title: "¿Borrar este costo?", confirmLabel: "Borrar", danger: true })) borrar.mutate(e.id); }}>Borrar</button>
               </div>
               <small>{e.entry_date} · {e.person_name ?? "—"} · {e.description}</small>
             </li>
