@@ -7,6 +7,8 @@ import "./notifications.css";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { listPrograms, programKeys } from "@/features/programs/api";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Icon } from "@/components/ui/Icon";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   addOptOut,
@@ -32,6 +34,7 @@ import {
   type ConsentState,
   type Product,
 } from "./api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 /** Filas por página en destinatarios, contactos y bajas (los tres pueden ser miles). */
 const PAGE_SIZE = 50;
@@ -86,7 +89,7 @@ export function CampaignsPage() {
 function CampaignList({ onOpen }: { onOpen: (id: string) => void }) {
   const lista = usePaginatedQuery<Campaign>({ key: campaignKeys.list, path: "/campaigns", pageSize: 20 });
   const { items: data, isLoading } = lista;
-  if (isLoading) return <p className="acta-empty">Cargando…</p>;
+  if (isLoading) return <article className="acta"><SkeletonRows rows={5} label="Cargando campañas…" /></article>;
   return (
     <article className="acta">
       {data.length === 0 ? <p className="acta-empty">Todavía no hay campañas. Crea la primera con «Nueva campaña».</p> : (
@@ -94,7 +97,7 @@ function CampaignList({ onOpen }: { onOpen: (id: string) => void }) {
           {data.map((c) => (
             <li key={c.id}>
               <button type="button" onClick={() => onOpen(c.id)}>
-                <span><strong>{c.name}</strong><small>{CANAL[c.channel]} · {c.preview}</small></span>
+                <span className="campaign-main"><span className="campaign-thumb" aria-hidden="true"><Icon name="megaphone" /></span><span className="campaign-text"><strong>{c.name}</strong><small>{CANAL[c.channel]} · {c.preview}</small></span></span>
                 <span className="queue-counts">
                   <span className={`billing-chip ${ESTADO[c.status][1]}`}>{ESTADO[c.status][0]}</span>
                   {c.status !== "draft" && <small>{c.stats.sent} enviados · {c.stats.pending} en cola</small>}
@@ -323,7 +326,7 @@ function Launch({ id, canal, beforeLaunch, onDone }: { id: string; canal: Campai
       {msg && <p className="info-banner" role="status">{msg}</p>}
       <div className="acta-actions">
         <button type="button" className="acta-btn is-primary" disabled={lanzar.isPending}
-          onClick={() => { if (window.confirm("¿Lanzar la campaña? Después ya no se edita.")) lanzar.mutate(); }}>Lanzar campaña</button>
+          onClick={async () => { if (await confirmAction({ title: "¿Lanzar la campaña?", message: "Después ya no se edita.", confirmLabel: "Lanzar campaña" })) lanzar.mutate(); }}>Lanzar campaña</button>
       </div>
     </div>
   );
@@ -353,7 +356,7 @@ function CampaignResult({ c, onChange }: { c: Campaign; onChange: () => void }) 
         {s && <div><dt>Excluidos sin permiso o de baja</dt><dd>{s.without_consent + s.opted_out}</dd></div>}
       </dl>
       {(c.status === "scheduled" || c.status === "sending") && (
-        <div className="acta-actions"><button type="button" className="acta-btn is-quiet" onClick={() => { if (window.confirm("¿Cancelar lo que falta por enviar?")) cancelar.mutate(); }}>Cancelar campaña</button></div>
+        <div className="acta-actions"><button type="button" className="acta-btn is-quiet" onClick={async () => { if (await confirmAction({ title: "¿Cancelar lo que falta por enviar?", confirmLabel: "Cancelar campaña", cancelLabel: "Volver", danger: true })) cancelar.mutate(); }}>Cancelar campaña</button></div>
       )}
       <div className="tablewrap"><table className="notices-table">
         <thead><tr><th>Nombre</th><th>Canal</th><th>Para</th><th>Estado</th></tr></thead>
@@ -424,7 +427,7 @@ function OwnContacts() {
           <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th aria-label="Acciones" /></tr></thead>
           <tbody>{lista.items.map((k) => (
             <tr key={k.id}><td>{k.name ?? "—"}</td><td className="mono">{tel(k.phone)}</td><td className="mono">{k.email ?? "—"}</td>
-              <td><button type="button" className="acta-link" onClick={() => { if (window.confirm("¿Quitar este contacto de la lista?")) borrar.mutate(k.id); }}>Quitar</button></td></tr>
+              <td><button type="button" className="acta-link" onClick={async () => { if (await confirmAction({ title: "¿Quitar este contacto de la lista?", confirmLabel: "Quitar", danger: true })) borrar.mutate(k.id); }}>Quitar</button></td></tr>
           ))}</tbody>
         </table></div>
       )}

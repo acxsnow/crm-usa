@@ -6,6 +6,8 @@ import "../programs/programs.css";
 import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getBoard, myPrograms, salesKeys } from "./api";
+import { Icon } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/Avatar";
 
 /**
  * Inicio del vendedor (módulo 2, D5): sus programas y zonas, el botón para
@@ -27,7 +29,7 @@ export function SalesHomePage() {
       </header>
 
       <Link to="/sales/visit" className="sales-knock">
-        <span className="sales-knock-icon" aria-hidden="true">⌂</span>
+        <span className="sales-knock-icon" aria-hidden="true"><Icon name="door" size={26} /></span>
         <span><strong>Tocar una puerta</strong><small>Registra la visita, aunque no abran</small></span>
       </Link>
 
@@ -68,8 +70,9 @@ function CaseList({ items }: { items: { id: string; case_number: string; custome
       {items.map((c) => (
         <li key={c.id}>
           <Link to={`/cases/${c.id}/form`}>
-            <span><strong>{c.customer_name ?? c.address}</strong><small>{c.case_number}{c.program_name ? ` · ${c.program_name}` : " · sin programa"}</small></span>
-            <span aria-hidden="true">›</span>
+            {c.customer_name ? <Avatar name={c.customer_name} size="sm" /> : <span className="ui-avatar is-sm is-door" aria-hidden="true"><Icon name="door" size={16} /></span>}
+            <span className="sales-case-text"><strong>{c.customer_name ?? c.address}</strong><small>{c.case_number}{c.program_name ? ` · ${c.program_name}` : " · sin programa"}</small></span>
+            <span className="sales-case-go" aria-hidden="true"><Icon name="chevronRight" size={16} /></span>
           </Link>
         </li>
       ))}

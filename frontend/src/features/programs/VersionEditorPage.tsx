@@ -27,6 +27,7 @@ import {
   useProgramCatalogs,
 } from "./api";
 import { FormRenderer } from "./FormRenderer";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 /**
  * Editor de una versión del formulario del vendedor. A la izquierda los pasos
@@ -159,7 +160,7 @@ function StepCard({ step, index, total, editable, allKeys, onChanged, onError }:
             <button type="button" className="icon-btn" aria-label="Subir paso" disabled={index === 0} onClick={() => mover.mutate("up")}>↑</button>
             <button type="button" className="icon-btn" aria-label="Bajar paso" disabled={index === total - 1} onClick={() => mover.mutate("down")}>↓</button>
             <button type="button" className="icon-btn" aria-label="Quitar paso"
-              onClick={() => window.confirm(`¿Quitar el paso «${step.title}» y sus campos de esta versión?`) && quitar.mutate(undefined)}>✕</button>
+              onClick={async () => { if (await confirmAction({ title: `¿Quitar el paso «${step.title}»?`, message: "Se quitan también sus campos de esta versión.", confirmLabel: "Quitar", danger: true })) quitar.mutate(undefined); }}>✕</button>
           </span>
         )}
       </div>

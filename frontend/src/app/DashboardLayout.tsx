@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useAuth } from "@/features/auth/AuthContext";
 import { buildNavForUser } from "@/config/navigation";
+import { MobileTabBar } from "./MobileTabBar";
+import { Icon, NavIcon } from "@/components/ui/Icon";
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -39,16 +41,17 @@ export function DashboardLayout() {
                     aria-disabled="true"
                     title="Este módulo todavía no está disponible"
                   >
-                    <span className="nav-icon">{item.icon}</span>
+                    <span className="nav-icon"><NavIcon to={item.to} glyph={item.icon} /></span>
                     {item.label}
                   </span>
                 ) : (
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.to === "/warehouse"}
                     className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
                   >
-                    <span className="nav-icon">{item.icon}</span>
+                    <span className="nav-icon"><NavIcon to={item.to} glyph={item.icon} /></span>
                     {item.label}
                   </NavLink>
                 )
@@ -61,7 +64,8 @@ export function DashboardLayout() {
           {user?.role_names?.length ? <small>{user.role_names.join(", ")}</small> : null}
           <button type="button" onClick={() => logout()}>Salir</button>
         </div>
-        <div className="sidebar-help"><span className="help-icon">?</span><div><strong>¿Necesitas ayuda?</strong><small>Visita el centro de soporte</small></div></div>
+        {/* Sin la tarjeta «¿Necesitas ayuda? Visita el centro de soporte»: no
+            llevaba a ningún lado (propuesta UI/UX V1: nada de información de relleno). */}
       </aside>
       <div className="app-main">
         <header className="app-topbar">
@@ -75,7 +79,7 @@ export function DashboardLayout() {
           >
             <span aria-hidden="true">☰</span> Menú
           </button>
-          <div className="topbar-search"><span>⌕</span><input aria-label="Buscar" placeholder="Buscar clientes, proyectos..." /></div>
+          <div className="topbar-search"><Icon name="search" /><input aria-label="Buscar" placeholder="Buscar clientes, proyectos..." /></div>
           <NotificationBell />
           <div className="user-menu">
             <span className="user-avatar">{user?.full_name?.charAt(0).toUpperCase() ?? "U"}</span>
@@ -92,6 +96,7 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+      <MobileTabBar groups={navGroups} menuOpen={menuOpen} onMore={() => setMenuOpen((v) => !v)} />
     </div>
   );
 }

@@ -8,6 +8,9 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import type { Customer } from "@/types/crm";
 import { useAuth } from "@/features/auth/AuthContext";
+import { Avatar } from "@/components/ui/Avatar";
+import { Icon } from "@/components/ui/Icon";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const PAGE_SIZE = 20;
 
@@ -23,6 +26,8 @@ export function CustomersPage() {
   });
   const customers = data?.items;
   const [name, setName] = useState("");
+  // El alta rápida se abre con «+ Nuevo cliente» (antes estaba siempre a la vista).
+  const [alta, setAlta] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: createCustomer,
@@ -52,28 +57,60 @@ export function CustomersPage() {
   ];
 
   const columns: Column<Customer>[] = [
-    { key: "legal_name", header: "Nombre", render: (c) => <Link to={`/customers/${c.id}`}>{c.legal_name}</Link> },
-    { key: "main_phone", header: "Teléfono", render: (c) => c.main_phone ?? "—" },
-    { key: "email", header: "Email", render: (c) => c.email ?? "—" },
-    { key: "status", header: "Estado", render: (c) => <span className={`status-pill status-${c.status}`}>{c.status}</span> },
+    {
+      key: "legal_name", header: "Nombre", render: (c) => (
+        <Link to={`/customers/${c.id}`} className="ui-person">
+          <Avatar name={c.legal_name} />
+          <span className="ui-person-text">
+            <span className="ui-person-name">{c.legal_name}</span>
+            {/* En el celular el teléfono y el correo van bajo el nombre, no en filas aparte. */}
+            <small className="ui-only-mobile">{[c.main_phone, c.email].filter(Boolean).join(" · ") || "Sin datos de contacto"}</small>
+          </span>
+        </Link>
+      ),
+    },
+    { key: "main_phone", header: "Teléfono", className: "is-hide-mobile", render: (c) => c.main_phone ?? "—" },
+    { key: "email", header: "Email", className: "is-hide-mobile", render: (c) => c.email ?? "—" },
+    {
+      key: "status", header: "Estado", className: "is-corner",
+      render: (c) => <StatusBadge tone={c.status === "active" ? "ok" : "neutral"}>{ESTADO[c.status] ?? c.status}</StatusBadge>,
+    },
   ];
+
+  const abrirAlta = () => {
+    setAlta(true);
+    // El campo aparece en este mismo render; se enfoca en el siguiente cuadro.
+    requestAnimationFrame(() => document.getElementById("new-customer")?.focus());
+  };
 
   return (
     <div className="list-page">
-      <div className="page-heading"><div><p className="eyebrow">RELACIONES</p><h1>Clientes</h1><p className="page-subtitle">Administra tu cartera y mantén cada relación al día.</p></div>{canCreate && <button className="primary-button" onClick={() => document.getElementById("new-customer")?.focus()}>+ Nuevo cliente</button>}</div>
-      {canCreate && (
-      <form className="inline-form compact-form" onSubmit={handleSubmit}>
-        <span className="form-search">⌕</span>
-        <input id="new-customer" placeholder="Nombre del cliente" value={name} onChange={(e) => setName(e.target.value)} required />
-        <button className="primary-button" type="submit" disabled={createMutation.isPending}>
-          {createMutation.isPending ? "Guardando..." : "Agregar cliente"}
-        </button>
+      <div className="page-heading">
+        <div><p className="eyebrow">Relaciones</p><h1>Clientes</h1><p className="page-subtitle">Administra tu cartera y mantén cada relación al día.</p></div>
+        {canCreate && <button className="primary-button" aria-expanded={alta} aria-controls="alta-cliente" onClick={alta ? () => setAlta(false) : abrirAlta}>{alta ? "Cerrar" : "+ Nuevo cliente"}</button>}
+      </div>
+      {canCreate && alta && (
+      <form id="alta-cliente" className="ui-quick-create" onSubmit={handleSubmit}>
+        <label htmlFor="new-customer">Nuevo cliente</label>
+        <div className="ui-quick-create-row">
+          <input id="new-customer" placeholder="Nombre del cliente" value={name} onChange={(e) => setName(e.target.value)} required />
+          <button className="primary-button" type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? "Guardando..." : "Agregar cliente"}
+          </button>
+        </div>
       </form>
       )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
       <DataTable columns={columns} rows={customers ?? []} isLoading={isLoading} getRowKey={(c) => c.id} emptyMessage="Sin clientes para mostrar." />
       {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
+      {canCreate && !alta && (
+        <button type="button" className="ui-fab" aria-label="Nuevo cliente" onClick={() => { window.scrollTo({ top: 0 }); abrirAlta(); }}>
+          <Icon name="plus" size={24} />
+        </button>
+      )}
     </div>
   );
 }
+
+const ESTADO: Record<string, string> = { active: "Activo", inactive: "Inactivo" };

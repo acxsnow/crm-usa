@@ -21,6 +21,7 @@ import {
   type Expense,
 } from "./api";
 import { ProjectPicker, Tabs, fecha } from "./common";
+import { askText, confirmAction } from "@/components/ui/ConfirmDialog";
 
 type Tab = "mine" | "review" | "all";
 const CHIP: Record<Expense["status"], string> = { submitted: "is-preparing", approved: "is-accepted", rejected: "is-rejected", reimbursed: "is-paid" };
@@ -119,7 +120,7 @@ function MyExpenses() {
                 {g.status === "reimbursed" && <small>Reembolsado el {fecha(g.reimbursed_at)}{g.reimbursement_reference ? ` · ${g.reimbursement_reference}` : ""}</small>}
                 <div className="acta-actions">
                   <button type="button" className="acta-link" onClick={() => openFile(`/expenses/${g.id}/receipt`)}>Ver recibo</button>
-                  {g.status === "submitted" && <button type="button" className="acta-link fin-danger" onClick={() => { if (window.confirm("¿Borrar este gasto?")) borrar.mutate(g.id); }}>Borrar</button>}
+                  {g.status === "submitted" && <button type="button" className="acta-link fin-danger" onClick={async () => { if (await confirmAction({ title: "¿Borrar este gasto?", confirmLabel: "Borrar", danger: true })) borrar.mutate(g.id); }}>Borrar</button>}
                 </div>
               </li>
             ))}
@@ -142,7 +143,7 @@ function ExpenseList({ status: fijo, review = false }: { status?: string; review
   const refrescar = () => { setError(null); setRechazo(null); qc.invalidateQueries({ queryKey: ["expenses"] }); };
   const revisar = useMutation({ mutationFn: (a: { id: string; ok: boolean; nota?: string }) => reviewExpense(a.id, a.ok, a.nota),
     onSuccess: refrescar, onError: (e) => setError(apiErrorMessage(e)) });
-  const reembolsar = useMutation({ mutationFn: (id: string) => reimburseExpense(id, today(), window.prompt("Referencia del reembolso (Zelle, cheque…)") ?? undefined),
+  const reembolsar = useMutation({ mutationFn: async (id: string) => reimburseExpense(id, today(), (await askText({ title: "Reembolsar", label: "Referencia del reembolso (Zelle, cheque…)", confirmLabel: "Guardar", cancelLabel: "Sin referencia" })) ?? undefined),
     onSuccess: refrescar, onError: (e) => setError(apiErrorMessage(e)) });
   const total = lista.items.reduce((s, g) => s + Number(g.amount), 0);
   return (

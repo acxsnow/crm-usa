@@ -35,6 +35,7 @@ import {
   type SupplierPayment,
 } from "./api";
 import { ProjectPicker, Tabs, fecha } from "./common";
+import { askText } from "@/components/ui/ConfirmDialog";
 
 type Tab = "invoices" | "payments" | "suppliers" | "aging" | "settings";
 const CHIP: Record<SupplierInvoice["status"], string> = {
@@ -171,7 +172,7 @@ function InvoiceRow({ inv, abierta, onToggle, estado }: { inv: SupplierInvoice; 
                 </form>
               )}
               {inv.status !== "void" && inv.paid === "0.00" && (hasPermission("payables.manage") || hasPermission("payables.approve")) && (
-                <button type="button" className="acta-link fin-danger" onClick={() => { const m = window.prompt("Motivo de la anulación"); if (m?.trim()) anular.mutate(m); }}>Anular</button>
+                <button type="button" className="acta-link fin-danger" onClick={async () => { const m = await askText({ title: "Anular", label: "Motivo de la anulación", required: true, confirmLabel: "Anular", danger: true }); if (m?.trim()) anular.mutate(m); }}>Anular</button>
               )}
             </div>
           </>}

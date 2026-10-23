@@ -7,6 +7,7 @@ import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listPrograms } from "@/features/programs/api";
 import { listUsersPage } from "@/features/users/api";
+import { SkeletonRows } from "@/components/ui/Skeleton";
 import { ApprovalDays } from "./ApprovalDays";
 import { getBoard, getBoardColumn, salesKeys, type BoardColumn, type BoardFilters } from "./api";
 
@@ -74,6 +75,10 @@ export function CasesBoardPage() {
   // vuelve a montar cuando llegan los del filtro nuevo (si no, se quedaba con
   // las tarjetas viejas y los totales nuevos).
   const firmaFiltros = JSON.stringify([tempranos, filtros, isPlaceholderData]);
+  // En el celular se ve una etapa a la vez (chips arriba); en pantalla ancha, todas.
+  const [etapa, setEtapa] = useState<string | null>(null);
+  const etapaVisible = columnas.find((c) => c.code === etapa)?.code
+    ?? columnas.find((c) => c.count > 0)?.code ?? columnas[0]?.code;
 
   return (
     <div className="billing-page board-page">
@@ -110,20 +115,31 @@ export function CasesBoardPage() {
         )}
       </div>
 
-      {isLoading ? <p className="acta-empty">Cargando…</p> : (
-        <div className="board">
-          {columnas.map((col) => (
-            <ColumnaPaginada key={`${col.code}|${firmaFiltros}`} col={col} tempranos={tempranos} filtros={filtros} revisa={revisa} />
-          ))}
-        </div>
+      {isLoading ? <SkeletonRows rows={6} label="Cargando expedientes…" /> : (
+        <>
+          <div className="board-stages" role="tablist" aria-label="Etapas">
+            {columnas.map((col) => (
+              <button key={col.code} type="button" role="tab" aria-selected={etapaVisible === col.code}
+                className={etapaVisible === col.code ? "board-stage is-active" : "board-stage"} onClick={() => setEtapa(col.code)}>
+                {col.label}<span>{col.count}</span>
+              </button>
+            ))}
+          </div>
+          <div className="board">
+            {columnas.map((col) => (
+              <ColumnaPaginada key={`${col.code}|${firmaFiltros}`} col={col} tempranos={tempranos} filtros={filtros} revisa={revisa}
+                actual={etapaVisible === col.code} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
 /** Una columna con su propia ventana de páginas (ver `PAGINA` y `VENTANA`). */
-function ColumnaPaginada({ col, tempranos, filtros, revisa }: {
-  col: BoardColumn; tempranos: boolean; filtros: BoardFilters; revisa: boolean;
+function ColumnaPaginada({ col, tempranos, filtros, revisa, actual }: {
+  col: BoardColumn; tempranos: boolean; filtros: BoardFilters; revisa: boolean; actual: boolean;
 }) {
   // `primera`: número de la primera página cargada (0 = la más reciente).
   const [primera, setPrimera] = useState(0);
@@ -191,7 +207,7 @@ function ColumnaPaginada({ col, tempranos, filtros, revisa }: {
   };
 
   return (
-    <section className="board-col" aria-label={col.label}>
+    <section className={actual ? "board-col is-current" : "board-col"} aria-label={col.label}>
       <h2><span>{col.label}</span><span className="billing-count">{col.count}</span></h2>
       {col.count > tarjetas.length && tarjetas.length > 0 && (
         <p className="board-range" aria-live="polite">{desde + 1}–{desde + tarjetas.length} de {col.count}</p>

@@ -28,7 +28,7 @@ export function FilterBar({ fields, values, onApply, onClear }: FilterBarProps) 
   return (
     <form className="filter-bar" onSubmit={handleSubmit}>
       <button type="button" className="filter-bar-toggle" onClick={() => setOpen((o) => !o)}>
-        {open ? "▾" : "▸"} FILTROS
+        {open ? "▾" : "▸"} Filtros
       </button>
       {open && (
         <>

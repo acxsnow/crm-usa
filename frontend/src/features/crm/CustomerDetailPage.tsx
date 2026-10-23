@@ -1,8 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { getCustomerTimeline, updateCustomer } from "./api";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
+import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { SkeletonRows } from "@/components/ui/Skeleton";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
+type Pestana = "resumen" | "expedientes" | "contactos";
+
+const TIPO: Record<string, string> = { individual: "Persona", business: "Empresa" };
+const ACTIVIDAD: Record<string, string> = {
+  call: "Llamada", email: "Correo", meeting: "Reunión", note: "Nota", task: "Tarea", follow_up: "Seguimiento",
+};
 
 export function CustomerDetailPage() {
   const queryClient = useQueryClient();
@@ -17,6 +29,7 @@ export function CustomerDetailPage() {
   // "Cargando…", React ve menos hooks en el primer render que en el segundo
   // y la página revienta («Rendered more hooks than during the previous render»).
   const [editing, setEditing] = useState(false);
+  const [pestana, setPestana] = useState<Pestana>("resumen");
   // Editar es de `customers.update` (Vendedor, Administración, Administrador);
   // técnico, Contabilidad y Gerencia veían el botón y recibían un 403 (17 oct).
   const canEdit = useAuth().hasPermission("customers.update");
@@ -26,7 +39,7 @@ export function CustomerDetailPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] }); setEditing(false); },
   });
 
-  if (isLoading || !data) return <p>Cargando...</p>;
+  if (isLoading || !data) return <div className="customer-detail-page"><SkeletonRows rows={6} label="Cargando cliente…" /></div>;
 
   const { customer, cases, activities } = data;
   const alternarEdicion = () => {
@@ -37,64 +50,129 @@ export function CustomerDetailPage() {
     setEditing(!editing);
   };
 
+  const pestanas: { id: Pestana; label: string; count?: number }[] = [
+    { id: "resumen", label: "Resumen" },
+    { id: "expedientes", label: "Expedientes", count: cases.length },
+    { id: "contactos", label: "Contactos", count: customer.contacts.length },
+  ];
+
   return (
     <div className="customer-detail-page">
-      <div className="page-heading"><div><p className="eyebrow">PERFIL DEL CLIENTE</p><h1>{customer.legal_name}</h1><p className="page-subtitle">Información de contacto, aplicaciones y trazabilidad.</p></div>{canEdit && <button className="primary-button" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button>}</div>
+      <header className="ui-profile">
+        <Avatar name={customer.legal_name} size="lg" />
+        <div className="ui-profile-text">
+          <p className="eyebrow">Perfil del cliente</p>
+          <h1>{customer.legal_name}</h1>
+          <div className="ui-profile-meta">
+            <StatusBadge tone={customer.status === "active" ? "ok" : "neutral"}>{customer.status === "active" ? "Activo" : "Inactivo"}</StatusBadge>
+            <span>{TIPO[customer.customer_type] ?? customer.customer_type}</span>
+          </div>
+        </div>
+        {canEdit && <button className="primary-button ui-profile-action" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button>}
+      </header>
       {canEdit && editing && <form className="edit-card" onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }}><div className="edit-grid"><label>Nombre completo<input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} required /></label><label>Teléfono<input value={form.main_phone} onChange={(e) => setForm({ ...form, main_phone: e.target.value })} /></label><label>Correo<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Dirección de facturación<input value={form.billing_address} onChange={(e) => setForm({ ...form, billing_address: e.target.value })} /></label><label className="wide-field">Notas<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div><button className="primary-button" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</button>{updateMutation.isError && <p className="form-error">No se pudieron guardar los cambios.</p>}</form>}
-      <p className="page-subtitle">
-        {customer.main_phone} · {customer.email}
-      </p>
 
-      <section>
-        <h2>Contactos</h2>
-        <ul className="plain-list">
-          {customer.contacts.map((c) => (
-            <li key={c.id}>
-              {c.full_name} {c.is_primary && "(principal)"} — {c.phone} {c.email}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="ui-tabs" role="tablist" aria-label="Secciones del cliente">
+        {pestanas.map((p) => (
+          <button key={p.id} type="button" role="tab" id={`tab-${p.id}`} aria-controls={`panel-${p.id}`}
+            aria-selected={pestana === p.id} className={pestana === p.id ? "ui-tab is-active" : "ui-tab"} onClick={() => setPestana(p.id)}>
+            {p.label}{p.count !== undefined && <span className="ui-tab-count">{p.count}</span>}
+          </button>
+        ))}
+      </div>
 
-      <section>
-        <h2>Expedientes</h2>
-        {cases.length === 0 ? (
-          <p className="muted">Este cliente todavía no tiene expedientes.</p>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Expediente</th>
-                <th>Etapa</th>
-                <th>Dirección</th>
-                <th>Abierto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.case_number}</td>
-                  <td>{c.stage_label}</td>
-                  <td>{[c.address_street, c.address_unit].filter(Boolean).join(", ")}</td>
-                  <td>{new Date(c.created_at).toLocaleDateString("es-CO")}</td>
-                </tr>
+      {pestana === "resumen" && (
+        <div className="ui-profile-grid" role="tabpanel" id="panel-resumen" aria-labelledby="tab-resumen">
+          <section className="panel ui-info-card" aria-label="Datos de contacto">
+            <Dato icon="phone" label="Teléfono">{customer.main_phone}</Dato>
+            <Dato icon="mail" label="Correo">{customer.email}</Dato>
+            <Dato icon="pin" label="Dirección de facturación">{customer.billing_address}</Dato>
+            {customer.notes && <Dato icon="note" label="Notas">{customer.notes}</Dato>}
+          </section>
+          <section className="panel">
+            <h2 className="ui-card-title">Actividades</h2>
+            {activities.length === 0 ? (
+              <EmptyState title="Sin actividades" description="Este cliente todavía no tiene actividades registradas." />
+            ) : (
+              <ul className="ui-timeline">
+                {activities.map((a) => (
+                  <li key={a.id}>
+                    <span className="ui-timeline-dot" aria-hidden="true" />
+                    <div>
+                      <strong>{a.subject}</strong>
+                      <small>{ACTIVIDAD[a.type] ?? a.type} · {new Date(a.created_at).toLocaleDateString("es-CO")}</small>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+
+      {pestana === "expedientes" && (
+        <section role="tabpanel" id="panel-expedientes" aria-labelledby="tab-expedientes">
+          {cases.length === 0 ? (
+            <div className="panel"><EmptyState title="Sin expedientes" description="Este cliente todavía no tiene expedientes." /></div>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table is-cards">
+                <thead>
+                  <tr>
+                    <th>Expediente</th>
+                    <th>Etapa</th>
+                    <th>Dirección</th>
+                    <th>Abierto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cases.map((c) => (
+                    <tr key={c.id}>
+                      <td data-label="Expediente" className="is-title">{c.case_number}</td>
+                      <td data-label="Etapa"><StatusBadge tone="info">{c.stage_label}</StatusBadge></td>
+                      <td data-label="Dirección">{[c.address_street, c.address_unit].filter(Boolean).join(", ")}</td>
+                      <td data-label="Abierto">{new Date(c.created_at).toLocaleDateString("es-CO")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {pestana === "contactos" && (
+        <section role="tabpanel" id="panel-contactos" aria-labelledby="tab-contactos">
+          {customer.contacts.length === 0 ? (
+            <div className="panel"><EmptyState title="Sin contactos" description="Este cliente no tiene contactos adicionales." /></div>
+          ) : (
+            <ul className="ui-contact-list">
+              {customer.contacts.map((c) => (
+                <li key={c.id} className="panel">
+                  <Avatar name={c.full_name} />
+                  <div>
+                    <strong>{c.full_name}</strong>{c.is_primary && <StatusBadge tone="info">Principal</StatusBadge>}
+                    <small>{[c.role_title, c.phone, c.email].filter(Boolean).join(" · ") || "Sin datos de contacto"}</small>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+            </ul>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
 
-      <section>
-        <h2>Actividades</h2>
-        <ul className="plain-list">
-          {activities.map((a) => (
-            <li key={a.id}>
-              [{a.type}] {a.subject}
-            </li>
-          ))}
-        </ul>
-      </section>
-
+/** Un dato de la ficha con su ícono; «—» si está vacío. */
+function Dato({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
+  return (
+    <div className="ui-info-row">
+      <span className="ui-info-icon"><Icon name={icon} /></span>
+      <div>
+        <small>{label}</small>
+        <span>{children || "—"}</span>
+      </div>
     </div>
   );
 }

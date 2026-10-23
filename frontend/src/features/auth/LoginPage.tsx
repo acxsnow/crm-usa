@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { PasswordInput } from "@/components/PasswordInput";
+import { Icon } from "@/components/ui/Icon";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -31,14 +32,15 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-brand"><span className="auth-logo" aria-hidden="true">P</span><span className="auth-brand-name">PAP CRM</span></div>
         <h1>Sign in</h1>
         <label>
           Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+          <span className="auth-input"><Icon name="mail" /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus /></span>
         </label>
         <label>
           Password
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <span className="auth-input"><Icon name="lock" /><PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required /></span>
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={isSubmitting}>

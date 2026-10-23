@@ -13,7 +13,7 @@ export function PaginationControls({ page, pageSize, total, onPageChange }: Prop
   if (total <= pageSize && page === 1) return null;
 
   return (
-    <div className="inline-form" style={{ marginTop: "0.75rem" }}>
+    <div className="inline-form ui-pagination" style={{ marginTop: "0.75rem" }}>
       <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
         Anterior
       </button>

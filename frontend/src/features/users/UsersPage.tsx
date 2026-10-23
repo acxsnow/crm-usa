@@ -9,6 +9,8 @@ import { UserEditPanel, rolesAsignables } from "./components/UserEditPanel";
 import { UserProfilePanel } from "./components/UserProfilePanel";
 import { useAuth } from "@/features/auth/AuthContext";
 import type { OrgUser } from "@/types/users";
+import { Avatar } from "@/components/ui/Avatar";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const PAGE_SIZE = 20;
 
@@ -94,8 +96,18 @@ export function UsersPage() {
   ];
 
   const columns: Column<OrgUser>[] = [
-    { key: "full_name", header: "Nombre" },
-    { key: "email", header: "Email" },
+    {
+      key: "full_name", header: "Nombre", render: (u) => (
+        <span className="ui-person">
+          <Avatar name={u.full_name} />
+          <span className="ui-person-text">
+            <span className="ui-person-name">{u.full_name}</span>
+            <small className="ui-only-mobile">{u.email}</small>
+          </span>
+        </span>
+      ),
+    },
+    { key: "email", header: "Email", className: "is-hide-mobile" },
     {
       key: "roles",
       header: "Roles",
@@ -106,8 +118,9 @@ export function UsersPage() {
     {
       key: "status",
       header: "Estado",
+      className: "is-corner",
       render: (u) => (
-        <span className={`status-pill ${u.status === "active" ? "status-active" : "status-inactive"}`}>{u.status}</span>
+        <StatusBadge tone={u.status === "active" ? "ok" : u.status === "invited" ? "info" : "neutral"}>{u.status === "active" ? "Activo" : u.status === "invited" ? "Invitado" : "Inactivo"}</StatusBadge>
       ),
     },
     { key: "last_login_at", header: "Último acceso", render: (u) => (u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "—") },
@@ -138,8 +151,8 @@ export function UsersPage() {
 
   return (
     <div>
-      <h1>Usuarios</h1>
-      <p className="page-subtitle">Administra el equipo y sus roles dentro de la organización.</p>
+      <div className="page-heading"><div><p className="eyebrow">Administración</p><h1>Usuarios</h1>
+        <p className="page-subtitle">Administra el equipo y sus roles dentro de la organización.</p></div></div>
 
       {data && (
         <p className="page-subtitle">
@@ -148,7 +161,7 @@ export function UsersPage() {
         </p>
       )}
 
-      <form className="inline-form" onSubmit={handleSubmit} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+      <form className="inline-form ui-invite" onSubmit={handleSubmit} style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
         <input
           placeholder="Email"
           type="email"

@@ -8,6 +8,7 @@ import {
   useUpdateRole,
 } from "./queries";
 import type { Role } from "@/types/users";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 /** Mensaje del backend, que ya viene en español y explica la regla concreta. */
 function mensajeDeError(err: unknown, porDefecto: string): string {
@@ -91,7 +92,7 @@ export function RolesPage() {
   async function eliminar(role: Role) {
     setError(null);
     setAviso(null);
-    if (!window.confirm(`¿Eliminar el rol "${role.name}"? Esta acción no se puede deshacer.`)) {
+    if (!(await confirmAction({ title: `¿Eliminar el rol "${role.name}"?`, message: "Esta acción no se puede deshacer.", confirmLabel: "Eliminar", danger: true }))) {
       return;
     }
     try {
