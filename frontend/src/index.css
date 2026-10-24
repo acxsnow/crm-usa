@@ -1630,7 +1630,8 @@ button {
 .materials-table .is-action { text-align: right; width: 1%; white-space: nowrap; }
 .materials-form { border-top: 1px dashed var(--line, #e2ddd5); padding-top: 0.9rem; }
 .materials-form h5 { margin: 0 0 0.6rem; font-size: 0.92rem; }
-.materials-fields { display: grid; grid-template-columns: 2fr 1.2fr 0.8fr 1fr; gap: 0 0.75rem; }
+.materials-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1fr); gap: 0 0.75rem; }
+.materials-fields .field input { width: 100%; min-width: 0; box-sizing: border-box; }
 .materials-fields .field label { font-size: 0.82rem; font-weight: 600; }
 .materials-fields .optional { font-weight: 400; opacity: 0.6; }
 @media (max-width: 760px) {
@@ -4325,3 +4326,17 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
   .works-chip strong, .works-chip span, .works-chip small { white-space: normal; }
 }
 .billing-chip.read-only-chip { margin-left: 6px; color: var(--ink-soft); background: var(--line-soft); }
+
+/* Salidas de bodega dentro de «Materiales de la orden» (24 oct). */
+.materials-releases { margin-bottom: 1rem; padding-bottom: 0.9rem; border-bottom: 1px dashed var(--line); }
+.materials-releases-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+.materials-releases-head h5 { margin: 0; font-size: 0.92rem; }
+.materials-releases ul { list-style: none; margin: 0; padding: 0; }
+.materials-releases li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.materials-releases-meta { color: var(--ink-soft); font-size: 0.85rem; }
+.billing-chip.release-status.is-entregada { color: var(--ok); background: var(--ok-wash); }
+.billing-chip.release-status.is-por_autorizar, .billing-chip.release-status.is-autorizada { color: #1d4ed8; background: #e8effd; }
+.billing-chip.release-status.is-rechazada { color: var(--red-dark); background: var(--red-wash); }
+.materials-releases li { flex-direction: column; align-items: stretch; }
+.materials-release-main, .materials-release-next { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.materials-release-next small { color: var(--ink-soft); }

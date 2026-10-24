@@ -108,8 +108,9 @@
       "Técnico que hará la instalación.",
       "Fecha de la instalación.",
       "Libera la orden: aparece en la Agenda del técnico y le llega un aviso.",
-      "Materiales que lleva la orden.",
-      "Agregar un material: descripción, cantidad y unidad."
+      "Salidas de bodega de esta obra con su estado; «Pedir material a bodega» abre la salida con la obra puesta.",
+      "Materiales de la orden: lo entregado por bodega entra solo; lo demás se anota a mano.",
+      "Agregar lo que no sale de bodega (comprado directo para la obra)."
     ]
   },
   "agenda": {

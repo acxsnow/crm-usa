@@ -227,6 +227,9 @@ async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, lo
     assert materiales[0]["description"] == "Tubo cobre 3/8"
     assert materiales[0]["quantity"] == 12
     assert "De bodega" in materiales[0]["notes"]
+    # Lo que entregó bodega no se quita de la orden: es el rastro de la salida.
+    r = await app_client.delete(f"{API}/materials/{materiales[0]['id']}", headers=bodega)
+    assert (r.status_code, r.json()["code"]) == (409, "material_from_warehouse")
 
 
 # ---------------------------------------------------------------------------
@@ -356,3 +359,21 @@ async def test_el_tecnico_marca_lo_que_carga_en_la_camioneta(app_client, db, see
     # Se puede desmarcar si se equivocó.
     r = await app_client.post(marcar, json={"loaded": False}, headers=tecnico)
     assert r.json()["loading"] == {"loadable": 1, "loaded": 0, "required_pending": 1}
+
+
+async def test_la_salida_pedida_para_una_obra_queda_a_nombre_de_su_tecnico(app_client, db, seeded_org, login,
+                                                                           active_admin_staff_user,
+                                                                           active_technician_user):
+    """Desde «Materiales de la orden» la oficina pide a bodega para la obra: la
+    orden es del técnico responsable, que la ve y marca «lo llevo»."""
+    oficina = await login(active_admin_staff_user.email)
+    tecnico = await login(active_technician_user.email)
+    _, obra = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
+    tubo = await _item(app_client, oficina)
+    orden = await _orden(app_client, oficina, tubo["id"], project_id=str(obra.id))
+    assert orden["technician_user_id"] == str(active_technician_user.id)
+    assert orden["requested_by_user_id"] == str(active_admin_staff_user.id)
+    # El técnico la encuentra entre sus órdenes y en las de su obra.
+    suyas = (await app_client.get(f"{API}/warehouse/releases", params={"project_id": str(obra.id)},
+                                  headers=tecnico)).json()
+    assert [o["id"] for o in suyas] == [orden["id"]]

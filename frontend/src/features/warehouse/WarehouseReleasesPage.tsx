@@ -1,4 +1,5 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import "../billing/billing.css";
@@ -10,7 +11,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { SearchPicker } from "@/components/SearchPicker";
 import { askText } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
-import { listProjectsPage } from "@/features/field-ops/api";
+import { getProject, listProjectsPage } from "@/features/field-ops/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import type { Project } from "@/types/fieldOps";
@@ -57,7 +58,11 @@ export function WarehouseReleasesPage() {
 
   const [tab, setTab] = useState<"pendientes" | "todas">(puedeAutorizar ? "pendientes" : "todas");
   const [filtros, setFiltros] = useState<Record<string, string>>({});
-  const [creando, setCreando] = useState(false);
+  // «Pedir material a bodega» desde la obra llega con ?nueva=1&obra=<id>.
+  const [enlace] = useSearchParams();
+  const navigate = useNavigate();
+  const obraDeLaFicha = enlace.get("nueva") ? enlace.get("obra") : null;
+  const [creando, setCreando] = useState(Boolean(enlace.get("nueva")));
   const [rechazando, setRechazando] = useState<{ id: string; numero: string } | null>(null);
   const [motivo, setMotivo] = useState("");
   const [entrega, setEntrega] = useState<DeliverResult | null>(null);
@@ -138,8 +143,13 @@ export function WarehouseReleasesPage() {
 
       {creando && (
         <ReleaseForm
-          onClose={() => setCreando(false)}
-          onCreated={() => { setCreando(false); setTab("todas"); invalidarBodega(qc); }}
+          obraInicial={obraDeLaFicha}
+          onClose={() => { setCreando(false); if (obraDeLaFicha) navigate(`/projects/${obraDeLaFicha}`); }}
+          onCreated={() => {
+            setCreando(false); setTab("todas"); invalidarBodega(qc);
+            // Si vino desde la obra, vuelve a ella: ahí se ve la salida pedida.
+            if (obraDeLaFicha) navigate(`/projects/${obraDeLaFicha}`);
+          }}
         />
       )}
 
@@ -416,8 +426,21 @@ const FILA_VACIA: Omit<FilaSalida, "clave"> = { item_id: "", quantity: "1", spec
  * que se manda a autorizar. Se puede partir de una lista predefinida (punto 2
  * del cuestionario) y de ahí ajustar cantidades, calibres y extras a mano.
  */
-function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function ReleaseForm({ obraInicial, onClose, onCreated }: {
+  obraInicial?: string | null;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [obra, setObra] = useState<Project | null>(null);
+  // Desde la ficha de la obra: la obra ya viene puesta.
+  const { data: obraPedida } = useQuery({
+    queryKey: ["project", obraInicial],
+    queryFn: () => getProject(obraInicial as string),
+    enabled: Boolean(obraInicial),
+  });
+  useEffect(() => {
+    if (obraPedida) setObra((actual) => actual ?? obraPedida);
+  }, [obraPedida]);
   const [necesaria, setNecesaria] = useState("");
   const [nota, setNota] = useState("");
   const [lineas, setLineas] = useState<FilaSalida[]>(() => [{ ...FILA_VACIA, clave: nuevaClave() }]);
@@ -431,8 +454,18 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
     queryFn: () => listKitsPage(1, 200, { active: true }).then((p) => p.items),
   });
 
+  // «Guardar y enviar a autorizar» es lo normal cuando ya se eligió todo: el
+  // borrador solo existe para seguir armándola después.
+  const [enviarYa, setEnviarYa] = useState(false);
   const guardar = useMutation({
-    mutationFn: () => createRelease({
+    mutationFn: async () => {
+      const creada = await crearOrden();
+      return enviarYa ? submitRelease(creada.id) : creada;
+    },
+    onSuccess: onCreated,
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const crearOrden = () => createRelease({
       project_id: obra?.id ?? null,
       needed_on: necesaria || null,
       note: nota.trim() || null,
@@ -442,10 +475,7 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
         origin: l.origin ?? "manual", section: l.section?.trim() || null, is_required: !!l.is_required,
       })),
       omissions: omisiones.map((o) => ({ item_id: o.item_id, spec_label: o.spec_label || null, reason: o.reason })),
-    }),
-    onSuccess: onCreated,
-    onError: (e) => setError(apiErrorMessage(e)),
-  });
+    });
 
   function cambiar(i: number, campos: Partial<FilaSalida>) {
     setLineas((actuales) => actuales.map((l, j) => (j === i ? { ...l, ...campos } : l)));
@@ -614,8 +644,13 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="acta-actions">
-        <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending || renglones.length === 0}>
-          {guardar.isPending ? "Guardando…" : "Guardar el borrador"}
+        <button type="submit" className="acta-btn is-primary" disabled={guardar.isPending || renglones.length === 0}
+          onClick={() => setEnviarYa(true)}>
+          {guardar.isPending && enviarYa ? "Enviando…" : "Guardar y enviar a autorizar"}
+        </button>
+        <button type="submit" className="acta-btn" disabled={guardar.isPending || renglones.length === 0}
+          onClick={() => setEnviarYa(false)}>
+          {guardar.isPending && !enviarYa ? "Guardando…" : "Guardar el borrador"}
         </button>
         <button type="button" className="acta-btn is-quiet" onClick={onClose}>Cancelar</button>
       </div>

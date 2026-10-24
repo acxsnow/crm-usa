@@ -152,8 +152,9 @@ def orden(pg):
         (paso.locator("select").first, "Técnico que hará la instalación.", "left"),
         (paso.locator("input[type=date]").first, "Fecha de la instalación.", "bottom"),
         (paso.locator("button.acta-btn.is-primary").first, "Libera la orden: aparece en la Agenda del técnico y le llega un aviso.", "right"),
-        (paso.locator("table").first, "Materiales que lleva la orden.", "left"),
-        (paso.get_by_role("button", name="Agregar material"), "Agregar un material: descripción, cantidad y unidad.", "right"),
+        (paso.locator(".materials-releases"), "Salidas de bodega de esta obra con su estado; «Pedir material a bodega» abre la salida con la obra puesta.", "left"),
+        (paso.locator("table").first, "Materiales de la orden: lo entregado por bodega entra solo; lo demás se anota a mano.", "left"),
+        (paso.get_by_role("button", name="Agregar material"), "Agregar lo que no sale de bodega (comprado directo para la obra).", "right"),
     ], paso
 
 

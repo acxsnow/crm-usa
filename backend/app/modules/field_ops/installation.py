@@ -153,6 +153,11 @@ async def delete_material(db, *, organization_id, user, material_id) -> None:
     material = await _owned(db, ProjectMaterial, material_id, organization_id, "El material no existe.", "material_not_found")
     project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=material.project_id)
     ensure_installation_open(project)
+    # Lo que entregó bodega queda: es el rastro de la salida y el costo real de
+    # la obra. Si sobró, se registra la devolución a bodega.
+    if material.warehouse_release_line_id is not None:
+        raise ConflictError("Ese material lo entregó bodega: no se quita de la orden. Si sobró, regístralo como "
+                            "devolución a bodega.", code="material_from_warehouse")
     await db.delete(material)
     await db.commit()
 

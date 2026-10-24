@@ -734,3 +734,7 @@ export const getJobCosting = async (projectId: string) =>
 /** A quién se puede poner de ayudante en la jornada (técnicos activos, sin uno mismo). */
 export const listDayLogHelpers = async () =>
   (await apiClient.get<{ id: string; full_name: string }[]>("/warehouse/day-log-helpers", { params: { limit: 200 } })).data;
+
+/** Las salidas de bodega de una obra (para «Materiales de la orden»). */
+export const listProjectReleases = async (projectId: string) =>
+  (await apiClient.get<WarehouseRelease[]>("/warehouse/releases", { params: { project_id: projectId, limit: 50 } })).data;

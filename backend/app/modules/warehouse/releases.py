@@ -177,9 +177,18 @@ async def create_order(db: AsyncSession, *, organization_id, user, data: dict) -
 
     ubicacion = await wh.get_location(db, organization_id, data["location_id"]) if data.get("location_id") \
         else await wh.default_location(db, organization_id)
+    # El material de una obra es para su técnico responsable: cuando la oficina
+    # lo pide desde la obra, la orden queda a nombre de él, que es quien la ve en
+    # su celular y marca «lo llevo».
+    tecnico = data.get("technician_user_id")
+    if not tecnico and data.get("project_id"):
+        from app.modules.field_ops.models import Project
+
+        tecnico = (await db.execute(select(Project.primary_technician_user_id).where(
+            Project.id == data["project_id"], Project.organization_id == organization_id))).scalar_one_or_none()
     order = WarehouseReleaseOrder(
         organization_id=organization_id, status=ReleaseStatus.BORRADOR, location_id=ubicacion.id,
-        project_id=data.get("project_id"), technician_user_id=data.get("technician_user_id") or user.id,
+        project_id=data.get("project_id"), technician_user_id=tecnico or user.id,
         requested_by_user_id=user.id, needed_on=data.get("needed_on"),
         note=(data.get("note") or "").strip() or None, omissions=omisiones,
     )
