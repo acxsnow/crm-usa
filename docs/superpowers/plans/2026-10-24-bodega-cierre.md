@@ -73,8 +73,9 @@ Pedido: «algo preestablecido que el técnico use como checklist para que no se 
 
 ## Fase 4 — Compras sugeridas y conteo (S · 2–3 días)
 
-- [ ] Compras sugeridas descuenta lo ya entregado a cada obra con presupuesto aprobado (hoy cuenta el presupuesto completo aunque ya haya salido parte).
-- [ ] Recordatorio de conteo físico mensual (respuesta 8): aviso a quien administra la bodega cuando pasan 30 días desde el último conteo, con la alerta diaria que ya existe.
+- [x] Compras sugeridas descuenta lo ya entregado a cada obra con presupuesto aprobado: por obra y artículo, presupuestado − (salidas − devoluciones con esa obra, incluido el material del diario), nunca menos de cero; lo entregado de más a una obra no le quita a otra. Columnas nuevas «Ya entregado» y «Falta entregar».
+- [x] Recordatorio de conteo físico mensual (respuesta 8): aviso `warehouse.count_due` a quien tiene `warehouse.manage` cuando pasan 30 días desde el último conteo o la carga del catálogo (sale de la auditoría: un conteo que cuadra no deja movimiento). Solo con bodega activa y una vez por mes, en la alerta diaria que ya existe.
+- [x] Pruebas: `test_compras_sugeridas_descuentan_lo_que_ya_salio_para_la_obra` y `test_recuerda_el_conteo_mensual_de_bodega_una_vez_al_mes`. QA 379/379 (el paso nuevo de compras no corre ahí porque esa obra del QA queda cerrada; lo cubre la prueba). Pantalla a 390 y 1440. Manual 12.1 y 12.4 con una captura.
 
 ## Fase 5 — Calendario de jornadas (L · 2 sem) — necesita spec y acuerdo con Mateo
 

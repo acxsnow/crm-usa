@@ -274,3 +274,42 @@ async def test_la_obra_con_presupuesto_no_ve_el_presupuesto_de_otra_organizacion
                                  headers=ajeno)).status_code == 404
     assert (await app_client.get(f"{API}/warehouse/purchasing", headers=ajeno)).json() == {
         "rows": [], "totals": {"budgeted": "0.00", "to_buy": "0.00", "items": 0}}
+
+
+async def test_compras_sugeridas_descuentan_lo_que_ya_salio_para_la_obra(
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
+    """Plan bodega-cierre, fase 4: una obra a medio surtir solo pide lo que le
+    falta. Antes se contaba su presupuesto completo y se sugería comprar de más."""
+    admin = await login(active_admin_user.email)
+    supervisor = await login(active_admin_staff_user.email)
+    org = seeded_org["org"]
+    _, a_medias = await approved_case_with_project(db, org.id)
+    _, sin_empezar = await approved_case_with_project(db, org.id)
+    _, de_mas = await approved_case_with_project(db, org.id)
+    tubo = await _item(app_client, admin, "Tubo cobre 3/8", costo="5.00")
+    await _entrada(app_client, admin, tubo["id"], "40")
+
+    await _presupuesto_aprobado(app_client, admin, a_medias.id,
+                                [{"category": "materials", "item_id": tubo["id"], "quantity": "20"}])
+    await _presupuesto_aprobado(app_client, admin, sin_empezar.id,
+                                [{"category": "materials", "item_id": tubo["id"], "quantity": "5"}])
+    await _presupuesto_aprobado(app_client, admin, de_mas.id,
+                                [{"category": "materials", "item_id": tubo["id"], "quantity": "3"}])
+    await _entregar(app_client, admin, tubo["id"], a_medias.id, "15", autoriza=supervisor)
+    # A esta se le entregó más de lo presupuestado: lo de más no le quita a las otras.
+    await _entregar(app_client, admin, tubo["id"], de_mas.id, "10", autoriza=supervisor)
+
+    # Faltan 20 − 15 = 5 de la primera, 5 de la segunda y 0 de la tercera: 10.
+    # En bodega quedan 40 − 25 = 15, así que no hay que comprar nada. Con el
+    # cálculo viejo eran 28 presupuestados contra 15 en bodega: 13 de más.
+    fila = (await app_client.get(f"{API}/warehouse/purchasing", headers=admin)).json()["rows"][0]
+    assert (fila["budgeted"], fila["delivered"], fila["pending"]) == ("28.00", "18.00", "10.00")
+    assert (fila["in_stock"], fila["to_buy"]) == ("15.00", "0.00")
+
+    # Si se acaba la bodega, se compra solo lo que falta por entregar.
+    await _entregar(app_client, admin, tubo["id"], sin_empezar.id, "1", autoriza=supervisor)
+    r = await app_client.post(f"{API}/warehouse/counts", json={
+        "lines": [{"item_id": tubo["id"], "counted_quantity": "2"}]}, headers=admin)
+    assert r.status_code == 200, r.text
+    fila = (await app_client.get(f"{API}/warehouse/purchasing", headers=admin)).json()["rows"][0]
+    assert (fila["pending"], fila["in_stock"], fila["to_buy"]) == ("9.00", "2.00", "7.00")

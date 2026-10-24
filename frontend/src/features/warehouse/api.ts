@@ -316,6 +316,10 @@ export interface PurchasingRow {
   sku: string | null;
   unit: string | null;
   budgeted: string;
+  /** Lo que ya salió para esas obras (hasta lo presupuestado de cada una). */
+  delivered: string;
+  /** Lo que falta entregarles: presupuestado − ya entregado, por obra. */
+  pending: string;
   in_stock: string;
   to_buy: string;
   unit_cost: string;

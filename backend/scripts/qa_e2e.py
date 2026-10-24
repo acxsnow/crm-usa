@@ -1035,6 +1035,11 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
     else:
         check("Sugiere comprar el capacitor que falta", sug is not None and float(sug["to_buy"]) > 0,
               json.dumps(sug)[:200])
+        # Fase 4 del plan de cierre: lo que ya salió para la obra no se vuelve a pedir.
+        check("Descuenta lo que ya salió para la obra (pendiente = presupuestado − entregado)",
+              sug is not None and float(sug["delivered"]) > 0
+              and abs(float(sug["pending"]) - (float(sug["budgeted"]) - float(sug["delivered"]))) < 0.001,
+              json.dumps(sug)[:200])
 
     section("20. Bodega: diario de obra")
     r = tec.post(f"/warehouse/projects/{pid}/day-logs", json={

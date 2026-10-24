@@ -28,7 +28,7 @@ from app.modules.finance.models import SupplierInvoice, SupplierInvoiceLine
 from app.modules.finance.profitability import project_costs
 from app.modules.field_ops.models import Project, ProjectStatus
 from app.modules.warehouse.budgets import budget_lines_of, budget_totals, current_budget
-from app.modules.warehouse.catalogs import BUDGET_CATEGORIES, BudgetCategory
+from app.modules.warehouse.catalogs import BUDGET_CATEGORIES, BudgetCategory, MovementType
 from app.modules.warehouse.models import (
     ProjectBudget,
     ProjectBudgetLine,
@@ -198,24 +198,53 @@ async def purchasing_report(db: AsyncSession, organization_id) -> dict:
     terminaron: lo ya instalado no vuelve a comprarse. Se incluye la camioneta en
     la existencia —el material que ya salió de bodega y no se ha consumido sigue
     estando— y el resultado nunca es negativo: sobrar no es comprar.
+
+    A cada obra se le resta lo que **ya salió para ella** (salidas de bodega y
+    material del diario, menos devoluciones; fase 4 del plan de cierre): una obra
+    a medio surtir solo pide lo que le falta. Antes se contaba el presupuesto
+    completo y se sugería comprar de más. Lo entregado de más a una obra no le
+    quita a otra: por obra, lo pendiente nunca baja de cero.
     """
+    from sqlalchemy import func
+
     pendientes = select(Project.id).where(
         Project.organization_id == organization_id,
         Project.status.not_in((ProjectStatus.completed, ProjectStatus.cancelled)),
     )
     filas = (await db.execute(
-        select(ProjectBudgetLine.item_id, ProjectBudgetLine.quantity)
+        select(ProjectBudget.project_id, ProjectBudgetLine.item_id, ProjectBudgetLine.quantity)
+        .join(ProjectBudget, ProjectBudget.id == ProjectBudgetLine.budget_id)
         .where(ProjectBudgetLine.organization_id == organization_id,
-               ProjectBudgetLine.budget_id.in_(
-                   select(ProjectBudget.id).where(
-                       ProjectBudget.organization_id == organization_id,
-                       ProjectBudget.status == "aprobado",
-                       ProjectBudget.project_id.in_(pendientes))),
+               ProjectBudget.organization_id == organization_id,
+               ProjectBudget.status == "aprobado",
+               ProjectBudget.project_id.in_(pendientes),
                ProjectBudgetLine.item_id.is_not(None)))).all()
 
+    por_obra: dict = {}
+    for project_id, item_id, cantidad in filas:
+        clave = (project_id, item_id)
+        por_obra[clave] = por_obra.get(clave, ZERO) + Decimal(str(cantidad))
+
+    # Lo que ya salió para cada obra: la salida resta (cantidad negativa) y la
+    # devolución suma, así que lo consumido es el negativo de la suma.
+    salido: dict = {}
+    if por_obra:
+        movidos = (await db.execute(
+            select(WarehouseMovement.project_id, WarehouseMovement.item_id, func.sum(WarehouseMovement.quantity))
+            .where(WarehouseMovement.organization_id == organization_id,
+                   WarehouseMovement.project_id.in_({p for p, _ in por_obra}),
+                   WarehouseMovement.movement_type.in_((MovementType.SALIDA, MovementType.DEVOLUCION)))
+            .group_by(WarehouseMovement.project_id, WarehouseMovement.item_id))).all()
+        salido = {(p, i): -Decimal(str(total or 0)) for p, i, total in movidos}
+
     presupuestado: dict = {}
-    for item_id, cantidad in filas:
-        presupuestado[item_id] = presupuestado.get(item_id, ZERO) + Decimal(str(cantidad))
+    entregado: dict = {}
+    pendiente: dict = {}
+    for (project_id, item_id), cantidad in por_obra.items():
+        ya = max(salido.get((project_id, item_id), ZERO), ZERO)
+        presupuestado[item_id] = presupuestado.get(item_id, ZERO) + cantidad
+        entregado[item_id] = entregado.get(item_id, ZERO) + min(ya, cantidad)
+        pendiente[item_id] = pendiente.get(item_id, ZERO) + max(cantidad - ya, ZERO)
 
     existencias = await totals_by_item(db, organization_id, list(presupuestado))
     items = {i.id: i for i in (await db.execute(select(WarehouseItem).where(
@@ -229,12 +258,14 @@ async def purchasing_report(db: AsyncSession, organization_id) -> dict:
         if item is None:
             continue
         en_bodega = (existencias.get(item_id) or {}).get("total", ZERO)
-        por_comprar = cantidad - en_bodega
+        falta = pendiente.get(item_id, ZERO)
+        por_comprar = falta - en_bodega
         if por_comprar < ZERO:
             por_comprar = ZERO
         renglones.append({
             "item_id": str(item_id), "item_name": item.name, "sku": item.sku, "unit": item.unit,
-            "budgeted": str(to_money(cantidad)), "in_stock": str(to_money(en_bodega)),
+            "budgeted": str(to_money(cantidad)), "delivered": str(to_money(entregado.get(item_id, ZERO))),
+            "pending": str(to_money(falta)), "in_stock": str(to_money(en_bodega)),
             "to_buy": str(to_money(por_comprar)),
             "unit_cost": str(to_money(item.unit_cost)),
             "estimated_cost": str(to_money(por_comprar * to_money(item.unit_cost))),

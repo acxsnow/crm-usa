@@ -29,8 +29,8 @@ export function WarehousePurchasingPage() {
         <div>
           <h1>Compras sugeridas</h1>
           <p>
-            Lo que las obras en curso ya presupuestaron, menos lo que hay en bodega. Lo que sobra no se
-            compra: la columna de la derecha es solo lo que falta.
+            Lo que a las obras en curso les falta por entregar de su presupuesto, menos lo que hay en bodega.
+            Lo que ya salió para una obra no se vuelve a comprar, y lo que sobra tampoco.
           </p>
         </div>
       </header>
@@ -44,7 +44,8 @@ export function WarehousePurchasingPage() {
           <div className="tablewrap"><table className="notices-table">
             <thead>
               <tr>
-                <th>Artículo</th><th>Presupuestado</th><th>En bodega</th><th>Por comprar</th>
+                <th>Artículo</th><th>Presupuestado</th><th>Ya entregado</th><th>Falta entregar</th>
+                <th>En bodega</th><th>Por comprar</th>
                 <th>Costo unitario</th><th>Costo estimado</th><th>Existencia</th>
               </tr>
             </thead>
@@ -56,6 +57,8 @@ export function WarehousePurchasingPage() {
                     {f.sku && <small>{f.sku}</small>}
                   </td>
                   <td>{f.budgeted} {f.unit}</td>
+                  <td>{f.delivered} {f.unit}</td>
+                  <td>{f.pending} {f.unit}</td>
                   <td>{f.in_stock} {f.unit}</td>
                   <td><strong>{f.to_buy} {f.unit}</strong></td>
                   <td>{dinero(f.unit_cost)}</td>
@@ -66,7 +69,7 @@ export function WarehousePurchasingPage() {
               <tr>
                 <td><strong>Total</strong></td>
                 <td><strong>{data?.totals.budgeted}</strong></td>
-                <td />
+                <td /><td /><td />
                 <td><strong>{data?.totals.to_buy}</strong></td>
                 <td colSpan={3}><strong>{data?.totals.items} artículos</strong></td>
               </tr>

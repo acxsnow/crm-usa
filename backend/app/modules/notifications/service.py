@@ -16,7 +16,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -459,8 +459,43 @@ async def daily_alerts(db: AsyncSession, organization_id) -> int:
                                   context=ctx, link=f"/projects/{pm.project_id}", entity=("permit", str(pm.id)),
                                   dedupe_key=f"permit_expiring:{pm.id}"))
     total += await _finance_alerts(db, organization_id, hoy)
+    total += await _warehouse_count_alert(db, organization_id, hoy, zona)
     await db.commit()
     return total
+
+
+# Cada cuánto se cuenta la bodega (respuesta 8 del cuestionario: mensual).
+COUNT_EVERY_DAYS = 30
+
+
+async def _warehouse_count_alert(db, organization_id, hoy, zona) -> int:
+    """Recordatorio del conteo físico mensual (plan bodega-cierre, fase 4).
+
+    La fecha del último conteo sale de la auditoría y no del libro de
+    movimientos: un conteo que cuadra no deja ningún ajuste, pero sí cuenta como
+    conteo. La carga del catálogo con su conteo inicial también cuenta. Solo a
+    organizaciones con bodega (artículos activos), y una vez por mes.
+    """
+    from app.modules.field_ops.clock import local_date
+    from app.modules.warehouse.models import WarehouseItem
+    from app.shared.audit_models import AuditEvent
+
+    hay_bodega = (await db.execute(select(WarehouseItem.id).where(
+        WarehouseItem.organization_id == organization_id, WarehouseItem.active.is_(True)).limit(1))).first()
+    if not hay_bodega:
+        return 0
+    ultimo = (await db.execute(select(func.max(AuditEvent.created_at)).where(
+        AuditEvent.organization_id == organization_id,
+        AuditEvent.action.in_(("warehouse.counted", "warehouse.catalog_imported"))))).scalar_one_or_none()
+    dias = (hoy - local_date(ultimo, zona)).days if ultimo else None
+    if dias is not None and dias < COUNT_EVERY_DAYS:
+        return 0
+    contexto = {"fecha": local_date(ultimo, zona).isoformat() if ultimo else "nunca",
+                "dias": str(dias) if dias is not None else "—"}
+    return len(await notify(db, organization_id=organization_id, code="warehouse.count_due",
+                            users=await _users_with(db, organization_id, "warehouse.manage"), context=contexto,
+                            link="/warehouse", entity=("organization", str(organization_id)),
+                            dedupe_key=f"count_due:{organization_id}:{hoy.strftime('%Y-%m')}"))
 
 
 async def _finance_alerts(db, organization_id, hoy) -> int:

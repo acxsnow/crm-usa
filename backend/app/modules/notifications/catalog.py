@@ -127,6 +127,11 @@ NOTICES: dict[str, dict] = {
         "title": "Por reponer: {{articulo}}",
         "body": "{{articulo}} quedó en {{existencia}} (mínimo {{minimo}}). Hay que reponerlo.",
     },
+    "warehouse.count_due": {
+        "label": "Alerta: toca el conteo mensual de bodega", "audience": "Bodega (warehouse.manage)",
+        "title": "Toca contar la bodega",
+        "body": "El último conteo físico fue el {{fecha}} (hace {{dias}} días). Toca el conteo mensual.",
+    },
 }
 
 DEFAULT_PERMISSION = {
@@ -143,6 +148,7 @@ DEFAULT_PERMISSION = {
     "supplier.document_expiring": "suppliers.manage",
     "warehouse.release_pending": "warehouse.approve_release",
     "warehouse.stock_low": "warehouse.manage",
+    "warehouse.count_due": "warehouse.manage",
 }
 
 

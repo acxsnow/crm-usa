@@ -298,5 +298,13 @@
       "«Lo llevo»: se marca al subir cada cosa a la camioneta.",
       "Lo obligatorio va marcado para que no se quede."
     ]
+  },
+  "bodega_compras": {
+    "titulo": "Compras sugeridas",
+    "leyenda": [
+      "Lo que suman los presupuestos aprobados de las obras abiertas.",
+      "Lo que ya salió para esas obras: no se vuelve a comprar.",
+      "Lo que falta entregar menos lo que hay en bodega."
+    ]
   }
 }

@@ -192,3 +192,35 @@ async def test_my_notifications_are_paginated(app_client, db, seeded_org, active
     assert [n["title"] for n in sin_leer.json()] == ["Aviso 0"]
 
     assert (await app_client.get("/api/v1/notifications", params={"limit": 501}, headers=admin)).status_code == 422
+
+
+async def test_recuerda_el_conteo_mensual_de_bodega_una_vez_al_mes(db, seeded_org, active_admin_staff_user,
+                                                                  active_technician_user):
+    """Respuesta 8 del cuestionario: la bodega se cuenta cada mes (plan
+    bodega-cierre, fase 4). A los 30 días del último conteo, quien administra
+    la bodega recibe el aviso una sola vez en el mes; el técnico no."""
+    from app.modules.warehouse.models import WarehouseItem
+    from app.shared.audit_models import AuditEvent
+
+    org = seeded_org["org"].id
+    # Sin bodega no hay nada que contar.
+    assert not [a for a in await _avisos(db, active_admin_staff_user.id) if a.event == "warehouse.count_due"]
+    await service.daily_alerts(db, org)
+    assert not [a for a in await _avisos(db, active_admin_staff_user.id) if a.event == "warehouse.count_due"]
+
+    db.add(WarehouseItem(organization_id=org, name="Tubo cobre 3/8", category="pipe_copper", unit="ft"))
+    conteo = AuditEvent(organization_id=org, action="warehouse.counted", entity_type="warehouse_location",
+                        created_at=datetime.now(timezone.utc) - timedelta(days=10))
+    db.add(conteo)
+    await db.commit()
+    await service.daily_alerts(db, org)
+    assert not [a for a in await _avisos(db, active_admin_staff_user.id) if a.event == "warehouse.count_due"]
+
+    # Pasaron 31 días: toca contar, y el aviso no se repite en el mismo mes.
+    conteo.created_at = datetime.now(timezone.utc) - timedelta(days=31)
+    await db.commit()
+    await service.daily_alerts(db, org)
+    await service.daily_alerts(db, org)
+    avisos = [a for a in await _avisos(db, active_admin_staff_user.id) if a.event == "warehouse.count_due"]
+    assert len(avisos) == 1 and "31 días" in avisos[0].body
+    assert not [a for a in await _avisos(db, active_technician_user.id) if a.event == "warehouse.count_due"]

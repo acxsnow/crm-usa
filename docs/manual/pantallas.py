@@ -386,6 +386,15 @@ def bodega_carga(pg):
     ], fila
 
 
+def bodega_compras(pg):
+    pg.locator("thead th").first.wait_for(timeout=20000)
+    return [
+        (pg.locator("thead th", has_text="Presupuestado"), "Lo que suman los presupuestos aprobados de las obras abiertas.", "top"),
+        (pg.locator("thead th", has_text="Ya entregado"), "Lo que ya salió para esas obras: no se vuelve a comprar.", "top"),
+        (pg.locator("thead th", has_text="Por comprar"), "Lo que falta entregar menos lo que hay en bodega.", "top"),
+    ], None
+
+
 def bodega_diario(pg):
     pg.get_by_role("button", name="Registrar la jornada").first.click()
     pg.wait_for_timeout(800)
@@ -439,6 +448,7 @@ PANTALLAS = [
     ("bodega_salida", "adm", {"width": 1280, "height": 1000}, "/warehouse/releases", "Bodega: nueva salida con el buscador de artículos", bodega_salida),
     ("bodega_checklist", "tecnico", alto(1600), "/warehouse/releases", "Salida armada desde una lista (celular del técnico)", bodega_checklist),
     ("bodega_carga", "tecnico", alto(1500), "/warehouse/releases", "«Lo llevo»: la checklist al cargar la camioneta", bodega_carga),
+    ("bodega_compras", "adm", ESCRITORIO, "/warehouse/purchasing", "Compras sugeridas", bodega_compras),
     ("bodega_diario", "tecnico", alto(1500), f"/projects/{DEMO['tecnico']['project']}", "Diario de obra: material del día (celular)", bodega_diario),
     ("programas", "admin", {"width": 1280, "height": 1350}, "/programs", "Configuración de programas", programas),
     ("equipo", "admin", ESCRITORIO, "/users", "Equipo", equipo),
