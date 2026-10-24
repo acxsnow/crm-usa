@@ -13,9 +13,13 @@ ZERO = Decimal("0.00")
 
 
 def to_money(value) -> Decimal:
+    """Un monto con dos decimales. Lo que no es un número finito que quepa en la
+    columna (Numeric(12, 2)) responde 400 `invalid_number`, no un 500."""
     if isinstance(value, float):
         raise TypeError("Los montos no se manejan como float: usa texto o Decimal.")
-    return Decimal(str(value)).quantize(CENT, rounding=ROUND_HALF_UP)
+    from app.shared.decimals import MAX_MONEY, parse_decimal
+
+    return parse_decimal(value, limit=MAX_MONEY)
 
 
 def money_sum(values: Iterable) -> Decimal:

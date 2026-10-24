@@ -30,6 +30,7 @@ from app.modules.warehouse import service as wh
 from app.modules.warehouse.budgets import get_project
 from app.modules.warehouse.catalogs import ITEM_UNITS, LocationKind, MovementType
 from app.modules.warehouse.models import ProjectDayLog, ProjectDayLogHelper, ProjectDayLogMaterial
+from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import ForbiddenError, InvalidInputError, NotFoundError
 
@@ -47,7 +48,7 @@ MAX_NOTE = 4000
 
 
 def _q(value) -> Decimal:
-    return (Decimal(str(value)) if value is not None else ZERO).quantize(Q2)
+    return to_quantity(value)
 
 
 def _texto(value, *, maximo: int = MAX_NOTE) -> str | None:
