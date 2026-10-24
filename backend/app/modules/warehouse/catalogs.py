@@ -11,7 +11,11 @@ Las categorías y las unidades son las de la hoja «Listas» del cuestionario de
 """
 from enum import StrEnum
 
-# Hoja «Listas», columna Categorías.
+# Las categorías con las que arranca cada organización: las de la hoja «Listas»
+# del cuestionario más las que muestra el catálogo de AC Pro que mandó el cliente
+# (`docs/bodega/bodega.pdf`, 22 oct). Desde la fase 3 del plan de cierre viven en
+# `warehouse_categories` y cada organización las cambia; este diccionario solo
+# siembra la tabla y da la etiqueta de respaldo.
 ITEM_CATEGORIES: dict[str, str] = {
     "pipe_copper": "Tubería y cobre",
     "electrical": "Eléctrico",
@@ -21,8 +25,20 @@ ITEM_CATEGORIES: dict[str, str] = {
     "consumables": "Consumibles",
     "equipment": "Equipos",
     "tools": "Herramienta",
+    "thermostats": "Termostatos",
+    "filters": "Filtros",
+    "venting": "Ventilación (B-Vent)",
+    "pvc_drain": "PVC y drenaje",
+    "gas_iron": "Hierro negro y gas",
+    "parts": "Repuestos (motores, capacitores, ignitores)",
+    "chemicals": "Químicos y limpieza",
+    "tapes_sealants": "Cintas y sellantes",
     "other": "Otro",
 }
+
+# La categoría comodín: la que toma un artículo sin categoría y la que no se
+# puede desactivar.
+DEFAULT_CATEGORY = "other"
 
 # Hoja «Listas», columna Unidades.
 ITEM_UNITS: dict[str, str] = {
@@ -34,6 +50,8 @@ ITEM_UNITS: dict[str, str] = {
     "gal": "galones",
     "lb": "libras",
     "set": "juegos",
+    # AC Pro vende por paquete (50, 100 o 1000 piezas).
+    "pack": "paquetes",
 }
 
 # Qué hace cada movimiento. El signo lo pone el servicio, no quien lo llama:

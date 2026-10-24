@@ -9,7 +9,10 @@ import { fetchPage, type Page } from "@/lib/pagination";
  */
 
 export interface WarehouseCatalogs {
+  /** Las categorías que se pueden elegir (activas) de la organización. */
   categories: Record<string, string>;
+  /** Todas, también las desactivadas, para nombrar las de artículos viejos. */
+  category_labels: Record<string, string>;
   units: Record<string, string>;
   movement_types: Record<string, string>;
   location_kinds: Record<string, string>;
@@ -30,7 +33,10 @@ export interface StockAtLocation {
 export interface WarehouseItem {
   id: string;
   name: string;
+  /** El código de AC Pro (o la referencia del proveedor). */
   sku: string | null;
+  brand: string | null;
+  manufacturer_part: string | null;
   category: string;
   category_label: string;
   unit: string;
@@ -368,15 +374,37 @@ export interface ImportResult {
   omitidos: number;
   conteo_inicial: number;
   errores: { fila: number; error: string }[];
+  /** Categorías que el Excel traía y no existían: se crearon. */
+  categorias_nuevas: string[];
   sheet: string;
   rows_read: number;
 }
+
+/** Una categoría del catálogo, propia de la organización. */
+export interface WarehouseCategory {
+  id: string;
+  code: string;
+  label: string;
+  active: boolean;
+  sort_order: number;
+  item_count: number;
+}
+
+export const listCategories = async () =>
+  (await apiClient.get<WarehouseCategory[]>("/warehouse/categories", { params: { limit: 500 } })).data;
+
+export const createCategory = async (label: string) =>
+  (await apiClient.post<WarehouseCategory>("/warehouse/categories", { label })).data;
+
+export const updateCategory = async (id: string, data: { label?: string; active?: boolean }) =>
+  (await apiClient.put<WarehouseCategory>(`/warehouse/categories/${id}`, data)).data;
 
 export const warehouseCatalogs = async () =>
   (await apiClient.get<WarehouseCatalogs>("/warehouse/catalogs")).data;
 
 export const warehouseKeys = {
   catalogs: ["warehouse-catalogs"] as const,
+  categories: ["warehouse-categories"] as const,
   items: ["warehouse-items"] as const,
   stock: ["warehouse-stock"] as const,
   summary: ["warehouse-stock-summary"] as const,

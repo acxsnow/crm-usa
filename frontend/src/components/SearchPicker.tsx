@@ -59,7 +59,11 @@ export function SearchPicker<T>({
     enabled: abierto,
     staleTime: 30_000,
   });
-  const opciones = data ?? [];
+  // Mientras lo escrito no se ha buscado (la espera de 300 ms), la lista que se
+  // ve es la de antes: no se ofrece, para que Enter no elija un artículo que no
+  // corresponde a lo que se escribió.
+  const pendiente = texto.trim() !== buscado;
+  const opciones = pendiente ? [] : data ?? [];
 
   useEffect(() => setActivo(0), [buscado]);
 
@@ -127,7 +131,7 @@ export function SearchPicker<T>({
             <li className="search-picker-note" role="presentation">No se pudo buscar. Revisa la conexión e inténtalo de nuevo.</li>
           ) : opciones.length === 0 ? (
             <li className="search-picker-note" role="presentation">
-              {isFetching ? "Buscando…" : buscado ? `Sin resultados para «${buscado}».` : "No hay nada para elegir."}
+              {pendiente || isFetching ? "Buscando…" : buscado ? `Sin resultados para «${buscado}».` : "No hay nada para elegir."}
             </li>
           ) : (
             opciones.map((item, i) => (

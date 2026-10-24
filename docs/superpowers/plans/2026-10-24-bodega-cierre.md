@@ -63,10 +63,12 @@ Pedido: «algo preestablecido que el técnico use como checklist para que no se 
 
 ## Fase 3 — Catálogo listo para AC Pro (M · 1 sem)
 
-- [ ] Categorías administrables desde la pantalla (por organización), sembradas con las 9 actuales más las que muestran los PDF de AC Pro: termostatos, filtros, ventilación B-Vent, PVC y drenaje, hierro negro y gas, repuestos (motores, ignitores, contactores, capacitores), químicos y limpieza, cintas y sellantes. Migración que convierte los códigos actuales sin perder datos.
-- [ ] Artículo con **marca** y **número del fabricante** además de la referencia (código AC Pro, ej. `3496`; fabricante, ej. `TH4110U2005`). La búsqueda encuentra por los tres.
-- [ ] Importación del Excel con esas columnas nuevas (y plantilla de Excel actualizada).
-- [ ] Unidad «paquete» (AC Pro vende por pack de 50, 100, 1000).
+- [x] Categorías por organización (`warehouse_categories`, migración 0034, `warehouse/categories.py`): se siembran la primera vez con las 9 del cuestionario más termostatos, filtros, ventilación (B-Vent), PVC y drenaje, hierro negro y gas, repuestos, químicos y limpieza, y cintas y sellantes. El artículo sigue guardando el código, así que no hubo que convertir datos. Se agregan, renombran y desactivan en **Artículos › Categorías**; no se borran y «Otro» no se desactiva.
+- [x] Artículo con **marca** y **número del fabricante** además del código AC Pro. El buscador encuentra por nombre, código, fabricante, marca o proveedor.
+- [x] Importación con las columnas «Código AC Pro», «Número del fabricante» y «Marca». Arreglado de paso: los códigos de AC Pro son números y la fila fallaba al importarlos. Una categoría que el Excel trae y no existe se crea y se avisa (antes caía en «Otro»). La plantilla de Excel no vive en la app (se mandó al cliente el 19 oct); cuando se mande la de AC Pro, agregar esas tres columnas.
+- [x] Unidad «paquetes».
+- [x] El buscador no ofrece la lista anterior mientras se escribe (Enter podía elegir un artículo que no correspondía).
+- [x] Pruebas: `test_el_excel_de_ac_pro_trae_codigo_fabricante_y_marca` y `test_las_categorias_las_administra_la_organizacion` (permisos y aislamiento). QA 372/372. Navegador a 390 y 1440. Manual: 12.1 con dos capturas nuevas.
 
 ## Fase 4 — Compras sugeridas y conteo (S · 2–3 días)
 

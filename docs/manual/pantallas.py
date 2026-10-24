@@ -323,6 +323,28 @@ def bodega_existencias(pg):
     ], None
 
 
+def bodega_articulo(pg):
+    pg.get_by_role("button", name="Nuevo artículo").click()
+    pg.wait_for_timeout(800)
+    return [
+        (pg.locator("#it-sku"), "Código AC Pro (o la referencia del proveedor): evita duplicar el artículo al importar.", "left"),
+        (pg.locator("#it-mfg"), "Número del fabricante, tal como aparece en AC Pro (MFG #).", "left"),
+        (pg.locator("#it-brand"), "Marca. El buscador encuentra el artículo por nombre, código, fabricante o marca.", "right"),
+        (pg.locator("#it-cat"), "Categoría: solo se ofrecen las activas.", "left"),
+        (pg.locator("#it-min"), "Mínimo: al llegar aquí la bodega recibe un aviso.", "right"),
+    ], pg.locator("#it-name")
+
+
+def bodega_categorias(pg):
+    pg.get_by_role("button", name="Categorías").click()
+    pg.wait_for_timeout(1500)
+    return [
+        (pg.locator("#cat-nueva"), "Escriba el nombre y toque «Agregar» para crear una categoría.", "left"),
+        (pg.locator(".category-list li").first, "Cada categoría con cuántos artículos tiene y si está activa.", "left"),
+        (pg.locator(".category-actions").first, "«Renombrar» cambia el nombre en todos sus artículos; «Desactivar» la saca de las opciones.", "left"),
+    ], pg.locator("#cat-nueva")
+
+
 def bodega_salida(pg):
     pg.get_by_role("button", name="Nueva salida").click()
     pg.wait_for_timeout(800)
@@ -387,6 +409,8 @@ PANTALLAS = [
     ("rentabilidad", "gerencia", ESCRITORIO, "/finance-close", "Rentabilidad por instalación", rentabilidad),
     ("reportes", "gerencia", ESCRITORIO, "/reports", "Reportes", reportes),
     ("bodega_existencias", "adm", ESCRITORIO, "/warehouse", "Bodega: existencias", bodega_existencias),
+    ("bodega_articulo", "adm", {"width": 1280, "height": 1000}, "/warehouse/items", "Bodega: un artículo con su código AC Pro, fabricante y marca", bodega_articulo),
+    ("bodega_categorias", "adm", {"width": 1280, "height": 1000}, "/warehouse/items", "Bodega: categorías del catálogo", bodega_categorias),
     ("bodega_salida", "adm", {"width": 1280, "height": 1000}, "/warehouse/releases", "Bodega: nueva salida con el buscador de artículos", bodega_salida),
     ("bodega_diario", "tecnico", alto(1500), f"/projects/{DEMO['tecnico']['project']}", "Diario de obra: material del día (celular)", bodega_diario),
     ("programas", "admin", {"width": 1280, "height": 1350}, "/programs", "Configuración de programas", programas),

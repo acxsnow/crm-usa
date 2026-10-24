@@ -12,10 +12,14 @@ import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { money } from "@/features/finance/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
+  createCategory,
+  listCategories,
   saveItem,
+  updateCategory,
   warehouseCatalogs,
   warehouseKeys,
   type WarehouseCatalogs,
+  type WarehouseCategory,
   type WarehouseItem,
 } from "./api";
 
@@ -33,6 +37,7 @@ export function WarehouseItemsPage() {
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
   const [filtros, setFiltros] = useState<Record<string, string>>({});
   const [editando, setEditando] = useState<WarehouseItem | "new" | null>(null);
+  const [categorias, setCategorias] = useState(false);
 
   const params = {
     q: filtros.q || undefined,
@@ -44,7 +49,7 @@ export function WarehouseItemsPage() {
   });
 
   const campos: FilterFieldDef[] = [
-    { key: "q", label: "Buscar", type: "text", placeholder: "Nombre, referencia o proveedor" },
+    { key: "q", label: "Buscar", type: "text", placeholder: "Nombre, código, fabricante o marca" },
     {
       key: "category", label: "Categoría", type: "select",
       options: Object.entries(cat?.categories ?? {}).map(([value, label]) => ({ value, label })),
@@ -64,10 +69,14 @@ export function WarehouseItemsPage() {
         </div>
         {puede && editando === null && (
           <div className="acta-actions">
+            <button type="button" className="acta-btn" aria-expanded={categorias}
+              onClick={() => setCategorias((v) => !v)}>{categorias ? "Cerrar categorías" : "Categorías"}</button>
             <button type="button" className="acta-btn is-primary" onClick={() => setEditando("new")}>Nuevo artículo</button>
           </div>
         )}
       </header>
+
+      {puede && categorias && <CategoriesPanel />}
 
       {editando !== null && cat && (
         <ItemForm
@@ -89,7 +98,8 @@ export function WarehouseItemsPage() {
                 <tr key={i.id} className={i.active ? "" : "fin-inactive"}>
                   <td>
                     <strong>{i.name}</strong>
-                    <small>{[i.sku ? `Ref. ${i.sku}` : null, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
+                    <small>{[i.sku ? `Ref. ${i.sku}` : null, i.manufacturer_part ? `Fab. ${i.manufacturer_part}` : null,
+                      i.brand, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
                     {i.has_serial && <small>Con serial</small>}
                   </td>
                   <td>{i.category_label}</td>
@@ -117,14 +127,22 @@ function ItemForm({ initial, catalogs, onClose }: {
 }) {
   const qc = useQueryClient();
   const [item, setItem] = useState<Partial<WarehouseItem>>(initial ?? {
-    name: "", sku: "", category: "other", unit: "unit", unit_cost: "0", supplier_name: "",
-    has_serial: false, min_quantity: "", notes: "", active: true,
+    name: "", sku: "", brand: "", manufacturer_part: "", category: "other", unit: "unit", unit_cost: "0",
+    supplier_name: "", has_serial: false, min_quantity: "", notes: "", active: true,
   });
   const [error, setError] = useState<string | null>(null);
+  // Las categorías que se pueden elegir, más la que el artículo ya tiene aunque
+  // esté desactivada: editarlo no lo obliga a cambiar de categoría.
+  const opcionesCategoria = { ...catalogs.categories };
+  if (initial && !(initial.category in opcionesCategoria)) {
+    opcionesCategoria[initial.category] = `${initial.category_label} (desactivada)`;
+  }
   const guardar = useMutation({
     mutationFn: () => saveItem(initial?.id ?? null, {
       name: item.name ?? "",
       sku: item.sku || null,
+      brand: item.brand || null,
+      manufacturer_part: item.manufacturer_part || null,
       category: item.category || "other",
       unit: item.unit || "unit",
       unit_cost: item.unit_cost || "0",
@@ -151,15 +169,28 @@ function ItemForm({ initial, catalogs, onClose }: {
           <input id="it-name" value={item.name ?? ""} onChange={(e) => setItem({ ...item, name: e.target.value })} required />
         </div>
         <div className="form-field">
-          <label className="form-label" htmlFor="it-sku">Referencia / SKU</label>
-          <input id="it-sku" value={item.sku ?? ""} onChange={(e) => setItem({ ...item, sku: e.target.value })} />
+          <label className="form-label" htmlFor="it-sku">Código AC Pro / referencia</label>
+          <input id="it-sku" value={item.sku ?? ""} placeholder="Ej.: 3496" maxLength={80}
+            onChange={(e) => setItem({ ...item, sku: e.target.value })} />
+        </div>
+      </div>
+      <div className="fin-row">
+        <div className="form-field">
+          <label className="form-label" htmlFor="it-mfg">Número del fabricante</label>
+          <input id="it-mfg" value={item.manufacturer_part ?? ""} placeholder="Ej.: TH4110U2005" maxLength={80}
+            onChange={(e) => setItem({ ...item, manufacturer_part: e.target.value })} />
+        </div>
+        <div className="form-field">
+          <label className="form-label" htmlFor="it-brand">Marca</label>
+          <input id="it-brand" value={item.brand ?? ""} placeholder="Ej.: Honeywell" maxLength={120}
+            onChange={(e) => setItem({ ...item, brand: e.target.value })} />
         </div>
       </div>
       <div className="fin-row">
         <div className="form-field">
           <label className="form-label" htmlFor="it-cat">Categoría</label>
           <select id="it-cat" value={item.category ?? "other"} onChange={(e) => setItem({ ...item, category: e.target.value })}>
-            {Object.entries(catalogs.categories).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {Object.entries(opcionesCategoria).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div className="form-field">
@@ -203,5 +234,98 @@ function ItemForm({ initial, catalogs, onClose }: {
         <button type="button" className="acta-btn is-quiet" onClick={onClose}>Cancelar</button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Las categorías del catálogo (plan bodega-cierre, fase 3): se agregan, se
+ * renombran y se desactivan. No se borran, porque los artículos guardan su
+ * categoría; desactivarla solo la saca de las opciones para artículos nuevos.
+ */
+function CategoriesPanel() {
+  const qc = useQueryClient();
+  const { data: categorias, isLoading } = useQuery({ queryKey: warehouseKeys.categories, queryFn: listCategories });
+  const [nueva, setNueva] = useState("");
+  const [renombrando, setRenombrando] = useState<{ id: string; label: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function refrescar() {
+    setError(null);
+    [warehouseKeys.categories, warehouseKeys.catalogs, warehouseKeys.items, warehouseKeys.stock].forEach((key) =>
+      qc.invalidateQueries({ queryKey: key }));
+  }
+  const crear = useMutation({
+    mutationFn: () => createCategory(nueva.trim()),
+    onSuccess: () => { setNueva(""); refrescar(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const cambiar = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { label?: string; active?: boolean } }) => updateCategory(id, data),
+    onSuccess: () => { setRenombrando(null); refrescar(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  return (
+    <article className="acta fin-form fin-box">
+      <h3 className="acta-section-title">Categorías del catálogo</h3>
+      <p className="acta-lead">
+        Renombrar cambia cómo se ven en todos los artículos. Desactivar una la saca de las opciones para artículos
+        nuevos; los que ya la tienen la conservan. «Otro» queda siempre activa.
+      </p>
+      <form className="fin-row" onSubmit={(e) => { e.preventDefault(); if (nueva.trim()) crear.mutate(); }}>
+        <div className="form-field">
+          <label className="form-label" htmlFor="cat-nueva">Nueva categoría</label>
+          <input id="cat-nueva" value={nueva} maxLength={80} placeholder="Ej.: Bombas de condensado"
+            onChange={(e) => setNueva(e.target.value)} />
+        </div>
+        <div className="acta-actions">
+          <button type="submit" className="acta-btn is-primary" disabled={!nueva.trim() || crear.isPending}>
+            {crear.isPending ? "Agregando…" : "Agregar"}
+          </button>
+        </div>
+      </form>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {isLoading ? <p className="acta-empty">Cargando…</p> : (
+        <ul className="category-list">
+            {(categorias ?? []).map((c: WarehouseCategory) => (
+              <li key={c.id} className={c.active ? "" : "is-inactive"}>
+                <div className="category-main">
+                  {renombrando?.id === c.id ? (
+                    <form className="category-rename" onSubmit={(e) => {
+                      e.preventDefault();
+                      if (renombrando.label.trim()) cambiar.mutate({ id: c.id, data: { label: renombrando.label.trim() } });
+                    }}>
+                      <input aria-label={`Nuevo nombre de ${c.label}`} value={renombrando.label} maxLength={80} autoFocus
+                        onChange={(e) => setRenombrando({ id: c.id, label: e.target.value })} />
+                      <button type="submit" className="acta-btn is-primary" disabled={cambiar.isPending}>Guardar</button>
+                      <button type="button" className="acta-btn is-quiet" onClick={() => setRenombrando(null)}>Cancelar</button>
+                    </form>
+                  ) : (
+                    <>
+                      <strong>{c.label}</strong>
+                      <small>{c.item_count} {c.item_count === 1 ? "artículo" : "artículos"} · {c.active ? "Activa" : "Desactivada"}</small>
+                    </>
+                  )}
+                </div>
+                <div className="category-actions">
+                  {renombrando?.id !== c.id && (
+                    <>
+                      <button type="button" className="acta-link" onClick={() => setRenombrando({ id: c.id, label: c.label })}>
+                        Renombrar
+                      </button>
+                      {c.code !== "other" && (
+                        <button type="button" className="acta-link" disabled={cambiar.isPending}
+                          onClick={() => cambiar.mutate({ id: c.id, data: { active: !c.active } })}>
+                          {c.active ? "Desactivar" : "Activar"}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+        </ul>
+      )}
+    </article>
   );
 }

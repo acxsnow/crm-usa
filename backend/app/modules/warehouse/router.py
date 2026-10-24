@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.modules.users.models import User
 from app.modules.warehouse import service as wh
 from app.modules.warehouse import budgets as budget_svc
+from app.modules.warehouse import categories as cat_svc
 from app.modules.warehouse import costing as costing_svc
 from app.modules.warehouse import day_logs as daylog_svc
 from app.modules.warehouse import kits as kit_svc
@@ -20,7 +21,6 @@ from app.modules.warehouse import xlsx
 from app.modules.warehouse.catalogs import (
     BUDGET_CATEGORIES,
     BUDGET_STATUSES,
-    ITEM_CATEGORIES,
     ITEM_UNITS,
     LINE_ORIGINS,
     LOCATION_KINDS,
@@ -30,7 +30,7 @@ from app.modules.warehouse.catalogs import (
 from app.modules.warehouse.models import WarehouseItem, WarehouseLocation, WarehouseMovement
 from app.shared.errors import InvalidInputError, NotFoundError
 from app.shared.files.validation import read_limited
-from app.shared.pagination import paginate, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(tags=["warehouse"])
 
@@ -130,8 +130,16 @@ async def _visible_project(db, organization_id, user, project_id):
 
 
 @router.get("/warehouse/catalogs")
-async def warehouse_catalogs(current_user: User = Depends(_catalog)) -> dict:
-    return {"categories": ITEM_CATEGORIES, "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
+async def warehouse_catalogs(db: AsyncSession = Depends(get_db),
+                             organization_id: uuid.UUID = Depends(get_organization_id),
+                             current_user: User = Depends(_catalog)) -> dict:
+    # Las categorías son las de la organización (fase 3): `categories` trae las
+    # que se pueden elegir y `category_labels` todas, para nombrar las de los
+    # artículos viejos aunque ya no se ofrezcan.
+    todas = await cat_svc.list_categories(db, organization_id)
+    return {"categories": {c.code: c.label for c in todas if c.active},
+            "category_labels": {c.code: c.label for c in todas},
+            "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
             "location_kinds": LOCATION_KINDS, "release_statuses": RELEASE_STATUSES,
             "line_origins": LINE_ORIGINS, "budget_categories": BUDGET_CATEGORIES,
             "budget_statuses": BUDGET_STATUSES}
@@ -144,6 +152,8 @@ async def warehouse_catalogs(current_user: User = Depends(_catalog)) -> dict:
 class ItemIn(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     sku: str | None = Field(default=None, max_length=80)
+    brand: str | None = Field(default=None, max_length=120)
+    manufacturer_part: str | None = Field(default=None, max_length=80)
     category: str = "other"
     unit: str = "unit"
     unit_cost: str = "0"
@@ -154,6 +164,53 @@ class ItemIn(BaseModel):
     active: bool = True
 
 
+# ---------------------------------------------------------------------------
+# Categorías (fase 3: las administra cada organización)
+# ---------------------------------------------------------------------------
+
+class CategoryIn(BaseModel):
+    label: str = Field(min_length=1, max_length=80)
+
+
+class CategoryUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=80)
+    active: bool | None = None
+
+
+@router.get("/warehouse/categories")
+async def list_categories(response: Response, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          pag: tuple[int, int] = Depends(pagination_params),
+                          current_user: User = Depends(_catalog)) -> list[dict]:
+    """Las categorías con cuántos artículos tiene cada una (para saber qué se
+    afecta al renombrar o desactivar)."""
+    from sqlalchemy import func, select
+
+    conteo = dict((await db.execute(
+        select(WarehouseItem.category, func.count()).where(WarehouseItem.organization_id == organization_id)
+        .group_by(WarehouseItem.category))).all())
+    filas = [cat_svc.category_out(c, item_count=conteo.get(c.code, 0))
+             for c in await cat_svc.list_categories(db, organization_id)]
+    return paginate_list(filas, limit=pag[0], offset=pag[1], response=response)
+
+
+@router.post("/warehouse/categories", status_code=201)
+async def create_category(payload: CategoryIn, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_manage)) -> dict:
+    return cat_svc.category_out(await cat_svc.create_category(db, organization_id=organization_id,
+                                                              user=current_user, label=payload.label))
+
+
+@router.put("/warehouse/categories/{category_id}")
+async def update_category(category_id: uuid.UUID, payload: CategoryUpdate, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_manage)) -> dict:
+    return cat_svc.category_out(await cat_svc.update_category(
+        db, organization_id=organization_id, user=current_user, category_id=category_id,
+        label=payload.label, active=payload.active))
+
+
 @router.get("/warehouse/items")
 async def list_items(response: Response, q: str | None = None, category: str | None = None, active: bool | None = None,
                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
@@ -162,8 +219,9 @@ async def list_items(response: Response, q: str | None = None, category: str | N
     items = await paginate(db, wh.items_stmt(organization_id, q=q, category=category, active=active),
                            limit=pag[0], offset=pag[1], response=response)
     totales = await wh.totals_by_item(db, organization_id, [i.id for i in items])
+    etiquetas = await cat_svc.category_labels(db, organization_id)
     return await _articulos_para(db, organization_id, current_user,
-                                 [wh.item_out(i, totales.get(i.id)) for i in items])
+                                 [wh.item_out(i, totales.get(i.id), etiquetas) for i in items])
 
 
 @router.get("/warehouse/items/{item_id}")
@@ -172,7 +230,7 @@ async def get_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                    current_user: User = Depends(_catalog)) -> dict:
     item = await wh.get_item(db, organization_id, item_id)
     totales = await wh.totals_by_item(db, organization_id, [item.id])
-    return (await _articulos_para(db, organization_id, current_user, [wh.item_out(item, totales.get(item.id))]))[0]
+    return (await _articulos_para(db, organization_id, current_user, [wh.item_out(item, totales.get(item.id), await cat_svc.category_labels(db, organization_id))]))[0]
 
 
 @router.post("/warehouse/items", status_code=201)
@@ -180,7 +238,7 @@ async def create_item(payload: ItemIn, db: AsyncSession = Depends(get_db),
                       organization_id: uuid.UUID = Depends(get_organization_id),
                       current_user: User = Depends(_manage)) -> dict:
     item = await wh.save_item(db, organization_id=organization_id, user=current_user, data=payload.model_dump())
-    return wh.item_out(item)
+    return wh.item_out(item, labels=await cat_svc.category_labels(db, organization_id))
 
 
 @router.put("/warehouse/items/{item_id}")
@@ -190,7 +248,7 @@ async def update_item(item_id: uuid.UUID, payload: ItemIn, db: AsyncSession = De
     item = await wh.save_item(db, organization_id=organization_id, user=current_user, data=payload.model_dump(),
                               item_id=item_id)
     totales = await wh.totals_by_item(db, organization_id, [item.id])
-    return wh.item_out(item, totales.get(item.id))
+    return wh.item_out(item, totales.get(item.id), await cat_svc.category_labels(db, organization_id))
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +301,8 @@ async def list_stock(response: Response, q: str | None = None, category: str | N
     items = await paginate(db, wh.stock_stmt(organization_id, q=q, category=category, low_only=low_only),
                            limit=pag[0], offset=pag[1], response=response)
     totales = await wh.totals_by_item(db, organization_id, [i.id for i in items])
-    return [wh.item_out(i, totales.get(i.id)) for i in items]
+    etiquetas = await cat_svc.category_labels(db, organization_id)
+    return [wh.item_out(i, totales.get(i.id), etiquetas) for i in items]
 
 
 @router.get("/warehouse/stock/summary")

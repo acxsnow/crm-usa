@@ -134,7 +134,7 @@ function ImportCatalog({ onClose }: { onClose: () => void }) {
     onSuccess: (r) => {
       setError(null);
       setResultado(r);
-      [warehouseKeys.stock, warehouseKeys.items, warehouseKeys.summary].forEach((key) =>
+      [warehouseKeys.stock, warehouseKeys.items, warehouseKeys.summary, warehouseKeys.catalogs, warehouseKeys.categories].forEach((key) =>
         qc.invalidateQueries({ queryKey: key }));
     },
     onError: (e) => { setResultado(null); setError(apiErrorMessage(e)); },
@@ -155,6 +155,9 @@ function ImportCatalog({ onClose }: { onClose: () => void }) {
       {resultado && (
         <div className="info-banner" role="status">
           Hoja «{resultado.sheet}»: {resultado.rows_read} filas leídas. {resultado.creados} artículos nuevos, {resultado.actualizados} actualizados, {resultado.conteo_inicial} con conteo inicial.
+          {resultado.categorias_nuevas?.length > 0 && (
+            <p>Categorías nuevas que traía el archivo: {resultado.categorias_nuevas.join(", ")}. Se pueden renombrar o desactivar en Artículos › Categorías.</p>
+          )}
           {resultado.errores.length > 0 && (
             <ul>{resultado.errores.slice(0, 10).map((e) => <li key={e.fila}>Fila {e.fila}: {e.error}</li>)}</ul>
           )}

@@ -892,6 +892,24 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
     check("El ajuste queda en el libro de movimientos", len(ajustes) == 1, json.dumps(ajustes)[:150])
     RECORDS["Bodega · artículos"] = f"{sku_tubo}, {sku_cap}, {sku_cinta}"
 
+    # Catálogo listo para AC Pro (plan bodega-cierre, fase 3).
+    categoria = expect("Administración crea una categoría propia", adm.post(
+        "/warehouse/categories", json={"label": f"QA {RUN} Bombas"}), 201) or {}
+    expect("El técnico no administra categorías", tec.post("/warehouse/categories", json={"label": "X"}), 403)
+    bomba = expect("Artículo con código AC Pro, número del fabricante y marca", adm.post("/warehouse/items", json={
+        "name": f"QA {RUN} Condensate Pump 22' Lift", "sku": f"QA{RUN}-1936", "manufacturer_part": f"CP-22T-{RUN}",
+        "brand": "Diversitech", "category": categoria.get("code", "other"), "unit": "unit", "unit_cost": "80.46"}),
+        201) or {}
+    hallados = adm.get("/warehouse/items", params={"q": f"cp-22t-{RUN}"}).json()
+    check("El buscador lo encuentra por el número del fabricante",
+          [a.get("id") for a in hallados] == [bomba.get("id")], json.dumps(hallados)[:200])
+    expect("Desactivar la categoría", adm.put(f"/warehouse/categories/{categoria.get('id')}",
+                                              json={"active": False}), 200)
+    check("La categoría desactivada ya no se ofrece",
+          categoria.get("code") not in adm.get("/warehouse/catalogs").json().get("categories", {}))
+    r = adm.post("/warehouse/items", json={"name": f"QA {RUN} otra bomba", "category": categoria.get("code")})
+    check("Un artículo nuevo no puede usar la categoría desactivada", r.status_code == 400, f"{r.status_code}")
+
     section("17. Bodega: camioneta del técnico y lo que el técnico ve")
     camioneta = expect("Administración crea la camioneta del técnico", adm.post("/warehouse/locations", json={
         "name": f"QA {RUN} Camioneta", "kind": "truck", "technician_user_id": tec.me["id"]}), 201) or {}

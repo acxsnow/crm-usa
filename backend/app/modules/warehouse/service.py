@@ -106,12 +106,19 @@ async def get_item(db: AsyncSession, organization_id, item_id) -> WarehouseItem:
     return item
 
 
+def _matches(q: str):
+    """Lo que busca el buscador: nombre, código de AC Pro, número del fabricante,
+    marca o proveedor (el técnico busca con lo que tenga a mano)."""
+    patron = f"%{q.strip()}%"
+    return or_(WarehouseItem.name.ilike(patron), WarehouseItem.sku.ilike(patron),
+               WarehouseItem.manufacturer_part.ilike(patron), WarehouseItem.brand.ilike(patron),
+               WarehouseItem.supplier_name.ilike(patron))
+
+
 def items_stmt(organization_id, *, q: str | None = None, category: str | None = None, active: bool | None = None):
     stmt = select(WarehouseItem).where(WarehouseItem.organization_id == organization_id)
     if q:
-        patron = f"%{q.strip()}%"
-        stmt = stmt.where(or_(WarehouseItem.name.ilike(patron), WarehouseItem.sku.ilike(patron),
-                              WarehouseItem.supplier_name.ilike(patron)))
+        stmt = stmt.where(_matches(q))
     if category:
         stmt = stmt.where(WarehouseItem.category == category)
     if active is not None:
@@ -133,9 +140,7 @@ def stock_stmt(organization_id, *, q: str | None = None, category: str | None = 
             .outerjoin(sub, sub.c.item_id == WarehouseItem.id)
             .where(WarehouseItem.organization_id == organization_id, WarehouseItem.active.is_(True)))
     if q:
-        patron = f"%{q.strip()}%"
-        stmt = stmt.where(or_(WarehouseItem.name.ilike(patron), WarehouseItem.sku.ilike(patron),
-                              WarehouseItem.supplier_name.ilike(patron)))
+        stmt = stmt.where(_matches(q))
     if category:
         stmt = stmt.where(WarehouseItem.category == category)
     below = and_(WarehouseItem.min_quantity.is_not(None), total <= WarehouseItem.min_quantity)
@@ -152,15 +157,19 @@ def _stock_total_subquery(organization_id):
 
 
 async def save_item(db: AsyncSession, *, organization_id, user, data: dict, item_id=None) -> WarehouseItem:
-    if data["category"] not in ITEM_CATEGORIES:
-        raise InvalidInputError("La categoría no existe.", code="invalid_item_category")
+    from app.modules.warehouse.categories import check_category
+
     if data["unit"] not in ITEM_UNITS:
         raise InvalidInputError("La unidad no existe.", code="invalid_item_unit")
-    item = await get_item(db, organization_id, item_id) if item_id else WarehouseItem(organization_id=organization_id)
-    if item_id is None:
+    item = await get_item(db, organization_id, item_id) if item_id else None
+    await check_category(db, organization_id, data["category"], current=item.category if item else None)
+    if item is None:
+        item = WarehouseItem(organization_id=organization_id)
         db.add(item)
     item.name = data["name"].strip()
     item.sku = (data.get("sku") or "").strip() or None
+    item.brand = (data.get("brand") or "").strip() or None
+    item.manufacturer_part = (data.get("manufacturer_part") or "").strip() or None
     item.category, item.unit = data["category"], data["unit"]
     item.unit_cost = to_money(data.get("unit_cost") or 0)
     item.supplier_name = (data.get("supplier_name") or "").strip() or None
@@ -356,7 +365,10 @@ def movements_stmt(organization_id, *, item_id=None, location_id=None, movement_
 # mover una columna en el Excel no cargue el proveedor como categoría.
 CATALOG_COLUMNS: dict[str, tuple[str, ...]] = {
     "name": ("nombre del material", "nombre", "material"),
-    "sku": ("referencia / sku", "referencia", "sku"),
+    "sku": ("referencia / sku", "referencia", "sku", "código ac pro", "codigo ac pro", "ac pro"),
+    "manufacturer_part": ("número del fabricante", "numero del fabricante", "número de fabricante",
+                          "numero de fabricante", "mfg #", "mfg"),
+    "brand": ("marca",),
     "category": ("categoría", "categoria"),
     "unit": ("unidad",),
     "unit_cost": ("costo unitario", "costo"),
@@ -369,6 +381,18 @@ CATALOG_COLUMNS: dict[str, tuple[str, ...]] = {
 
 # La fila gris de ejemplo no se borra ni se cuenta (hoja «Cómo llenar»).
 _SKIP_PREFIXES = ("ejemplo",)
+
+
+def _texto(valor) -> str | None:
+    """Una celda como texto. Los códigos de AC Pro son números («3496») y el
+    Excel los guarda como número: sin esto llegaban como `Decimal('3496')` y la
+    fila fallaba al limpiarle los espacios (o quedaba «3496.0»)."""
+    if valor is None:
+        return None
+    if isinstance(valor, (int, float, Decimal)) and not isinstance(valor, bool):
+        numero = Decimal(str(valor))
+        return str(int(numero)) if numero == numero.to_integral_value() else str(numero)
+    return str(valor).strip() or None
 
 
 def _truthy(valor) -> bool:
@@ -424,14 +448,16 @@ def rows_from_catalog_sheet(filas: list[list]) -> list[dict]:
             continue
         filas_out.append({
             "name": nombre,
-            "sku": celda(fila, "sku"),
-            "category": celda(fila, "category"),
-            "unit": celda(fila, "unit"),
+            "sku": _texto(celda(fila, "sku")),
+            "manufacturer_part": _texto(celda(fila, "manufacturer_part")),
+            "brand": _texto(celda(fila, "brand")),
+            "category": _texto(celda(fila, "category")),
+            "unit": _texto(celda(fila, "unit")),
             "unit_cost": celda(fila, "unit_cost"),
-            "supplier_name": celda(fila, "supplier_name"),
+            "supplier_name": _texto(celda(fila, "supplier_name")),
             "quantity": celda(fila, "quantity"),
             "min_quantity": celda(fila, "min_quantity"),
-            "notes": celda(fila, "notes"),
+            "notes": _texto(celda(fila, "notes")),
             "has_serial": _truthy(celda(fila, "has_serial")),
         })
     return filas_out
@@ -448,17 +474,22 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
 
     Una fila mala no aborta la carga: se cuenta y se explica en `errores`.
     """
-    from app.modules.warehouse.catalogs import ITEM_CATEGORIES as CATEGORIES
     from app.modules.warehouse.catalogs import ITEM_UNITS as UNITS
     from app.modules.warehouse.catalogs import code_of
+    from app.modules.warehouse.categories import create_category, list_categories
 
     bodega = await default_location(db, organization_id)
+    # Las categorías de la organización (siembra las iniciales si no tiene).
+    # Una categoría que el Excel trae y no existe se crea: la hoja «Listas»
+    # dejaba al cliente agregar las suyas.
+    categorias = {c.code: c.label for c in await list_categories(db, organization_id)}
+    nuevas: list[str] = []
     creados = actualizados = omitidos = 0
     iniciales = 0
     errores: list[dict] = []
 
     for numero, fila in enumerate(rows, start=1):
-        nombre = (fila.get("name") or "").strip()
+        nombre = (_texto(fila.get("name")) or "")
         if not nombre:
             omitidos += 1
             continue
@@ -466,21 +497,27 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
         # sola y la carga sigue con la siguiente.
         try:
             async with db.begin_nested():
-                categoria, ok_cat = code_of(fila.get("category"), CATEGORIES, "other")
-                unidad, ok_uni = code_of(fila.get("unit"), UNITS, "unit")
+                categoria, ok_cat = code_of(_texto(fila.get("category")), categorias, "other")
                 if not ok_cat:
-                    errores.append({"fila": numero, "error": f"Categoría «{fila.get('category')}» no reconocida; "
-                                                            "se guardó como «Otro»."})
+                    nueva = await create_category(db, organization_id=organization_id, user=user,
+                                                  label=_texto(fila.get("category")) or "", commit=False)
+                    categorias[nueva.code] = nueva.label
+                    nuevas.append(nueva.label)
+                    categoria = nueva.code
+                unidad, ok_uni = code_of(_texto(fila.get("unit")), UNITS, "unit")
                 if not ok_uni:
                     errores.append({"fila": numero, "error": f"Unidad «{fila.get('unit')}» no reconocida; "
                                                             "se guardó como «unidades»."})
 
-                sku = (fila.get("sku") or "").strip() or None
+                sku = _texto(fila.get("sku"))
+                marca = _texto(fila.get("brand"))
+                fabricante = _texto(fila.get("manufacturer_part"))
                 item = await _find_item(db, organization_id, sku=sku, name=nombre)
                 cantidad = _q(fila.get("quantity") or 0)
                 if item is None:
                     item = WarehouseItem(
                         organization_id=organization_id, name=nombre, sku=sku, category=categoria, unit=unidad,
+                        brand=marca, manufacturer_part=fabricante,
                         unit_cost=to_money(fila.get("unit_cost") or 0),
                         supplier_name=(fila.get("supplier_name") or "").strip() or None,
                         has_serial=bool(fila.get("has_serial")),
@@ -501,6 +538,8 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
                     item.name, item.category, item.unit = nombre, categoria, unidad
                     if sku:
                         item.sku = sku
+                    item.brand = marca or item.brand
+                    item.manufacturer_part = fabricante or item.manufacturer_part
                     item.unit_cost = to_money(fila.get("unit_cost") or item.unit_cost or 0)
                     item.supplier_name = (fila.get("supplier_name") or "").strip() or item.supplier_name
                     item.has_serial = bool(fila.get("has_serial")) or item.has_serial
@@ -521,10 +560,11 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
 
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="warehouse.catalog_imported", entity_type="warehouse_item",
-                             after_data={"creados": creados, "actualizados": actualizados, "errores": len(errores)})
+                             after_data={"creados": creados, "actualizados": actualizados, "errores": len(errores),
+                                         "categorias_nuevas": nuevas})
     await db.commit()
     return {"creados": creados, "actualizados": actualizados, "omitidos": omitidos,
-            "conteo_inicial": iniciales, "errores": errores}
+            "conteo_inicial": iniciales, "errores": errores, "categorias_nuevas": nuevas}
 
 
 # ---------------------------------------------------------------------------
@@ -573,13 +613,17 @@ def location_out(loc: WarehouseLocation | None) -> dict | None:
             "active": loc.active}
 
 
-def item_out(item: WarehouseItem, totals: dict | None = None) -> dict:
+def item_out(item: WarehouseItem, totals: dict | None = None, labels: dict[str, str] | None = None) -> dict:
+    """`labels`: las categorías de la organización (`category_labels`); sin
+    ellas se usa la etiqueta inicial."""
     datos = totals or {"total": ZERO, "by_location": []}
     total = datos["total"]
     bajo_minimo = item.min_quantity is not None and total <= _q(item.min_quantity)
+    etiquetas = labels or ITEM_CATEGORIES
     return {
         "id": str(item.id), "name": item.name, "sku": item.sku,
-        "category": item.category, "category_label": ITEM_CATEGORIES.get(item.category, item.category),
+        "brand": item.brand, "manufacturer_part": item.manufacturer_part,
+        "category": item.category, "category_label": etiquetas.get(item.category, item.category),
         "unit": item.unit, "unit_label": ITEM_UNITS.get(item.unit, item.unit),
         "unit_cost": str(to_money(item.unit_cost)), "supplier_name": item.supplier_name,
         "has_serial": item.has_serial,

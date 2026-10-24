@@ -264,5 +264,23 @@
       "El material del día se busca en el catálogo escribiendo su nombre o referencia.",
       "Se toca el artículo para elegirlo."
     ]
+  },
+  "bodega_articulo": {
+    "titulo": "Bodega: un artículo con su código AC Pro, fabricante y marca",
+    "leyenda": [
+      "Código AC Pro (o la referencia del proveedor): evita duplicar el artículo al importar.",
+      "Número del fabricante, tal como aparece en AC Pro (MFG #).",
+      "Marca. El buscador encuentra el artículo por nombre, código, fabricante o marca.",
+      "Categoría: solo se ofrecen las activas.",
+      "Mínimo: al llegar aquí la bodega recibe un aviso."
+    ]
+  },
+  "bodega_categorias": {
+    "titulo": "Bodega: categorías del catálogo",
+    "leyenda": [
+      "Escriba el nombre y toque «Agregar» para crear una categoría.",
+      "Cada categoría con cuántos artículos tiene y si está activa.",
+      "«Renombrar» cambia el nombre en todos sus artículos; «Desactivar» la saca de las opciones."
+    ]
   }
 }

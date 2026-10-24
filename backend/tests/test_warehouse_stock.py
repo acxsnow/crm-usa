@@ -189,13 +189,16 @@ async def test_una_fila_mala_no_aborta_la_carga(app_client, login, active_admin_
                                json={"rows": filas, "filename": "catalogo.xlsx"}, headers=h)).json()
 
     assert r["creados"] == 3  # los tres buenos entraron
-    assert {e["fila"] for e in r["errores"]} == {2, 4}
+    assert {e["fila"] for e in r["errores"]} == {2}
 
     items = await _articulos(app_client, h)
     # La fila rota no dejó un artículo a medias: la carga siguió con la siguiente.
     assert {i["sku"] for i in items} == {"CU-38", "CAP-355", "CIN-01"}
     cinta = next(i for i in items if i["sku"] == "CIN-01")
-    assert cinta["category_label"] == "Otro"  # el comodín, reportado en `errores`
+    # Desde la fase 3 del plan de cierre la categoría que el Excel trae y no
+    # existe se crea (la hoja «Listas» dejaba agregar las propias) y se avisa.
+    assert cinta["category_label"] == "Categoría inventada"
+    assert r["categorias_nuevas"] == ["Categoría inventada"]
     assert cinta["total_quantity"] == "3.00"
 
 
@@ -240,6 +243,8 @@ def _xlsx(filas: list[list]) -> bytes:
 
     def celda(col, fila, valor):
         ref = f"{chr(65 + col)}{fila}"
+        if valor is None:  # celda vacía, como la deja Excel
+            return ""
         if isinstance(valor, (int, float)):
             return f'<c r="{ref}"><v>{valor}</v></c>'
         return f'<c r="{ref}" t="inlineStr"><is><t>{valor}</t></is></c>'
@@ -273,3 +278,92 @@ async def test_el_excel_con_costos_con_centavos_se_carga_completo(app_client, lo
     assert (r.json()["creados"], r.json()["errores"]) == (2, [])
     items = {i["sku"]: i for i in (await app_client.get(f"{API}/warehouse/items", headers=h)).json()}
     assert (items["CU-38"]["unit_cost"], items["CU-38"]["total_quantity"]) == ("3.25", "120.50")
+
+
+# ---------------------------------------------------------------------------
+# Catálogo listo para AC Pro (plan bodega-cierre, fase 3)
+# ---------------------------------------------------------------------------
+
+async def test_el_excel_de_ac_pro_trae_codigo_fabricante_y_marca(app_client, login, active_admin_user):
+    """AC Pro identifica cada producto con su código (número: Excel lo guarda
+    como número y antes la fila fallaba al limpiarlo), el del fabricante y la
+    marca. Los tres quedan en el artículo y el buscador encuentra por cualquiera."""
+    h = await login(active_admin_user.email)
+    libro = _xlsx([
+        ["Nombre del material", "Código AC Pro", "Número del fabricante", "Marca", "Categoría", "Unidad",
+         "Costo unitario", "Cantidad en bodega hoy"],
+        ["T4 Pro Programmable Thermostat", 61664, "TH4110U2005", "Honeywell", "Termostatos", "unidades", 74.40, 3],
+        ["Wire Connector Orange 100 Pack", 36141, None, None, "Eléctrico", "paquetes", 12.64, 2],
+    ])
+    r = await app_client.post(f"{API}/warehouse/import", files={
+        "file": ("acpro.xlsx", libro, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers=h)
+    assert r.status_code == 200, r.text
+    assert (r.json()["creados"], r.json()["errores"], r.json()["categorias_nuevas"]) == (2, [], [])
+
+    items = {i["sku"]: i for i in (await _articulos(app_client, h))}
+    termostato = items["61664"]  # sin «.0»
+    assert (termostato["brand"], termostato["manufacturer_part"]) == ("Honeywell", "TH4110U2005")
+    assert (termostato["category_label"], items["36141"]["unit_label"]) == ("Termostatos", "paquetes")
+
+    for buscado in ("th4110", "honeywell", "61664"):
+        hallados = (await app_client.get(f"{API}/warehouse/items", params={"q": buscado}, headers=h)).json()
+        assert [a["sku"] for a in hallados] == ["61664"], buscado
+
+
+async def test_las_categorias_las_administra_la_organizacion(app_client, login, active_admin_user,
+                                                             active_technician_user, second_org_admin_user):
+    admin = await login(active_admin_user.email)
+    tecnico = await login(active_technician_user.email)
+
+    # Arrancan con las del cuestionario más las de AC Pro.
+    iniciales = (await app_client.get(f"{API}/warehouse/catalogs", headers=admin)).json()["categories"]
+    assert {"Tubería y cobre", "Termostatos", "Filtros", "Hierro negro y gas", "Otro"} <= set(iniciales.values())
+
+    # Crear: el código sale del nombre y no se repite el nombre.
+    r = await app_client.post(f"{API}/warehouse/categories", json={"label": "Bombas de condensado"}, headers=admin)
+    assert r.status_code == 201, r.text
+    bombas = r.json()
+    assert (bombas["code"], bombas["active"]) == ("bombas_de_condensado", True)
+    otra = await app_client.post(f"{API}/warehouse/categories", json={"label": "bombas de condensado"}, headers=admin)
+    assert (otra.status_code, otra.json()["code"]) == (409, "category_exists")
+    # El técnico ve el catálogo pero no lo administra.
+    nope = await app_client.post(f"{API}/warehouse/categories", json={"label": "X"}, headers=tecnico)
+    assert nope.status_code == 403
+    assert (await app_client.get(f"{API}/warehouse/categories", headers=tecnico)).status_code == 200
+
+    item = await _item(app_client, admin, "Bomba CP-22T", sku="1936", category=bombas["code"])
+    assert item["category_label"] == "Bombas de condensado"
+
+    # Renombrar cambia cómo se ve en los artículos, sin tocarlos.
+    r = await app_client.put(f"{API}/warehouse/categories/{bombas['id']}", json={"label": "Bombas"}, headers=admin)
+    assert r.status_code == 200, r.text
+    visto = (await app_client.get(f"{API}/warehouse/items/{item['id']}", headers=admin)).json()
+    assert (visto["category"], visto["category_label"]) == ("bombas_de_condensado", "Bombas")
+
+    # Desactivar: deja de ofrecerse, el artículo que la tiene se sigue editando
+    # sin moverlo y un artículo nuevo ya no la puede usar.
+    await app_client.put(f"{API}/warehouse/categories/{bombas['id']}", json={"active": False}, headers=admin)
+    catalogo = (await app_client.get(f"{API}/warehouse/catalogs", headers=admin)).json()
+    assert "bombas_de_condensado" not in catalogo["categories"]
+    assert catalogo["category_labels"]["bombas_de_condensado"] == "Bombas"
+    editar = await app_client.put(f"{API}/warehouse/items/{item['id']}", json={
+        "name": "Bomba CP-22T 115V", "sku": "1936", "category": "bombas_de_condensado", "unit": "ft"}, headers=admin)
+    assert editar.status_code == 200, editar.text
+    nuevo = await app_client.post(f"{API}/warehouse/items", json={
+        "name": "Otra bomba", "category": "bombas_de_condensado"}, headers=admin)
+    assert (nuevo.status_code, nuevo.json()["code"]) == (400, "inactive_item_category")
+
+    # «Otro» es el comodín: no se desactiva.
+    lista = (await app_client.get(f"{API}/warehouse/categories", headers=admin)).json()
+    otro = next(c for c in lista if c["code"] == "other")
+    r = await app_client.put(f"{API}/warehouse/categories/{otro['id']}", json={"active": False}, headers=admin)
+    assert (r.status_code, r.json()["code"]) == (400, "default_category_required")
+    assert next(c for c in lista if c["code"] == "bombas_de_condensado")["item_count"] == 1
+
+    # Cada organización tiene las suyas.
+    ajena = await login(second_org_admin_user.email)
+    suyas = (await app_client.get(f"{API}/warehouse/categories", headers=ajena)).json()
+    assert "bombas_de_condensado" not in {c["code"] for c in suyas}
+    r = await app_client.put(f"{API}/warehouse/categories/{bombas['id']}", json={"label": "Mía"}, headers=ajena)
+    assert r.status_code == 404

@@ -56,6 +56,26 @@ class WarehouseLocation(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
+class WarehouseCategory(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Una categoría del catálogo, propia de cada organización.
+
+    El artículo guarda el `code`, que no cambia nunca: renombrar la categoría
+    cambia solo `label`, y desactivarla la saca de las opciones sin tocar los
+    artículos que ya la tienen. No se borra, por esos mismos artículos.
+    """
+
+    __tablename__ = "warehouse_categories"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "code", name="uq_warehouse_category_code"),
+        UniqueConstraint("organization_id", "label", name="uq_warehouse_category_label"),
+    )
+
+    code: Mapped[str] = mapped_column(String(30), nullable=False)
+    label: Mapped[str] = mapped_column(String(80), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 class WarehouseItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     """Un material del catálogo, con lo que cuesta y cuándo hay que reponer."""
 
@@ -66,9 +86,14 @@ class WarehouseItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Referencia del proveedor. Puede venir vacía en el Excel; cuando está, es
-    # lo que evita duplicar el artículo al importar dos veces.
+    # Referencia del proveedor (en AC Pro, su código: «3496»). Puede venir vacía
+    # en el Excel; cuando está, es lo que evita duplicar el artículo al importar
+    # dos veces.
     sku: Mapped[str | None] = mapped_column(String(80))
+    # La marca y el número del fabricante («Honeywell», «TH4110U2005»): AC Pro
+    # muestra los tres datos y el técnico busca por cualquiera de ellos.
+    brand: Mapped[str | None] = mapped_column(String(120))
+    manufacturer_part: Mapped[str | None] = mapped_column(String(80))
     category: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
     unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unit")
     unit_cost: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))

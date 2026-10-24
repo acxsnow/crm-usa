@@ -4244,3 +4244,14 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
 .search-picker-option small { display: block; color: var(--ink-soft); font-size: 0.78rem; }
 .search-picker-option.is-active { background: var(--red-wash); }
 .search-picker-note { padding: 8px 10px; color: var(--ink-soft); font-size: 0.85rem; }
+
+/* Renombrar una categoría de bodega en su propia fila. */
+.category-rename { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.category-rename input { flex: 1 1 180px; min-width: 0; }
+.category-list { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.category-list li { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: space-between; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.category-list li.is-inactive strong { color: var(--ink-soft); }
+.category-main { flex: 1 1 220px; min-width: 0; }
+.category-main strong { display: block; font-weight: 600; }
+.category-main small { display: block; color: var(--ink-soft); font-size: 0.8rem; }
+.category-actions { display: flex; gap: 14px; }

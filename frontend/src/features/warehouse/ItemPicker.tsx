@@ -61,11 +61,11 @@ export function ItemPicker({ itemId, onChange, label, clearLabel, disabled }: {
       renderOption={(a) => (
         <>
           <strong>{a.name}</strong>
-          <small>{[a.sku, a.category_label, a.unit_label].filter(Boolean).join(" · ")}</small>
+          <small>{[a.sku, a.manufacturer_part, a.brand, a.category_label, a.unit_label].filter(Boolean).join(" · ")}</small>
         </>
       )}
       pageSize={POR_BUSQUEDA}
-      placeholder="Busca por nombre o referencia"
+      placeholder="Busca por nombre, código o marca"
       pendingLabel={itemId && isLoading ? "Cargando…" : undefined}
       clearLabel={clearLabel}
       disabled={disabled}
