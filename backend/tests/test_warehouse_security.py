@@ -105,6 +105,43 @@ async def test_el_tecnico_ve_el_catalogo_sin_costos_ni_existencias(app_client, l
         assert (await app_client.get(f"{API}{ruta}", headers=tecnico)).status_code == 403, ruta
 
 
+async def test_el_buscador_encuentra_fuera_de_la_primera_pagina(app_client, login, active_admin_user,
+                                                                 active_technician_user):
+    """El buscador de artículos de la salida, las listas, el presupuesto y el
+    diario (plan bodega-cierre, fase 1): los selectores traían una sola página y
+    el catálogo de AC Pro son ~600 artículos, así que lo que no cabía no se podía
+    elegir. Ahora se busca en el servidor por nombre o referencia, solo entre
+    los activos, y el técnico sigue sin ver costos."""
+    admin = await login(active_admin_user.email)
+    tecnico = await login(active_technician_user.email)
+    for i in range(1, 8):
+        await _item(app_client, admin, f"Filtro plisado {i}", sku=f"AC-{i:03d}")
+    retirado = await _item(app_client, admin, "Filtro plisado retirado", sku="AC-999")
+    r = await app_client.put(f"{API}/warehouse/items/{retirado['id']}",
+                             json={"name": retirado["name"], "category": "pipe_copper", "unit": "ft", "active": False},
+                             headers=admin)
+    assert r.status_code == 200, r.text
+
+    # Con páginas de 5 el séptimo no sale en la primera; buscándolo, sí.
+    primera = await app_client.get(f"{API}/warehouse/items", params={"limit": 5, "active": True}, headers=tecnico)
+    assert primera.headers["x-total-count"] == "7"
+    assert "Filtro plisado 7" not in [a["name"] for a in primera.json()]
+
+    por_nombre = await app_client.get(f"{API}/warehouse/items", params={"q": "plisado 7", "active": True, "limit": 5},
+                                      headers=tecnico)
+    assert [a["name"] for a in por_nombre.json()] == ["Filtro plisado 7"]
+    assert "unit_cost" not in por_nombre.json()[0]
+
+    por_referencia = await app_client.get(f"{API}/warehouse/items", params={"q": "ac-007", "active": True},
+                                          headers=tecnico)
+    assert [a["sku"] for a in por_referencia.json()] == ["AC-007"]
+
+    # El retirado no se ofrece para pedir material.
+    inactivos = await app_client.get(f"{API}/warehouse/items", params={"q": "retirado", "active": True},
+                                     headers=tecnico)
+    assert inactivos.json() == []
+
+
 async def test_el_tecnico_solo_ve_y_cambia_sus_ordenes(app_client, login, db, seeded_org, active_admin_user,
                                                       active_technician_user):
     admin = await login(active_admin_user.email)

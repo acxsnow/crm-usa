@@ -905,6 +905,11 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
     check("De existencias, el técnico solo ve su camioneta (20 ft)",
           [(l["name"], l["quantity"]) for l in visto.get("by_location", [])] == [(f"QA {RUN} Camioneta", "20.00")],
           json.dumps(visto.get("by_location"))[:200])
+    # El buscador de artículos (plan bodega-cierre, fase 1) pide 20 activos con lo escrito.
+    hallados = tec.get("/warehouse/items", params={"q": sku_cap.lower(), "active": True, "limit": 20}).json()
+    check("El buscador del técnico encuentra el capacitor por su referencia, sin costo",
+          [a.get("sku") for a in hallados] == [sku_cap] and "unit_cost" not in hallados[0],
+          json.dumps(hallados)[:200])
     for ruta in ("/warehouse/stock", "/warehouse/movements", "/warehouse/purchasing", "/warehouse/budgets"):
         expect(f"técnico GET {ruta} → 403", tec.get(ruta), 403)
     expect("El vendedor no entra a bodega", v.get("/warehouse/items"), 403)
@@ -1075,7 +1080,8 @@ def flujo_costo_del_trabajo(c: dict, pid: str | None) -> None:
     check("Hay margen real y estimado", resumen["profit"]["margin_pct"] is not None
           and resumen["profit"]["estimated_margin_pct"] is not None, json.dumps(resumen.get("profit"))[:200])
     expect("El técnico no ve el costo del trabajo", tec.get(f"/warehouse/projects/{pid}/job-costing"), 403)
-    rep = adm.get("/finance/profitability", params={"project_id": pid}).json()
+    # La rentabilidad es de Contabilidad (`profitability.read`); Administración no la ve.
+    rep = c["conta"].get("/finance/profitability", params={"project_id": pid}).json()
     fila = (rep.get("rows") or [{}])[0]
     check("Rentabilidad y panel dan el mismo costo", fila.get("costs") == resumen["costs"]["total"],
           f'{fila.get("costs")} vs {resumen["costs"]["total"]}')

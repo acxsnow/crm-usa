@@ -7,15 +7,17 @@ import "../notifications/notifications.css";
 import "../finance/finance.css";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
+import { SearchPicker } from "@/components/SearchPicker";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listProjectsPage } from "@/features/field-ops/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import type { Project } from "@/types/fieldOps";
+import { ItemPicker } from "./ItemPicker";
 import {
   approveRelease,
   createRelease,
   deliverRelease,
-  listItemsPage,
   listKitsPage,
   rejectRelease,
   submitRelease,
@@ -262,29 +264,21 @@ function EntregaBanner({ resultado, onClose }: { resultado: DeliverResult; onClo
  * del cuestionario) y de ahí ajustar cantidades, calibres y extras a mano.
  */
 function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [projectId, setProjectId] = useState("");
+  const [obra, setObra] = useState<Project | null>(null);
   const [necesaria, setNecesaria] = useState("");
   const [nota, setNota] = useState("");
   const [lineas, setLineas] = useState<ReleaseLineInput[]>([{ item_id: "", quantity: "1", spec_label: "", notes: "" }]);
   const [deLista, setDeLista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: articulos } = useQuery({
-    queryKey: [...warehouseKeys.items, "para-salida"],
-    queryFn: () => listItemsPage(1, 200, { active: true }).then((p) => p.items),
-  });
   const { data: listas } = useQuery({
     queryKey: [...warehouseKeys.kits, "para-salida"],
     queryFn: () => listKitsPage(1, 200, { active: true }).then((p) => p.items),
   });
-  const { data: proyectos } = useQuery({
-    queryKey: ["projects", "para-salida"],
-    queryFn: () => listProjectsPage(1, 200).then((p) => p.items),
-  });
 
   const guardar = useMutation({
     mutationFn: () => createRelease({
-      project_id: projectId || null,
+      project_id: obra?.id ?? null,
       needed_on: necesaria || null,
       note: nota.trim() || null,
       lines: lineas.filter((l) => l.item_id).map((l) => ({
@@ -342,11 +336,25 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
       <div className="fin-row">
         <div className="form-field">
-          <label className="form-label" htmlFor="rel-obra">Obra (para cargar el material al proyecto)</label>
-          <select id="rel-obra" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">Sin obra / uso interno</option>
-            {(proyectos ?? []).map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-          </select>
+          <span className="form-label">Obra (para cargar el material al proyecto)</span>
+          <SearchPicker<Project>
+            label="Obra"
+            value={obra}
+            onChange={setObra}
+            search={(q) => listProjectsPage(1, 20, q ? { q } : {}).then((p) => p.items)}
+            queryKey={["projects", "buscador-salida"]}
+            getKey={(p) => p.id}
+            getLabel={(p) => p.title}
+            renderOption={(p) => (
+              <>
+                <strong>{p.title}</strong>
+                <small>{[p.address_street, p.address_city].filter(Boolean).join(", ")}</small>
+              </>
+            )}
+            pageSize={20}
+            placeholder="Busca la obra (vacío = uso interno)"
+            clearLabel="Quitar la obra"
+          />
         </div>
         <div className="form-field">
           <label className="form-label" htmlFor="rel-fecha">Para cuándo se necesita</label>
@@ -362,13 +370,8 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
           {lineas.map((l, i) => (
             <tr key={i}>
               <td>
-                <select aria-label={`Artículo del renglón ${i + 1}`} value={l.item_id}
-                  onChange={(e) => cambiar(i, { item_id: e.target.value })}>
-                  <option value="">— Elegir —</option>
-                  {(articulos ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}{a.sku ? ` (${a.sku})` : ""}</option>
-                  ))}
-                </select>
+                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={l.item_id}
+                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "" })} />
               </td>
               <td>
                 <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={l.quantity}

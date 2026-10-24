@@ -1,0 +1,268 @@
+{
+  "login": {
+    "titulo": "Ingreso",
+    "leyenda": [
+      "Correo con el que lo invitaron.",
+      "Contraseña.",
+      "El ojo muestra u oculta la contraseña mientras la escribe.",
+      "«Sign in» entra a la plataforma.",
+      "«Forgot password?» envía al correo un enlace para crear una contraseña nueva (vale 60 minutos)."
+    ]
+  },
+  "inicio": {
+    "titulo": "Inicio",
+    "leyenda": [
+      "Menú: muestra solo lo que su rol puede usar, agrupado por área.",
+      "Buscador de clientes y proyectos.",
+      "Campana: el número son los avisos sin leer; tóquela para verlos.",
+      "Su nombre y su rol.",
+      "«Salir» cierra la sesión.",
+      "Resumen: expedientes activos, clientes, proyectos en curso y lo cobrado en el mes.",
+      "Actividad reciente: los últimos cambios de etapa de los expedientes y quién los hizo."
+    ]
+  },
+  "campana": {
+    "titulo": "La campana de avisos",
+    "leyenda": [
+      "La campana abre la lista de avisos.",
+      "Cada aviso lleva directo a lo que hay que hacer y se marca como leído al tocarlo."
+    ]
+  },
+  "midia": {
+    "titulo": "Mi día (vendedor, en el celular)",
+    "leyenda": [
+      "«Menú» abre las opciones de su rol.",
+      "«Tocar una puerta» registra la visita, aunque no abran.",
+      "Expedientes por terminar: tóquelo para seguir el formulario."
+    ]
+  },
+  "visita": {
+    "titulo": "Tocar una puerta",
+    "leyenda": [
+      "Programa que se le ofrece al cliente (se puede elegir después).",
+      "Dirección de la casa, con espacio o unidad, estado, ciudad y ZIP.",
+      "«Abrió y sigue»: el cliente atiende y se llena su solicitud.",
+      "«No abrió», «No le interesa» o «No califica» guardan la visita y cierran ahí."
+    ]
+  },
+  "formulario": {
+    "titulo": "Formulario: términos y firma del cliente",
+    "leyenda": [
+      "Los pasos del formulario: en verde los completos; se puede ir a cualquiera.",
+      "Términos del programa que acepta el cliente.",
+      "El cliente marca que acepta.",
+      "El cliente firma con el dedo dentro del recuadro.",
+      "«Guardar y seguir» guarda el paso; lo que no se guarda no cuenta."
+    ]
+  },
+  "tablero": {
+    "titulo": "Expedientes: tablero por etapa",
+    "leyenda": [
+      "Buscar y filtrar por vendedor o programa.",
+      "Una columna por etapa del expediente, con cuántos tiene.",
+      "Cada tarjeta es un expediente: tóquela para abrirlo.",
+      "Días hábiles en «Pendiente de aprobación»: en rojo desde el límite."
+    ]
+  },
+  "porrevisar": {
+    "titulo": "Por revisar › Documentos",
+    "leyenda": [
+      "Las cuatro bandejas de Administración; el número rojo son los pendientes de cada una.",
+      "Cada fila abre el expediente o el proyecto en el paso que toca.",
+      "Días hábiles esperando: en rojo cuando pasó el límite.",
+      "Documentos por revisar, rechazados y aceptados."
+    ]
+  },
+  "porrevisar_inspeccion": {
+    "titulo": "Por revisar › Inspección municipal",
+    "leyenda": [
+      "Pestaña «Inspección municipal».",
+      "Estado: «Sin agendar», «Agendada» (con fecha) o «Falló: reagendar».",
+      "La fila abre el proyecto directo en el paso de inspección."
+    ]
+  },
+  "revision": {
+    "titulo": "Revisión del expediente",
+    "leyenda": [
+      "«✓ Aceptar» cada documento, o «Rechazar» con una nota.",
+      "Avance con el programa: listo, sometido y en revisión del programa.",
+      "«Aprobar» con el código del programa: nace el proyecto de instalación.",
+      "«Devolver al vendedor» con el motivo, para que corrija.",
+      "Poner en espera del programa o rechazar, con motivo.",
+      "Historial: cada cambio de etapa con fecha y quién lo hizo."
+    ]
+  },
+  "acta_permiso": {
+    "titulo": "Acta de instalación: permiso municipal",
+    "leyenda": [
+      "Cada paso del acta muestra su estado: Pendiente, En curso, Completado o Bloqueado.",
+      "La tarjeta del permiso: radicado y, cuando responda la ciudad, aprobado.",
+      "«La ciudad lo aprobó»: fechas de aprobación y vencimiento; el expediente pasa a «Listo para instalar».",
+      "«La ciudad lo rechazó»: con el motivo; luego se vuelve a radicar.",
+      "Registrar otro permiso (eléctrico, mecánico…) o «No requerido»."
+    ]
+  },
+  "orden": {
+    "titulo": "Orden liberada: técnico, fecha y materiales",
+    "leyenda": [
+      "Técnico que hará la instalación.",
+      "Fecha de la instalación.",
+      "Libera la orden: aparece en la Agenda del técnico y le llega un aviso.",
+      "Materiales que lleva la orden.",
+      "Agregar un material: descripción, cantidad y unidad."
+    ]
+  },
+  "agenda": {
+    "titulo": "Agenda del técnico",
+    "leyenda": [
+      "«Pendientes»: lo que falta, con las atrasadas arriba. «Historial»: lo cerrado.",
+      "Hasta qué fecha ver.",
+      "Tocar la orden abre su acta."
+    ]
+  },
+  "checklist": {
+    "titulo": "Checklist técnico",
+    "leyenda": [
+      "Condiciones de la casa: agregan o quitan requisitos del checklist.",
+      "Línea confirmada, con fecha y hora; «Deshacer» la reabre.",
+      "«Tomar foto»: la línea exige foto (con GPS y fecha); con la foto queda confirmada.",
+      "Si la línea no aplica en esta casa, se marca con su motivo."
+    ]
+  },
+  "equipos": {
+    "titulo": "Equipos instalados",
+    "leyenda": [
+      "Mientras la lista no se guarde, el paso sigue «En curso».",
+      "Equipos registrados; «Quitar» borra uno.",
+      "Cuando estén todos, «Guardar equipos instalados» completa el paso.",
+      "Para cada equipo: tipo, marca, modelo, serial, cantidad y unidad o espacio.",
+      "«Agregar equipo» lo suma a la lista."
+    ]
+  },
+  "firmas": {
+    "titulo": "Firmas del acta",
+    "leyenda": [
+      "El técnico firma con el dedo y toca «Firmar».",
+      "Al cliente le llega un enlace al correo para firmar desde su teléfono (vale 72 horas).",
+      "Si el cliente no tiene correo ni internet, firma en el celular del técnico."
+    ]
+  },
+  "firma_cliente": {
+    "titulo": "Firma del cliente en el celular del técnico",
+    "leyenda": [
+      "El cliente escribe su nombre.",
+      "Y firma en el recuadro; luego «Firmar». Una firma no se puede repetir.",
+      "Volver a la opción del enlace por correo."
+    ]
+  },
+  "cierre": {
+    "titulo": "Cierre de la instalación",
+    "leyenda": [
+      "Lo que falta para cerrar: líneas del checklist y la lista de equipos guardada.",
+      "«Cerrar instalación» se habilita con todo cumplido: el acta queda congelada y Administración recibe el aviso."
+    ]
+  },
+  "confirmacion": {
+    "titulo": "Confirmación de Administración",
+    "leyenda": [
+      "Paso «Confirmación de Administración», abierto desde el aviso o la bandeja.",
+      "«Confirmar información técnica»: habilita el cobro.",
+      "«Devolver al técnico» con el motivo; el acta se reabre para corregir."
+    ]
+  },
+  "cobro": {
+    "titulo": "Cobro al programa",
+    "leyenda": [
+      "Solo aparece el programa del expediente.",
+      "Tarifa vigente el día de la instalación.",
+      "«Crear cobro»: el expediente pasa a «En cobro».",
+      "Ver cómo saldrá la factura antes de crearla."
+    ]
+  },
+  "facturacion": {
+    "titulo": "Facturación y cobros",
+    "leyenda": [
+      "Cobros de programas, facturas, cotizaciones del trabajo particular y configuración de cobro de los programas.",
+      "El ciclo del cobro: por cobrar, por radicar, radicados, rechazados y pagados.",
+      "Lo que deben los programas, por antigüedad.",
+      "Cada fila abre la instalación o el cobro."
+    ]
+  },
+  "gastos": {
+    "titulo": "Gastos de campo",
+    "leyenda": [
+      "Categoría del gasto: gasolina, viáticos, hotel, material…",
+      "Foto del recibo: obligatoria.",
+      "Queda «por revisar» y a Contabilidad le llega el aviso."
+    ]
+  },
+  "proveedores": {
+    "titulo": "Proveedores y pagos",
+    "leyenda": [
+      "Facturas, pagos, proveedores y antigüedad. Gerencia y el Administrador ven además «Ajustes».",
+      "Exportar facturas y pagos para el contador.",
+      "Filtrar por estado: con saldo, por aprobar, pagadas…",
+      "Registrar una factura de proveedor; cada línea se puede asignar a una instalación.",
+      "Estado: por aprobar, aprobada, pagada en parte o pagada. Debajo dice qué falta."
+    ]
+  },
+  "rentabilidad": {
+    "titulo": "Rentabilidad por instalación",
+    "leyenda": [
+      "Filtrar por fecha de cierre y por programa.",
+      "Totales: esperado, cobrado, costos y margen.",
+      "Los costos de cada instalación, por tipo: equipos, materiales, contratistas, gastos de campo…"
+    ]
+  },
+  "reportes": {
+    "titulo": "Reportes",
+    "leyenda": [
+      "Reportes comercial, de operación y de finanzas.",
+      "Rango de fechas del reporte, o atajos de 7, 30 y 90 días o un año.",
+      "Exportar el reporte a CSV para Excel."
+    ]
+  },
+  "programas": {
+    "titulo": "Configuración de programas",
+    "leyenda": [
+      "Programas creados; tóquelo para configurarlo.",
+      "«+ Nuevo programa»: código y nombre.",
+      "Formulario por versión: la publicada queda congelada; para cambiar algo se crea una versión nueva.",
+      "Términos y condiciones por versión e idioma.",
+      "Zonas de venta con sus vendedores."
+    ]
+  },
+  "equipo": {
+    "titulo": "Equipo",
+    "leyenda": [
+      "Invitar a una persona por correo, con su rol.",
+      "El equipo, con rol y estado; se activa o desactiva, no se borra."
+    ]
+  },
+  "bodega_existencias": {
+    "titulo": "Bodega: existencias",
+    "leyenda": [
+      "«Importar catálogo» carga el Excel del catálogo con la cantidad de hoy como conteo inicial.",
+      "Artículos activos y cuántos están por debajo de su mínimo.",
+      "Cada artículo con su categoría, lo que hay en total, el mínimo y lo que vale."
+    ]
+  },
+  "bodega_salida": {
+    "titulo": "Bodega: nueva salida con el buscador de artículos",
+    "leyenda": [
+      "Aplicar una lista predefinida: trae los renglones del tipo de trabajo para ajustarlos.",
+      "La obra se busca por nombre o dirección; vacía, el material es de uso interno.",
+      "El artículo se busca escribiendo parte del nombre o la referencia de AC Pro.",
+      "Se elige de la lista; si salen muchos, se escribe más para afinar.",
+      "«Agregar renglón» suma cualquier otro artículo del catálogo."
+    ]
+  },
+  "bodega_diario": {
+    "titulo": "Diario de obra: material del día (celular)",
+    "leyenda": [
+      "Qué se hizo ese día; abajo, el avance, lo que faltó y qué llevar mañana.",
+      "El material del día se busca en el catálogo escribiendo su nombre o referencia.",
+      "Se toca el artículo para elegirlo."
+    ]
+  }
+}

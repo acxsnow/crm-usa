@@ -1,0 +1,8 @@
+{
+  "name": "manual-delta-hvac",
+  "private": true,
+  "description": "Genera docs/Manual_Usuario_CRM_Delta_HVAC.docx (ver README.md)",
+  "dependencies": {
+    "docx": "9.12.0"
+  }
+}

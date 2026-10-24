@@ -4222,3 +4222,25 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
   .app-content .acta-actions:not(#_) > .acta-btn { white-space: normal; text-align: center; }
   .app-content .notices-toolbar:not(#_) > *, .app-content .notices-toolbar:not(#_) select { max-width: 100%; min-width: 0; }
 }
+
+/* Buscador con lista (SearchPicker): reemplaza a los <select> de catálogos que
+   crecen. La lista va debajo del campo, no flota, para que una tabla que se
+   desplaza de lado en el celular no la recorte. */
+.search-picker { min-width: 200px; }
+.search-picker-field { position: relative; display: flex; align-items: center; }
+.search-picker-field input { width: 100%; padding-right: 2rem; }
+.search-picker-clear {
+  position: absolute; right: 4px; width: 28px; height: 28px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--ink-soft); font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.search-picker-clear:hover { background: var(--line-soft); color: var(--ink); }
+.search-picker-list {
+  list-style: none; margin: 4px 0 0; padding: 4px; max-height: 260px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line-input); border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(23, 32, 43, 0.08);
+}
+.search-picker-option { padding: 8px 10px; border-radius: 6px; cursor: pointer; min-height: 40px; }
+.search-picker-option strong { display: block; font-weight: 600; }
+.search-picker-option small { display: block; color: var(--ink-soft); font-size: 0.78rem; }
+.search-picker-option.is-active { background: var(--red-wash); }
+.search-picker-note { padding: 8px 10px; color: var(--ink-soft); font-size: 0.85rem; }

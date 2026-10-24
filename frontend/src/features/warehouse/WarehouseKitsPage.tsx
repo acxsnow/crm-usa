@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import "../billing/billing.css";
 import "../programs/programs.css";
@@ -10,9 +10,9 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { ItemPicker } from "./ItemPicker";
 import {
   deleteKit,
-  listItemsPage,
   listKitsPage,
   saveKit,
   warehouseKeys,
@@ -166,11 +166,6 @@ function KitForm({ initial, onClose }: { initial: WarehouseKit | null; onClose: 
   );
   const [error, setError] = useState<string | null>(null);
 
-  const { data: articulos } = useQuery({
-    queryKey: [...warehouseKeys.items, "para-lista"],
-    queryFn: () => listItemsPage(1, 200, { active: true }).then((p) => p.items),
-  });
-
   const guardar = useMutation({
     mutationFn: () => {
       const body: KitInput = {
@@ -230,13 +225,8 @@ function KitForm({ initial, onClose }: { initial: WarehouseKit | null; onClose: 
           {renglones.map((r, i) => (
             <tr key={i}>
               <td>
-                <select aria-label={`Artículo del renglón ${i + 1}`} value={r.item_id}
-                  onChange={(e) => cambiar(i, { item_id: e.target.value })}>
-                  <option value="">— Elegir —</option>
-                  {(articulos ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}{a.sku ? ` (${a.sku})` : ""}</option>
-                  ))}
-                </select>
+                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={r.item_id}
+                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "" })} />
               </td>
               <td>
                 <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={r.quantity}

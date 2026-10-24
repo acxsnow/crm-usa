@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage, localISODate, useInstallers } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { ItemPicker, useWarehouseItems } from "./ItemPicker";
 import {
-  listItemsPage,
   saveDayLog,
   warehouseKeys,
   type DayLog,
@@ -240,11 +240,6 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
   onSaved: () => void;
 }) {
   const { data: tecnicos } = useInstallers(puedeElegirTecnico);
-  const { data: articulos } = useQuery({
-    queryKey: [...warehouseKeys.items, "para-diario"],
-    queryFn: () => listItemsPage(1, 200, { active: true }).then((p) => p.items),
-  });
-
   const [fecha, setFecha] = useState(initial?.log_date ?? localISODate());
   const [tecnicoId, setTecnicoId] = useState(initial?.technician_user_id ?? (puedeElegirTecnico ? "" : usuarioId));
   const [cuadrilla, setCuadrilla] = useState(initial?.crew ?? "");
@@ -258,6 +253,8 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
     initial?.materials.length ? initial.materials.map(filaDe) : [{ ...FILA_VACIA }],
   );
   const [error, setError] = useState<string | null>(null);
+  // Existencias de los artículos ya elegidos, para ofrecer de qué camioneta sale.
+  const articulos = useWarehouseItems(filas.map((f) => f.item_id));
 
   const guardar = useMutation({
     mutationFn: () => saveDayLog(projectId, initial?.id ?? null, {
@@ -287,10 +284,9 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
   }
 
   /** Al elegir el artículo se traen su nombre y su unidad del catálogo. */
-  function elegirArticulo(i: number, itemId: string) {
-    const articulo = (articulos ?? []).find((a) => a.id === itemId);
+  function elegirArticulo(i: number, articulo: WarehouseItem | null) {
     cambiar(i, {
-      item_id: itemId,
+      item_id: articulo?.id ?? "",
       description: articulo ? articulo.name : "",
       unit: articulo ? articulo.unit : "",
       // La ubicación se vuelve a elegir: la del artículo anterior no aplica.
@@ -300,7 +296,7 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
 
   /** Dónde hay existencia del artículo elegido: la bodega o una camioneta. */
   function existencias(fila: FilaMaterial): WarehouseItem["by_location"] {
-    return (articulos ?? []).find((a) => a.id === fila.item_id)?.by_location ?? [];
+    return articulos[fila.item_id]?.by_location ?? [];
   }
 
   const hayBloqueadas = filas.some((f) => f.bloqueada);
@@ -401,13 +397,8 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
           ) : (
             <tr key={i}>
               <td>
-                <select aria-label={`Artículo del material ${i + 1}`} value={f.item_id}
-                  onChange={(e) => elegirArticulo(i, e.target.value)}>
-                  <option value="">— Sin artículo —</option>
-                  {(articulos ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}{a.sku ? ` (${a.sku})` : ""}</option>
-                  ))}
-                </select>
+                <ItemPicker label={`Artículo del material ${i + 1}`} itemId={f.item_id}
+                  clearLabel={`Dejar sin artículo el material ${i + 1}`} onChange={(a) => elegirArticulo(i, a)} />
               </td>
               <td>
                 <input aria-label={`Cantidad del material ${i + 1}`} inputMode="decimal" value={f.quantity}

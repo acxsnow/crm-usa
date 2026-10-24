@@ -1,0 +1,20 @@
+{
+  "formulario": "08639814-2879-4b79-9cb8-09c997213b57",
+  "revision": "5d70f672-467a-4286-8ce9-737ad0841e2b",
+  "permiso": {
+    "case": "fbad3cb2-9f80-4994-866b-fd09bd222f07",
+    "project": "07375b73-c0b1-4610-9c74-be8cb811e384"
+  },
+  "tecnico": {
+    "case": "b7e0919a-6443-4a31-9f19-43326cc40479",
+    "project": "06bdd603-b0eb-487b-aba1-67d4068c8968"
+  },
+  "acta": {
+    "case": "e996b1aa-37e3-4e67-b486-e49f6d994fdb",
+    "project": "b3f7755a-8cc1-42ec-bffd-a767214e71f3"
+  },
+  "cobro": {
+    "case": "82156fcc-aa10-4fa3-a31c-9921555d4900",
+    "project": "eb8499da-d2f6-4f4d-a0ed-0c0c2de1dbe6"
+  }
+}

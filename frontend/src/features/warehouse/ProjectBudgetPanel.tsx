@@ -9,7 +9,6 @@ import {
   deleteBudget,
   getBudgetVsActual,
   getProjectBudget,
-  listItemsPage,
   listKitsPage,
   saveBudget,
   warehouseCatalogs,
@@ -17,7 +16,9 @@ import {
   type BudgetLineInput,
   type BudgetVsActual,
   type ProjectBudget,
+  type WarehouseItem,
 } from "./api";
+import { ItemPicker } from "./ItemPicker";
 import { confirmAction } from "@/components/ui/ConfirmDialog";
 
 const MONEDA = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -238,10 +239,6 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
       : [{ ...RENGLON_VACIO }],
   );
 
-  const { data: articulos } = useQuery({
-    queryKey: [...warehouseKeys.items, "para-presupuesto"],
-    queryFn: () => listItemsPage(1, 200, { active: true }).then((p) => p.items),
-  });
   const { data: listas } = useQuery({
     queryKey: [...warehouseKeys.kits, "para-presupuesto"],
     queryFn: () => listKitsPage(1, 100, { active: true }).then((p) => p.items),
@@ -296,10 +293,9 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
   }
 
   /** Al elegir un artículo se traen su nombre y su costo del catálogo. */
-  function elegirArticulo(i: number, itemId: string) {
-    const articulo = (articulos ?? []).find((a) => a.id === itemId);
+  function elegirArticulo(i: number, articulo: WarehouseItem | null) {
     cambiar(i, {
-      item_id: itemId,
+      item_id: articulo?.id ?? "",
       description: articulo ? articulo.name : "",
       unit: articulo ? articulo.unit : "",
       unit_cost: articulo ? articulo.unit_cost : "",
@@ -360,13 +356,8 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
                 </select>
               </td>
               <td>
-                <select aria-label={`Artículo del renglón ${i + 1}`} value={r.item_id ?? ""}
-                  onChange={(e) => elegirArticulo(i, e.target.value)}>
-                  <option value="">— Libre —</option>
-                  {(articulos ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}{a.sku ? ` (${a.sku})` : ""}</option>
-                  ))}
-                </select>
+                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={r.item_id ?? ""}
+                  clearLabel={`Dejar libre el renglón ${i + 1}`} onChange={(a) => elegirArticulo(i, a)} />
               </td>
               <td>
                 <input aria-label={`Descripción del renglón ${i + 1}`} value={r.description ?? ""}
