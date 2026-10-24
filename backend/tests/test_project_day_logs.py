@@ -238,7 +238,9 @@ async def test_dos_jornadas_con_tecnicos_distintos_y_una_sola_por_dia(
 
     await _jornada(app_client, tecnico, project.id, log_date=AYER.isoformat(),
                    technician_user_id=str(active_technician_user.id), hours="8", progress_note="Día 1")
-    await _jornada(app_client, tecnico, project.id, log_date=HOY.isoformat(),
+    # A nombre de otro técnico la registra la oficina (fase 5 del plan de
+    # cierre: el técnico solo registra su propia jornada).
+    await _jornada(app_client, admin, project.id, log_date=HOY.isoformat(),
                    technician_user_id=str(segundo.id), hours="6", progress_note="Día 2")
 
     diario = await _diario(app_client, tecnico, project.id)

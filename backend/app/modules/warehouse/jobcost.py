@@ -465,9 +465,9 @@ async def create_extra_charge(db: AsyncSession, *, organization_id, user, projec
     siempre en efectivo, y queda «por entregar» hasta que la oficina lo recibe.
     El técnico solo lo anota en sus obras; la oficina puede decir quién lo cobró.
     """
-    from app.modules.field_ops.access import get_visible_project
+    from app.modules.field_ops.access import get_workable_project
 
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
     monto = to_money(data.get("amount") or ZERO)
     if monto <= ZERO:
         raise InvalidInputError("El cobro adicional tiene que ser mayor que cero.", code="invalid_extra_amount")

@@ -16,6 +16,7 @@ import { ChecklistTemplatesPage } from "@/features/field-ops/ChecklistTemplatesP
 import { ProjectDetailPage } from "@/features/field-ops/ProjectDetailPage";
 import { TechnicianMonitorPage } from "@/features/field-ops/TechnicianMonitorPage";
 import { AgendaPage } from "@/features/field-ops/AgendaPage";
+import { WorksCalendarPage } from "@/features/warehouse/WorksCalendarPage";
 import { InvoicesPage } from "@/features/billing/InvoicesPage";
 import { ClaimDetailPage } from "@/features/billing/ClaimDetailPage";
 import { QuoteDetailPage } from "@/features/billing/QuoteDetailPage";
@@ -106,6 +107,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["projects.read_all", "projects.read_assigned"]} moduleLabel="Proyectos e instalación">
             <ProjectDetailPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "works-calendar",
+        element: (
+          <RequireAccess permission={["projects.read_all", "dispatch.manage", "daylogs.manage"]} moduleLabel="el calendario de obras">
+            <WorksCalendarPage />
           </RequireAccess>
         ),
       },

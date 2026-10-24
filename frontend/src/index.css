@@ -4279,3 +4279,49 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
   .app-content .release-orders:not(#_) td { display: block; border: 0; padding: 3px 0; }
   .app-content .release-orders:not(#_) td:empty { display: none; }
 }
+
+/* Rotación del técnico (plan bodega-cierre, fase 5). */
+.read-only-banner { margin-bottom: 12px; }
+.assignments-history { margin-top: 14px; }
+.assignments-history ol { list-style: none; margin: 6px 0 0; padding: 0; }
+.assignments-history li { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.assignments-history li span { color: var(--ink-soft); font-size: 0.85rem; }
+.assignments-history li.is-current strong { color: var(--red-dark); }
+.helpers-field { border: 0; margin: 0; padding: 0; min-width: 0; }
+.helpers-options { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+
+/* Calendario de obras (plan bodega-cierre, fase 5). */
+.works-calendar-bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 8px 0 14px; }
+.works-calendar-nav, .works-calendar-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.works-calendar-title { display: inline-block; font-size: 1.05rem; margin-left: 6px; }
+.works-calendar-title::first-letter { text-transform: uppercase; }
+.works-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.works-calendar-head { padding: 8px; font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); background: var(--card-soft); border-bottom: 1px solid var(--line); }
+.works-calendar-day { min-height: 110px; padding: 6px; border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.works-calendar-grid.is-semana .works-calendar-day { min-height: 220px; }
+.works-calendar-day.is-other-month { background: var(--card-soft); }
+.works-calendar-day.is-other-month .works-calendar-date { color: var(--ink-faint); }
+.works-calendar-day.is-today .works-calendar-date { color: var(--red); font-weight: 700; }
+.works-calendar-date { font-size: 0.82rem; font-weight: 600; }
+.works-calendar-weekday { display: none; }
+.works-chip { display: block; padding: 4px 6px; border-radius: 6px; font-size: 0.76rem; line-height: 1.25; text-decoration: none; color: inherit; border: 1px solid transparent; overflow: hidden; }
+.works-chip strong, .works-chip span, .works-chip small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.works-chip small { opacity: 0.8; }
+.works-chip.is-turn { background: transparent !important; border-style: dashed; }
+.works-chip.is-t0 { background: #fdecee; color: #b91325; border-color: #f5b5bd; }
+.works-chip.is-t1 { background: #e8f0fe; color: #1d4ed8; border-color: #b6cbf6; }
+.works-chip.is-t2 { background: #e7f6ef; color: #12704d; border-color: #a9dcc4; }
+.works-chip.is-t3 { background: #fff3e0; color: #a35f0a; border-color: #f2cf98; }
+.works-chip.is-t4 { background: #f1ecfd; color: #6d3fd1; border-color: #cfc0f5; }
+.works-chip.is-t5 { background: #eef0f4; color: #475467; border-color: #d0d5dd; }
+/* En el celular, una lista por día con lo que tiene (la cuadrícula no cabe). */
+@media (max-width: 767px) {
+  .works-calendar-grid { display: block; }
+  .works-calendar-head { display: none; }
+  .works-calendar-grid .works-calendar-day:not(#_) { min-height: 0; border-right: 0; }
+  .works-calendar-day.is-empty, .works-calendar-day.is-other-month.is-empty { display: none; }
+  .works-calendar-weekday { display: inline; }
+  .works-chip { font-size: 0.85rem; padding: 8px 10px; }
+  .works-chip strong, .works-chip span, .works-chip small { white-space: normal; }
+}
+.billing-chip.read-only-chip { margin-left: 6px; color: var(--ink-soft); background: var(--line-soft); }

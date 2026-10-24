@@ -53,7 +53,9 @@ export function ProjectsPage() {
   ];
 
   const columns: Column<Project>[] = [
-    { key: "title", header: "Proyecto" },
+    { key: "title", header: "Proyecto", render: (p) => (
+      <>{p.title}{p.my_access === "read_only" && <span className="billing-chip read-only-chip">Solo lectura</span>}</>
+    ) },
     { key: "address", header: "Dirección", render: (p) => [p.address_street, p.address_unit].filter(Boolean).join(", ") || "—" },
     { key: "status", header: "Estado", render: (p) => <span className={`status-pill status-${p.status}`}>{PROJECT_STATUS_LABELS[p.status]}</span> },
     { key: "scheduled_date", header: "Programado", render: (p) => p.scheduled_date ?? "—" },

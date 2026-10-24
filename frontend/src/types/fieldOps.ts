@@ -20,6 +20,8 @@ export interface Project extends Address {
   scheduled_date?: string | null;
   completed_date?: string | null;
   primary_technician_user_id?: string | null;
+  /** Para quien pide: «read_only» si fue el responsable antes o va de ayudante. */
+  my_access?: "full" | "read_only";
   notes?: string | null;
   installation_conditions: string[];
   /** Etapa del expediente del que nace el proyecto (solo lectura). */

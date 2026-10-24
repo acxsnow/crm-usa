@@ -17,7 +17,7 @@ from app.modules.field_ops import installation as installation_service
 from app.modules.field_ops import permits as permits_service
 from app.modules.field_ops import reviews as reviews_service
 from app.modules.field_ops import service as field_ops_service
-from app.modules.field_ops.access import get_visible_project, scope_projects_stmt
+from app.modules.field_ops.access import can_work, get_visible_project, get_workable_project, scope_projects_stmt
 from app.shared.errors import InvalidInputError
 from app.modules.field_ops.defaults import DEFAULT_CHECKLIST_TEMPLATE
 from app.modules.field_ops.models import (
@@ -342,7 +342,8 @@ async def list_projects(
     if technician_id:
         stmt = stmt.where(Project.primary_technician_user_id == technician_id)
     limit, offset = pagination
-    return await paginate(db, stmt, limit=limit, offset=offset, response=response)
+    return [_with_access(p, current_user) for p in await paginate(db, stmt, limit=limit, offset=offset,
+                                                                  response=response)]
 
 
 @router.post("/projects", response_model=ProjectResponse, status_code=201)
@@ -363,13 +364,43 @@ async def _get_project_or_404(db: AsyncSession, *, organization_id: uuid.UUID, p
     )
 
 
+async def _get_workable_or_403(db: AsyncSession, *, organization_id: uuid.UUID, project_id: uuid.UUID,
+                               current_user: User) -> Project:
+    """Para lo que escribe: el técnico que ve la obra en solo lectura recibe 403."""
+    return await get_workable_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+
+
+def _with_access(project: Project, user: User) -> Project:
+    """Le dice a la pantalla si quien pide llena la obra o solo la ve."""
+    project.my_access = "full" if can_work(project, user) else "read_only"
+    return project
+
+
 @router.get("/projects/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
 ):
-    return await _get_project_or_404(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
+    return _with_access(await _get_project_or_404(db, organization_id=organization_id, project_id=project_id,
+                                                  current_user=current_user), current_user)
+
+
+@router.get("/projects/{project_id}/assignments")
+async def project_assignments(
+    project_id: uuid.UUID, response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+) -> list[dict]:
+    """Quién fue el técnico responsable de la obra y desde/hasta cuándo."""
+    from app.modules.field_ops.installation import assignments_of
+    from app.shared.pagination import paginate_list
+
+    await _get_project_or_404(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
+    limit, offset = pagination
+    return paginate_list(await assignments_of(db, organization_id=organization_id, project_id=project_id),
+                         limit=limit, offset=offset, response=response)
 
 
 @router.patch("/projects/{project_id}", response_model=ProjectResponse)
@@ -466,7 +497,7 @@ async def create_task(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("tasks.manage")),
 ):
-    await _get_project_or_404(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
+    await _get_workable_or_403(db, organization_id=organization_id, project_id=project_id, current_user=current_user)
     task = Task(organization_id=organization_id, project_id=project_id, **payload.model_dump())
     db.add(task)
     await db.commit()
@@ -496,6 +527,8 @@ async def update_task(
     current_user: User = Depends(require_permission("tasks.manage")),
 ):
     task = await _get_task_or_404(db, organization_id=organization_id, task_id=task_id, current_user=current_user)
+    await _get_workable_or_403(db, organization_id=organization_id, project_id=task.project_id,
+                               current_user=current_user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(task, field, value)
     await db.commit()
@@ -543,7 +576,9 @@ async def create_task_comment(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("tasks.manage")),
 ):
-    await _get_task_or_404(db, organization_id=organization_id, task_id=task_id, current_user=current_user)
+    task = await _get_task_or_404(db, organization_id=organization_id, task_id=task_id, current_user=current_user)
+    await _get_workable_or_403(db, organization_id=organization_id, project_id=task.project_id,
+                               current_user=current_user)
     comment = TaskComment(task_id=task_id, author_user_id=current_user.id, body=payload.body)
     db.add(comment)
     await db.commit()
@@ -587,7 +622,7 @@ async def upload_evidence(
     allows it). Confirmed requirement: a visible GPS watermark is burned
     into the stored image — see shared/files/watermark.py."""
     # El técnico solo sube evidencias a sus proyectos asignados.
-    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    await get_workable_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     return await field_ops_service.upload_evidence(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id, file=file,
         category=category, latitude=latitude, longitude=longitude, captured_at=captured_at,
@@ -616,7 +651,7 @@ async def sign_as_technician(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
-    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    await get_workable_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     attestation = await field_ops_service.technician_sign(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id,
         signature_base64=payload.signature_base64,
@@ -630,7 +665,7 @@ async def request_customer_signature(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
-    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    await get_workable_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     token = await field_ops_service.create_customer_signature_request(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id
     )
@@ -645,7 +680,7 @@ async def sign_as_customer(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("evidence.create")),
 ):
-    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    await get_workable_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
     attestation = await field_ops_service.customer_sign(
         db, organization_id=organization_id, actor_id=current_user.id, project_id=project_id,
         customer_name=payload.customer_name, signature_base64=payload.signature_base64,

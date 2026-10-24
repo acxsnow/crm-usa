@@ -29,9 +29,9 @@ from app.modules.users.models import User
 from app.modules.warehouse import service as wh
 from app.modules.warehouse.budgets import get_project
 from app.modules.warehouse.catalogs import ITEM_UNITS, LocationKind, MovementType
-from app.modules.warehouse.models import ProjectDayLog, ProjectDayLogMaterial
+from app.modules.warehouse.models import ProjectDayLog, ProjectDayLogHelper, ProjectDayLogMaterial
 from app.shared.audit import record_audit_event
-from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.errors import ForbiddenError, InvalidInputError, NotFoundError
 
 Q2 = Decimal("0.01")
 
@@ -227,6 +227,31 @@ def _cambios_rechazados(linea: ProjectDayLogMaterial, datos: dict) -> bool:
         or _q(datos.get("quantity") or Decimal("1")) != _q(linea.quantity)
 
 
+async def _check_active_user(db, organization_id, user_id) -> None:
+    """El técnico del día o el ayudante: una persona activa de la organización."""
+    from app.modules.users.models import UserStatus
+
+    persona = await db.get(User, user_id)
+    if persona is None or persona.organization_id != organization_id or persona.status != UserStatus.active:
+        raise InvalidInputError("El técnico no existe o no está activo.", code="invalid_technician")
+
+
+async def helpers_of(db, organization_id, log_ids) -> dict:
+    """Los ayudantes de cada jornada, con su nombre."""
+    ids = list(log_ids)
+    if not ids:
+        return {}
+    filas = (await db.execute(select(ProjectDayLogHelper.day_log_id, User.id, User.full_name)
+                              .join(User, User.id == ProjectDayLogHelper.user_id)
+                              .where(ProjectDayLogHelper.organization_id == organization_id,
+                                     ProjectDayLogHelper.day_log_id.in_(ids))
+                              .order_by(User.full_name))).all()
+    agrupados: dict = {}
+    for log_id, uid, nombre in filas:
+        agrupados.setdefault(log_id, []).append({"user_id": str(uid), "name": nombre})
+    return agrupados
+
+
 async def save_day_log(db: AsyncSession, *, organization_id, user, project_id, data: dict,
                        log_id=None) -> ProjectDayLog:
     """Registra o corrige una jornada.
@@ -240,10 +265,18 @@ async def save_day_log(db: AsyncSession, *, organization_id, user, project_id, d
     if not fecha:
         raise InvalidInputError("El diario necesita la fecha del día.", code="day_log_date_required")
 
+    from app.modules.field_ops.access import _sees_all
+
+    oficina = _sees_all(user)
     if log_id is not None:
         log = await get_day_log(db, organization_id, log_id)
         if log.project_id != project.id:
             raise NotFoundError("La jornada no existe.", code="day_log_not_found")
+        # Cada jornada es de quien la registró: el técnico que sigue la obra la
+        # lee pero no la cambia (el personal rota; fase 5). La oficina corrige.
+        if not oficina and log.created_by_user_id != user.id:
+            raise ForbiddenError("Esa jornada la registró otro técnico: la ves en solo lectura.",
+                                 code="day_log_by_other")
         log.updated_by_user_id = user.id
     else:
         log = ProjectDayLog(organization_id=organization_id, project_id=project.id,
@@ -257,8 +290,22 @@ async def save_day_log(db: AsyncSession, *, organization_id, user, project_id, d
         raise InvalidInputError("Esa obra ya tiene una jornada de ese día.",
                                 code="day_log_date_taken")
 
+    # El técnico registra su propia jornada; a nombre de otro, solo la oficina.
+    tecnico_id = data.get("technician_user_id") or (None if oficina else user.id)
+    if tecnico_id and tecnico_id != user.id:
+        if not oficina:
+            raise ForbiddenError("La jornada queda a tu nombre: no puedes registrarla por otro técnico.",
+                                 code="day_log_for_other")
+        await _check_active_user(db, organization_id, tecnico_id)
+    ayudantes = []
+    for ayudante in dict.fromkeys(data.get("helper_user_ids") or []):
+        if ayudante == tecnico_id:
+            continue  # el responsable del día no es su propio ayudante
+        await _check_active_user(db, organization_id, ayudante)
+        ayudantes.append(ayudante)
+
     log.log_date = fecha
-    log.technician_user_id = data.get("technician_user_id") or None
+    log.technician_user_id = tecnico_id
     log.crew = _texto(data.get("crew"), maximo=255)
     log.hours = None if data.get("hours") in (None, "") else _q(data["hours"])
     log.work_done = _texto(data.get("work_done"))
@@ -268,6 +315,17 @@ async def save_day_log(db: AsyncSession, *, organization_id, user, project_id, d
     log.incidents = _texto(data.get("incidents"))
     if log_id is None:
         db.add(log)
+    await db.flush()
+
+    # Los ayudantes se reemplazan completos: la jornada dice quiénes fueron.
+    previos = {h.user_id: h for h in (await db.execute(select(ProjectDayLogHelper).where(
+        ProjectDayLogHelper.day_log_id == log.id))).scalars().all()}
+    for uid, fila in previos.items():
+        if uid not in ayudantes:
+            await db.delete(fila)
+    for uid in ayudantes:
+        if uid not in previos:
+            db.add(ProjectDayLogHelper(organization_id=organization_id, day_log_id=log.id, user_id=uid))
     await db.flush()
 
     anteriores = {linea.id: linea for linea in (await materials_of(db, organization_id, [log.id])).get(log.id, [])}
@@ -337,8 +395,10 @@ def material_out(linea: ProjectDayLogMaterial, *, nombres: dict) -> dict:
 
 
 def day_log_out(log: ProjectDayLog, *, lineas: list[ProjectDayLogMaterial], nombres: dict,
-                gastos: dict | None = None) -> dict:
+                gastos: dict | None = None, ayudantes: list | None = None) -> dict:
     return {
+        "created_by_user_id": str(log.created_by_user_id) if log.created_by_user_id else None,
+        "helpers": ayudantes or [],
         "id": str(log.id), "project_id": str(log.project_id),
         "log_date": log.log_date.isoformat() if log.log_date else None,
         "technician_user_id": str(log.technician_user_id) if log.technician_user_id else None,
@@ -369,5 +429,78 @@ async def day_logs_out(db: AsyncSession, organization_id, logs) -> list[dict]:
     )
     gastos = await expenses_by_date(db, organization_id, project_id=filas[0].project_id,
                                     fechas={log.log_date for log in filas})
+    ayudantes = await helpers_of(db, organization_id, [log.id for log in filas])
     return [day_log_out(log, lineas=por_jornada.get(log.id, []), nombres=nombres,
-                        gastos=gastos.get(log.log_date)) for log in filas]
+                        gastos=gastos.get(log.log_date), ayudantes=ayudantes.get(log.id)) for log in filas]
+
+
+# ---------------------------------------------------------------------------
+# Calendario de obras (plan bodega-cierre, fase 5)
+# ---------------------------------------------------------------------------
+
+# Un calendario de más de dos meses ya es un reporte.
+CALENDAR_MAX_DAYS = 62
+
+
+async def calendar(db: AsyncSession, organization_id, user, *, date_from: date, date_to: date,
+                   technician_id=None) -> dict:
+    """Lo que pasó y pasa en las obras, día por día: el turno de cada
+    responsable (de cuándo a cuándo estuvo en la obra) y cada jornada
+    registrada, con su técnico, sus ayudantes y hasta dónde se avanzó.
+
+    La oficina ve todo y puede filtrar por técnico; el técnico ve solo lo suyo:
+    sus turnos y las jornadas donde fue responsable o ayudante.
+    """
+    from sqlalchemy import and_, or_
+
+    from app.modules.field_ops.access import _sees_all
+    from app.modules.field_ops.models import Project, ProjectTechnicianAssignment
+
+    if date_to < date_from:
+        raise InvalidInputError("La fecha final va después de la inicial.", code="calendar_range_invalid")
+    if (date_to - date_from).days > CALENDAR_MAX_DAYS:
+        raise InvalidInputError(f"El calendario muestra hasta {CALENDAR_MAX_DAYS} días.",
+                                code="calendar_range_too_long")
+    persona = technician_id if _sees_all(user) else user.id
+
+    turnos_stmt = (select(ProjectTechnicianAssignment, Project.title, Project.status)
+                   .join(Project, Project.id == ProjectTechnicianAssignment.project_id)
+                   .where(ProjectTechnicianAssignment.organization_id == organization_id,
+                          ProjectTechnicianAssignment.started_on <= date_to,
+                          or_(ProjectTechnicianAssignment.ended_on.is_(None),
+                              ProjectTechnicianAssignment.ended_on >= date_from)))
+    if persona:
+        turnos_stmt = turnos_stmt.where(ProjectTechnicianAssignment.technician_user_id == persona)
+    turnos = (await db.execute(turnos_stmt.order_by(ProjectTechnicianAssignment.started_on))).all()
+
+    jornadas_stmt = (select(ProjectDayLog, Project.title)
+                     .join(Project, Project.id == ProjectDayLog.project_id)
+                     .where(ProjectDayLog.organization_id == organization_id,
+                            ProjectDayLog.log_date >= date_from, ProjectDayLog.log_date <= date_to))
+    if persona:
+        de_ayudante = select(ProjectDayLogHelper.day_log_id).where(ProjectDayLogHelper.user_id == persona)
+        jornadas_stmt = jornadas_stmt.where(or_(ProjectDayLog.technician_user_id == persona,
+                                                ProjectDayLog.id.in_(de_ayudante)))
+    jornadas = (await db.execute(jornadas_stmt.order_by(ProjectDayLog.log_date, Project.title))).all()
+
+    ayudantes = await helpers_of(db, organization_id, [log.id for log, _ in jornadas])
+    usuarios = {t.technician_user_id for t, _, _ in turnos} | {log.technician_user_id for log, _ in jornadas
+                                                              if log.technician_user_id}
+    nombres = {u.id: u.full_name for u in (await db.execute(select(User).where(
+        User.id.in_(usuarios)))).scalars().all()} if usuarios else {}
+    return {
+        "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
+        "assignments": [{
+            "project_id": str(t.project_id), "project_title": titulo, "project_status": getattr(estado, "value", estado),
+            "technician_user_id": str(t.technician_user_id), "technician_name": nombres.get(t.technician_user_id),
+            "started_on": t.started_on.isoformat(), "ended_on": t.ended_on.isoformat() if t.ended_on else None,
+        } for t, titulo, estado in turnos],
+        "day_logs": [{
+            "id": str(log.id), "project_id": str(log.project_id), "project_title": titulo,
+            "log_date": log.log_date.isoformat(),
+            "technician_user_id": str(log.technician_user_id) if log.technician_user_id else None,
+            "technician_name": nombres.get(log.technician_user_id),
+            "helpers": ayudantes.get(log.id, []), "progress_note": log.progress_note,
+            "work_done": log.work_done, "next_day_plan": log.next_day_plan,
+        } for log, titulo in jornadas],
+    }

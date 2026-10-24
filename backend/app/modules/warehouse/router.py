@@ -129,6 +129,14 @@ async def _visible_project(db, organization_id, user, project_id):
     return await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
 
 
+async def _workable_project(db, organization_id, user, project_id):
+    """El proyecto, si la persona lo llena: el técnico que lo ve en solo lectura
+    (fue el responsable antes o va de ayudante) recibe 403."""
+    from app.modules.field_ops.access import get_workable_project
+
+    return await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
+
+
 @router.get("/warehouse/catalogs")
 async def warehouse_catalogs(db: AsyncSession = Depends(get_db),
                              organization_id: uuid.UUID = Depends(get_organization_id),
@@ -837,6 +845,8 @@ class DayLogIn(BaseModel):
     next_day_plan: str | None = Field(default=None, max_length=4000)
     incidents: str | None = Field(default=None, max_length=4000)
     materials: list[DayLogMaterialIn] = Field(default_factory=list, max_length=100)
+    # Los técnicos que fueron con el responsable ese día (ven la obra, no la llenan).
+    helper_user_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
 
 
 @router.get("/warehouse/projects/{project_id}/day-logs")
@@ -861,7 +871,7 @@ async def create_day_log(project_id: uuid.UUID, payload: DayLogIn, db: AsyncSess
                          current_user: User = Depends(_daylog_manage)) -> dict:
     """Registra la jornada del día. El material que sale de una camioneta
     descuenta la existencia y queda como costo de la obra."""
-    await _visible_project(db, organization_id, current_user, project_id)
+    await _workable_project(db, organization_id, current_user, project_id)
     log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
                                         project_id=project_id, data=payload.model_dump())
     return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]
@@ -874,7 +884,39 @@ async def update_day_log(project_id: uuid.UUID, log_id: uuid.UUID, payload: DayL
                          current_user: User = Depends(_daylog_manage)) -> dict:
     """Corrige la jornada. Lo que ya descontó la camioneta no se edita: para eso
     se registra la devolución a bodega."""
-    await _visible_project(db, organization_id, current_user, project_id)
+    await _workable_project(db, organization_id, current_user, project_id)
     log = await daylog_svc.save_day_log(db, organization_id=organization_id, user=current_user,
                                         project_id=project_id, data=payload.model_dump(), log_id=log_id)
     return (await daylog_svc.day_logs_out(db, organization_id, [log]))[0]
+
+
+# ---------------------------------------------------------------------------
+# Calendario de obras (plan bodega-cierre, fase 5)
+# ---------------------------------------------------------------------------
+
+_calendar_read = require_any_permission("projects.read_all", "dispatch.manage", "daylogs.manage")
+
+
+@router.get("/warehouse/calendar")
+async def works_calendar(date_from: date, date_to: date, technician_user_id: uuid.UUID | None = None,
+                         db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_calendar_read)) -> dict:
+    """Quién estuvo en qué obra y qué se hizo cada día. El técnico ve lo suyo;
+    la oficina, todo (y puede filtrar por técnico). Hasta dos meses por consulta."""
+    return await daylog_svc.calendar(db, organization_id, current_user, date_from=date_from, date_to=date_to,
+                                     technician_id=technician_user_id)
+
+
+@router.get("/warehouse/day-log-helpers")
+async def day_log_helpers(response: Response, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          pag: tuple[int, int] = Depends(pagination_params),
+                          current_user: User = Depends(_daylog_manage)) -> list[dict]:
+    """A quién se puede poner de ayudante en la jornada: los técnicos activos,
+    solo con su nombre (el técnico no tiene el listado de despacho)."""
+    from app.modules.field_ops.installation import list_installers
+
+    filas = [{"id": str(u.id), "full_name": u.full_name}
+             for u in await list_installers(db, organization_id=organization_id) if u.id != current_user.id]
+    return paginate_list(filas, limit=pag[0], offset=pag[1], response=response)

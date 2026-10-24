@@ -74,6 +74,9 @@ class ProjectResponse(AddressSchema):
     # Revisión administrativa del acta (módulo 6).
     technician_info_confirmed: bool = False
     returned_reason: str | None = None
+    # Para quien pide: «full» si llena la obra, «read_only» si la ve porque fue
+    # su responsable antes o va de ayudante (plan bodega-cierre, fase 5).
+    my_access: str = "full"
     created_at: datetime
     model_config = {"from_attributes": True}
 

@@ -187,6 +187,7 @@ add(
     ["Operación de campo", "Proyectos", "Una instalación por expediente aprobado"],
     ["", "Monitor de técnicos", "Si cada técnico está conectado y cuántas órdenes tiene"],
     ["", "Agenda", "Instalaciones pendientes e historial"],
+    ["", "Calendario de obras", "Quién estuvo en cada obra y qué se hizo cada día"],
     ["", "Checklists de instalación", "Plantillas del checklist por programa"],
     ["", "Permisos e inspecciones", "Vista general de permisos municipales e inspecciones"],
     ["Bodega", "Existencias", "Qué hay en la bodega y en las camionetas; importar el catálogo"],
@@ -425,7 +426,16 @@ add(
   ...fig("bodega_compras"),
   h2("12.5 Diario de obra"),
   ...fig("bodega_diario"),
-  p("Para trabajos de varios días: en la ficha del proyecto, **Registrar la jornada** guarda un día con el técnico de ese día, cuadrilla, horas, qué se hizo, hasta dónde se avanzó, qué material faltó, qué llevar al día siguiente y novedades. El material del día se busca en el catálogo igual que en la salida: si se elige de qué camioneta salió, se descuenta de ella; si se deja sin ubicación, solo queda anotado. Los gastos de campo aprobados de ese día aparecen solos en la jornada."),
+  p("Para trabajos de varios días: en la ficha del proyecto, **Registrar la jornada** guarda el día del técnico responsable, con sus **ayudantes** (los técnicos que fueron con él), horas, qué se hizo, hasta dónde se avanzó, qué material faltó, qué llevar al día siguiente y novedades. Cada jornada queda a nombre de quien la registró: solo él (o la oficina) la corrige. El material del día se busca en el catálogo igual que en la salida: si se elige de qué camioneta salió, se descuenta de ella; si se deja sin ubicación, solo queda anotado. Los gastos de campo aprobados de ese día aparecen solos en la jornada."),
+  h2("12.6 Cambio de técnico, ayudantes y calendario de obras"),
+  p("El personal rota. Cada obra tiene **un técnico responsable**, y es el único técnico que la llena: evidencias, checklist, equipos, firmas, diario y pedidos de material."),
+  n("**Cambiar el técnico:** en el paso **Orden liberada**, Administración elige el otro técnico, la fecha desde la que sigue (por defecto, hoy) y toca **Cambiar técnico**. El nuevo continúa donde el otro terminó. Ahí mismo queda el historial: quién estuvo, desde y hasta cuándo. Lo puede hacer quien tenga el permiso de despacho (`dispatch.manage`): hoy, el Administrador y Administración; para dárselo a otro rol, se agrega en **Roles y permisos**.", "l13"),
+  n("**El técnico anterior** sigue viendo la obra en **solo lectura**: lo que hizo él y lo que va haciendo el nuevo. No sube fotos, no marca el checklist, no registra jornadas ni pide material. En Proyectos la obra le aparece con «Solo lectura».", "l13"),
+  n("**Lo que hizo cada uno es suyo:** una línea del checklist que marcó un técnico no la desmarca otro, y una jornada solo la corrige quien la registró. La oficina sí puede corregir.", "l13"),
+  n("**Ayudantes:** al registrar la jornada, el responsable marca qué técnicos fueron con él. Los ayudantes ven la obra en solo lectura para saber a dónde ir y qué se está haciendo; no la llenan.", "l13"),
+  ...fig("rotacion_solo_lectura"),
+  p("**Calendario de obras** (menú Operación de campo): por mes o por semana, cada jornada registrada con la obra, el técnico, sus ayudantes y hasta dónde se avanzó; punteado, el día en que un técnico toma una obra. Al tocar una entrada se abre la obra. La oficina ve todo y puede filtrar por técnico; el técnico ve lo suyo. En el celular se ve como lista por día."),
+  ...fig("calendario_obras"),
 );
 
 // --- 13 ---------------------------------------------------------------------------
@@ -461,7 +471,7 @@ add(
 // --- 15 ---------------------------------------------------------------------------
 add(
   h1("15. Lo que todavía no hace"),
-  li("Órdenes de compra a proveedores y precios por proveedor. En bodega, todavía no: el calendario para planear cada día de una obra (en desarrollo)."),
+  li("Órdenes de compra a proveedores y precios por proveedor. Planear de antemano qué técnico va cada día a una obra (hoy se ve lo que pasó y quién es el responsable)."),
   li("Pagar desde la plataforma (solo registra pagos hechos por fuera), sincronizar con QuickBooks y los 1099."),
   li("Llenar automáticamente los formularios municipales y sincronizar con Microsoft Forms."),
   li("Trabajar sin conexión; la comisión del vendedor en la rentabilidad."),

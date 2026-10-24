@@ -109,6 +109,26 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
         return self.case.substatus_code if self.case else None
 
 
+class ProjectTechnicianAssignment(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Quién fue el técnico responsable de la obra y desde cuándo hasta cuándo.
+
+    El personal rota: si la obra sigue y el administrador cambia el técnico (con
+    la misma «Orden liberada»), el nuevo sigue donde el otro terminó. El anterior
+    no pierde la obra: la sigue viendo en solo lectura, y eso sale de aquí.
+    `ended_on` nulo = es el responsable de hoy.
+    """
+
+    __tablename__ = "project_technician_assignments"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    technician_user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False,
+                                                          index=True)
+    started_on: Mapped[date] = mapped_column(Date, nullable=False)
+    ended_on: Mapped[date | None] = mapped_column(Date)
+    assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
 # ---------------------------------------------------------------------------
 # Checklists — template (org-configurable) and per-project snapshot
 # ---------------------------------------------------------------------------

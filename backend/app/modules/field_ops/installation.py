@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_effective_permissions
 from app.modules.cases.models import Case
 from app.modules.cases.stages import STAGE_LABELS
-from app.modules.field_ops.access import get_visible_project
+from app.modules.field_ops.access import get_visible_project, get_workable_project
 from app.modules.field_ops.case_flow import advance_case, case_for_project, mark_substatus
 from app.modules.field_ops.catalogs import EQUIPMENT_TYPES
 from app.modules.field_ops.checklist import checklist_gaps, ensure_installation_open
@@ -60,7 +60,7 @@ async def list_equipment(db, *, organization_id, user, project_id) -> list[Insta
 
 
 async def add_equipment(db, *, organization_id, user, project_id, data: dict) -> InstalledEquipment:
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
     if data["equipment_type"] not in EQUIPMENT_TYPES:
         raise InvalidInputError(
@@ -85,7 +85,7 @@ async def add_equipment(db, *, organization_id, user, project_id, data: dict) ->
 
 async def delete_equipment(db, *, organization_id, user, equipment_id) -> None:
     equipo = await _owned(db, InstalledEquipment, equipment_id, organization_id, "El equipo no existe.", "equipment_not_found")
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=equipo.project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=equipo.project_id)
     ensure_installation_open(project)
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=user.id,
@@ -105,7 +105,7 @@ def _unconfirm(project: Project) -> None:
 
 async def confirm_equipment(db, *, organization_id, user, project_id) -> Project:
     """«Guardar equipos instalados»: el técnico da por terminada la lista."""
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
     equipos = await equipment_of(db, project.id)
     if not equipos:
@@ -140,7 +140,7 @@ async def list_materials(db, *, organization_id, user, project_id) -> list[Proje
 
 
 async def add_material(db, *, organization_id, user, project_id, data: dict) -> ProjectMaterial:
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
     material = ProjectMaterial(organization_id=organization_id, project_id=project.id, **data)
     db.add(material)
@@ -151,7 +151,7 @@ async def add_material(db, *, organization_id, user, project_id, data: dict) -> 
 
 async def delete_material(db, *, organization_id, user, material_id) -> None:
     material = await _owned(db, ProjectMaterial, material_id, organization_id, "El material no existe.", "material_not_found")
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=material.project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=material.project_id)
     ensure_installation_open(project)
     await db.delete(material)
     await db.commit()
@@ -160,6 +160,48 @@ async def delete_material(db, *, organization_id, user, material_id) -> None:
 # ---------------------------------------------------------------------------
 # Agenda
 # ---------------------------------------------------------------------------
+
+async def _record_assignment(db, *, project: Project, technician_id: uuid.UUID, starts_on: date, user) -> None:
+    """Historial de responsables (plan bodega-cierre, fase 5). Cambiar de
+    técnico cierra el turno del anterior el día que empieza el nuevo: el
+    anterior conserva la obra en solo lectura. Volver a liberar con el mismo
+    técnico solo mueve la fecha de inicio de su turno."""
+    from sqlalchemy import select
+
+    from app.modules.field_ops.models import ProjectTechnicianAssignment
+
+    abierto = (await db.execute(select(ProjectTechnicianAssignment).where(
+        ProjectTechnicianAssignment.project_id == project.id,
+        ProjectTechnicianAssignment.ended_on.is_(None)))).scalars().first()
+    if abierto is not None and abierto.technician_user_id == technician_id:
+        if not await db.scalar(select(ProjectTechnicianAssignment.id).where(
+                ProjectTechnicianAssignment.project_id == project.id,
+                ProjectTechnicianAssignment.id != abierto.id)):
+            abierto.started_on = starts_on  # todavía no rotó: se corrige la fecha
+        return
+    if abierto is not None:
+        abierto.ended_on = max(starts_on, abierto.started_on)
+    db.add(ProjectTechnicianAssignment(organization_id=project.organization_id, project_id=project.id,
+                                       technician_user_id=technician_id, started_on=starts_on,
+                                       assigned_by_user_id=user.id))
+
+
+async def assignments_of(db, *, organization_id, project_id) -> list[dict]:
+    """Quién fue responsable de la obra, del primero al de hoy, con su nombre."""
+    from sqlalchemy import select
+
+    from app.modules.field_ops.models import ProjectTechnicianAssignment
+
+    filas = (await db.execute(select(ProjectTechnicianAssignment, User.full_name)
+                              .join(User, User.id == ProjectTechnicianAssignment.technician_user_id)
+                              .where(ProjectTechnicianAssignment.organization_id == organization_id,
+                                     ProjectTechnicianAssignment.project_id == project_id)
+                              .order_by(ProjectTechnicianAssignment.started_on,
+                                        ProjectTechnicianAssignment.created_at))).all()
+    return [{"technician_user_id": str(a.technician_user_id), "technician_name": nombre,
+             "started_on": a.started_on.isoformat(), "ended_on": a.ended_on.isoformat() if a.ended_on else None,
+             "current": a.ended_on is None} for a, nombre in filas]
+
 
 async def schedule_installation(
     db, *, organization_id, user, project_id, technician_id: uuid.UUID, scheduled_date: date
@@ -172,6 +214,7 @@ async def schedule_installation(
 
     antes = {"technician": str(project.primary_technician_user_id) if project.primary_technician_user_id else None,
              "scheduled_date": project.scheduled_date.isoformat() if project.scheduled_date else None}
+    await _record_assignment(db, project=project, technician_id=technician_id, starts_on=scheduled_date, user=user)
     project.primary_technician_user_id = technician_id
     project.scheduled_date = scheduled_date
     if project.status in (ProjectStatus.planning, ProjectStatus.scheduled):
@@ -273,7 +316,7 @@ def mark_project_completed(project: Project, today: date) -> None:
 
 
 async def close_installation(db, *, organization_id, user, project_id, observations: str | None) -> Project:
-    project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
 
     faltan = await installation_gaps(db, project=project)

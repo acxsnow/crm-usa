@@ -6,6 +6,7 @@ import {
   createTaskComment,
   fetchEvidenceObjectUrl,
   getProject,
+  getProjectAssignments,
   getProjectChecklist,
   listProjectEvidencePage,
   listProjectTasks,
@@ -396,14 +397,23 @@ export function ProjectDetailPage() {
     if (paso && proyectoListo) openActaStep(paso);
   }, [paso, proyectoListo]);
   const { data: installers } = useInstallers(hasPermission("dispatch.manage"));
+  const { data: turnos } = useQuery({
+    queryKey: ["project-assignments", projectId],
+    queryFn: () => getProjectAssignments(projectId!),
+    enabled: !!projectId,
+  });
 
   if (projectLoading || !project) return <p>Cargando...</p>;
   const cerrada = project.status === "completed";
+  // El técnico que fue responsable antes o va de ayudante ve la obra sin
+  // llenarla: el personal rota y el nuevo sigue donde el otro terminó.
+  const trabaja = project.my_access !== "read_only";
   const estados = deriveStates(project, recordData);
   const technicianName = project.primary_technician_user_id
     ? project.primary_technician_user_id === user?.id
       ? user.full_name
-      : installers?.find((t) => t.id === project.primary_technician_user_id)?.full_name ?? "Asignado"
+      : installers?.find((t) => t.id === project.primary_technician_user_id)?.full_name
+        ?? turnos?.find((t) => t.current)?.technician_name ?? "Asignado"
     : null;
 
   return (
@@ -411,6 +421,13 @@ export function ProjectDetailPage() {
       <Link to={backTo} className="acta-back">
         <span aria-hidden="true">‹</span> Volver a {backLabel}
       </Link>
+      {!trabaja && (
+        <div className="info-banner read-only-banner" role="status">
+          <strong>Solo lectura.</strong> El técnico responsable de esta obra hoy es{" "}
+          {turnos?.find((t) => t.current)?.technician_name ?? "otro técnico"}. Ves lo que se ha hecho y lo que se
+          va haciendo, pero no la llenas.
+        </div>
+      )}
       <InstallationRecord
         project={project}
         technicianName={technicianName}
@@ -425,7 +442,8 @@ export function ProjectDetailPage() {
               <>
                 <ReleaseOrderStep project={project} canSchedule={hasPermission("dispatch.manage")} />
                 <h4 className="acta-section-title">Materiales de la orden</h4>
-                <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update")} closed={cerrada} />
+                <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update") && trabaja} closed={cerrada} />
+                <AssignmentsHistory projectId={project.id} />
               </>
             ),
           },
@@ -433,25 +451,25 @@ export function ProjectDetailPage() {
             key: "checklist", title: "Checklist técnico", ...estados.checklist,
             body: (
               <>
-                <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete")} />
+                <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete") && trabaja} />
                 <ChecklistPanel project={project} items={checklist ?? []}
-                  canEdit={hasPermission("checklists.complete")} coords={geo.coords} />
+                  canEdit={hasPermission("checklists.complete") && trabaja} coords={geo.coords} />
               </>
             ),
           },
           {
             key: "equipment", title: "Equipos instalados", ...estados.equipment,
-            body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage")} closed={cerrada}
+            body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage") && trabaja} closed={cerrada}
               confirmedAt={project.equipment_confirmed_at} />,
           },
           {
             key: "signatures", title: "Firmas del acta", ...estados.signatures,
-            body: <SignaturesPanel projectId={project.id} canSign={hasPermission("evidence.create")} />,
+            body: <SignaturesPanel projectId={project.id} canSign={hasPermission("evidence.create") && trabaja} />,
           },
           {
             key: "close", title: "Cierre de la instalación", ...estados.close,
             body: (
-              <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete")}
+              <CloseInstallationStep project={project} canClose={hasPermission("checklists.complete") && trabaja}
                 requirements={closeRequirements(project, recordData)} />
             ),
           },
@@ -499,6 +517,7 @@ export function ProjectDetailPage() {
           <p className="acta-lead">
             Las fotos del checklist se toman desde su línea; aquí van las adicionales.
           </p>
+          {trabaja && (
           <form
             className="annex-evidence"
             onSubmit={(e) => {
@@ -535,6 +554,7 @@ export function ProjectDetailPage() {
               </button>
             </div>
           </form>
+          )}
           <p className="annex-note"><PinIcon size={14} /> Ubicación GPS y hora grabadas automáticamente en cada archivo.</p>
             <div className="annex-thumbs">
               {(evidence ?? []).length > 0
@@ -552,7 +572,7 @@ export function ProjectDetailPage() {
         <TaskBoard projectId={project.id} />
 
         {puedeVerPresupuesto && <JobCostPanel projectId={project.id} />}
-        {puedeAnotarExtra && (
+        {puedeAnotarExtra && trabaja && (
           <section className="annex-section" aria-labelledby="anexo-extra">
             <div className="annex-section-head"><h3 id="anexo-extra">Cobro adicional del cliente</h3></div>
             <p className="acta-lead">
@@ -563,8 +583,38 @@ export function ProjectDetailPage() {
           </section>
         )}
 
-        {puedeVerDiario && <ProjectDayLogPanel projectId={project.id} />}
+        {puedeVerDiario && <ProjectDayLogPanel projectId={project.id} soloLectura={!trabaja} />}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Quién fue el técnico responsable de la obra (plan bodega-cierre, fase 5).
+ * El personal rota: la «Orden liberada» se vuelve a guardar con otro técnico y
+ * el nuevo sigue donde el otro terminó. Solo se muestra cuando ya hubo cambio.
+ */
+function AssignmentsHistory({ projectId }: { projectId: string }) {
+  const { data: turnos } = useQuery({
+    queryKey: ["project-assignments", projectId],
+    queryFn: () => getProjectAssignments(projectId),
+  });
+  if (!turnos || turnos.length < 2) return null;
+  const fecha = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+  return (
+    <div className="assignments-history">
+      <h4 className="acta-section-title">Técnicos responsables de la obra</h4>
+      <ol>
+        {turnos.map((t, i) => (
+          <li key={`${t.technician_user_id}-${i}`} className={t.current ? "is-current" : undefined}>
+            <strong>{t.technician_name ?? "Técnico"}</strong>
+            <span>
+              {t.current ? `desde el ${fecha(t.started_on)} · responsable hoy`
+                : `del ${fecha(t.started_on)} al ${fecha(t.ended_on ?? t.started_on)} · solo lectura`}
+            </span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

@@ -379,6 +379,21 @@ class ProjectDayLog(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
         "ProjectDayLogMaterial", back_populates="day_log", lazy="raise")
 
 
+class ProjectDayLogHelper(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un ayudante de la jornada: un técnico que fue con el responsable ese día.
+
+    No llena nada (evidencias, checklist y diario son del responsable), pero ve
+    la obra en solo lectura para saber a dónde va y qué se está haciendo.
+    """
+
+    __tablename__ = "project_day_log_helpers"
+    __table_args__ = (UniqueConstraint("day_log_id", "user_id", name="uq_day_log_helper"),)
+
+    day_log_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("project_day_logs.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+
+
 class ProjectDayLogMaterial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     """El material que se usó ese día.
 

@@ -118,11 +118,11 @@ async def get_own_draft(db: AsyncSession, organization_id, user, order_id) -> Wa
 async def _check_refs(db: AsyncSession, organization_id, user, data: dict) -> None:
     """La obra tiene que ser una que la persona ve y el técnico, una persona
     activa de la organización: nada de ids ajenos colados en la orden."""
-    from app.modules.field_ops.access import get_visible_project
+    from app.modules.field_ops.access import get_workable_project
     from app.modules.users.models import User, UserStatus
 
     if data.get("project_id"):
-        await get_visible_project(db, organization_id=organization_id, user=user, project_id=data["project_id"])
+        await get_workable_project(db, organization_id=organization_id, user=user, project_id=data["project_id"])
     tecnico_id = data.get("technician_user_id")
     if tecnico_id and tecnico_id != user.id:
         tecnico = await db.get(User, tecnico_id)

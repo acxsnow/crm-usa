@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   apiErrorMessage,
@@ -17,15 +17,26 @@ import type { Requirement } from "./InstallationRecord";
 /** Paso "Orden liberada": técnico y fecha (spec D5.9). */
 export function ReleaseOrderStep({ project, canSchedule }: { project: Project; canSchedule: boolean }) {
   const refresh = useRefreshProject(project.id);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const { data: tecnicos } = useInstallers(canSchedule);
-  const [tecnico, setTecnico] = useState(project.primary_technician_user_id ?? "");
+  const actual = project.primary_technician_user_id ?? "";
+  const [tecnico, setTecnico] = useState(actual);
   const [fecha, setFecha] = useState(project.scheduled_date ?? "");
+  // Cambiar el responsable de una obra ya iniciada (el personal rota): el nuevo
+  // sigue desde hoy, y la fecha programada original ya pasó y no se acepta.
+  const cambiaTecnico = Boolean(actual) && tecnico !== actual;
+  function elegirTecnico(id: string) {
+    setTecnico(id);
+    if (actual && id !== actual && (!fecha || fecha < localISODate())) setFecha(localISODate());
+  }
 
   const schedule = useMutation({
     mutationFn: () => scheduleInstallation(project.id, { technician_user_id: tecnico, scheduled_date: fecha }),
     onSuccess: () => {
       setError(null);
+      // El historial de responsables cambia cuando cambia el técnico.
+      queryClient.invalidateQueries({ queryKey: ["project-assignments", project.id] });
       return refresh();
     },
     onError: (err) => setError(apiErrorMessage(err)),
@@ -39,7 +50,7 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
       {error && <p className="form-error" role="alert" style={{ gridColumn: "1 / -1" }}>{error}</p>}
       <div className="field">
         <label htmlFor="orden-tecnico">Técnico</label>
-        <select id="orden-tecnico" required value={tecnico} onChange={(e) => setTecnico(e.target.value)}>
+        <select id="orden-tecnico" required value={tecnico} onChange={(e) => elegirTecnico(e.target.value)}>
           <option value="">Elige un técnico</option>
           {(tecnicos ?? []).map((t) => (
             <option key={t.id} value={t.id}>{t.full_name}</option>
@@ -47,12 +58,18 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
         </select>
       </div>
       <div className="field">
-        <label htmlFor="orden-fecha">Fecha de instalación</label>
+        <label htmlFor="orden-fecha">{cambiaTecnico ? "Sigue desde" : "Fecha de instalación"}</label>
         <input id="orden-fecha" type="date" required min={localISODate()} value={fecha}
           onChange={(e) => setFecha(e.target.value)} />
       </div>
+      {cambiaTecnico && (
+        <p className="acta-lead" style={{ gridColumn: "1 / -1" }}>
+          El nuevo técnico sigue donde el otro terminó. El anterior conserva la obra en solo lectura: ve lo que
+          hizo y lo que se va haciendo, pero ya no la llena.
+        </p>
+      )}
       <button type="submit" className="acta-btn is-primary" disabled={schedule.isPending}>
-        {project.scheduled_date ? "Reagendar" : "Liberar orden"}
+        {cambiaTecnico ? "Cambiar técnico" : project.scheduled_date ? "Guardar cambio" : "Liberar orden"}
       </button>
     </form>
   );
@@ -67,6 +84,7 @@ export function CloseInstallationStep({ project, canClose, requirements }: {
   project: Project; canClose: boolean; requirements: Requirement[];
 }) {
   const refresh = useRefreshProject(project.id);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [observaciones, setObservaciones] = useState("");
   const cerrada = project.status === "completed";

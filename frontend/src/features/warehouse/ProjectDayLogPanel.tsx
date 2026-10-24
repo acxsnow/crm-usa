@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -7,6 +7,7 @@ import { apiErrorMessage, localISODate, useInstallers } from "@/features/field-o
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { ItemPicker, useWarehouseItems } from "./ItemPicker";
 import {
+  listDayLogHelpers,
   saveDayLog,
   warehouseKeys,
   type DayLog,
@@ -42,10 +43,13 @@ function diaLargo(iso: string | null): string {
  * es donde ya están cargados. El material que sale de una camioneta descuenta la
  * existencia y cuenta como costo de la obra.
  */
-export function ProjectDayLogPanel({ projectId }: { projectId: string }) {
+export function ProjectDayLogPanel({ projectId, soloLectura = false }: { projectId: string; soloLectura?: boolean }) {
   const { hasPermission, user } = useAuth();
   const qc = useQueryClient();
-  const puedeRegistrar = hasPermission("daylogs.manage");
+  // Quien ve la obra en solo lectura (fue el responsable antes o va de ayudante)
+  // no registra; cada jornada la corrige su autor o la oficina.
+  const puedeRegistrar = hasPermission("daylogs.manage") && !soloLectura;
+  const oficina = hasPermission("projects.read_all");
   // Elegir a otro técnico exige el listado de despacho (`dispatch.manage`); sin
   // él, la jornada se registra a nombre de quien la escribe.
   const puedeElegirTecnico = hasPermission("dispatch.manage");
@@ -110,7 +114,8 @@ export function ProjectDayLogPanel({ projectId }: { projectId: string }) {
             <ul className="plain-list">
               {lista.items.map((jornada) => (
                 <Jornada key={jornada.id} jornada={jornada}
-                  onCorregir={puedeRegistrar ? () => setEditando(jornada) : undefined} />
+                  onCorregir={puedeRegistrar && (oficina || jornada.created_by_user_id === user?.id)
+                    ? () => setEditando(jornada) : undefined} />
               ))}
             </ul>
           )}
@@ -134,6 +139,7 @@ function Jornada({ jornada, onCorregir }: { jornada: DayLog; onCorregir?: () => 
       </div>
       <p className="acta-lead">
         {jornada.technician_name ?? "Sin técnico asignado"}
+        {jornada.helpers.length > 0 ? ` · Con: ${jornada.helpers.map((h) => h.name ?? "Técnico").join(", ")}` : ""}
         {jornada.crew ? ` · Cuadrilla: ${jornada.crew}` : ""}
         {jornada.hours ? ` · ${jornada.hours} h` : ""}
         {jornada.progress_note ? ` · Avance: ${jornada.progress_note}` : ""}
@@ -249,6 +255,10 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
   const [faltante, setFaltante] = useState(initial?.missing_materials ?? "");
   const [siguiente, setSiguiente] = useState(initial?.next_day_plan ?? "");
   const [novedades, setNovedades] = useState(initial?.incidents ?? "");
+  // Los técnicos que fueron con el responsable ese día: ven la obra, no la llenan.
+  const [ayudantes, setAyudantes] = useState<string[]>(initial?.helpers.map((h) => h.user_id) ?? []);
+  const { data: posiblesAyudantes } = useQuery({ queryKey: ["day-log-helpers"], queryFn: listDayLogHelpers,
+    staleTime: 5 * 60_000 });
   const [filas, setFilas] = useState<FilaMaterial[]>(
     initial?.materials.length ? initial.materials.map(filaDe) : [{ ...FILA_VACIA }],
   );
@@ -267,6 +277,7 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
       missing_materials: faltante.trim() || null,
       next_day_plan: siguiente.trim() || null,
       incidents: novedades.trim() || null,
+      helper_user_ids: ayudantes.filter((a) => a !== tecnicoId),
       // Un renglón sin artículo y sin descripción es una línea que quedó en blanco.
       materials: filas
         .filter((f) => f.item_id || f.description.trim())
@@ -327,6 +338,20 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
             <span className="form-label">Técnico del día</span>
             <span className="acta-lead">La jornada queda a nombre de {usuarioNombre ?? "ti"}.</span>
           </div>
+        )}
+        {(posiblesAyudantes ?? []).length > 0 && (
+          <fieldset className="form-field helpers-field">
+            <legend className="form-label">Ayudantes <span className="optional">(técnicos que fueron contigo)</span></legend>
+            <div className="helpers-options">
+              {(posiblesAyudantes ?? []).filter((t) => t.id !== tecnicoId).map((t) => (
+                <label key={t.id} className="billing-check">
+                  <input type="checkbox" checked={ayudantes.includes(t.id)}
+                    onChange={(e) => setAyudantes((a) => e.target.checked ? [...a, t.id] : a.filter((x) => x !== t.id))} />
+                  {t.full_name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
         )}
         <div className="form-field">
           <label className="form-label" htmlFor="diario-cuadrilla">Cuadrilla <span className="optional">(opcional)</span></label>

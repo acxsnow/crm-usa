@@ -104,6 +104,13 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "◷",
         permission: ["dispatch.read_own", "dispatch.manage"],
       },
+      // Quién estuvo en cada obra y qué se hizo cada día (plan bodega-cierre, fase 5).
+      {
+        label: "Calendario de obras",
+        to: "/works-calendar",
+        icon: "▦",
+        permission: ["projects.read_all", "dispatch.manage", "daylogs.manage"],
+      },
       // Plantillas de checklist por programa (módulo 5).
       { label: "Checklists de instalación", to: "/checklists", icon: "☑", permission: "checklists.manage" },
       {

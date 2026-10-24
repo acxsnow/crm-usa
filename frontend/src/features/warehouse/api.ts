@@ -371,6 +371,10 @@ export interface DayLog {
   next_day_plan: string | null;
   incidents: string | null;
   created_at: string | null;
+  /** Quien la registró: solo él (o la oficina) la corrige. */
+  created_by_user_id: string | null;
+  /** Los técnicos que fueron con el responsable ese día. */
+  helpers: { user_id: string; name: string | null }[];
   materials: DayLogMaterial[];
   expenses: { count: number; amount: string };
 }
@@ -397,6 +401,7 @@ export interface DayLogInput {
   next_day_plan?: string | null;
   incidents?: string | null;
   materials: DayLogMaterialInput[];
+  helper_user_ids?: string[];
 }
 
 export interface ImportResult {
@@ -725,3 +730,7 @@ export interface JobCosting {
 
 export const getJobCosting = async (projectId: string) =>
   (await apiClient.get<JobCosting>(`/warehouse/projects/${projectId}/job-costing`)).data;
+
+/** A quién se puede poner de ayudante en la jornada (técnicos activos, sin uno mismo). */
+export const listDayLogHelpers = async () =>
+  (await apiClient.get<{ id: string; full_name: string }[]>("/warehouse/day-log-helpers", { params: { limit: 200 } })).data;

@@ -1066,6 +1066,42 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
     RECORDS["Bodega · diario"] = f"proyecto {pid}, {HOY.isoformat()}"
 
 
+def flujo_rotacion(c: dict) -> None:
+    """Rotación del técnico (plan bodega-cierre, fase 5): la oficina cambia el
+    responsable con la «Orden liberada», el anterior queda en solo lectura y el
+    calendario lo muestra. Al final la obra vuelve a su técnico."""
+    adm, tec, admin = c["adm"], c["tecnico"], c["admin"]
+    section("22. Rotación del técnico en la obra")
+    abiertas = [p for p in adm.get("/projects", params={"limit": 100}).json()
+                if p.get("primary_technician_user_id") == tec.me["id"]
+                and p.get("status") in ("planning", "scheduled", "in_progress")]
+    if not check("Hay una obra abierta del técnico para rotar", bool(abiertas), "ninguna abierta"):
+        return
+    pid = abiertas[0]["id"]
+    hoy = date.today().isoformat()
+    otro = next((t for t in adm.get("/dispatch/technicians").json() if t["id"] != tec.me["id"]), None)
+    if not check("Hay otro técnico a quien pasarla", otro is not None):
+        return
+    expect("La oficina pasa la obra a otro técnico", adm.patch(f"/projects/{pid}/schedule", json={
+        "technician_user_id": otro["id"], "scheduled_date": hoy}), 200)
+    visto = tec.get(f"/projects/{pid}").json()
+    check("El técnico anterior la sigue viendo, en solo lectura", visto.get("my_access") == "read_only",
+          str(visto.get("my_access")))
+    r = tec.post(f"/warehouse/projects/{pid}/day-logs", json={"log_date": hoy, "work_done": f"QA {RUN}"})
+    check("Ya no registra jornadas → 403", r.status_code == 403, f"{r.status_code}")
+    turnos = adm.get(f"/projects/{pid}/assignments").json()
+    check("El historial muestra al anterior y al de hoy",
+          len(turnos) >= 2 and turnos[-1].get("current") and turnos[-1]["technician_user_id"] == otro["id"],
+          json.dumps(turnos)[:200])
+    cal = adm.get("/warehouse/calendar", params={"date_from": hoy, "date_to": hoy}).json()
+    check("El calendario muestra el cambio de responsable",
+          any(a["project_id"] == pid and a["technician_user_id"] == otro["id"] for a in cal.get("assignments", [])),
+          json.dumps(cal.get("assignments"))[:200])
+    expect("La obra vuelve a su técnico", adm.patch(f"/projects/{pid}/schedule", json={
+        "technician_user_id": tec.me["id"], "scheduled_date": hoy}), 200)
+    check("Y él vuelve a llenarla", tec.get(f"/projects/{pid}").json().get("my_access") == "full")
+
+
 def flujo_costo_del_trabajo(c: dict, pid: str | None) -> None:
     """Costo del trabajo (spec 2026-10-22): estimado desde plantilla, mano de obra
     y representante, cobro adicional en efectivo y el resumen estimado contra real."""
@@ -1199,6 +1235,7 @@ def main() -> int:
     seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
     seguro("Bodega", flujo_bodega, c, pid_az)
     seguro("Costo del trabajo", flujo_costo_del_trabajo, c, pid)
+    seguro("Rotación", flujo_rotacion, c)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.field_ops.access import get_visible_project
+from app.modules.field_ops.access import get_workable_project
 from app.modules.field_ops.catalogs import INSTALLATION_CONDITIONS
 from app.modules.field_ops.models import (
     ChecklistTemplate,
@@ -26,7 +26,7 @@ from app.modules.field_ops.models import (
     ProjectStatus,
 )
 from app.shared.audit import record_audit_event
-from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+from app.shared.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 
 MIN_REASON_LENGTH = 3
 
@@ -61,7 +61,7 @@ async def set_installation_conditions(
     db: AsyncSession, *, organization_id: uuid.UUID, user, project_id: uuid.UUID,
     conditions: list[str],
 ) -> Project:
-    project = await get_visible_project(
+    project = await get_workable_project(
         db, organization_id=organization_id, user=user, project_id=project_id
     )
     ensure_installation_open(project)
@@ -101,10 +101,17 @@ async def update_checklist_item(
         raise NotFoundError("El ítem del checklist no existe.", code="checklist_item_not_found")
     # Misma regla de visibilidad que el proyecto: un técnico no marca la orden
     # de otro.
-    project = await get_visible_project(
+    project = await get_workable_project(
         db, organization_id=organization_id, user=user, project_id=item.project_id
     )
     ensure_installation_open(project)
+    # Lo que marcó otro técnico (el anterior, si el personal rotó) lo cambia
+    # solo la oficina: el nuevo sigue donde el otro terminó, no lo deshace.
+    from app.modules.field_ops.access import _sees_all
+
+    if item.completed_by_user_id and item.completed_by_user_id != user.id and not _sees_all(user):
+        raise ForbiddenError("Esa línea la marcó otro técnico: solo la oficina la cambia.",
+                             code="checklist_item_by_other")
 
     ahora = datetime.now(timezone.utc)
     if not_applicable:

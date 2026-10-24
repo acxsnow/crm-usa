@@ -77,7 +77,19 @@ Pedido: «algo preestablecido que el técnico use como checklist para que no se 
 - [x] Recordatorio de conteo físico mensual (respuesta 8): aviso `warehouse.count_due` a quien tiene `warehouse.manage` cuando pasan 30 días desde el último conteo o la carga del catálogo (sale de la auditoría: un conteo que cuadra no deja movimiento). Solo con bodega activa y una vez por mes, en la alerta diaria que ya existe.
 - [x] Pruebas: `test_compras_sugeridas_descuentan_lo_que_ya_salio_para_la_obra` y `test_recuerda_el_conteo_mensual_de_bodega_una_vez_al_mes`. QA 379/379 (el paso nuevo de compras no corre ahí porque esa obra del QA queda cerrada; lo cubre la prueba). Pantalla a 390 y 1440. Manual 12.1 y 12.4 con una captura.
 
-## Fase 5 — Calendario de jornadas (L · 2 sem) — necesita spec y acuerdo con Mateo
+## Fase 5 — Rotación del técnico, ayudantes y calendario de obras (hecha el 24 oct)
+
+**Rediseñada con José el 24 oct** sobre cómo funciona el sistema hoy: no se planean días aparte; el técnico se asigna con la «Orden liberada», un solo responsable por obra que llena todo, el personal rota y el anterior queda en solo lectura, y los ayudantes van por jornada.
+
+- [x] Historial de responsables (`project_technician_assignments`, migración 0036, sembrado con el técnico de hoy de cada obra). Guardar la Orden liberada con otro técnico cierra el turno del anterior. Visible en «Orden liberada» y en `GET /projects/{id}/assignments`.
+- [x] Acceso partido en ver y llenar (`field_ops/access.py`): el técnico ve la obra de la que es responsable hoy, de la que lo fue antes y en la que fue ayudante; solo llena la de hoy (403 `project_read_only` en evidencias, checklist, condiciones, equipos, materiales, firmas, cierre, tareas, diario, salidas para la obra y cobros adicionales). La oficina (`projects.read_all`) no cambia. La ficha muestra «Solo lectura» y apaga los controles; la lista de Proyectos lo marca.
+- [x] Lo de cada uno es suyo: la línea del checklist que marcó otro técnico no se desmarca, y la jornada solo la corrige su autor (la oficina sí). El técnico ya no puede registrar una jornada a nombre de otro (hueco encontrado).
+- [x] Ayudantes por jornada (`project_day_log_helpers`): el responsable los elige de los técnicos activos (`GET /warehouse/day-log-helpers`, solo id y nombre); ven la obra en solo lectura.
+- [x] Calendario de obras (`/works-calendar`, `GET /warehouse/calendar`, hasta 62 días): mes y semana, jornadas con técnico, ayudantes y avance, y el día en que un técnico toma la obra; filtro por técnico para la oficina; el técnico ve lo suyo; lista por día en el celular.
+- [x] Pruebas `tests/test_technician_rotation.py` (4). QA 388/388 con la sección 22 (rotación). Navegador: técnico anterior, técnico nuevo y oficina, a 390 y 1440. Manual 12.6 con dos capturas.
+- Queda para después, si lo piden: planear de antemano qué técnico va cada día.
+
+## Fase 5 (diseño original, reemplazado) — Calendario de jornadas
 
 Pedido: «un calendario donde se vea qué se realiza cada día… el día 1 puede ir X técnico y el día 3 otro».
 

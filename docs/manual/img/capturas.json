@@ -306,5 +306,20 @@
       "Lo que ya salió para esas obras: no se vuelve a comprar.",
       "Lo que falta entregar menos lo que hay en bodega."
     ]
+  },
+  "rotacion_solo_lectura": {
+    "titulo": "Obra en solo lectura para el técnico anterior",
+    "leyenda": [
+      "Solo lectura: el responsable de hoy es otro técnico. Se ve todo, no se llena."
+    ]
+  },
+  "calendario_obras": {
+    "titulo": "Calendario de obras",
+    "leyenda": [
+      "Moverse por meses o semanas; «Hoy» vuelve al día de hoy.",
+      "Ver el mes o la semana, y solo un técnico.",
+      "Una jornada del diario: la obra, el técnico (y sus ayudantes) y hasta dónde se avanzó.",
+      "Punteado: el día en que un técnico toma la obra."
+    ]
   }
 }

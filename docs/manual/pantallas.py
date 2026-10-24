@@ -395,6 +395,25 @@ def bodega_compras(pg):
     ], None
 
 
+def rotacion_solo_lectura(pg):
+    pg.locator(".read-only-banner").wait_for(timeout=20000)
+    return [
+        (pg.locator(".read-only-banner"), "Solo lectura: el responsable de hoy es otro técnico. Se ve todo, no se llena.", "inside"),
+    ], pg.locator(".read-only-banner")
+
+
+def calendario_obras(pg):
+    pg.locator(".works-calendar-grid").wait_for(timeout=20000)
+    pg.get_by_role("tab", name="Semana").click()
+    pg.wait_for_timeout(1500)
+    return [
+        (pg.locator(".works-calendar-nav"), "Moverse por meses o semanas; «Hoy» vuelve al día de hoy.", "bottom"),
+        (pg.locator(".works-calendar-filters"), "Ver el mes o la semana, y solo un técnico.", "bottom"),
+        (pg.locator(".works-chip.is-log").first, "Una jornada del diario: la obra, el técnico (y sus ayudantes) y hasta dónde se avanzó.", "left"),
+        (pg.locator(".works-chip.is-turn").first, "Punteado: el día en que un técnico toma la obra.", "left"),
+    ], None
+
+
 def bodega_diario(pg):
     pg.get_by_role("button", name="Registrar la jornada").first.click()
     pg.wait_for_timeout(800)
@@ -449,6 +468,8 @@ PANTALLAS = [
     ("bodega_checklist", "tecnico", alto(1600), "/warehouse/releases", "Salida armada desde una lista (celular del técnico)", bodega_checklist),
     ("bodega_carga", "tecnico", alto(1500), "/warehouse/releases", "«Lo llevo»: la checklist al cargar la camioneta", bodega_carga),
     ("bodega_compras", "adm", ESCRITORIO, "/warehouse/purchasing", "Compras sugeridas", bodega_compras),
+    ("rotacion_solo_lectura", "tecnico", alto(1100), f"/projects/{DEMO['tecnico']['project']}", "Obra en solo lectura para el técnico anterior", rotacion_solo_lectura),
+    ("calendario_obras", "adm", {"width": 1280, "height": 1100}, "/works-calendar", "Calendario de obras", calendario_obras),
     ("bodega_diario", "tecnico", alto(1500), f"/projects/{DEMO['tecnico']['project']}", "Diario de obra: material del día (celular)", bodega_diario),
     ("programas", "admin", {"width": 1280, "height": 1350}, "/programs", "Configuración de programas", programas),
     ("equipo", "admin", ESCRITORIO, "/users", "Equipo", equipo),

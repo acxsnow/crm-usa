@@ -89,6 +89,20 @@ export async function updateProject(projectId: string, payload: Partial<Project>
   return res.data;
 }
 
+/** Un turno de técnico responsable en la obra (el personal rota). */
+export interface ProjectAssignment {
+  technician_user_id: string;
+  technician_name: string | null;
+  started_on: string;
+  ended_on: string | null;
+  current: boolean;
+}
+
+export async function getProjectAssignments(projectId: string): Promise<ProjectAssignment[]> {
+  const res = await apiClient.get<ProjectAssignment[]>(`/projects/${projectId}/assignments`);
+  return res.data;
+}
+
 export async function getProjectChecklist(projectId: string): Promise<ProjectChecklistItem[]> {
   const res = await apiClient.get<ProjectChecklistItem[]>(`/projects/${projectId}/checklist`);
   return res.data;
