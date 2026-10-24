@@ -282,5 +282,21 @@
       "Cada categoría con cuántos artículos tiene y si está activa.",
       "«Renombrar» cambia el nombre en todos sus artículos; «Desactivar» la saca de las opciones."
     ]
+  },
+  "bodega_checklist": {
+    "titulo": "Salida armada desde una lista (celular del técnico)",
+    "leyenda": [
+      "La lista trae los renglones del tipo de trabajo, agrupados por sección.",
+      "Cada sección del trabajo: exterior, eléctrico, líneas, drenaje…",
+      "«Obligatorio»: si se quita, pide el motivo y quien autoriza lo ve."
+    ]
+  },
+  "bodega_carga": {
+    "titulo": "«Lo llevo»: la checklist al cargar la camioneta",
+    "leyenda": [
+      "Cuánto ya va en la camioneta y cuántos obligatorios faltan.",
+      "«Lo llevo»: se marca al subir cada cosa a la camioneta.",
+      "Lo obligatorio va marcado para que no se quede."
+    ]
   }
 }

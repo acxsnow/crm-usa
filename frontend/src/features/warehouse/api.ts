@@ -88,6 +88,27 @@ export interface ReleaseLine {
   spec_label: string | null;
   notes: string | null;
   origin: string;
+  /** De la lista predefinida: en qué parte del trabajo va y si es obligatorio. */
+  section: string | null;
+  is_required: boolean;
+  /** El técnico lo marcó «lo llevo» al cargar la camioneta. */
+  loaded: boolean;
+  loaded_at: string | null;
+}
+
+/** Un obligatorio de la lista que no se lleva, con el motivo. */
+export interface ReleaseOmission {
+  item_id: string;
+  item_name?: string | null;
+  spec_label?: string | null;
+  reason: string;
+}
+
+/** Cuánto de lo entregado ya va en la camioneta (solo en órdenes entregadas). */
+export interface ReleaseLoading {
+  loadable: number;
+  loaded: number;
+  required_pending: number;
 }
 
 /** Una orden de salida de bodega (punto 1 del cuestionario del 19 de octubre). */
@@ -109,6 +130,8 @@ export interface WarehouseRelease {
   delivered_by_user_id: string | null;
   delivered_at: string | null;
   shortage_note: string | null;
+  omissions: ReleaseOmission[];
+  loading: ReleaseLoading | null;
   created_at: string | null;
   lines: ReleaseLine[];
 }
@@ -131,6 +154,9 @@ export interface ReleaseLineInput {
   quantity: string;
   spec_label?: string | null;
   notes?: string | null;
+  origin?: string;
+  section?: string | null;
+  is_required?: boolean;
 }
 
 export interface ReleaseInput {
@@ -140,6 +166,7 @@ export interface ReleaseInput {
   needed_on?: string | null;
   note?: string | null;
   lines: ReleaseLineInput[];
+  omissions?: ReleaseOmission[];
 }
 
 /** Un renglón de la lista predefinida: el material, cuánto y de qué calibre. */
@@ -451,8 +478,14 @@ export const approveRelease = async (id: string) =>
 export const rejectRelease = async (id: string, reason: string) =>
   (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/reject`, { reason })).data;
 
-export const deliverRelease = async (id: string, note?: string | null) =>
-  (await apiClient.post<DeliverResult>(`/warehouse/releases/${id}/deliver`, { note: note || null })).data;
+/** `lines`: lo que Bodega confirma que sale de cada renglón; sin él, lo pedido. */
+export const deliverRelease = async (id: string, note?: string | null,
+  lines?: { line_id: string; quantity: string }[]) =>
+  (await apiClient.post<DeliverResult>(`/warehouse/releases/${id}/deliver`, { note: note || null, lines: lines ?? null })).data;
+
+/** «Lo llevo»: el técnico marca (o desmarca) el renglón al cargar la camioneta. */
+export const loadReleaseLine = async (id: string, lineId: string, loaded: boolean) =>
+  (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/lines/${lineId}/load`, { loaded })).data;
 
 export const getItem = async (id: string) =>
   (await apiClient.get<WarehouseItem>(`/warehouse/items/${id}`)).data;

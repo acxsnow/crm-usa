@@ -247,3 +247,112 @@ async def test_otra_organizacion_no_ve_la_orden(app_client, login, active_admin_
                                   headers=ajeno)).status_code == 404
     assert (await app_client.post(f"{API}/warehouse/releases/{orden['id']}/deliver",
                                   headers=ajeno)).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# La lista como checklist (plan bodega-cierre, fase 2)
+# ---------------------------------------------------------------------------
+
+async def test_quitar_un_obligatorio_pide_el_motivo_y_lo_ve_quien_autoriza(app_client, login, active_admin_user,
+                                                                         active_technician_user):
+    bodega = await login(active_admin_user.email)
+    tecnico = await login(active_technician_user.email)
+    tubo = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
+    disconnect = await _item(app_client, bodega, "Disconnect 30 A", sku="257")
+
+    linea = {"item_id": tubo["id"], "quantity": "20", "section": "Líneas", "is_required": True, "origin": "lista"}
+    sin_motivo = await app_client.post(f"{API}/warehouse/releases", json={
+        "lines": [linea], "omissions": [{"item_id": disconnect["id"], "reason": "   "}]}, headers=tecnico)
+    assert (sin_motivo.status_code, sin_motivo.json()["code"]) == (400, "omission_reason_required")
+
+    r = await app_client.post(f"{API}/warehouse/releases", json={
+        "lines": [linea], "omissions": [{"item_id": disconnect["id"], "reason": "La casa ya tiene disconnect"}]},
+        headers=tecnico)
+    assert r.status_code == 201, r.text
+    orden = r.json()
+    assert orden["omissions"] == [{"item_id": disconnect["id"], "item_name": "Disconnect 30 A", "spec_label": None,
+                                   "reason": "La casa ya tiene disconnect"}]
+    assert (orden["lines"][0]["section"], orden["lines"][0]["is_required"]) == ("Líneas", True)
+    # Quien autoriza ve lo mismo en su bandeja.
+    await _enviar(app_client, tecnico, orden["id"])
+    bandeja = (await app_client.get(f"{API}/warehouse/releases/pending", headers=bodega)).json()
+    assert next(o for o in bandeja if o["id"] == orden["id"])["omissions"][0]["reason"] == "La casa ya tiene disconnect"
+
+
+async def test_bodega_confirma_lo_que_sale_de_cada_renglon(app_client, login, active_admin_user,
+                                                          active_admin_staff_user):
+    bodega = await login(active_admin_user.email)
+    supervisor = await login(active_admin_staff_user.email)
+    tubo = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
+    cinta = await _item(app_client, bodega, "Cinta de aluminio", sku="CI-01")
+    await _entrada(app_client, bodega, tubo["id"], "100")
+    await _entrada(app_client, bodega, cinta["id"], "100")
+    r = await app_client.post(f"{API}/warehouse/releases", json={"lines": [
+        {"item_id": tubo["id"], "quantity": "20"}, {"item_id": cinta["id"], "quantity": "3"}]}, headers=bodega)
+    orden = r.json()
+    await _enviar(app_client, bodega, orden["id"])
+    await _autorizar(app_client, supervisor, orden["id"])
+    l_tubo, l_cinta = orden["lines"][0]["id"], orden["lines"][1]["id"]
+    url = f"{API}/warehouse/releases/{orden['id']}/deliver"
+
+    # Nunca más de lo pedido, ni renglones de otra orden.
+    de_mas = await app_client.post(url, json={"lines": [{"line_id": l_tubo, "quantity": "25"}]}, headers=bodega)
+    assert (de_mas.status_code, de_mas.json()["code"]) == (400, "invalid_delivered_quantity")
+    ajena = await app_client.post(url, json={"lines": [{"line_id": orden["id"], "quantity": "1"}]}, headers=bodega)
+    assert (ajena.status_code, ajena.json()["code"]) == (400, "release_line_not_found")
+
+    r = await app_client.post(url, json={"lines": [{"line_id": l_tubo, "quantity": "15"},
+                                                   {"line_id": l_cinta, "quantity": "0"}]}, headers=bodega)
+    assert r.status_code == 200, r.text
+    entregada = r.json()
+    cantidades = {l["item_name"]: l["quantity_delivered"] for l in entregada["lines"]}
+    assert cantidades == {"Tubo cobre 3/8": "15.00", "Cinta de aluminio": "0.00"}
+    assert sorted(f["motivo"] for f in entregada["faltantes"]) == ["Bodega entregó 15.00 de 20.00.",
+                                                                   "Bodega no lo entregó."]
+    assert await _existencia(app_client, bodega, tubo["id"]) == "85.00"
+    assert await _existencia(app_client, bodega, cinta["id"]) == "100.00"
+
+
+async def test_el_tecnico_marca_lo_que_carga_en_la_camioneta(app_client, db, seeded_org, login, active_admin_user,
+                                                             active_admin_staff_user, active_technician_user):
+    from tests.test_warehouse_security import _otro_tecnico
+
+    bodega = await login(active_admin_user.email)
+    supervisor = await login(active_admin_staff_user.email)
+    tecnico = await login(active_technician_user.email)
+    tubo = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
+    cinta = await _item(app_client, bodega, "Cinta de aluminio", sku="CI-01")
+    await _entrada(app_client, bodega, tubo["id"], "100")  # de la cinta no hay
+    r = await app_client.post(f"{API}/warehouse/releases", json={"lines": [
+        {"item_id": tubo["id"], "quantity": "20", "is_required": True, "origin": "lista"},
+        {"item_id": cinta["id"], "quantity": "2", "is_required": True, "origin": "lista"}]}, headers=tecnico)
+    orden = r.json()
+    l_tubo, l_cinta = orden["lines"][0]["id"], orden["lines"][1]["id"]
+    marcar = f"{API}/warehouse/releases/{orden['id']}/lines/{l_tubo}/load"
+
+    # Antes de entregarla no hay qué cargar.
+    antes = await app_client.post(marcar, json={"loaded": True}, headers=tecnico)
+    assert (antes.status_code, antes.json()["code"]) == (400, "release_not_delivered")
+
+    await _enviar(app_client, tecnico, orden["id"])
+    await _autorizar(app_client, supervisor, orden["id"])
+    entregada = (await _entregar(app_client, bodega, orden["id"])).json()
+    # Lo que se entregó se puede cargar; lo que no había, no.
+    assert entregada["loading"] == {"loadable": 1, "loaded": 0, "required_pending": 1}
+
+    r = await app_client.post(marcar, json={"loaded": True}, headers=tecnico)
+    assert r.status_code == 200, r.text
+    assert r.json()["loading"] == {"loadable": 1, "loaded": 1, "required_pending": 0}
+    assert next(l for l in r.json()["lines"] if l["id"] == l_tubo)["loaded"] is True
+    sin_entregar = await app_client.post(f"{API}/warehouse/releases/{orden['id']}/lines/{l_cinta}/load",
+                                         json={"loaded": True}, headers=tecnico)
+    assert (sin_entregar.status_code, sin_entregar.json()["code"]) == (400, "release_line_not_delivered")
+
+    # Otro técnico no marca la orden ajena.
+    otro = await _otro_tecnico(db, seeded_org)
+    ajeno = await app_client.post(marcar, json={"loaded": False}, headers=await login(otro.email))
+    assert ajeno.status_code in (403, 404)
+
+    # Se puede desmarcar si se equivocó.
+    r = await app_client.post(marcar, json={"loaded": False}, headers=tecnico)
+    assert r.json()["loading"] == {"loadable": 1, "loaded": 0, "required_pending": 1}

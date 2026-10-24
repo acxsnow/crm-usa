@@ -967,6 +967,28 @@ def flujo_bodega(c: dict, pid: str | None) -> None:
           r.status_code in (200, 400, 409) and saldo == "175.00", f"{r.status_code} · tubo {saldo}")
     RECORDS["Bodega · orden entregada"] = str(enviada.get("number"))
 
+    # La lista como checklist (plan bodega-cierre, fase 2).
+    de_lista = [l for l in aplicada.get("lines", []) if l.get("origin") == "lista"]
+    check("Los renglones de la lista traen su sección y si son obligatorios",
+          {l.get("section") for l in de_lista} == {"Tubería", "Consumibles"} and all(l.get("is_required") for l in de_lista),
+          json.dumps(de_lista)[:200])
+    linea_tubo = next((l for l in entrega.get("lines", []) if l.get("item_id") == tubo["id"]), {})
+    cargada = expect("El técnico marca «lo llevo» el tubo al cargar la camioneta", tec.post(
+        f"/warehouse/releases/{orden.get('id')}/lines/{linea_tubo.get('id')}/load", json={"loaded": True}), 200) or {}
+    check("La orden cuenta lo cargado", (cargada.get("loading") or {}).get("loaded") == 1,
+          json.dumps(cargada.get("loading")))
+    expect("El vendedor no marca la carga", v.post(
+        f"/warehouse/releases/{orden.get('id')}/lines/{linea_tubo.get('id')}/load", json={"loaded": True}), 403)
+    r = tec.post("/warehouse/releases", json={
+        "lines": [{"item_id": tubo["id"], "quantity": "5", "is_required": True, "origin": "lista"}],
+        "omissions": [{"item_id": cinta["id"], "reason": "  "}]})
+    check("Quitar un obligatorio sin motivo → 400", r.status_code == 400, f"{r.status_code}")
+    con_motivo = expect("Quitar un obligatorio con motivo queda en la orden", tec.post("/warehouse/releases", json={
+        "lines": [{"item_id": tubo["id"], "quantity": "5", "is_required": True, "origin": "lista"}],
+        "omissions": [{"item_id": cinta["id"], "reason": f"QA {RUN}: ya hay en la camioneta"}]}), 201) or {}
+    check("El motivo viaja con la orden", (con_motivo.get("omissions") or [{}])[0].get("reason", "").endswith("camioneta"),
+          json.dumps(con_motivo.get("omissions"))[:150])
+
     otra = expect("Segunda orden del técnico", tec.post("/warehouse/releases", json={
         "project_id": pid, "lines": [{"item_id": tubo["id"], "quantity": "500"}]}), 201) or {}
     tec.post(f"/warehouse/releases/{otra.get('id')}/submit")

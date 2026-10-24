@@ -4255,3 +4255,27 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
 .category-main strong { display: block; font-weight: 600; }
 .category-main small { display: block; color: var(--ink-soft); font-size: 0.8rem; }
 .category-actions { display: flex; gap: 14px; }
+
+/* Salida de bodega como checklist (plan bodega-cierre, fase 2). */
+.billing-chip.is-required { margin-left: 6px; background: var(--red-wash); color: var(--red-dark); }
+.release-section-row th { text-align: left; font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); background: var(--card-soft); padding: 6px 0.9rem; }
+.release-lines ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.release-lines li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.release-lines li.is-loaded .release-line-text { color: var(--ink-soft); }
+.release-lines .release-lines-section { font-size: 0.76rem; font-weight: 700; color: var(--ink-soft); border-bottom: 0; padding-top: 10px; }
+.release-load-check { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 600; cursor: pointer; }
+.release-load-check input { width: 22px; height: 22px; }
+.release-omissions { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--red-wash); font-size: 0.85rem; }
+.release-omissions ul { margin: 4px 0 0; padding-left: 1.1rem; list-style: disc; }
+.release-omissions li { display: list-item; border: 0; padding: 2px 0; }
+.release-load { display: block; font-weight: 600; }
+.release-load.is-pending { color: var(--red-dark); }
+/* En el celular, una tarjeta por orden: la columna de renglones (donde el
+   técnico marca «Lo llevo») quedaba angosta. */
+@media (max-width: 767px) {
+  .app-content .release-orders:not(#_) { min-width: 0; }
+  .app-content .release-orders:not(#_) thead { display: none; }
+  .app-content .release-orders:not(#_) tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .app-content .release-orders:not(#_) td { display: block; border: 0; padding: 3px 0; }
+  .app-content .release-orders:not(#_) td:empty { display: none; }
+}

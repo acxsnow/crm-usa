@@ -54,11 +54,12 @@ El catálogo real son ~600 productos; hoy los desplegables traen solo los primer
 
 Pedido: «algo preestablecido que el técnico use como checklist para que no se le olviden cosas que sí o sí debe llevar».
 
-- [ ] Al aplicar la lista, el renglón de la salida guarda su sección, si es obligatorio y de qué lista vino (migración).
-- [ ] La orden se ve agrupada por sección, con «Obligatorio» marcado.
-- [ ] Quitar un renglón obligatorio pide motivo (queda escrito en la orden y lo ve quien autoriza).
-- [ ] En la entrega, quien entrega confirma renglón por renglón lo que sale (cantidad entregada editable, sin pasar de lo pedido).
-- [ ] El técnico ve su orden entregada en el celular como lista de chequeo al cargar la camioneta.
+- [x] Al aplicar la lista (en el formulario o con `/kits/{id}/apply`), el renglón de la salida guarda su sección y si es obligatorio (migración 0035). El origen ya se guardaba.
+- [x] La orden se ve agrupada por sección, con «Obligatorio» marcado, en el formulario, en la bandeja de quien autoriza y en la entrega.
+- [x] Quitar un renglón obligatorio pide motivo (diálogo propio); queda en `omissions` de la orden, lo ve quien autoriza y se deshace con «Volver a agregarlo».
+- [x] En la entrega, Bodega confirma renglón por renglón lo que sale (de 0 a lo pedido; nunca más que lo que hay). Lo no entregado queda como faltante con su motivo.
+- [x] El técnico marca «Lo llevo» en su orden entregada (solo lo que se entregó; solo él, quien la pidió o quien administra la bodega). La orden muestra «Cargado X de Y · faltan N obligatorios». La casilla responde al tocarla, sin esperar al servidor, y vuelve atrás si falla. En el celular, una tarjeta por orden.
+- [x] Pruebas: copiar sección y obligatorio, omisión sin motivo, entrega por renglón (de más, de otra orden, en cero) y «lo llevo» (antes de entregar, lo no entregado, otro técnico, desmarcar). QA 379/379. Recorrido en el navegador: técnico a 390 px, Administración a 1440. Manual 12.3 con dos capturas.
 - **Decidido (24 oct):** chequean los dos, cada uno lo suyo. Bodega confirma al entregar cuánto sale de cada renglón; el técnico marca «lo llevo» en el celular al cargar la camioneta, y esa marca es la checklist del pedido. Un obligatorio sin marcar se avisa.
 
 ## Fase 3 — Catálogo listo para AC Pro (M · 1 sem)

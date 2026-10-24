@@ -145,8 +145,26 @@ def _normalizar_lineas(lineas: list[dict]) -> list[dict]:
             "spec_label": (linea.get("spec_label") or "").strip() or None,
             "notes": (linea.get("notes") or "").strip() or None,
             "origin": linea.get("origin") or LineOrigin.MANUAL,
+            "section": (linea.get("section") or "").strip() or None,
+            "is_required": bool(linea.get("is_required")),
             "sort_order": posicion,
         })
+    return limpias
+
+
+async def _omisiones(db, organization_id, omisiones: list[dict] | None) -> list[dict]:
+    """Los obligatorios de la lista que quien arma la orden quitó. Cada uno
+    necesita su motivo: es lo que quien autoriza revisa («ya hay en la
+    camioneta», «este trabajo no lleva disconnect»…)."""
+    limpias = []
+    for omision in omisiones or []:
+        motivo = (omision.get("reason") or "").strip()
+        if not motivo:
+            raise InvalidInputError("Para quitar un renglón obligatorio hay que decir por qué.",
+                                    code="omission_reason_required")
+        item = await _item_for_line(db, organization_id, omision["item_id"])
+        limpias.append({"item_id": str(item.id), "item_name": item.name,
+                        "spec_label": (omision.get("spec_label") or "").strip() or None, "reason": motivo})
     return limpias
 
 
@@ -155,6 +173,7 @@ async def create_order(db: AsyncSession, *, organization_id, user, data: dict) -
     for linea in lineas:
         await _item_for_line(db, organization_id, linea["item_id"])
     await _check_refs(db, organization_id, user, data)
+    omisiones = await _omisiones(db, organization_id, data.get("omissions"))
 
     ubicacion = await wh.get_location(db, organization_id, data["location_id"]) if data.get("location_id") \
         else await wh.default_location(db, organization_id)
@@ -162,7 +181,7 @@ async def create_order(db: AsyncSession, *, organization_id, user, data: dict) -
         organization_id=organization_id, status=ReleaseStatus.BORRADOR, location_id=ubicacion.id,
         project_id=data.get("project_id"), technician_user_id=data.get("technician_user_id") or user.id,
         requested_by_user_id=user.id, needed_on=data.get("needed_on"),
-        note=(data.get("note") or "").strip() or None,
+        note=(data.get("note") or "").strip() or None, omissions=omisiones,
     )
     db.add(order)
     await db.flush()
@@ -193,6 +212,7 @@ async def update_order(db: AsyncSession, *, organization_id, user, order_id, dat
     for linea in lineas:
         await _item_for_line(db, organization_id, linea["item_id"])
     await _check_refs(db, organization_id, user, data)
+    order.omissions = await _omisiones(db, organization_id, data.get("omissions"))
 
     for previa in (await lines_of(db, organization_id, [order.id])).get(order.id, []):
         await db.delete(previa)
@@ -279,17 +299,24 @@ async def reject_order(db: AsyncSession, *, organization_id, user, order_id, rea
     return order
 
 
-async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, note: str | None = None) -> dict:
+async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, note: str | None = None,
+                        quantities: dict | None = None) -> dict:
     """Entrega el material: baja el saldo y carga lo entregado a la obra.
 
-    Devuelve la orden y la lista de faltantes (lo pedido que no se pudo
-    entregar). Sin existencia no se bloquea (D-BOD-4).
+    `quantities` ({id de línea: cantidad}) es lo que Bodega confirma renglón por
+    renglón (fase 2 del plan de cierre); sin él se entrega lo pedido. Nunca sale
+    más de lo pedido ni más de lo que hay. Devuelve la orden y la lista de
+    faltantes. Sin existencia no se bloquea (D-BOD-4).
     """
     order = await get_order(db, organization_id, order_id)
     if order.status != ReleaseStatus.AUTORIZADA:
         raise InvalidInputError("Solo se entrega material de una orden autorizada.",
                                 code="release_not_authorized")
     lineas = (await lines_of(db, organization_id, [order.id])).get(order.id, [])
+    confirmadas = {str(k): v for k, v in (quantities or {}).items()}
+    ajenas = set(confirmadas) - {str(l.id) for l in lineas}
+    if ajenas:
+        raise InvalidInputError("Una de las cantidades no es de esta orden.", code="release_line_not_found")
     ubicacion = await wh.get_location(db, organization_id, order.location_id)
     hoy = await org_today(db, organization_id)
 
@@ -297,19 +324,26 @@ async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, no
     entregado_alguna = False
     for linea in lineas:
         pedida = _q(linea.quantity_requested)
+        a_entregar = pedida
+        if str(linea.id) in confirmadas:
+            a_entregar = _q(confirmadas[str(linea.id)])
+            if a_entregar < ZERO or a_entregar > pedida:
+                raise InvalidInputError(f"Se entrega entre 0 y {pedida} de lo pedido en cada renglón.",
+                                        code="invalid_delivered_quantity")
         disponible = await wh.stock_quantity(db, organization_id, item_id=linea.item_id,
                                              location_id=ubicacion.id)
-        entregada = min(pedida, disponible) if disponible > ZERO else ZERO
+        entregada = min(a_entregar, disponible) if disponible > ZERO else ZERO
         linea.quantity_delivered = _q(entregada)
         if entregada <= ZERO:
+            motivo = "Bodega no lo entregó." if a_entregar <= ZERO else "No había existencia en bodega."
             faltantes.append({"line_id": str(linea.id), "item_id": str(linea.item_id),
-                              "pedida": str(pedida), "entregada": "0.00",
-                              "motivo": "No había existencia en bodega."})
+                              "pedida": str(pedida), "entregada": "0.00", "motivo": motivo})
             continue
         if entregada < pedida:
+            motivo = (f"Solo había {_q(entregada)} de {pedida}." if entregada < a_entregar
+                      else f"Bodega entregó {_q(entregada)} de {pedida}.")
             faltantes.append({"line_id": str(linea.id), "item_id": str(linea.item_id),
-                              "pedida": str(pedida), "entregada": str(_q(entregada)),
-                              "motivo": f"Solo había {_q(entregada)} de {pedida}."})
+                              "pedida": str(pedida), "entregada": str(_q(entregada)), "motivo": motivo})
         entregado_alguna = True
         movimiento = await wh.record_movement(
             db, organization_id=organization_id, user=user, item_id=linea.item_id, location_id=ubicacion.id,
@@ -369,6 +403,43 @@ async def _cargar_a_la_obra(db, *, organization_id, order, line_id, item_id, can
 
 
 # ---------------------------------------------------------------------------
+# «Lo llevo»: la checklist del técnico al cargar la camioneta (fase 2)
+# ---------------------------------------------------------------------------
+
+async def mark_loaded(db: AsyncSession, *, organization_id, user, order_id, line_id, loaded: bool) -> WarehouseReleaseOrder:
+    """El técnico marca (o desmarca) que el renglón ya va en la camioneta.
+
+    Solo sobre una orden entregada y solo lo que de verdad salió de bodega: lo
+    que no se entregó no se puede cargar. La marca es del técnico de la orden o
+    de quien la pidió; Bodega (`warehouse.manage`) puede corregirla.
+    """
+    from app.api.deps import get_effective_permissions
+
+    order = await get_order(db, organization_id, order_id)
+    if user.id not in (order.requested_by_user_id, order.technician_user_id) \
+            and "warehouse.manage" not in get_effective_permissions(user):
+        raise ForbiddenError("Solo el técnico de la orden marca lo que carga.", code="release_not_owner")
+    if order.status != ReleaseStatus.ENTREGADA:
+        raise InvalidInputError("Se marca lo que se carga cuando la orden ya está entregada.",
+                                code="release_not_delivered")
+    linea = next((l for l in (await lines_of(db, organization_id, [order.id])).get(order.id, [])
+                  if str(l.id) == str(line_id)), None)
+    if linea is None:
+        raise NotFoundError("El renglón no es de esta orden.", code="release_line_not_found")
+    if loaded and _q(linea.quantity_delivered or 0) <= ZERO:
+        raise InvalidInputError("Ese renglón no se entregó: no hay qué cargar.", code="release_line_not_delivered")
+    linea.loaded_at = _now() if loaded else None
+    linea.loaded_by_user_id = user.id if loaded else None
+    await db.flush()
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="warehouse.release_line_loaded", entity_type="warehouse_release_order",
+                             entity_id=str(order.id), after_data={"line_id": str(linea.id), "loaded": loaded})
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+# ---------------------------------------------------------------------------
 # Salidas para las pantallas
 # ---------------------------------------------------------------------------
 
@@ -401,6 +472,19 @@ def line_out(linea: WarehouseReleaseLine, *, item: WarehouseItem | None = None) 
         "quantity_delivered": None if entregada is None else str(entregada),
         "pending_quantity": str(pedida - entregada) if entregada is not None and entregada < pedida else "0.00",
         "spec_label": linea.spec_label, "notes": linea.notes, "origin": linea.origin,
+        "section": linea.section, "is_required": linea.is_required,
+        "loaded": linea.loaded_at is not None,
+        "loaded_at": linea.loaded_at.isoformat() if linea.loaded_at else None,
+    }
+
+
+def _carga(lineas: list[WarehouseReleaseLine]) -> dict:
+    """Cuánto de lo entregado ya va en la camioneta, y qué obligatorios faltan."""
+    entregadas = [l for l in lineas if _q(l.quantity_delivered or 0) > ZERO]
+    return {
+        "loadable": len(entregadas),
+        "loaded": sum(1 for l in entregadas if l.loaded_at is not None),
+        "required_pending": sum(1 for l in entregadas if l.is_required and l.loaded_at is None),
     }
 
 
@@ -422,6 +506,8 @@ def order_out(order: WarehouseReleaseOrder, lineas: list[WarehouseReleaseLine], 
         "delivered_by_user_id": str(order.delivered_by_user_id) if order.delivered_by_user_id else None,
         "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
         "shortage_note": order.shortage_note,
+        "omissions": order.omissions or [],
+        "loading": _carga(lineas) if order.status == ReleaseStatus.ENTREGADA else None,
         "created_at": order.created_at.isoformat() if order.created_at else None,
         "lines": [line_out(l, item=catalogo.get(l.item_id)) for l in lineas],
     }

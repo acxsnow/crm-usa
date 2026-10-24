@@ -455,6 +455,15 @@ class ReleaseLineIn(BaseModel):
     spec_label: str | None = Field(default=None, max_length=60)
     notes: str | None = Field(default=None, max_length=1000)
     origin: str = "manual"
+    section: str | None = Field(default=None, max_length=120)
+    is_required: bool = False
+
+
+class OmissionIn(BaseModel):
+    """Un obligatorio de la lista que no se lleva, con el motivo."""
+    item_id: uuid.UUID
+    spec_label: str | None = Field(default=None, max_length=60)
+    reason: str = Field(min_length=1, max_length=500)
 
 
 class ReleaseIn(BaseModel):
@@ -464,14 +473,26 @@ class ReleaseIn(BaseModel):
     needed_on: date | None = None
     note: str | None = Field(default=None, max_length=2000)
     lines: list[ReleaseLineIn] = Field(min_length=1, max_length=200)
+    omissions: list[OmissionIn] = Field(default_factory=list, max_length=200)
 
 
 class RejectIn(BaseModel):
     reason: str = Field(min_length=1, max_length=2000)
 
 
+class DeliverLineIn(BaseModel):
+    line_id: uuid.UUID
+    quantity: str
+
+
 class DeliverIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
+    # Lo que Bodega confirma que sale de cada renglón; sin esto, lo pedido.
+    lines: list[DeliverLineIn] | None = Field(default=None, max_length=200)
+
+
+class LoadIn(BaseModel):
+    loaded: bool = True
 
 
 @router.get("/warehouse/releases/pending")
@@ -555,10 +576,23 @@ async def deliver_release(release_id: uuid.UUID, payload: DeliverIn | None = Non
                           organization_id: uuid.UUID = Depends(get_organization_id),
                           current_user: User = Depends(_deliver)) -> dict:
     """Entrega el material y baja el saldo. Devuelve lo que no se pudo entregar."""
+    cantidades = {l.line_id: l.quantity for l in payload.lines} if payload and payload.lines else None
     resultado = await rel.deliver_order(db, organization_id=organization_id, user=current_user,
-                                        order_id=release_id, note=payload.note if payload else None)
+                                        order_id=release_id, note=payload.note if payload else None,
+                                        quantities=cantidades)
     order = resultado["order"]
     return {**(await rel.orders_out(db, organization_id, [order]))[0], "faltantes": resultado["faltantes"]}
+
+
+@router.post("/warehouse/releases/{release_id}/lines/{line_id}/load")
+async def load_release_line(release_id: uuid.UUID, line_id: uuid.UUID, payload: LoadIn,
+                            db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            current_user: User = Depends(_request)) -> dict:
+    """«Lo llevo»: el técnico marca el renglón al cargar la camioneta."""
+    order = await rel.mark_loaded(db, organization_id=organization_id, user=current_user, order_id=release_id,
+                                  line_id=line_id, loaded=payload.loaded)
+    return (await rel.orders_out(db, organization_id, [order]))[0]
 
 
 # ---------------------------------------------------------------------------

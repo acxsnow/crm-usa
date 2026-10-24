@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import "../billing/billing.css";
@@ -8,6 +8,7 @@ import "../finance/finance.css";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { PaginationControls } from "@/components/PaginationControls";
 import { SearchPicker } from "@/components/SearchPicker";
+import { askText } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listProjectsPage } from "@/features/field-ops/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
@@ -23,8 +24,11 @@ import {
   submitRelease,
   warehouseCatalogs,
   warehouseKeys,
+  loadReleaseLine,
   type DeliverResult,
+  type ReleaseLine,
   type ReleaseLineInput,
+  type ReleaseOmission,
   type WarehouseRelease,
 } from "./api";
 
@@ -45,7 +49,7 @@ function invalidarBodega(qc: ReturnType<typeof useQueryClient>) {
  * arriba es el trabajo del supervisor; la lista de abajo, el histórico.
  */
 export function WarehouseReleasesPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const qc = useQueryClient();
   const puedePedir = hasPermission("warehouse.request_release") || hasPermission("warehouse.manage");
   const puedeAutorizar = hasPermission("warehouse.approve_release");
@@ -57,6 +61,7 @@ export function WarehouseReleasesPage() {
   const [rechazando, setRechazando] = useState<{ id: string; numero: string } | null>(null);
   const [motivo, setMotivo] = useState("");
   const [entrega, setEntrega] = useState<DeliverResult | null>(null);
+  const [entregando, setEntregando] = useState<WarehouseRelease | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
@@ -99,10 +104,21 @@ export function WarehouseReleasesPage() {
     onError: alFallar,
   });
   const entregar = useMutation({
-    mutationFn: (id: string) => deliverRelease(id),
-    onSuccess: (r) => { setError(null); setEntrega(r); invalidarBodega(qc); },
+    mutationFn: ({ id, lines }: { id: string; lines: { line_id: string; quantity: string }[] }) =>
+      deliverRelease(id, null, lines),
+    onSuccess: (r) => { setError(null); setEntrega(r); setEntregando(null); invalidarBodega(qc); },
     onError: alFallar,
   });
+  const cargar = useMutation({
+    mutationFn: ({ id, lineId, loaded }: { id: string; lineId: string; loaded: boolean }) =>
+      loadReleaseLine(id, lineId, loaded),
+    meta: { silent: true },
+    onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: warehouseKeys.releases }); },
+    onError: alFallar,
+  });
+  /** La checklist «lo llevo» es del técnico de la orden (o de quien la pidió). */
+  const esMia = (o: WarehouseRelease) =>
+    Boolean(user) && (o.technician_user_id === user?.id || o.requested_by_user_id === user?.id);
 
   const lista = tab === "pendientes" ? pendientes : todas;
 
@@ -128,6 +144,11 @@ export function WarehouseReleasesPage() {
       )}
 
       {entrega && <EntregaBanner resultado={entrega} onClose={() => setEntrega(null)} />}
+
+      {entregando && (
+        <DeliveryForm orden={entregando} enviando={entregar.isPending} onCancel={() => setEntregando(null)}
+          onSubmit={(lines) => entregar.mutate({ id: entregando.id, lines })} />
+      )}
 
       {rechazando && (
         <form
@@ -176,7 +197,7 @@ export function WarehouseReleasesPage() {
             {tab === "pendientes" ? "Nada por autorizar: la bodega está al día." : "Todavía no hay órdenes de salida."}
           </p>
         ) : (
-          <div className="tablewrap"><table className="notices-table">
+          <div className="tablewrap"><table className="notices-table release-orders">
             <thead>
               <tr>
                 <th>Orden</th><th>Estado</th><th>Renglones</th><th>Necesaria</th><th>Pedida</th><th />
@@ -193,19 +214,24 @@ export function WarehouseReleasesPage() {
                     {cat?.release_statuses[o.status] ?? o.status}
                     {o.reject_reason && <small>Motivo: {o.reject_reason}</small>}
                     {o.shortage_note && <small>Al entregar: {o.shortage_note}</small>}
+                    {o.loading && o.loading.loadable > 0 && (
+                      <small className={o.loading.required_pending > 0 ? "release-load is-pending" : "release-load"}>
+                        Cargado {o.loading.loaded} de {o.loading.loadable}
+                        {o.loading.required_pending === 1 && " · falta 1 obligatorio"}
+                        {o.loading.required_pending > 1 && ` · faltan ${o.loading.required_pending} obligatorios`}
+                      </small>
+                    )}
                   </td>
                   <td>
-                    <details>
-                      <summary>{o.lines.length} renglones</summary>
-                      <ul>
-                        {o.lines.map((l) => (
-                          <li key={l.id}>
-                            {l.item_name ?? "Artículo"}: {l.quantity_requested} {l.unit_label ?? ""}
-                            {l.quantity_delivered !== null && ` — entregado ${l.quantity_delivered}`}
-                            {l.spec_label ? ` (${l.spec_label})` : ""}
-                          </li>
-                        ))}
-                      </ul>
+                    <details open={o.status === "entregada" && esMia(o) && (o.loading?.loaded ?? 0) < (o.loading?.loadable ?? 0)}>
+                      <summary>
+                        {o.lines.length} {o.lines.length === 1 ? "renglón" : "renglones"}
+                        {o.omissions.length === 1 && " · 1 obligatorio quitado"}
+                        {o.omissions.length > 1 && ` · ${o.omissions.length} obligatorios quitados`}
+                      </summary>
+                      <OrderLines orden={o}
+                        marcable={o.status === "entregada" && esMia(o)}
+                        onMarcar={(l, loaded) => cargar.mutateAsync({ id: o.id, lineId: l.id, loaded })} />
                     </details>
                   </td>
                   <td>{o.needed_on ?? "—"}</td>
@@ -225,7 +251,7 @@ export function WarehouseReleasesPage() {
                     )}
                     {o.status === "autorizada" && puedeEntregar && (
                       <button type="button" className="acta-link" disabled={entregar.isPending}
-                        onClick={() => entregar.mutate(o.id)}>Entregar</button>
+                        onClick={() => setEntregando(o)}>Entregar</button>
                     )}
                   </td>
                 </tr>
@@ -236,6 +262,125 @@ export function WarehouseReleasesPage() {
         <PaginationControls {...lista.controls} />
       </article>
     </div>
+  );
+}
+
+/**
+ * Los renglones de una orden, por sección, con lo obligatorio marcado. En una
+ * orden entregada que es del técnico, cada renglón entregado tiene su «Lo
+ * llevo»: es la checklist al cargar la camioneta (plan bodega-cierre, fase 2).
+ */
+function OrderLines({ orden, marcable, onMarcar }: {
+  orden: WarehouseRelease;
+  marcable: boolean;
+  onMarcar: (linea: ReleaseLine, loaded: boolean) => Promise<unknown>;
+}) {
+  // La casilla cambia al tocarla, sin esperar al servidor: con la señal de los
+  // parques, esperar la respuesta se siente como que no tomó. Si falla, vuelve.
+  const [marcas, setMarcas] = useState<Record<string, boolean>>({});
+  async function marcar(l: ReleaseLine, valor: boolean) {
+    setMarcas((m) => ({ ...m, [l.id]: valor }));
+    try {
+      await onMarcar(l, valor);
+    } catch {
+      setMarcas((m) => { const copia = { ...m }; delete copia[l.id]; return copia; });
+    }
+  }
+  return (
+    <div className="release-lines">
+      <ul>
+        {orden.lines.map((l, i) => {
+          const entregado = l.quantity_delivered !== null && Number(l.quantity_delivered) > 0;
+          const nuevaSeccion = l.section && l.section !== (i > 0 ? orden.lines[i - 1].section : null);
+          return (
+            <Fragment key={l.id}>
+              {nuevaSeccion && <li className="release-lines-section">{l.section}</li>}
+              <li className={l.loaded ? "is-loaded" : undefined}>
+                {marcable && entregado ? (
+                  <label className="release-load-check">
+                    <input type="checkbox" checked={l.id in marcas ? marcas[l.id] : l.loaded}
+                      onChange={(e) => marcar(l, e.target.checked)} />
+                    <span>Lo llevo</span>
+                  </label>
+                ) : null}
+                <span className="release-line-text">
+                  <strong>{l.item_name ?? "Artículo"}</strong>{l.spec_label ? ` (${l.spec_label})` : ""}:{" "}
+                  {l.quantity_requested} {l.unit_label ?? ""}
+                  {l.quantity_delivered !== null && ` — entregado ${l.quantity_delivered}`}
+                  {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
+                </span>
+              </li>
+            </Fragment>
+          );
+        })}
+      </ul>
+      {orden.omissions.length > 0 && (
+        <div className="release-omissions">
+          <strong>Obligatorios que no se llevan:</strong>
+          <ul>
+            {orden.omissions.map((o) => (
+              <li key={`${o.item_id}-${o.spec_label ?? ""}`}>
+                {o.item_name ?? "Artículo"}{o.spec_label ? ` (${o.spec_label})` : ""}: {o.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Entregar renglón por renglón: Bodega confirma cuánto sale de cada uno (de 0
+ * a lo pedido). Lo que no sale queda como faltante con su motivo.
+ */
+function DeliveryForm({ orden, enviando, onCancel, onSubmit }: {
+  orden: WarehouseRelease;
+  enviando: boolean;
+  onCancel: () => void;
+  onSubmit: (lines: { line_id: string; quantity: string }[]) => void;
+}) {
+  const [cantidades, setCantidades] = useState<Record<string, string>>(
+    () => Object.fromEntries(orden.lines.map((l) => [l.id, l.quantity_requested])));
+  const invalida = orden.lines.some((l) => {
+    const n = Number(cantidades[l.id]);
+    return cantidades[l.id] === "" || Number.isNaN(n) || n < 0 || n > Number(l.quantity_requested);
+  });
+  return (
+    <form className="acta fin-form fin-box"
+      onSubmit={(e) => { e.preventDefault(); onSubmit(orden.lines.map((l) => ({ line_id: l.id, quantity: cantidades[l.id] }))); }}>
+      <h3 className="acta-section-title">Entregar {orden.number ?? "la salida"}</h3>
+      <p className="acta-lead">
+        Confirma cuánto sale de cada renglón. Si en bodega hay menos, se entrega lo que hay y la diferencia queda
+        como faltante.
+      </p>
+      <table className="materials-table">
+        <thead><tr><th scope="col">Artículo</th><th scope="col" className="is-num">Pedido</th><th scope="col">Sale</th></tr></thead>
+        <tbody>
+          {orden.lines.map((l) => (
+            <tr key={l.id}>
+              <td>
+                <strong>{l.item_name ?? "Artículo"}</strong>
+                <small>{[l.spec_label, l.section].filter(Boolean).join(" · ")}</small>
+                {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
+              </td>
+              <td className="is-num">{l.quantity_requested} {l.unit_label ?? ""}</td>
+              <td>
+                <input aria-label={`Cantidad que sale de ${l.item_name ?? "el renglón"}`} inputMode="decimal"
+                  value={cantidades[l.id]} onChange={(e) => setCantidades({ ...cantidades, [l.id]: e.target.value })} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {invalida && <p className="form-error" role="alert">Cada cantidad va de 0 a lo pedido.</p>}
+      <div className="acta-actions">
+        <button type="submit" className="acta-btn is-primary" disabled={enviando || invalida}>
+          {enviando ? "Entregando…" : "Entregar"}
+        </button>
+        <button type="button" className="acta-btn is-quiet" onClick={onCancel}>Cancelar</button>
+      </div>
+    </form>
   );
 }
 
@@ -258,6 +403,14 @@ function EntregaBanner({ resultado, onClose }: { resultado: DeliverResult; onClo
   );
 }
 
+/** Un renglón del formulario: lo que se manda más el nombre (para el motivo) y
+ * una clave estable, para que quitar un renglón no le pase a otro el buscador. */
+type FilaSalida = ReleaseLineInput & { clave: string; nombre?: string };
+
+let contadorFilas = 0;
+const nuevaClave = () => `fila-${++contadorFilas}`;
+const FILA_VACIA: Omit<FilaSalida, "clave"> = { item_id: "", quantity: "1", spec_label: "", notes: "" };
+
 /**
  * Armar la orden. Todavía es un borrador: no tiene número ni mueve saldo hasta
  * que se manda a autorizar. Se puede partir de una lista predefinida (punto 2
@@ -267,7 +420,9 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [obra, setObra] = useState<Project | null>(null);
   const [necesaria, setNecesaria] = useState("");
   const [nota, setNota] = useState("");
-  const [lineas, setLineas] = useState<ReleaseLineInput[]>([{ item_id: "", quantity: "1", spec_label: "", notes: "" }]);
+  const [lineas, setLineas] = useState<FilaSalida[]>(() => [{ ...FILA_VACIA, clave: nuevaClave() }]);
+  // Obligatorios de la lista que se quitaron, con el motivo: quien autoriza los ve.
+  const [omisiones, setOmisiones] = useState<(ReleaseOmission & { fila: FilaSalida })[]>([]);
   const [deLista, setDeLista] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -284,14 +439,44 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
       lines: lineas.filter((l) => l.item_id).map((l) => ({
         item_id: l.item_id, quantity: l.quantity,
         spec_label: l.spec_label?.trim() || null, notes: l.notes?.trim() || null,
+        origin: l.origin ?? "manual", section: l.section?.trim() || null, is_required: !!l.is_required,
       })),
+      omissions: omisiones.map((o) => ({ item_id: o.item_id, spec_label: o.spec_label || null, reason: o.reason })),
     }),
     onSuccess: onCreated,
     onError: (e) => setError(apiErrorMessage(e)),
   });
 
-  function cambiar(i: number, campos: Partial<ReleaseLineInput>) {
+  function cambiar(i: number, campos: Partial<FilaSalida>) {
     setLineas((actuales) => actuales.map((l, j) => (j === i ? { ...l, ...campos } : l)));
+  }
+
+  /** Quitar un renglón. Si es obligatorio de la lista, pide el motivo: es la
+   * checklist que pidió el dueño para que no se olvide nada. */
+  async function quitar(i: number) {
+    const fila = lineas[i];
+    if (fila.is_required && fila.item_id) {
+      const motivo = await askText({
+        title: `¿Por qué no se lleva «${fila.nombre ?? "este artículo"}»?`,
+        message: "Es obligatorio en la lista. El motivo queda en la orden y lo ve quien autoriza.",
+        label: "Motivo", required: true, placeholder: "Ej.: ya hay en la camioneta",
+        confirmLabel: "Quitar", cancelLabel: "Dejarlo",
+      });
+      if (!motivo?.trim()) return;
+      setOmisiones((a) => [...a, { item_id: fila.item_id, item_name: fila.nombre, spec_label: fila.spec_label,
+        reason: motivo.trim(), fila }]);
+    }
+    setLineas((a) => {
+      const quedan = a.filter((_, j) => j !== i);
+      return quedan.length ? quedan : [{ ...FILA_VACIA, clave: nuevaClave() }];
+    });
+  }
+
+  /** Deshacer: el obligatorio vuelve a la orden y se borra su motivo. */
+  function devolver(k: number) {
+    const omision = omisiones[k];
+    setOmisiones((a) => a.filter((_, j) => j !== k));
+    setLineas((a) => [...a.filter((l) => l.item_id), omision.fila]);
   }
 
   /** Copia los renglones de la lista encima de lo que ya hay escrito, sin repetir
@@ -302,9 +487,11 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
     setLineas((actuales) => {
       const puestas = actuales.filter((l) => l.item_id);
       const claves = new Set(puestas.map((l) => `${l.item_id}|${l.spec_label ?? ""}`));
-      const nuevas = lista.items
+      const nuevas: FilaSalida[] = lista.items
         .filter((r) => !claves.has(`${r.item_id}|${r.spec_label ?? ""}`))
-        .map((r) => ({ item_id: r.item_id, quantity: r.quantity, spec_label: r.spec_label ?? "", notes: r.notes ?? "" }));
+        .map((r) => ({ item_id: r.item_id, quantity: r.quantity, spec_label: r.spec_label ?? "", notes: r.notes ?? "",
+          origin: "lista", section: r.section ?? "", is_required: r.is_required, nombre: r.item_name ?? undefined,
+          clave: nuevaClave() }));
       return [...puestas, ...nuevas];
     });
     setDeLista(lista.name);
@@ -368,10 +555,15 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
         </thead>
         <tbody>
           {lineas.map((l, i) => (
-            <tr key={i}>
+            <Fragment key={l.clave}>
+            {(l.section || "") !== (i > 0 ? lineas[i - 1].section || "" : "") && l.section && (
+              <tr className="release-section-row"><th colSpan={5} scope="colgroup">{l.section}</th></tr>
+            )}
+            <tr>
               <td>
                 <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={l.item_id}
-                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "" })} />
+                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "", nombre: a?.name })} />
+                {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
               </td>
               <td>
                 <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={l.quantity}
@@ -386,21 +578,35 @@ function ReleaseForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
                   onChange={(e) => cambiar(i, { notes: e.target.value })} />
               </td>
               <td>
-                {lineas.length > 1 && (
-                  <button type="button" className="acta-btn is-quiet"
-                    onClick={() => setLineas((a) => a.filter((_, j) => j !== i))}>Quitar</button>
+                {(lineas.length > 1 || l.item_id) && (
+                  <button type="button" className="acta-btn is-quiet" onClick={() => quitar(i)}>Quitar</button>
                 )}
               </td>
             </tr>
+            </Fragment>
           ))}
         </tbody>
       </table>
       <div className="acta-actions">
         <button type="button" className="acta-btn is-quiet"
-          onClick={() => setLineas((a) => [...a, { item_id: "", quantity: "1", spec_label: "", notes: "" }])}>
+          onClick={() => setLineas((a) => [...a, { ...FILA_VACIA, clave: nuevaClave() }])}>
           Agregar renglón
         </button>
       </div>
+
+      {omisiones.length > 0 && (
+        <div className="warning-banner" role="status">
+          <p><strong>Obligatorios que no se llevan</strong> (los ve quien autoriza):</p>
+          <ul>
+            {omisiones.map((o, k) => (
+              <li key={o.fila.clave}>
+                {o.item_name ?? "Artículo"}{o.spec_label ? ` (${o.spec_label})` : ""}: {o.reason}{" "}
+                <button type="button" className="acta-link" onClick={() => devolver(k)}>Volver a agregarlo</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="form-field">
         <label className="form-label" htmlFor="rel-nota">Nota para quien entrega</label>

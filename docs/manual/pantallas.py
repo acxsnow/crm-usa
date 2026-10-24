@@ -361,6 +361,31 @@ def bodega_salida(pg):
     ], pg.locator("#rel-lista")
 
 
+def bodega_checklist(pg):
+    pg.get_by_role("button", name="Nueva salida").click()
+    pg.wait_for_timeout(800)
+    pg.locator("#rel-lista").select_option(index=1)
+    pg.wait_for_timeout(1500)
+    return [
+        (pg.locator("#rel-lista"), "La lista trae los renglones del tipo de trabajo, agrupados por sección.", "right"),
+        (pg.locator(".release-section-row").first, "Cada sección del trabajo: exterior, eléctrico, líneas, drenaje…", "left"),
+        (pg.locator("form .billing-chip.is-required").first, "«Obligatorio»: si se quita, pide el motivo y quien autoriza lo ve.", "right"),
+    ], pg.locator("#rel-lista")
+
+
+def bodega_carga(pg):
+    pg.wait_for_timeout(2500)
+    fila = pg.locator("tbody tr").filter(has=pg.get_by_role("checkbox", name="Lo llevo")).filter(has_text="Fusible Disconnect").first
+    if not fila.locator("details").first.get_attribute("open") is not None:
+        fila.locator("summary").first.click()
+    pg.wait_for_timeout(600)
+    return [
+        (fila.locator(".release-load").first, "Cuánto ya va en la camioneta y cuántos obligatorios faltan.", "inside"),
+        (fila.get_by_role("checkbox", name="Lo llevo").first.locator(".."), "«Lo llevo»: se marca al subir cada cosa a la camioneta.", "inside"),
+        (fila.locator(".billing-chip.is-required").first, "Lo obligatorio va marcado para que no se quede.", "inside"),
+    ], fila
+
+
 def bodega_diario(pg):
     pg.get_by_role("button", name="Registrar la jornada").first.click()
     pg.wait_for_timeout(800)
@@ -412,6 +437,8 @@ PANTALLAS = [
     ("bodega_articulo", "adm", {"width": 1280, "height": 1000}, "/warehouse/items", "Bodega: un artículo con su código AC Pro, fabricante y marca", bodega_articulo),
     ("bodega_categorias", "adm", {"width": 1280, "height": 1000}, "/warehouse/items", "Bodega: categorías del catálogo", bodega_categorias),
     ("bodega_salida", "adm", {"width": 1280, "height": 1000}, "/warehouse/releases", "Bodega: nueva salida con el buscador de artículos", bodega_salida),
+    ("bodega_checklist", "tecnico", alto(1600), "/warehouse/releases", "Salida armada desde una lista (celular del técnico)", bodega_checklist),
+    ("bodega_carga", "tecnico", alto(1500), "/warehouse/releases", "«Lo llevo»: la checklist al cargar la camioneta", bodega_carga),
     ("bodega_diario", "tecnico", alto(1500), f"/projects/{DEMO['tecnico']['project']}", "Diario de obra: material del día (celular)", bodega_diario),
     ("programas", "admin", {"width": 1280, "height": 1350}, "/programs", "Configuración de programas", programas),
     ("equipo", "admin", ESCRITORIO, "/users", "Equipo", equipo),

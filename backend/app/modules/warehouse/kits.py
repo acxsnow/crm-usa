@@ -179,6 +179,7 @@ async def apply_to_release(db: AsyncSession, *, organization_id, user, kit_id, r
             organization_id=organization_id, order_id=order.id, item_id=renglon.item_id,
             quantity_requested=_q(renglon.quantity), spec_label=etiqueta,
             notes=renglon.notes, origin=LineOrigin.LISTA, sort_order=posicion,
+            section=renglon.section, is_required=renglon.is_required,
         ))
         ya_estan.add((renglon.item_id, etiqueta))
         posicion += 1

@@ -26,6 +26,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    JSON,
     Integer,
     Numeric,
     String,
@@ -194,6 +195,9 @@ class WarehouseReleaseOrder(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # D-BOD-4: sin existencias no se bloquea la entrega; el motivo queda escrito.
     shortage_note: Mapped[str | None] = mapped_column(Text)
+    # Los obligatorios de la lista que se quitaron al armarla, con el motivo
+    # ([{item_id, item_name, spec_label, reason}]): quien autoriza los ve.
+    omissions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     lines: Mapped[list["WarehouseReleaseLine"]] = relationship(
         "WarehouseReleaseLine", back_populates="order", lazy="raise")
@@ -217,6 +221,13 @@ class WarehouseReleaseLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     origin: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Copiados de la lista predefinida: en qué parte del trabajo va y si sí o sí
+    # hay que llevarlo (la checklist que pidió el dueño).
+    section: Mapped[str | None] = mapped_column(String(120))
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # El técnico lo marcó «lo llevo» al cargar la camioneta.
+    loaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    loaded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
 
     order: Mapped["WarehouseReleaseOrder"] = relationship(
         "WarehouseReleaseOrder", back_populates="lines", lazy="raise")

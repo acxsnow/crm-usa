@@ -241,3 +241,20 @@ async def test_otra_organizacion_no_ve_ni_usa_la_lista(app_client, login, active
         "name": "Ajena", "items": [{"item_id": tubo["id"], "quantity": "1"}]}, headers=ajeno)).status_code == 404
     assert (await app_client.delete(f"{API}/warehouse/kits/{lista['id']}", headers=ajeno)).status_code == 404
     assert (await _aplicar(app_client, ajeno, lista["id"], orden["id"])).status_code == 404
+
+
+async def test_aplicarla_copia_la_seccion_y_lo_obligatorio(app_client, login, active_admin_user):
+    """La lista viaja como checklist (plan bodega-cierre, fase 2): la salida
+    sabe en qué parte del trabajo va cada cosa y qué no se puede olvidar."""
+    bodega = await login(active_admin_user.email)
+    tubo = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
+    cinta = await _item(app_client, bodega, "Cinta de aluminio", sku="CI-01", unidad="roll")
+    lista = await _lista(app_client, bodega, [
+        {"item_id": tubo["id"], "quantity": "20", "section": "Líneas", "is_required": True},
+        {"item_id": cinta["id"], "quantity": "1", "section": "Consumibles", "is_required": False},
+    ])
+    orden = await _borrador(app_client, bodega, cinta["id"], "1")
+    lineas = _por_articulo((await _aplicar(app_client, bodega, lista["id"], orden["id"])).json())
+    assert (lineas["Tubo cobre 3/8"]["section"], lineas["Tubo cobre 3/8"]["is_required"]) == ("Líneas", True)
+    # La cinta ya estaba puesta a mano: no se repite ni se vuelve obligatoria.
+    assert lineas["Cinta de aluminio"]["is_required"] is False
