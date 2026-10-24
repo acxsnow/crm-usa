@@ -46,7 +46,7 @@ def inicio(pg):
     pg.wait_for_timeout(3000)  # las tarjetas cargan después
     return [
         (pg.locator(".app-sidebar"), "Menú: muestra solo lo que su rol puede usar, agrupado por área.", "inside"),
-        (pg.locator(".topbar-search"), "Buscador de clientes y proyectos.", "right"),
+        (pg.locator(".global-search-box"), "Buscador: clientes, expedientes, obras, facturas, artículos y más (ver 4.1).", "right"),
         (pg.locator(".notice-bell"), "Campana: el número son los avisos sin leer; tóquela para verlos.", "bottom"),
         (pg.locator(".user-menu"), "Su nombre y su rol.", "bottom"),
         (pg.locator(".sign-out"), "«Salir» cierra la sesión.", "bottom"),
@@ -436,6 +436,35 @@ def equipo(pg):
     ], None
 
 
+def buscador(pg):
+    pg.wait_for_timeout(1500)
+    caja = pg.locator(".global-search-box input")
+    caja.click()
+    caja.fill("Cliente")
+    pg.wait_for_timeout(2500)
+    grupo = pg.locator(".global-search-group").first
+    return [
+        (caja, "Escriba al menos 2 letras: nombre, dirección, número de expediente, factura o salida, código de artículo…", "right"),
+        (grupo.locator("header span"), "Los resultados van por grupo, y solo de lo que su rol puede ver.", "left"),
+        (grupo.locator(".global-search-option").first, "Tocar un resultado lo abre. Con el teclado: flechas y Enter.", "left"),
+        (grupo.get_by_text("Ver todos"), "«Ver todos» abre la lista completa ya filtrada con el mismo texto.", "right"),
+    ], None
+
+
+def buscador_celular(pg):
+    pg.wait_for_timeout(1500)
+    lupa = pg.locator(".global-search-trigger")
+    caja_lupa = lupa.bounding_box()
+    lupa.click()
+    pg.wait_for_timeout(500)
+    pg.locator(".global-search-box input").fill("Cliente")
+    pg.wait_for_timeout(2500)
+    return [
+        (pg.locator(".global-search-option").first, "La lupa junto a la campana abre el buscador a pantalla completa; tocar un resultado lo abre.", "inside"),
+        (pg.locator(".global-search-close"), "«Cerrar» vuelve a la pantalla en que estaba.", "bottom"),
+    ] if caja_lupa else [], None
+
+
 PANTALLAS = [
     ("login", None, ESCRITORIO, "/login", "Ingreso", login),
     ("inicio", "admin", ESCRITORIO, "/", "Inicio", inicio),
@@ -474,6 +503,8 @@ PANTALLAS = [
     ("bodega_diario", "tecnico", alto(1500), f"/projects/{DEMO['tecnico']['project']}", "Diario de obra: material del día (celular)", bodega_diario),
     ("programas", "admin", {"width": 1280, "height": 1350}, "/programs", "Configuración de programas", programas),
     ("equipo", "admin", ESCRITORIO, "/users", "Equipo", equipo),
+    ("buscador", "adm", {"width": 1280, "height": 900}, "/", "Buscador global", buscador),
+    ("buscador_celular", "adm", CELULAR, "/", "Buscador global en el celular", buscador_celular),
 ]
 
 

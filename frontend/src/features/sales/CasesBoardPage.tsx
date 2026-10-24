@@ -8,6 +8,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { listPrograms } from "@/features/programs/api";
 import { listUsersPage } from "@/features/users/api";
 import { SkeletonRows } from "@/components/ui/Skeleton";
+import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import { ApprovalDays } from "./ApprovalDays";
 import { getBoard, getBoardColumn, salesKeys, type BoardColumn, type BoardFilters } from "./api";
 
@@ -40,6 +41,7 @@ export function CasesBoardPage() {
   const { hasPermission } = useAuth();
   const [tempranos, setTempranos] = useState(false);
   const [buscar, setBuscar] = useState("");
+  useSearchTextFromUrl(setBuscar);
   const [q, setQ] = useState("");
   const [vendedor, setVendedor] = useState("");
   const [programa, setPrograma] = useState("");

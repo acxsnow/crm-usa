@@ -13,7 +13,7 @@
     "titulo": "Inicio",
     "leyenda": [
       "Menú: muestra solo lo que su rol puede usar, agrupado por área.",
-      "Buscador de clientes y proyectos.",
+      "Buscador: clientes, expedientes, obras, facturas, artículos y más (ver 4.1).",
       "Campana: el número son los avisos sin leer; tóquela para verlos.",
       "Su nombre y su rol.",
       "«Salir» cierra la sesión.",
@@ -321,6 +321,22 @@
       "Ver el mes o la semana, y solo un técnico.",
       "Una jornada del diario: la obra, el técnico (y sus ayudantes) y hasta dónde se avanzó.",
       "Punteado: el día en que un técnico toma la obra."
+    ]
+  },
+  "buscador": {
+    "titulo": "Buscador global",
+    "leyenda": [
+      "Escriba al menos 2 letras: nombre, dirección, número de expediente, factura o salida, código de artículo…",
+      "Los resultados van por grupo, y solo de lo que su rol puede ver.",
+      "Tocar un resultado lo abre. Con el teclado: flechas y Enter.",
+      "«Ver todos» abre la lista completa ya filtrada con el mismo texto."
+    ]
+  },
+  "buscador_celular": {
+    "titulo": "Buscador global en el celular",
+    "leyenda": [
+      "La lupa junto a la campana abre el buscador a pantalla completa; tocar un resultado lo abre.",
+      "«Cerrar» vuelve a la pantalla en que estaba."
     ]
   }
 }

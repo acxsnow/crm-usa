@@ -1102,6 +1102,31 @@ def flujo_rotacion(c: dict) -> None:
     check("Y él vuelve a llenarla", tec.get(f"/projects/{pid}").json().get("my_access") == "full")
 
 
+def flujo_buscador(c: dict) -> None:
+    """Buscador global de la barra superior: cada rol encuentra solo lo que ve."""
+    adm, tec, ven, conta = c["adm"], c["tecnico"], c["vendedor"], c["conta"]
+    section("23. Buscador global")
+    caso = (adm.get("/cases", params={"limit": 1}).json() or [None])[0]
+    if not check("Hay un expediente para buscar", caso is not None):
+        return
+    numero = caso["case_number"]
+    grupos = {g["key"]: g for g in expect("Administración busca por número de expediente",
+                                          adm.get("/search", params={"q": numero}), 200)["groups"]}
+    check("Lo encuentra en Expedientes", any(r["id"] == caso["id"] for r in grupos.get("cases", {}).get("results", [])),
+          json.dumps(list(grupos))[:200])
+    r = ven.get("/search", params={"q": "QA"}).json()
+    check("El vendedor no ve obras, facturas ni proveedores",
+          not ({"projects", "invoices", "suppliers", "users"} & {g["key"] for g in r["groups"]}),
+          str([g["key"] for g in r["groups"]]))
+    r = tec.get("/search", params={"q": "QA"}).json()
+    check("El técnico no ve expedientes, facturas ni proveedores",
+          not ({"cases", "invoices", "suppliers", "users"} & {g["key"] for g in r["groups"]}),
+          str([g["key"] for g in r["groups"]]))
+    facturas = conta.get("/search", params={"q": "FAC-"}).json()
+    check("Contabilidad encuentra facturas", any(g["key"] == "invoices" for g in facturas["groups"]))
+    check("Una letra no busca", adm.get("/search", params={"q": "Q"}).json()["groups"] == [])
+
+
 def flujo_costo_del_trabajo(c: dict, pid: str | None) -> None:
     """Costo del trabajo (spec 2026-10-22): estimado desde plantilla, mano de obra
     y representante, cobro adicional en efectivo y el resumen estimado contra real."""
@@ -1236,6 +1261,7 @@ def main() -> int:
     seguro("Bodega", flujo_bodega, c, pid_az)
     seguro("Costo del trabajo", flujo_costo_del_trabajo, c, pid)
     seguro("Rotación", flujo_rotacion, c)
+    seguro("Buscador", flujo_buscador, c)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")

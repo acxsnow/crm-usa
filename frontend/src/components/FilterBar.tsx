@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 export type FilterFieldDef =
   | { key: string; label: string; type: "text"; placeholder?: string }
@@ -14,6 +14,10 @@ interface FilterBarProps {
 export function FilterBar({ fields, values, onApply, onClear }: FilterBarProps) {
   const [draft, setDraft] = useState<Record<string, string>>(values);
   const [open, setOpen] = useState(true);
+  // Si los filtros cambian desde fuera (el «Ver todos» del buscador global con
+  // la pantalla ya abierta), la caja muestra lo que de verdad se está filtrando.
+  const firma = JSON.stringify(values);
+  useEffect(() => { setDraft(JSON.parse(firma)); }, [firma]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();

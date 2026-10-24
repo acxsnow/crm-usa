@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -6,6 +6,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { listCustomers } from "@/features/crm/api";
 import { apiErrorMessage, localISODate } from "@/features/field-ops/module5Api";
+import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import { INVOICE_STATUS_LABELS, type Invoice } from "@/types/billing";
 import {
   downloadInvoicesCsv,
@@ -46,13 +47,29 @@ export function InvoicesTab() {
   const [estado, setEstado] = useState("");
   const [page, setPage] = useState(1);
   const [abierta, setAbierta] = useState<string | null>(null);
+  // Número de factura o cliente; también llega del buscador global (?q=FAC-…).
+  const [buscar, setBuscar] = useState("");
+  const [q, setQ] = useState("");
+  const [abrirSiEsUna, setAbrirSiEsUna] = useState(false);
+  useSearchTextFromUrl((texto) => { setBuscar(texto); setQ(texto); setPage(1); setAbrirSiEsUna(true); });
+  useEffect(() => {
+    const t = setTimeout(() => { setQ((antes) => (antes === buscar.trim() ? antes : buscar.trim())); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [buscar]);
   const params: Record<string, string> = {};
   if (tipo) params.kind = tipo;
   if (estado) params.status = estado;
+  if (q) params.q = q;
   const { data, isLoading } = useQuery({
     queryKey: ["invoices", page, params],
     queryFn: () => listInvoicesPage(page, PAGE_SIZE, params),
   });
+  // Si el buscador global trajo una sola factura, se abre su detalle de una vez.
+  useEffect(() => {
+    if (!abrirSiEsUna || !data || params.q !== q) return;
+    if (data.items.length === 1) setAbierta(data.items[0].id);
+    setAbrirSiEsUna(false);
+  }, [abrirSiEsUna, data, q, params.q]);
   // El tablero financiero exige `dashboards.finance` (Contabilidad, Gerencia):
   // Administración ve la lista sin los totales en vez de recibir un 403 (QA-03).
   const { hasPermission } = useAuth();
@@ -91,6 +108,8 @@ export function InvoicesTab() {
         <select aria-label="Estado de la factura" value={estado} onChange={(e) => filtrar(() => setEstado(e.target.value))}>
           {ESTADOS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
+        <input type="search" aria-label="Buscar factura" placeholder="Número o cliente" value={buscar}
+          onChange={(e) => setBuscar(e.target.value)} />
       </div>
 
       {isLoading ? <p className="acta-empty">Cargando…</p> : (data?.items ?? []).length === 0 ? (

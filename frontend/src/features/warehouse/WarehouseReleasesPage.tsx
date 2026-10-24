@@ -14,6 +14,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { getProject, listProjectsPage } from "@/features/field-ops/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import type { Project } from "@/types/fieldOps";
 import { ItemPicker } from "./ItemPicker";
 import {
@@ -58,6 +59,8 @@ export function WarehouseReleasesPage() {
 
   const [tab, setTab] = useState<"pendientes" | "todas">(puedeAutorizar ? "pendientes" : "todas");
   const [filtros, setFiltros] = useState<Record<string, string>>({});
+  // Desde el buscador global (?q=SAL-…): la búsqueda va sobre todas las salidas.
+  useSearchTextFromUrl((q) => { setTab("todas"); setFiltros((f) => ({ ...f, q })); });
   // «Pedir material a bodega» desde la obra llega con ?nueva=1&obra=<id>.
   const [enlace] = useSearchParams();
   const navigate = useNavigate();
@@ -76,13 +79,14 @@ export function WarehouseReleasesPage() {
     enabled: puedeAutorizar && tab === "pendientes",
   });
 
-  const params = { status: filtros.status || undefined };
+  const params = { status: filtros.status || undefined, q: filtros.q || undefined };
   const todas = usePaginatedQuery<WarehouseRelease>({
     key: warehouseKeys.releases, path: "/warehouse/releases", pageSize: PAGE_SIZE,
     params, enabled: tab === "todas",
   });
 
   const campos: FilterFieldDef[] = [
+    { key: "q", label: "Buscar", type: "text", placeholder: "Número (SAL-…) o nota" },
     {
       key: "status", label: "Estado", type: "select",
       options: Object.entries(cat?.release_statuses ?? {}).map(([value, label]) => ({ value, label })),

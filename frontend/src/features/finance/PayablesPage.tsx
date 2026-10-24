@@ -9,6 +9,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import {
   approveInvoice,
   createInvoice,
@@ -386,6 +387,7 @@ function Suppliers() {
   const { hasPermission } = useAuth();
   const puede = hasPermission("suppliers.manage") || hasPermission("payables.approve");
   const [q, setQ] = useState("");
+  useSearchTextFromUrl(setQ);
   const lista = usePaginatedQuery<Supplier>({ key: ["suppliers", "list"], path: "/payables/suppliers", pageSize: 20, params: { q: q || undefined } });
   const [edit, setEdit] = useState<Partial<Supplier> | "new" | null>(null);
   const [importar, setImportar] = useState(false);

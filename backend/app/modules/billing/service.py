@@ -144,7 +144,7 @@ async def get_invoice_or_404(db: AsyncSession, *, organization_id: uuid.UUID, in
 
 async def list_invoices(
     db: AsyncSession, *, organization_id: uuid.UUID, status_filter: str | None = None,
-    project_id: uuid.UUID | None = None, kind: str | None = None,
+    project_id: uuid.UUID | None = None, kind: str | None = None, q: str | None = None,
 ) -> tuple[list[Invoice], date]:
     """Devuelve las facturas y el "hoy" de la organización con el que se
     calculó su estado de pago, para que quien serializa use el mismo día."""
@@ -153,6 +153,15 @@ async def list_invoices(
         stmt = stmt.where(Invoice.project_id == project_id)
     if kind:
         stmt = stmt.where(Invoice.kind == kind)
+    texto = (q or "").strip()
+    if texto:
+        # Número de factura o nombre del cliente (el «Ver todos» del buscador global).
+        from app.modules.crm.models import Customer
+
+        patron = "%" + texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        clientes = select(Customer.id).where(Customer.organization_id == organization_id,
+                                             Customer.legal_name.ilike(patron, escape="\\"))
+        stmt = stmt.where(Invoice.invoice_number.ilike(patron, escape="\\") | Invoice.customer_id.in_(clientes))
     invoices = list((await db.execute(stmt)).scalars().all())
     hoy = await org_today(db, organization_id)
     if status_filter:

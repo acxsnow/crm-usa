@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { money } from "@/features/finance/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import {
   createCategory,
   listCategories,
@@ -36,6 +37,7 @@ export function WarehouseItemsPage() {
   const puede = hasPermission("warehouse.manage");
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
   const [filtros, setFiltros] = useState<Record<string, string>>({});
+  useSearchTextFromUrl((q) => setFiltros((f) => ({ ...f, q })));
   const [editando, setEditando] = useState<WarehouseItem | "new" | null>(null);
   const [categorias, setCategorias] = useState(false);
 

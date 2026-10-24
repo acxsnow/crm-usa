@@ -217,6 +217,14 @@ add(
   li("**En el celular:** el menú se abre con **Menú**, y las tablas se muestran como una tarjeta por fila para leerlas sin desplazarse de lado."),
   li("**Fotos:** cada foto que se sube queda marcada con la fecha, la hora y la ubicación GPS. Si el navegador no tiene permiso de ubicación, la foto queda marcada «sin GPS». Solo se aceptan fotos, videos y PDF reales, hasta 10 MB."),
   li("**Fechas y días:** los contadores de días usan la fecha y la zona horaria de la empresa."),
+  h2("4.1 Buscador"),
+  p("La caja de la barra superior busca en toda la plataforma con una sola palabra o parte de ella: nombre del cliente, dirección, número de expediente (CASE-…), de factura (FAC-…), de cotización o de salida de bodega (SAL-…), código de AC Pro, número del fabricante o marca de un artículo, proveedor o persona del equipo. Se necesitan al menos 2 letras."),
+  li("**Solo lo que su rol puede ver:** los resultados vienen por grupo (Clientes, Expedientes, Obras, Facturas, Cotizaciones, Artículos de bodega, Salidas de bodega, Proveedores, Usuarios) y cada grupo aparece solo si su rol abre esa pantalla. El vendedor encuentra solo sus expedientes y el técnico solo sus obras (las de hoy, las que tuvo antes y en las que fue ayudante) y sus salidas."),
+  li("**Abrir un resultado:** tóquelo, o con el teclado use las flechas y Enter. Se muestran hasta 5 por grupo; **Ver todos** abre la lista completa de ese grupo ya filtrada con el mismo texto. Si de una factura buscada sale una sola, se abre su detalle de una vez."),
+  li("**Atajos:** la tecla **/** o **Ctrl+K** llevan al buscador desde cualquier pantalla; **Escape** lo cierra."),
+  li("**En el celular:** la lupa junto a la campana abre el buscador a pantalla completa; **Cerrar** vuelve a donde estaba. Con señal lenta muestra «Buscando…» y no abre un resultado viejo mientras llega la respuesta."),
+  ...fig("buscador"),
+  ...fig("buscador_celular"),
 );
 
 // --- 5 ---------------------------------------------------------------------------

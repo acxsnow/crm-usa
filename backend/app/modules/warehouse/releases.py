@@ -91,7 +91,12 @@ def releases_stmt(organization_id, *, status: str | None = None, project_id=None
         stmt = stmt.where(WarehouseReleaseOrder.project_id == project_id)
     if q:
         patron = f"%{q.strip()}%"
-        stmt = stmt.where(or_(WarehouseReleaseOrder.number.ilike(patron), WarehouseReleaseOrder.note.ilike(patron)))
+        # También por el nombre de la obra, como el buscador global.
+        from app.modules.field_ops.models import Project
+
+        obras =select(Project.id).where(Project.organization_id == organization_id, Project.title.ilike(patron))
+        stmt = stmt.where(or_(WarehouseReleaseOrder.number.ilike(patron), WarehouseReleaseOrder.note.ilike(patron),
+                              WarehouseReleaseOrder.project_id.in_(obras)))
     # Lo que espera decisión primero, y dentro de cada grupo lo más reciente.
     return stmt.order_by(WarehouseReleaseOrder.status, WarehouseReleaseOrder.created_at.desc())
 

@@ -41,13 +41,14 @@ async def list_invoices(
     status_filter: str | None = Query(None, alias="status"),
     project_id: uuid.UUID | None = None,
     kind: str | None = Query(None, description="rebate o particular"),
+    q: str | None = Query(None, max_length=100, description="Número de factura o nombre del cliente"),
     pagination: tuple[int, int] = Depends(pagination_params),
 ):
     # El estado de pago se calcula (no es una columna), así que el filtro y la
     # paginación van en Python, sobre el resultado ya filtrado: X-Total-Count
     # cuenta lo filtrado, no el total crudo.
     invoices, hoy = await billing_service.list_invoices(
-        db, organization_id=organization_id, status_filter=status_filter, project_id=project_id, kind=kind,
+        db, organization_id=organization_id, status_filter=status_filter, project_id=project_id, kind=kind, q=q,
     )
     limit, offset = pagination
     response.headers["X-Total-Count"] = str(len(invoices))
