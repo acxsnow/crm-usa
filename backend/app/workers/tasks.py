@@ -45,3 +45,19 @@ def purge_old_locations_task() -> int:
     borradas = asyncio.run(_purge_old_locations())
     logger.info("attendance.locations_purged", events=borradas)
     return borradas
+
+
+async def _sync_bank_feeds() -> int:
+    from app.modules.payments.bankfeed import sync_all
+
+    async with worker_session() as db:
+        return await sync_all(db)
+
+
+@celery_app.task(name="payments.sync_bank_feeds")
+def sync_bank_feeds_task() -> int:
+    """Trae cada mañana los movimientos nuevos de los bancos conectados (además
+    del webhook de Plaid, por si alguno no llegó)."""
+    hechas = asyncio.run(_sync_bank_feeds())
+    logger.info("payments.bank_feeds_synced", connections=hechas)
+    return hechas

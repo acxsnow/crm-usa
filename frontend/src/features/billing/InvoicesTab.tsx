@@ -18,6 +18,7 @@ import {
   uploadInvoiceAttachment,
 } from "./api";
 import { money, openInvoicePdf, shortDay } from "./billingApi";
+import { CollectPayment } from "@/features/payments/CollectPayment";
 
 const PAGE_SIZE = 20;
 
@@ -190,9 +191,14 @@ function InvoiceDetail({ invoice }: { invoice: Invoice }) {
       {invoice.payments.length > 0 && (
         <ol className="acta-history">
           {invoice.payments.map((p) => (
-            <li key={p.id} className="is-confirmed"><strong>{money(p.amount)}</strong><span>{shortDay(p.paid_at)}{p.reference ? ` · ${p.reference}` : ""}</span></li>
+            <li key={p.id} className="is-confirmed"><strong>{money(p.amount)}</strong><span>{shortDay(p.paid_at)}{p.method ? ` · ${p.method}` : ""}
+              {p.provider ? "" : p.reference ? ` · ${p.reference}` : ""}{p.fee_amount ? ` · comisión ${money(p.fee_amount)}` : ""}</span></li>
           ))}
         </ol>
+      )}
+      {/* Cobro en línea (como Housecall Pro): enlace por correo o SMS, o QR en la obra. */}
+      {emitida && invoice.kind === "particular" && invoice.balance > 0 && hasPermission("payments.collect") && (
+        <CollectPayment invoiceId={invoice.id} balance={Number(invoice.balance)} onPaid={() => { void refresh(); }} />
       )}
       {cobraAqui && (
         <form className="panel-form" onSubmit={(e) => { e.preventDefault(); pagar.mutate(); }}>

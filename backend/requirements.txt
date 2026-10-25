@@ -18,6 +18,8 @@ celery==5.4.0
 httpx==0.27.2
 # Lo trae httpx; se fija para salir de PYSEC-2026-4320 (certifi < 2026.10.19).
 certifi>=2026.10.19
+# Cifra los tokens de Plaid (Fernet) y permite a PyJWT verificar el webhook de Plaid (ES256).
+cryptography==50.0.2
 slowapi==0.1.9
 structlog==24.4.0
 pytest==9.1.1

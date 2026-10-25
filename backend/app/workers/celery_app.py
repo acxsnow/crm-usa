@@ -48,6 +48,11 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=6, minute=0),  # once a day, 06:00 UTC
     },
     # Turnos: retención de la ubicación del personal (spec 2026-10-24).
+    # Banca conectada: movimientos nuevos de los bancos (spec 2026-10-25-pagos-tarjeta).
+    "payments-sync-bank-feeds": {
+        "task": "payments.sync_bank_feeds",
+        "schedule": crontab(hour=12, minute=0),
+    },
     "attendance-purge-old-locations": {
         "task": "attendance.purge_old_locations",
         "schedule": crontab(hour=9, minute=30),

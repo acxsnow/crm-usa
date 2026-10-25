@@ -4,6 +4,7 @@ los procesos que no cargan rutas (worker de Celery, scripts) importan este
 módulo. Sin él, la primera consulta del worker fallaba con «failed to locate a
 name ('Program')» (lo encontró el QA del 7 de octubre de 2026)."""
 from app.modules.attendance import models as _attendance  # noqa: F401
+from app.modules.payments import models as _payments  # noqa: F401
 from app.modules.billing import models as _billing  # noqa: F401
 from app.modules.cases import models as _cases  # noqa: F401
 from app.modules.crm import models as _crm  # noqa: F401

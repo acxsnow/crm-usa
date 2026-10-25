@@ -26,6 +26,7 @@ import { JobCostPanel } from "@/features/warehouse/JobCostPanel";
 import { ExtraChargeForm } from "@/features/warehouse/ExtraChargeForm";
 import { ProjectDayLogPanel } from "@/features/warehouse/ProjectDayLogPanel";
 import { ProjectMiniMap } from "@/features/map/ProjectMiniMap";
+import { ProjectCollect } from "@/features/payments/ProjectCollect";
 import { hasAnyPermission } from "@/config/navigation";
 
 
@@ -210,6 +211,8 @@ export function ProjectDetailPage() {
         )}
 
         <ProjectMiniMap projectId={project.id} />
+
+        <ProjectCollect projectId={project.id} />
 
         <ProjectTaskBoard projectId={project.id} />
 
