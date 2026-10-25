@@ -31,6 +31,7 @@ from app.modules.warehouse.models import (
     ProjectBudgetLine,
     WarehouseItem,
 )
+from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError, NotFoundError
 
@@ -38,7 +39,7 @@ Q2 = Decimal("0.01")
 
 
 def _q(value) -> Decimal:
-    return (Decimal(str(value)) if value is not None else ZERO).quantize(Q2)
+    return to_quantity(value)
 
 
 def _now() -> datetime:

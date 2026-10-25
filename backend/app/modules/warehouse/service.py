@@ -29,6 +29,7 @@ from app.modules.warehouse.models import (
     WarehouseStock,
 )
 from app.shared import events as domain_events
+from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError, NotFoundError
 
@@ -37,7 +38,7 @@ Q2 = Decimal("0.01")
 
 def _q(value) -> Decimal:
     """Cantidad con dos decimales, como la columna."""
-    return (Decimal(str(value)) if value is not None else ZERO).quantize(Q2)
+    return to_quantity(value)
 
 
 def _now() -> datetime:
@@ -189,15 +190,24 @@ async def save_item(db: AsyncSession, *, organization_id, user, data: dict, item
 
 async def _find_item(db, organization_id, *, sku: str | None, name: str) -> WarehouseItem | None:
     """El mismo artículo de una carga anterior. Por referencia (SKU) cuando la
-    hay, que es lo único que no cambia entre un Excel y el siguiente."""
+    hay, que es lo único que no cambia entre un Excel y el siguiente.
+
+    Por nombre solo se busca un artículo **sin código**: AC Pro tiene productos
+    con el mismo nombre y distinto código (la cinta de espuma de Armacell 36140 y
+    la de Diversitech 3088), y si el nombre bastara el segundo pisaría el código
+    del primero y se perdería (ataque del 24 oct, hallazgo A2). Así un catálogo
+    cargado antes sin códigos los recibe en la carga siguiente.
+    """
     if sku:
         fila = (await db.execute(select(WarehouseItem).where(
             WarehouseItem.organization_id == organization_id, WarehouseItem.sku == sku))).scalar_one_or_none()
         if fila is not None:
             return fila
-    return (await db.execute(select(WarehouseItem).where(
-        WarehouseItem.organization_id == organization_id,
-        func.lower(WarehouseItem.name) == name.lower()))).scalar_one_or_none()
+    mismo_nombre = select(WarehouseItem).where(WarehouseItem.organization_id == organization_id,
+                                               func.lower(WarehouseItem.name) == name.lower())
+    if sku:
+        mismo_nombre = mismo_nombre.where(or_(WarehouseItem.sku.is_(None), WarehouseItem.sku == ""))
+    return (await db.execute(mismo_nombre.order_by(WarehouseItem.created_at).limit(1))).scalars().first()
 
 
 # ---------------------------------------------------------------------------

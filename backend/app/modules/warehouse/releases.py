@@ -34,8 +34,9 @@ from app.modules.warehouse.models import (
     WarehouseReleaseOrder,
 )
 from app.shared import events as domain_events
+from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
-from app.shared.errors import ForbiddenError, InvalidInputError, NotFoundError
+from app.shared.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 
 Q2 = Decimal("0.01")
 
@@ -43,7 +44,7 @@ RELEASE_SERIES = "SAL"
 
 
 def _q(value) -> Decimal:
-    return (Decimal(str(value)) if value is not None else ZERO).quantize(Q2)
+    return to_quantity(value)
 
 
 def _now() -> datetime:
@@ -120,14 +121,26 @@ async def get_own_draft(db: AsyncSession, organization_id, user, order_id) -> Wa
     return order
 
 
-async def _check_refs(db: AsyncSession, organization_id, user, data: dict) -> None:
-    """La obra tiene que ser una que la persona ve y el técnico, una persona
-    activa de la organización: nada de ids ajenos colados en la orden."""
+async def _check_project(db: AsyncSession, organization_id, user, project_id) -> None:
+    """La obra para la que se pide material: una que la persona **trabaja** hoy
+    (el técnico anterior la ve en solo lectura) y que no esté cerrada; material
+    para una obra cerrada se carga a un costo que ya nadie revisa (ataque del 24
+    oct, hallazgos A3 y A4)."""
     from app.modules.field_ops.access import get_workable_project
+    from app.modules.field_ops.installation import CLOSED_STATUSES
+
+    project = await get_workable_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    if project.status in CLOSED_STATUSES:
+        raise ConflictError("La obra ya está cerrada: no se pide material para ella.", code="project_closed")
+
+
+async def _check_refs(db: AsyncSession, organization_id, user, data: dict) -> None:
+    """La obra tiene que ser una que la persona trabaja y el técnico, una persona
+    activa de la organización: nada de ids ajenos colados en la orden."""
     from app.modules.users.models import User, UserStatus
 
     if data.get("project_id"):
-        await get_workable_project(db, organization_id=organization_id, user=user, project_id=data["project_id"])
+        await _check_project(db, organization_id, user, data["project_id"])
     tecnico_id = data.get("technician_user_id")
     if tecnico_id and tecnico_id != user.id:
         tecnico = await db.get(User, tecnico_id)
@@ -255,6 +268,9 @@ async def submit_order(db: AsyncSession, *, organization_id, user, order_id) -> 
     order = await get_own_draft(db, organization_id, user, order_id)
     if order.status != ReleaseStatus.BORRADOR:
         raise InvalidInputError("Solo un borrador se manda a autorizar.", code="release_not_draft")
+    if order.project_id:
+        # El borrador se armó cuando la obra era suya; si rotó o se cerró, ya no sale.
+        await _check_project(db, organization_id, user, order.project_id)
     lineas = (await lines_of(db, organization_id, [order.id])).get(order.id, [])
     if not lineas:
         raise InvalidInputError("La orden no tiene material: no hay nada que autorizar.", code="release_without_lines")
