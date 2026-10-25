@@ -26,7 +26,9 @@ from app.modules.warehouse.catalogs import (
     LOCATION_KINDS,
     MOVEMENT_TYPES,
     RELEASE_STATUSES,
+    SERIAL_STATUSES,
 )
+from app.modules.warehouse import serials as serial_svc
 from app.modules.warehouse.models import WarehouseItem, WarehouseLocation, WarehouseMovement
 from app.shared.errors import InvalidInputError, NotFoundError
 from app.shared.files.validation import read_limited
@@ -150,7 +152,7 @@ async def warehouse_catalogs(db: AsyncSession = Depends(get_db),
             "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
             "location_kinds": LOCATION_KINDS, "release_statuses": RELEASE_STATUSES,
             "line_origins": LINE_ORIGINS, "budget_categories": BUDGET_CATEGORIES,
-            "budget_statuses": BUDGET_STATUSES}
+            "budget_statuses": BUDGET_STATUSES, "serial_statuses": SERIAL_STATUSES}
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +337,9 @@ class MovementIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
     project_id: uuid.UUID | None = None
     movement_date: date | None = None
+    # Artículo con serial (D-007): uno por unidad. Obligatorio en la devolución,
+    # opcional en la entrada.
+    serials: list[str] | None = Field(default=None, max_length=500)
 
 
 async def _movement_out(db, organization_id, movimientos: list[WarehouseMovement]) -> list[dict]:
@@ -382,8 +387,39 @@ async def create_movement(payload: MovementIn, db: AsyncSession = Depends(get_db
         movement_type=payload.movement_type, quantity=payload.quantity,
         unit_cost=payload.unit_cost if payload.unit_cost is not None else item.unit_cost,
         reference=payload.reference, note=payload.note, project_id=payload.project_id,
-        to_location_id=payload.to_location_id, movement_date=payload.movement_date)
+        to_location_id=payload.to_location_id, movement_date=payload.movement_date, serials=payload.serials)
     return (await _movement_out(db, organization_id, [movimiento]))[0]
+
+
+# ---------------------------------------------------------------------------
+# Seriales (D-007)
+# ---------------------------------------------------------------------------
+
+@router.get("/warehouse/serials")
+async def list_serials(response: Response, q: str | None = None, status: str | None = None,
+                       item_id: uuid.UUID | None = None, project_id: uuid.UUID | None = None,
+                       db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                       pag: tuple[int, int] = Depends(pagination_params),
+                       current_user: User = Depends(_read)) -> list[dict]:
+    """Dónde está cada serial: en bodega, entregado (a qué obra y con qué
+    orden) o instalado. Se busca por el serial o por el nombre del artículo."""
+    stmt = serial_svc.serials_stmt(organization_id, q=q, status=status, item_id=item_id, project_id=project_id)
+    filas = await paginate(db, stmt, limit=pag[0], offset=pag[1], response=response)
+    return await serial_svc.serials_out(db, organization_id, filas)
+
+
+@router.get("/projects/{project_id}/serials")
+async def list_project_serials(project_id: uuid.UUID, response: Response, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               pag: tuple[int, int] = Depends(pagination_params),
+                               current_user: User = Depends(require_any_permission(
+                                   "projects.read_all", "projects.read_assigned"))) -> list[dict]:
+    """Los seriales que salieron de bodega para la obra: el técnico elige de
+    aquí en «Equipos instalados». Un técnico solo ve los de sus obras."""
+    project = await _visible_project(db, organization_id, current_user, project_id)
+    stmt = serial_svc.serials_stmt(organization_id, project_id=project.id)
+    filas = await paginate(db, stmt, limit=pag[0], offset=pag[1], response=response)
+    return await serial_svc.serials_out(db, organization_id, filas)
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +528,8 @@ class RejectIn(BaseModel):
 class DeliverLineIn(BaseModel):
     line_id: uuid.UUID
     quantity: str
+    # Artículo con serial (D-007): el serial de cada unidad entregada.
+    serials: list[str] | None = Field(default=None, max_length=500)
 
 
 class DeliverIn(BaseModel):
@@ -586,9 +624,10 @@ async def deliver_release(release_id: uuid.UUID, payload: DeliverIn | None = Non
                           current_user: User = Depends(_deliver)) -> dict:
     """Entrega el material y baja el saldo. Devuelve lo que no se pudo entregar."""
     cantidades = {l.line_id: l.quantity for l in payload.lines} if payload and payload.lines else None
+    seriales = {l.line_id: l.serials for l in payload.lines if l.serials is not None}         if payload and payload.lines else None
     resultado = await rel.deliver_order(db, organization_id=organization_id, user=current_user,
                                         order_id=release_id, note=payload.note if payload else None,
-                                        quantities=cantidades)
+                                        quantities=cantidades, serials=seriales)
     order = resultado["order"]
     return {**(await rel.orders_out(db, organization_id, [order]))[0], "faltantes": resultado["faltantes"]}
 

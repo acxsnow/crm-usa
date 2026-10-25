@@ -335,8 +335,18 @@ def campo_y_cobro(cid):
     chk("La lista agrega sus renglones (46, menos el que ya estaba)", (ap.get("agregadas") or 0) >= 45, ap.get("agregadas"))
     env = e.expect("Guardar y enviar a autorizar", tec.post(f"/warehouse/releases/{orden.get('id')}/submit"), 200) or {}
     chk("Recibe su número SAL-", str(env.get("number", "")).startswith("SAL-"), env.get("number"))
-    e.expect("Bodega la autoriza", adm.post(f"/warehouse/releases/{orden.get('id')}/approve"), 200)
-    ent = e.expect("Bodega la entrega", adm.post(f"/warehouse/releases/{orden.get('id')}/deliver", json={}), 200) or {}
+    autorizada = e.expect("Bodega la autoriza", adm.post(f"/warehouse/releases/{orden.get('id')}/approve"), 200) or {}
+    # D-007: los equipos «con serial» de la lista salen con el serial de cada unidad.
+    con_serial = [l for l in autorizada.get("lines", []) if l.get("has_serial")]
+    sin_serial = adm.post(f"/warehouse/releases/{orden.get('id')}/deliver", json={})
+    seriales_qa, renglones = [], []
+    for n, l in enumerate(con_serial):
+        unidades = int(min(float(l["quantity_requested"]), stock(l["item_id"])))
+        lote = [f"QA{e.RUN}-{n}-{k}" for k in range(unidades)]
+        seriales_qa += [(l["item_id"], s) for s in lote]
+        renglones.append({"line_id": l["id"], "quantity": str(unidades), "serials": lote})
+    ent = e.expect("Bodega la entrega", adm.post(f"/warehouse/releases/{orden.get('id')}/deliver",
+                                                 json={"lines": renglones}), 200) or {}
     lineas = {l["item_id"]: l for l in ent.get("lines", [])}
     for item_id, antes in muestra.items():
         entregado = float(lineas.get(item_id, {}).get("quantity_delivered") or 0)
@@ -347,8 +357,35 @@ def campo_y_cobro(cid):
     mats = tec.get(f"/projects/{pid}/materials").json()
     chk("El material entregado quedó cargado a la obra", any("De bodega" in (m.get("notes") or "") for m in mats), len(mats))
     esc("BOD-011")
-    chk("Al entregar el equipo con serial (85980) la bodega pide el serial", False,
-        "DeliverIn solo recibe note y lines(line_id, quantity); `has_serial` no se usa fuera del catálogo")
+    chk("La lista de 3 ton trae equipos «con serial» (85980)", any(l.get("sku") == "85980" for l in con_serial),
+        [l.get("sku") for l in con_serial])
+    chk("Sin los seriales la entrega se rechaza (400 serials_count_mismatch)",
+        sin_serial.status_code == 400 and sin_serial.json().get("code") == "serials_count_mismatch",
+        f"{sin_serial.status_code} {sin_serial.text[:150]}")
+    entregados = {s: l for l in ent.get("lines", []) for s in l.get("serials", [])}
+    chk("Cada unidad entregada quedó con su serial en el renglón", len(entregados) == len(seriales_qa) > 0,
+        f"{len(entregados)} de {len(seriales_qa)}")
+    estado = {x["serial"]: x for x in adm.get("/warehouse/serials", params={"project_id": pid}).json()}
+    chk("Bodega › Seriales los muestra «Entregado a la obra» con la orden",
+        all(estado.get(s, {}).get("status") == "delivered" and estado[s].get("release_number") == env.get("number")
+            for _, s in seriales_qa), list(estado)[:3])
+    obra = {x["serial"] for x in tec.get(f"/projects/{pid}/serials").json()}
+    chk("El técnico los ve en su obra para «Equipos instalados»", obra == {s for _, s in seriales_qa}, sorted(obra))
+    otro_pid = aprobar_rapido(311)[1]
+    r = adm.post(f"/projects/{otro_pid}/equipment", json={"equipment_type": "air_handler", "brand": "QA",
+                                                         "model": "QA", "serial_number": seriales_qa[0][1]})
+    chk("El mismo serial no se instala en otra obra (409 serial_not_available_here)",
+        r.status_code == 409 and r.json().get("code") == "serial_not_available_here", f"{r.status_code} {r.text[:120]}")
+    r = tec.post(f"/projects/{pid}/equipment", json={"equipment_type": "air_handler", "brand": "QA", "model": "QA",
+                                                   "warehouse_serial_id": estado[seriales_qa[0][1]]["id"]})
+    eq = r.json() if r.status_code == 201 else {}
+    chk("Instalarlo eligiéndolo de la lista lo deja «Instalado»", r.status_code == 201 and eq.get("serial_number")
+        == seriales_qa[0][1] and adm.get("/warehouse/serials", params={"q": seriales_qa[0][1]}).json()[0]["status"]
+        == "installed", f"{r.status_code} {r.text[:150]}")
+    if eq.get("id"):
+        tec.delete(f"/equipment/{eq['id']}")
+    chk("Al borrar el equipo el serial vuelve a «Entregado»",
+        adm.get("/warehouse/serials", params={"q": seriales_qa[0][1]}).json()[0]["status"] == "delivered", "")
 
     esc("INS-004")
     pid2 = e.flujo_campo(adm, tec, cid, devolver_acta=True, permiso=True)
@@ -546,6 +583,10 @@ def bodega_propia():
                                                      "unit_cost": "7.50", "has_serial": True, "min_quantity": "4"})
     chk("Editar costo a 7.50 y marcar «con serial»", r.status_code == 200 and r.json().get("unit_cost") == "7.50",
         f"{r.status_code} {r.text[:150]}")
+    # Una cinta no lleva serial: se desmarca para que BOD-005 y BOD-016 la entreguen como material común.
+    r = adm.put(f"/warehouse/items/{it['id']}", json={**{k: it[k] for k in ("name", "sku", "category", "unit")},
+                                                     "unit_cost": "7.50", "has_serial": False, "min_quantity": "4"})
+    chk("Desmarcar «con serial»", r.status_code == 200 and r.json().get("has_serial") is False, r.status_code)
     esc("BOD-003")
     valor0 = float(sql("select sum(s.quantity*i.unit_cost) from warehouse_stock s join warehouse_items i on i.id=s.item_id "
                        "join organizations o on o.id=i.organization_id where o.name='Demo Organization'"))

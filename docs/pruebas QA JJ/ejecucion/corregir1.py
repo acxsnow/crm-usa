@@ -16,8 +16,27 @@ res["BOD-001"].append({"check": "totales de la organización demo: 648 unidades 
                        "dato": "SQL: sum(quantity)=648.00, sum(quantity*unit_cost)=13209.22"})
 a = res["AUTH-002"][0]
 a.update(ok=True, check="correo inexistente y clave errada: mismo código y mismo mensaje (solo cambia request_id)")
-res["AUTH-002"].append({"check": "auditoría registra los intentos fallidos o el bloqueo", "ok": False,
-                        "dato": "audit_events solo tiene auth.login.success (26); ningún fallido ni bloqueo"})
+import asyncio  # noqa: E402
+
+from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
+from sqlalchemy.pool import NullPool  # noqa: E402
+
+
+async def _acciones():
+    motor = create_async_engine(get_settings().DATABASE_URL, poolclass=NullPool)
+    try:
+        async with motor.connect() as cx:
+            return dict((await cx.execute(text(
+                "select action, count(*) from audit_events where action like 'auth.login.%' group by action"))).all())
+    finally:
+        await motor.dispose()
+
+
+acciones = asyncio.run(_acciones())
+res["AUTH-002"].append({"check": "auditoría registra los intentos fallidos y el bloqueo",
+                        "ok": acciones.get("auth.login.failed", 0) > 0 and acciones.get("auth.login.locked", 0) > 0,
+                        "dato": str(acciones)})
 res["API-005"][0] = {"check": "30 pedidos de olvido de clave: no hay 429, pero solo se crean 3 enlaces en la hora (límite silencioso, no revela si el correo existe)",
                      "ok": True, "dato": "códigos=30×200; password_reset_tokens en la última hora=3"}
 json.dump(res, open("/tmp/lote1.json", "w"), ensure_ascii=False, indent=1)

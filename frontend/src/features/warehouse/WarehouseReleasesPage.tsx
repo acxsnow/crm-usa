@@ -21,6 +21,8 @@ import {
   approveRelease,
   createRelease,
   deliverRelease,
+  serialKeys,
+  type DeliverLineInput,
   listKitsPage,
   rejectRelease,
   submitRelease,
@@ -113,9 +115,12 @@ export function WarehouseReleasesPage() {
     onError: alFallar,
   });
   const entregar = useMutation({
-    mutationFn: ({ id, lines }: { id: string; lines: { line_id: string; quantity: string }[] }) =>
+    mutationFn: ({ id, lines }: { id: string; lines: DeliverLineInput[] }) =>
       deliverRelease(id, null, lines),
-    onSuccess: (r) => { setError(null); setEntrega(r); setEntregando(null); invalidarBodega(qc); },
+    onSuccess: (r) => {
+      setError(null); setEntrega(r); setEntregando(null); invalidarBodega(qc);
+      qc.invalidateQueries({ queryKey: serialKeys.all });
+    },
     onError: alFallar,
   });
   const cargar = useMutation({
@@ -344,25 +349,54 @@ function OrderLines({ orden, marcable, onMarcar }: {
   );
 }
 
+/** Cuántos seriales pide un renglón con serial: uno por unidad que sale. */
+const MAX_SERIALES = 50;
+function unidadesConSerial(cantidad: string): number {
+  const n = Number(cantidad);
+  return Number.isInteger(n) && n > 0 ? Math.min(n, MAX_SERIALES) : 0;
+}
+
 /**
  * Entregar renglón por renglón: Bodega confirma cuánto sale de cada uno (de 0
- * a lo pedido). Lo que no sale queda como faltante con su motivo.
+ * a lo pedido). Lo que no sale queda como faltante con su motivo. Un equipo
+ * con serial sale por unidades enteras, con el serial de cada una (D-007).
  */
 function DeliveryForm({ orden, enviando, onCancel, onSubmit }: {
   orden: WarehouseRelease;
   enviando: boolean;
   onCancel: () => void;
-  onSubmit: (lines: { line_id: string; quantity: string }[]) => void;
+  onSubmit: (lines: DeliverLineInput[]) => void;
 }) {
   const [cantidades, setCantidades] = useState<Record<string, string>>(
     () => Object.fromEntries(orden.lines.map((l) => [l.id, l.quantity_requested])));
-  const invalida = orden.lines.some((l) => {
+  const [seriales, setSeriales] = useState<Record<string, string[]>>({});
+  const serialesDe = (lineId: string, n: number) =>
+    Array.from({ length: n }, (_, i) => seriales[lineId]?.[i] ?? "");
+  const cambiarSerial = (lineId: string, i: number, valor: string) => {
+    const lista = [...(seriales[lineId] ?? [])];
+    lista[i] = valor;
+    setSeriales({ ...seriales, [lineId]: lista });
+  };
+  const cantidadMala = orden.lines.some((l) => {
     const n = Number(cantidades[l.id]);
-    return cantidades[l.id] === "" || Number.isNaN(n) || n < 0 || n > Number(l.quantity_requested);
+    return cantidades[l.id] === "" || Number.isNaN(n) || n < 0 || n > Number(l.quantity_requested)
+      || (l.has_serial && !Number.isInteger(n));
   });
+  const serialMalo = orden.lines.some((l) => {
+    if (!l.has_serial) return false;
+    const lista = serialesDe(l.id, unidadesConSerial(cantidades[l.id])).map((s) => s.trim().toUpperCase());
+    return lista.some((s) => !s) || new Set(lista).size !== lista.length;
+  });
+  const invalida = cantidadMala || serialMalo;
   return (
     <form className="acta fin-form fin-box"
-      onSubmit={(e) => { e.preventDefault(); onSubmit(orden.lines.map((l) => ({ line_id: l.id, quantity: cantidades[l.id] }))); }}>
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(orden.lines.map((l) => ({
+          line_id: l.id, quantity: cantidades[l.id],
+          ...(l.has_serial ? { serials: serialesDe(l.id, unidadesConSerial(cantidades[l.id])).map((s) => s.trim()) } : {}),
+        })));
+      }}>
       <h3 className="acta-section-title">Entregar {orden.number ?? "la salida"}</h3>
       <p className="acta-lead">
         Confirma cuánto sale de cada renglón. Si en bodega hay menos, se entrega lo que hay y la diferencia queda
@@ -382,12 +416,29 @@ function DeliveryForm({ orden, enviando, onCancel, onSubmit }: {
               <td>
                 <input aria-label={`Cantidad que sale de ${l.item_name ?? "el renglón"}`} inputMode="decimal"
                   value={cantidades[l.id]} onChange={(e) => setCantidades({ ...cantidades, [l.id]: e.target.value })} />
+                {l.has_serial && unidadesConSerial(cantidades[l.id]) > 0 && (
+                  <div className="serial-inputs">
+                    <small>Serial de cada unidad</small>
+                    {serialesDe(l.id, unidadesConSerial(cantidades[l.id])).map((s, i) => (
+                      <input key={i} aria-label={`Serial ${i + 1} de ${l.item_name ?? "el equipo"}`}
+                        autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder={`Serial ${i + 1}`}
+                        value={s} onChange={(e) => cambiarSerial(l.id, i, e.target.value)} />
+                    ))}
+                  </div>
+                )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {invalida && <p className="form-error" role="alert">Cada cantidad va de 0 a lo pedido.</p>}
+      {cantidadMala && (
+        <p className="form-error" role="alert">
+          Cada cantidad va de 0 a lo pedido; un equipo con serial sale por unidades enteras.
+        </p>
+      )}
+      {!cantidadMala && serialMalo && (
+        <p className="form-error" role="alert">Anota un serial distinto para cada unidad con serial que sale.</p>
+      )}
       <div className="acta-actions">
         <button type="submit" className="acta-btn is-primary" disabled={enviando || invalida}>
           {enviando ? "Entregando…" : "Entregar"}
@@ -406,6 +457,13 @@ function EntregaBanner({ resultado, onClose }: { resultado: DeliverResult; onClo
         <strong>{resultado.number ?? "La salida"}</strong> quedó entregada
         {resultado.project_id ? " y lo entregado ya está en «Lo que la orden necesita» del proyecto." : "."}
       </p>
+      {resultado.lines.some((l) => l.serials.length > 0) && (
+        <p>
+          Seriales entregados:{" "}
+          {resultado.lines.filter((l) => l.serials.length > 0)
+            .map((l) => `${l.item_name ?? "Equipo"}: ${l.serials.join(", ")}`).join(" · ")}
+        </p>
+      )}
       {resultado.faltantes.length > 0 && (
         <>
           <p>No se pudo entregar todo:</p>

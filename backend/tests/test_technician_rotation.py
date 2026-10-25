@@ -185,3 +185,22 @@ async def test_el_calendario_muestra_turnos_y_jornadas(app_client, db, seeded_or
     largo = {"date_from": hoy.isoformat(), "date_to": (hoy + timedelta(days=90)).isoformat()}
     r = await app_client.get(f"{API}/warehouse/calendar", params=largo, headers=oficina)
     assert (r.status_code, r.json()["code"]) == (400, "calendar_range_too_long")
+
+
+async def test_rotar_antes_de_la_fecha_no_cruza_los_turnos(app_client, db, seeded_org, login,
+                                                          active_admin_staff_user, active_technician_user):
+    """D-011: con la obra agendada para dentro de 2 días, rotar hoy dejaba al
+    anterior «del 27 al 27» y al nuevo «desde el 25», y la lista salía en
+    desorden. Ahora el anterior termina el día del cambio y la lista va en orden."""
+    oficina = await login(active_admin_staff_user.email)
+    luis_user = await _tecnico(db, seeded_org, "Luis Nuevo")
+    _, obra = await approved_case_with_project(db, seeded_org["org"].id)
+    hoy = _hoy_utc()
+
+    await _liberar(app_client, oficina, obra.id, active_technician_user.id, hoy + timedelta(days=2))
+    await _liberar(app_client, oficina, obra.id, luis_user.id, hoy)
+    historial = (await app_client.get(f"{API}/projects/{obra.id}/assignments", headers=oficina)).json()
+    assert [(h["technician_name"], h["started_on"], h["ended_on"], h["current"]) for h in historial] == [
+        ("Tom Technician", hoy.isoformat(), hoy.isoformat(), False),
+        ("Luis Nuevo", hoy.isoformat(), None, True),
+    ]

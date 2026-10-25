@@ -56,7 +56,13 @@ async def equipment_of(db: AsyncSession, project_id: uuid.UUID) -> list[Installe
 
 async def list_equipment(db, *, organization_id, user, project_id) -> list[InstalledEquipment]:
     await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
-    return await equipment_of(db, project_id)
+    equipos = await equipment_of(db, project_id)
+    from app.modules.warehouse import serials as serial_svc
+
+    cruzados = await serial_svc.linked_to_equipment(db, organization_id, [e.id for e in equipos])
+    for equipo in equipos:
+        equipo.warehouse_serial_id = cruzados.get(equipo.id)
+    return equipos
 
 
 async def add_equipment(db, *, organization_id, user, project_id, data: dict) -> InstalledEquipment:
@@ -66,12 +72,19 @@ async def add_equipment(db, *, organization_id, user, project_id, data: dict) ->
         raise InvalidInputError(
             f"El tipo de equipo «{data['equipment_type']}» no existe.", code="unknown_equipment_type"
         )
+    datos = dict(data)
+    serial_id = datos.pop("warehouse_serial_id", None)
     equipo = InstalledEquipment(
-        organization_id=organization_id, project_id=project.id, recorded_by_user_id=user.id, **data
+        organization_id=organization_id, project_id=project.id, recorded_by_user_id=user.id, **datos
     )
     db.add(equipo)
     _unconfirm(project)
     await db.flush()
+    # D-007: el serial se cruza con lo que salió de bodega para esta obra.
+    from app.modules.warehouse import serials as serial_svc
+
+    cruzado = await serial_svc.install(db, organization_id=organization_id, user=user, project=project,
+                                       equipment=equipo, serial_id=serial_id)
     await record_audit_event(
         db, organization_id=organization_id, actor_user_id=user.id,
         action="equipment.recorded", entity_type="InstalledEquipment", entity_id=str(equipo.id),
@@ -80,6 +93,7 @@ async def add_equipment(db, *, organization_id, user, project_id, data: dict) ->
     )
     await db.commit()
     await db.refresh(equipo)
+    equipo.warehouse_serial_id = cruzado.id if cruzado else None
     return equipo
 
 
@@ -92,6 +106,9 @@ async def delete_equipment(db, *, organization_id, user, equipment_id) -> None:
         action="equipment.deleted", entity_type="InstalledEquipment", entity_id=str(equipo.id),
         before_data={"serial_number": equipo.serial_number, "model": equipo.model},
     )
+    from app.modules.warehouse import serials as serial_svc
+
+    await serial_svc.uninstall(db, organization_id=organization_id, equipment_id=equipo.id)
     await db.delete(equipo)
     _unconfirm(project)
     await db.commit()
@@ -185,6 +202,12 @@ async def _record_assignment(db, *, project: Project, technician_id: uuid.UUID, 
             abierto.started_on = starts_on  # todavía no rotó: se corrige la fecha
         return
     if abierto is not None:
+        if starts_on < abierto.started_on:
+            # Se rota antes de que empezara el turno del anterior: no alcanzó a
+            # trabajarla. Su turno se corre al día del cambio para que no
+            # termine después de que empieza el nuevo (D-011); conserva la fila
+            # y con ella la obra en solo lectura.
+            abierto.started_on = starts_on
         abierto.ended_on = max(starts_on, abierto.started_on)
     db.add(ProjectTechnicianAssignment(organization_id=project.organization_id, project_id=project.id,
                                        technician_user_id=technician_id, started_on=starts_on,

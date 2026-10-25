@@ -74,7 +74,7 @@ function Profit() {
           <div className="fin-kpi"><small>Cobrado</small><strong>{money(t.collected as string)}</strong></div>
           <div className="fin-kpi"><small>Costos</small><strong>{money(t.costs as string)}</strong></div>
           <div className={`fin-kpi is-total${Number(t.margin) < 0 ? " is-alert" : ""}`}><small>Margen</small>
-            <strong>{money(t.margin as string)}{t.margin_pct !== null ? ` · ${t.margin_pct}%` : ""}</strong></div>
+            <strong>{money(t.margin as string)}</strong>{t.margin_pct !== null && <small>{t.margin_pct}%</small>}</div>
         </div>
       )}
       {isLoading ? <p className="acta-empty">Cargando…</p> : (data?.rows ?? []).length === 0 ? <p className="acta-empty">Sin proyectos en el periodo.</p> : (

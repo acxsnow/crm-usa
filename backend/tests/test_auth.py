@@ -33,7 +33,7 @@ async def test_login_wrong_password_generic_error(app_client, active_admin_user)
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "wrong-password"}
     )
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "Invalid email or password."
+    assert resp.json()["detail"] == "El correo o la contraseña no son correctos."
 
 
 async def test_login_unknown_email_same_generic_error(app_client, seeded_org):
@@ -41,7 +41,7 @@ async def test_login_unknown_email_same_generic_error(app_client, seeded_org):
         "/api/v1/auth/login", json={"email": "nobody@acme-demo.com", "password": "whatever12345"}
     )
     assert resp.status_code == 401
-    assert resp.json()["detail"] == "Invalid email or password."
+    assert resp.json()["detail"] == "El correo o la contraseña no son correctos."
 
 
 async def test_inactive_user_cannot_login(app_client, db, active_admin_user):
@@ -73,6 +73,31 @@ async def test_login_rate_limited_after_threshold(app_client, active_admin_user,
         "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "wrong-password"}
     )
     assert resp.status_code == 429
+    # D-005: dice que es un bloqueo, en español, y no lo confunde con una clave errada.
+    assert resp.json()["detail"].startswith("Demasiados intentos de ingreso. Espera 15 minutos")
+
+
+async def test_los_ingresos_fallidos_y_el_bloqueo_quedan_en_la_auditoria(app_client, db, active_admin_user,
+                                                                       monkeypatch):
+    """D-006: antes solo quedaba `auth.login.success`. El bloqueo se anota una
+    vez por ventana, no en cada intento bloqueado."""
+    from app.modules.auth import router as auth_router
+    from app.shared.audit_models import AuditEvent
+
+    monkeypatch.setattr(auth_router.settings, "LOGIN_MAX_ATTEMPTS", 2)
+    for _ in range(2):
+        await app_client.post("/api/v1/auth/login", json={"email": "Admin@acme-demo.com", "password": "mala"})
+    for _ in range(3):
+        resp = await app_client.post("/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "mala"})
+        assert resp.status_code == 429
+    # Un correo que no existe no tiene organización: no va a la auditoría.
+    await app_client.post("/api/v1/auth/login", json={"email": "nadie@acme-demo.com", "password": "mala"})
+
+    eventos = (await db.execute(select(AuditEvent).where(AuditEvent.entity_id == str(active_admin_user.id))
+                                .order_by(AuditEvent.created_at))).scalars().all()
+    assert [e.action for e in eventos] == ["auth.login.failed", "auth.login.failed", "auth.login.locked"]
+    assert all(e.organization_id == active_admin_user.organization_id and e.actor_user_id is None for e in eventos)
+    assert eventos[0].after_data == {"reason": "invalid_credentials"}
 
 
 async def test_password_reset_request_always_generic(app_client, active_admin_user, seeded_org):

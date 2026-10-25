@@ -174,5 +174,8 @@ export interface InspectionRow { id: string; project_id: string; project_title: 
   observations: string | null }
 
 export const money = (v: string | number | null | undefined) =>
-  v === null || v === undefined || v === "" ? "—" : `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  v === null || v === undefined || v === ""
+    ? "—"
+    // D-002: con estilo de moneda el signo va antes del símbolo («-$80,705.00», no «$-80,705.00»).
+    : Number(v).toLocaleString("en-US", { style: "currency", currency: "USD" });
 export const today = () => new Date().toLocaleDateString("en-CA");

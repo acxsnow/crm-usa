@@ -1,0 +1,775 @@
+{
+ "AUTH-001": [
+  {
+   "check": "admin: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Demo Admin · roles=['organization_admin'] · permisos=91 · 163 ms"
+  },
+  {
+   "check": "administracion: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Andrés Administración · roles=['admin_staff'] · permisos=58 · 74 ms"
+  },
+  {
+   "check": "vendedor: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Vicky Vendedora · roles=['salesperson'] · permisos=14 · 294 ms"
+  },
+  {
+   "check": "tecnico: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Tito Técnico · roles=['field_technician'] · permisos=15 · 65 ms"
+  },
+  {
+   "check": "contabilidad: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Clara Contable · roles=['accounting'] · permisos=32 · 61 ms"
+  },
+  {
+   "check": "gerencia: ingresa y /auth/me responde",
+   "ok": true,
+   "dato": "Gabriel Gerencia · roles=['management'] · permisos=21 · 70 ms"
+  }
+ ],
+ "AUTH-002": [
+  {
+   "check": "correo inexistente y clave errada: mismo código y mismo mensaje (solo cambia request_id)",
+   "ok": true,
+   "dato": "401 {'detail': 'El correo o la contraseña no son correctos.', 'code': 'http_401', 'request_id': '33080f3e-cec2-42e3-90c7-97facbf35316'} | 401 {'detail': 'El correo o la contraseña no son correctos.', 'code': 'http_401', 'request_id': 'ba241af8-312a-4d71-99db-912ad357bec3'}"
+  },
+  {
+   "check": "5 fallidos y el 6.º con la clave correcta se rechaza",
+   "ok": true,
+   "dato": "intentos=[401, 401, 401, 401, 401] sexto=429 {\"detail\":\"Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.\",\"code\":\"http_429\",\"request_id\":\"42ebd3ab-a0ae-4b09-a2e0-eef2ddf6db79\"}"
+  },
+  {
+   "check": "el mensaje del bloqueo está en español",
+   "ok": true,
+   "dato": "{\"detail\":\"Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.\",\"code\":\"http_429\",\"request_id\":\"42ebd3ab-a0ae-4b09-a2e0-eef2ddf6db79\"}"
+  },
+  {
+   "check": "después de limpiar los contadores entra",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "auditoría registra los intentos fallidos y el bloqueo",
+   "ok": true,
+   "dato": "{'auth.login.failed': 6, 'auth.login.locked': 1, 'auth.login.success': 11}"
+  }
+ ],
+ "AUTH-006": [
+  {
+   "check": "vendedor → Banca (/bank-feeds/transactions) responde 403",
+   "ok": true,
+   "dato": "403 · 54 ms"
+  },
+  {
+   "check": "vendedor → Proveedores (/payables/invoices) responde 403",
+   "ok": true,
+   "dato": "403 · 62 ms"
+  },
+  {
+   "check": "vendedor → Equipo (/users) responde 403",
+   "ok": true,
+   "dato": "403 · 56 ms"
+  },
+  {
+   "check": "vendedor → Roles (/roles) responde 403",
+   "ok": true,
+   "dato": "403 · 81 ms"
+  },
+  {
+   "check": "vendedor → Auditoría (/audit-events) responde 403",
+   "ok": true,
+   "dato": "403 · 95 ms"
+  },
+  {
+   "check": "vendedor → Bodega (saldos) (/warehouse/stock/summary) responde 403",
+   "ok": true,
+   "dato": "403 · 92 ms"
+  },
+  {
+   "check": "vendedor → Facturas (/invoices) responde 403",
+   "ok": true,
+   "dato": "403 · 88 ms"
+  },
+  {
+   "check": "vendedor → Asistencia (/attendance/dashboard) responde 403",
+   "ok": true,
+   "dato": "403 · 79 ms"
+  },
+  {
+   "check": "vendedor → Nómina (/attendance/payroll/periods) responde 403",
+   "ok": true,
+   "dato": "403 · 39 ms"
+  },
+  {
+   "check": "vendedor → Conciliación (/reconciliation/summary) responde 403",
+   "ok": true,
+   "dato": "403 · 85 ms"
+  },
+  {
+   "check": "tecnico → Banca (/bank-feeds/transactions) responde 403",
+   "ok": true,
+   "dato": "403 · 48 ms"
+  },
+  {
+   "check": "tecnico → Proveedores (/payables/invoices) responde 403",
+   "ok": true,
+   "dato": "403 · 52 ms"
+  },
+  {
+   "check": "tecnico → Equipo (/users) responde 403",
+   "ok": true,
+   "dato": "403 · 86 ms"
+  },
+  {
+   "check": "tecnico → Roles (/roles) responde 403",
+   "ok": true,
+   "dato": "403 · 75 ms"
+  },
+  {
+   "check": "tecnico → Auditoría (/audit-events) responde 403",
+   "ok": true,
+   "dato": "403 · 43 ms"
+  },
+  {
+   "check": "tecnico → Bodega (saldos) (/warehouse/stock/summary) responde 403",
+   "ok": true,
+   "dato": "403 · 57 ms"
+  },
+  {
+   "check": "tecnico → Facturas (/invoices) responde 403",
+   "ok": true,
+   "dato": "403 · 61 ms"
+  },
+  {
+   "check": "tecnico → Asistencia (/attendance/dashboard) responde 403",
+   "ok": true,
+   "dato": "403 · 51 ms"
+  },
+  {
+   "check": "tecnico → Nómina (/attendance/payroll/periods) responde 403",
+   "ok": true,
+   "dato": "403 · 47 ms"
+  },
+  {
+   "check": "tecnico → Conciliación (/reconciliation/summary) responde 403",
+   "ok": true,
+   "dato": "403 · 56 ms"
+  }
+ ],
+ "SEC-002": [
+  {
+   "check": "/cases sin token → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"2ee7bf98-7a64-4"
+  },
+  {
+   "check": "/cases sin token sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/cases token alterado → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"0908314b-ef62-4"
+  },
+  {
+   "check": "/cases token alterado sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/cases basura → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"63a98e91-d03c-4"
+  },
+  {
+   "check": "/cases basura sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/customers sin token → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"d620b67a-e864-4"
+  },
+  {
+   "check": "/customers sin token sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/customers token alterado → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"226c863f-146c-4"
+  },
+  {
+   "check": "/customers token alterado sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/customers basura → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"3f2e00b5-a885-4"
+  },
+  {
+   "check": "/customers basura sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/warehouse/stock sin token → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"43ba369d-6fba-4"
+  },
+  {
+   "check": "/warehouse/stock sin token sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/warehouse/stock token alterado → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"d3d33b6b-7f5c-4"
+  },
+  {
+   "check": "/warehouse/stock token alterado sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/warehouse/stock basura → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"d6647ec8-430a-4"
+  },
+  {
+   "check": "/warehouse/stock basura sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/invoices sin token → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"685bc204-3bba-4"
+  },
+  {
+   "check": "/invoices sin token sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/invoices token alterado → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"d2e7a55e-19ad-4"
+  },
+  {
+   "check": "/invoices token alterado sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "/invoices basura → 401",
+   "ok": true,
+   "dato": "401 {\"detail\":\"Tu sesión no es válida o ya venció. Vuelve a iniciar sesión.\",\"code\":\"http_401\",\"request_id\":\"fd365962-930a-4"
+  },
+  {
+   "check": "/invoices basura sin trazas internas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "el token de refresco no sirve como token de acceso",
+   "ok": true,
+   "dato": "401"
+  }
+ ],
+ "BOD-001": [
+  {
+   "check": "resumen de bodega",
+   "ok": true,
+   "dato": "{'low_count': 0} · 101 ms"
+  },
+  {
+   "check": "artículos de la organización demo = 244 (el ajeno no se ve)",
+   "ok": true,
+   "dato": "244"
+  },
+  {
+   "check": "SKU 85980: costo = CSV (1050.00)",
+   "ok": true,
+   "dato": "1050.00"
+  },
+  {
+   "check": "SKU 85980: un solo movimiento de carga inicial",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "SKU 3496: costo = CSV (8.00)",
+   "ok": true,
+   "dato": "8.00"
+  },
+  {
+   "check": "SKU 3496: un solo movimiento de carga inicial",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "SKU 1578: costo = CSV (39.00)",
+   "ok": true,
+   "dato": "39.00"
+  },
+  {
+   "check": "SKU 1578: un solo movimiento de carga inicial",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "SKU 27948: costo = CSV (7.68)",
+   "ok": true,
+   "dato": "7.68"
+  },
+  {
+   "check": "SKU 27948: un solo movimiento de carga inicial",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "SKU 61052: costo = CSV (89.34)",
+   "ok": true,
+   "dato": "89.34"
+  },
+  {
+   "check": "SKU 61052: un solo movimiento de carga inicial",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "«Artículo Ajeno QA» no aparece",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "SKU 85980: existencia = CSV (1)",
+   "ok": true,
+   "dato": "total_quantity=1.00 en ['Bodega']"
+  },
+  {
+   "check": "SKU 3496: existencia = CSV (11)",
+   "ok": true,
+   "dato": "total_quantity=11.00 en ['Bodega']"
+  },
+  {
+   "check": "SKU 1578: existencia = CSV (3)",
+   "ok": true,
+   "dato": "total_quantity=3.00 en ['Bodega']"
+  },
+  {
+   "check": "SKU 27948: existencia = CSV (4)",
+   "ok": true,
+   "dato": "total_quantity=4.00 en ['Bodega']"
+  },
+  {
+   "check": "SKU 61052: existencia = CSV (3)",
+   "ok": true,
+   "dato": "total_quantity=3.00 en ['Bodega']"
+  },
+  {
+   "check": "totales de la organización demo: 648 unidades y USD 13,209.22",
+   "ok": true,
+   "dato": "SQL: sum(quantity)=648.00, sum(quantity*unit_cost)=13209.22"
+  }
+ ],
+ "SEC-001": [
+  {
+   "check": "admin ajeno GET artículo demo → 404",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El artículo no existe.\",\"code\":\"warehouse_item_not_found\",\"request_id\":\"50b58bbd-3541-402"
+  },
+  {
+   "check": "admin ajeno GET usuario demo → 404",
+   "ok": true,
+   "dato": "404 {\"detail\":\"Frontend build not found.\",\"code\":\"http_404\",\"request_id\":\"2a0fcd14-e2bf-4a48-958b-1db86e"
+  },
+  {
+   "check": "admin ajeno GET lista demo → 404",
+   "ok": true,
+   "dato": "404 {\"detail\":\"La lista predefinida no existe.\",\"code\":\"warehouse_kit_not_found\",\"request_id\":\"fa3e808f-"
+  },
+  {
+   "check": "admin ajeno GET programa demo → 404",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El programa no existe.\",\"code\":\"program_not_found\",\"request_id\":\"3ea65fe0-cd68-4618-931a-"
+  },
+  {
+   "check": "admin demo GET cliente ajeno → 404",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "admin demo PATCH cliente ajeno → 404/405",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "admin demo PUT cliente ajeno → 404/405/422",
+   "ok": true,
+   "dato": "405"
+  },
+  {
+   "check": "admin demo DELETE cliente ajeno → 404/405",
+   "ok": true,
+   "dato": "405"
+  },
+  {
+   "check": "admin demo GET artículo ajeno → 404",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "admin demo PATCH artículo ajeno → 404/405",
+   "ok": true,
+   "dato": "405"
+  },
+  {
+   "check": "admin demo PUT artículo ajeno → 404/405/422",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "admin demo DELETE artículo ajeno → 404/405",
+   "ok": true,
+   "dato": "405"
+  },
+  {
+   "check": "la lista de clientes del ajeno solo trae lo suyo",
+   "ok": true,
+   "dato": "['Cliente Ajeno QA']"
+  },
+  {
+   "check": "la lista de artículos del ajeno solo trae el suyo",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "la lista de usuarios del ajeno solo trae los suyos",
+   "ok": true,
+   "dato": "200 ['admin@otra-org.com']"
+  },
+  {
+   "check": "crear cliente mandando organization_id ajeno no lo deja en la demo",
+   "ok": true,
+   "dato": "400 org=None {\"detail\":\"Falta la autorización de tratamiento de datos personales del cliente: márcala antes de guardar.\",\"code\":\"consent_required\",\"request_id\":\"44140c10-46d4-4548-8799-ba9bbd96897d\"}"
+  }
+ ],
+ "API-001": [
+  {
+   "check": "sin parámetros: 100 filas y X-Total-Count",
+   "ok": true,
+   "dato": "filas=100 total=244 · 113 ms"
+  },
+  {
+   "check": "limit=500 → 200",
+   "ok": true,
+   "dato": "200 filas=244"
+  },
+  {
+   "check": "limit=501 → 422",
+   "ok": true,
+   "dato": "422 filas=-"
+  },
+  {
+   "check": "limit=0 → 422",
+   "ok": true,
+   "dato": "422 filas=-"
+  },
+  {
+   "check": "limit=-1 → 422",
+   "ok": true,
+   "dato": "422 filas=-"
+  },
+  {
+   "check": "offset=200 trae las 44 restantes",
+   "ok": true,
+   "dato": "44"
+  },
+  {
+   "check": "offset=10000 trae lista vacía",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "recorrer las páginas: 244 ids sin repetir",
+   "ok": true,
+   "dato": "244/244"
+  }
+ ],
+ "API-002": [
+  {
+   "check": "movimientos en páginas de 50: 244 ids distintos",
+   "ok": true,
+   "dato": "244 filas, 244 distintas"
+  }
+ ],
+ "API-003": [
+  {
+   "check": "items q=cinta: total = filas",
+   "ok": true,
+   "dato": "200 total=0 filas=0"
+  },
+  {
+   "check": "items active=false: total = filas",
+   "ok": true,
+   "dato": "200 total=0 filas=0"
+  },
+  {
+   "check": "items q sin coincidencias: total = filas",
+   "ok": true,
+   "dato": "200 total=0 filas=0"
+  },
+  {
+   "check": "stock low_only: total = filas",
+   "ok": true,
+   "dato": "200 total=0 filas=0"
+  },
+  {
+   "check": "active=quizás → 422",
+   "ok": true,
+   "dato": "422"
+  }
+ ],
+ "API-004": [
+  {
+   "check": "/warehouse/items/{}: id inexistente → 404",
+   "ok": true,
+   "dato": "404 {'detail': 'El artículo no existe.', 'code': 'warehouse_item_not_found', 'request_id': 'ebc2fd24-5102-4376-b05d-6d449016ccb7'}"
+  },
+  {
+   "check": "/warehouse/items/{}: id mal formado → 422",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "/customers/{}: id inexistente → 404",
+   "ok": true,
+   "dato": "404 {'detail': 'El cliente no existe.', 'code': 'customer_not_found', 'request_id': '9b8a6501-4c22-442a-baa2-d6c033b15777'}"
+  },
+  {
+   "check": "/customers/{}: id mal formado → 422",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "/projects/{}: id inexistente → 404",
+   "ok": true,
+   "dato": "404 {'detail': 'El proyecto no existe.', 'code': 'project_not_found', 'request_id': '52ca6ee9-f257-4b82-810f-e7bbf324a2a6'}"
+  },
+  {
+   "check": "/projects/{}: id mal formado → 422",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "POST /warehouse/items cuerpo vacío → 422",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: name.\",\"code\":\"validation_error\",\"request_id\":\"b450b995-662c-4cc7-8f06-e93520c0fab6\",\"errors\":[{\"field\":\"name\",\"mes"
+  },
+  {
+   "check": "POST /warehouse/items JSON roto → 400/422 (no 500)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "POST /warehouse/items: formato de error con detail",
+   "ok": true,
+   "dato": "{\"detail\":\"Hay datos inválidos en: 1.\",\"code\":\"validation_error\",\"request_id\":\"101a0b5e-9088-4c1b-af41-f27f72acd63a\",\"errors\":[{\"field\":\"1\",\"message\":"
+  },
+  {
+   "check": "POST /customers cuerpo vacío → 422",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: legal_name.\",\"code\":\"validation_error\",\"request_id\":\"1eb33ae6-cf6c-4876-a8f9-55229d9bf481\",\"errors\":[{\"field\":\"lega"
+  },
+  {
+   "check": "POST /customers JSON roto → 400/422 (no 500)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "POST /customers: formato de error con detail",
+   "ok": true,
+   "dato": "{\"detail\":\"Hay datos inválidos en: 1.\",\"code\":\"validation_error\",\"request_id\":\"6da2752b-04ef-4ad4-b4df-0e694786927f\",\"errors\":[{\"field\":\"1\",\"message\":"
+  },
+  {
+   "check": "POST /warehouse/movements cuerpo vacío → 422",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: item_id, movement_type, quantity.\",\"code\":\"validation_error\",\"request_id\":\"e1cc07db-3bcd-4d5f-98df-a8fe7f7e1013\",\"e"
+  },
+  {
+   "check": "POST /warehouse/movements JSON roto → 400/422 (no 500)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "POST /warehouse/movements: formato de error con detail",
+   "ok": true,
+   "dato": "{\"detail\":\"Hay datos inválidos en: 1.\",\"code\":\"validation_error\",\"request_id\":\"bf38782c-7e51-4d4f-8384-37b462a1baf7\",\"errors\":[{\"field\":\"1\",\"message\":"
+  }
+ ],
+ "BUS-002": [
+  {
+   "check": "buscador «%» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 60 ms"
+  },
+  {
+   "check": "buscador «_» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 32 ms"
+  },
+  {
+   "check": "buscador «' OR 1=1 --» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 262 ms"
+  },
+  {
+   "check": "buscador «<script>alert(1)</script>» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 139 ms"
+  },
+  {
+   "check": "buscador «xxxxxxxxxxxxxxxxxxxxxxxxx» sin 500",
+   "ok": true,
+   "dato": "422 resultados=- · 56 ms"
+  },
+  {
+   "check": "buscador «🔧🔥» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 57 ms"
+  },
+  {
+   "check": "buscador «Ñandú» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 142 ms"
+  },
+  {
+   "check": "buscador «1; DROP TABLE cases; --» sin 500",
+   "ok": true,
+   "dato": "200 resultados=0 · 85 ms"
+  }
+ ],
+ "SEC-004": [
+  {
+   "check": "filtro de artículos «%» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «%» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «_» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «_» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «' OR 1=1 --» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «' OR 1=1 --» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «<script>alert(1)</script>» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «<script>alert(1)</script>» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «xxxxxxxxxxxxxxxxxxxxxxxxx» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «xxxxxxxxxxxxxxxxxxxxxxxxx» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «🔧🔥» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «🔧🔥» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «Ñandú» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «Ñandú» sin 500",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "filtro de artículos «1; DROP TABLE cases; --» sin 500 y sin traer todo",
+   "ok": true,
+   "dato": "200 total=0"
+  },
+  {
+   "check": "filtro de clientes «1; DROP TABLE cases; --» sin 500",
+   "ok": true,
+   "dato": "200"
+  }
+ ],
+ "SEC-009": [
+  {
+   "check": "documentación de la API (/api/docs) — anotar si está abierta",
+   "ok": true,
+   "dato": "200 (abierta=True)"
+  },
+  {
+   "check": "CORS no permite un origen ajeno",
+   "ok": true,
+   "dato": "None"
+  },
+  {
+   "check": "/auth/me no devuelve hash de clave ni secretos",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "API-005": [
+  {
+   "check": "30 pedidos de olvido de clave: no hay 429, pero solo se crean 3 enlaces en la hora (límite silencioso, no revela si el correo existe)",
+   "ok": true,
+   "dato": "códigos=30×200; password_reset_tokens en la última hora=3"
+  },
+  {
+   "check": "la API sigue respondiendo a otros usuarios",
+   "ok": true,
+   "dato": "200"
+  }
+ ]
+}

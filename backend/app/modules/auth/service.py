@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import structlog
 from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,7 @@ from app.shared.errors import AuthenticationError, InvalidInputError
 from app.shared.datetime_utils import as_utc
 
 settings = get_settings()
+logger = structlog.get_logger(__name__)
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
@@ -35,6 +37,30 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> User
     if user.status != UserStatus.active:
         return None
     return user
+
+
+async def record_failed_login(db: AsyncSession, email: str, *, reason: str, ip: str) -> None:
+    """Deja en la auditoría un ingreso fallido o un bloqueo (D-006).
+
+    Solo se puede anotar cuando el correo es de un usuario: la auditoría va
+    por organización, y un correo que no existe no tiene a cuál ir. Ese caso
+    queda en el log del servidor. La respuesta al cliente es la misma en los
+    dos casos, así que esto no revela si el correo existe."""
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user is None:
+        logger.warning("auth.login_failed_unknown_email", reason=reason, ip=ip)
+        return
+    await record_audit_event(
+        db,
+        organization_id=user.organization_id,
+        actor_user_id=None,
+        action="auth.login.locked" if reason == "locked" else "auth.login.failed",
+        entity_type="User",
+        entity_id=str(user.id),
+        after_data={"reason": reason},
+        ip_address=ip,
+    )
+    await db.commit()
 
 
 async def issue_token_pair(db: AsyncSession, user: User) -> tuple[str, str]:

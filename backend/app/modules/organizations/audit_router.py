@@ -8,6 +8,7 @@ from app.api.deps import get_organization_id, require_permission
 from app.db.session import get_db
 from app.shared.audit_models import AuditEvent
 from app.shared.pagination import paginate, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(tags=["audit"])
 
@@ -29,7 +30,7 @@ async def list_audit_events(
         .order_by(AuditEvent.created_at.desc())
     )
     if action:
-        stmt = stmt.where(AuditEvent.action.ilike(f"%{action}%"))
+        stmt = stmt.where(AuditEvent.action.ilike(contains_pattern(action), escape=LIKE_ESCAPE))
     if actor_user_id:
         stmt = stmt.where(AuditEvent.actor_user_id == actor_user_id)
     limit, offset = pagination

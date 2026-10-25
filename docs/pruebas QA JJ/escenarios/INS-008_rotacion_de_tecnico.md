@@ -6,7 +6,7 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · seguridad
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -27,10 +27,10 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] Como administración, en la obra: **Cambiar técnico** a Toño.
-2. [ ] Como Tito: abrir la obra desde su agenda o por la URL.
-3. [ ] Como Toño: registrar una jornada y cerrar la instalación.
-4. [ ] Revisar el Diario de obra.
+1. [x] Como administración, en la obra: **Cambiar técnico** a Toño.
+2. [x] Como Tito: abrir la obra desde su agenda o por la URL.
+3. [x] Como Toño: registrar una jornada y cerrar la instalación.
+4. [x] Revisar el Diario de obra.
 
 ## 6. Resultado esperado
 
@@ -41,6 +41,7 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 
 - Qué pasó: 8 de 9 comprobaciones bien.
 - Diferencias con lo esperado: Al rotar hoy una obra agendada para dentro de 2 días, el anterior queda «del 27 al 27» y el nuevo «desde el 25»: el anterior termina después de que empieza el nuevo y la lista sale en desorden.
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): 9 de 9. Al rotar antes de la fecha, el turno del anterior termina el día del cambio y la lista sale en orden (D-011).
 - Comprobaciones por API (8 de 9):
   - ✔ Hay una obra abierta del técnico para rotar — `ninguna abierta`
   - ✔ Hay otro técnico a quien pasarla
@@ -66,8 +67,8 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

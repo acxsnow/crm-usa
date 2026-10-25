@@ -6,7 +6,7 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
@@ -27,11 +27,11 @@ El ingreso con clave errada no da pistas de qué está mal y se bloquea a los 5 
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] Entrar con `nadie@demo-org.com` / `ChangeMe123!`. Anotar el mensaje.
-2. [ ] Entrar con `vendedor@demo-org.com` / `Errada123!`. Anotar el mensaje y compararlo con el anterior.
-3. [ ] Repetir la clave errada hasta completar 5 intentos.
-4. [ ] En el 6.º intento usar la clave correcta `ChangeMe123!`.
-5. [ ] Limpiar los intentos con el comando de las precondiciones y entrar con la clave correcta.
+1. [x] Entrar con `nadie@demo-org.com` / `ChangeMe123!`. Anotar el mensaje.
+2. [x] Entrar con `vendedor@demo-org.com` / `Errada123!`. Anotar el mensaje y compararlo con el anterior.
+3. [x] Repetir la clave errada hasta completar 5 intentos.
+4. [x] En el 6.º intento usar la clave correcta `ChangeMe123!`.
+5. [x] Limpiar los intentos con el comando de las precondiciones y entrar con la clave correcta.
 
 ## 6. Resultado esperado
 
@@ -43,6 +43,7 @@ El ingreso con clave errada no da pistas de qué está mal y se bloquea a los 5 
 
 - Qué pasó: El correo inexistente y la clave errada responden igual (401, mismo mensaje). Tras 5 fallidos, el 6.º con la clave correcta da 429; al limpiar los contadores entra.
 - Diferencias con lo esperado: 1) La API responde en inglés («Invalid email or password.», «Too many attempts. Try again later.») y la pantalla de ingreso muestra siempre «El correo o la contraseña no son correctos», también cuando la cuenta quedó bloqueada: quien está bloqueado cree que la clave está mal y sigue intentando. 2) La auditoría no registra intentos fallidos ni bloqueos (solo `auth.login.success`).
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): 5 de 5. Los mensajes salen en español (401 «El correo o la contraseña no son correctos.», 429 «Demasiados intentos de ingreso. Espera 15 minutos…») y la auditoría tiene `auth.login.failed` y `auth.login.locked` (D-005 y D-006). Falta ver en pantalla que el bloqueo se muestra con su propio mensaje (D-005).
 - Comprobaciones por API (3 de 5):
   - ✔ correo inexistente y clave errada: mismo código y mismo mensaje (solo cambia request_id) — `401 {'detail': 'Invalid email or password.', 'code': 'http_401', 'request_id': '0fe3c9f6-36aa-40df-bd66-c21c79c3e0a9'} | 401 {'detail': 'Invalid email or passwo`
   - ✔ 5 fallidos y el 6.º con la clave correcta se rechaza — `intentos=[401, 401, 401, 401, 401] sexto=429 {"detail":"Too many attempts. Try again later.","code":"http_429","request_id":"d75c6313-b21b-4d03-9f0d-081287021cd`
@@ -64,8 +65,8 @@ El ingreso con clave errada no da pistas de qué está mal y se bloquea a los 5 
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

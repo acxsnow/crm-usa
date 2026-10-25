@@ -6,7 +6,7 @@
 - **Módulo:** Concurrencia
 - **Prioridad:** P0
 - **Tipo de prueba:** Concurrencia
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -27,7 +27,7 @@ Un toque doble o un reintento por mala señal no duplica registros.
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] Lanzar 2 aprobaciones, 2 entregas y 2 emisiones simultáneas.
+1. [x] Lanzar 2 aprobaciones, 2 entregas y 2 emisiones simultáneas.
 
 ## 6. Resultado esperado
 
@@ -37,6 +37,7 @@ Un toque doble o un reintento por mala señal no duplica registros.
 
 - Qué pasó: 2 de 2 comprobaciones bien.
 - Diferencias con lo esperado: En el lote pasó una sola, pero al repetirlo 10 veces (script `carrera.py`) en 6 casos las dos respondieron 200 y quedaron dos `warehouse.release_authorized` en la auditoría. La entrega doble sí está protegida (BOD-016).
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): 2 de 2, y `carrera.py` 3 veces: 0 de 30 con doble autorización (antes 6 de 10). La segunda recibe 400 `release_not_pending` (D-012).
 - Comprobaciones por API (2 de 2):
   - ✔ Dos autorizaciones simultáneas de la misma salida: una pasa — `[400, 200]`
   - ✔ Y queda una sola autorización en la auditoría — `1`
@@ -54,8 +55,8 @@ Un toque doble o un reintento por mala señal no duplica registros.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

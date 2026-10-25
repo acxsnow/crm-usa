@@ -83,6 +83,19 @@ MOVEMENT_SIGN: dict[str, int] = {
     MovementType.AJUSTE: 1,
 }
 
+# Dónde está cada unidad de un artículo «con serial» (D-007, `serials.py`).
+class SerialStatus(StrEnum):
+    IN_STOCK = "in_stock"
+    DELIVERED = "delivered"
+    INSTALLED = "installed"
+
+
+SERIAL_STATUSES: dict[str, str] = {
+    SerialStatus.IN_STOCK: "En bodega",
+    SerialStatus.DELIVERED: "Entregado a la obra",
+    SerialStatus.INSTALLED: "Instalado",
+}
+
 # Tipos de ubicación: la bodega (hay una sola) y la camioneta de cada técnico,
 # que es lo que permite «el sobrante queda en la camioneta» cuando la obra pasa
 # de dos días.

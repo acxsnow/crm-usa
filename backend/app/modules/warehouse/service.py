@@ -32,6 +32,7 @@ from app.shared import events as domain_events
 from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 Q2 = Decimal("0.01")
 
@@ -43,6 +44,15 @@ def _q(value) -> Decimal:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _price(value, campo: str = "El costo") -> Decimal:
+    """Costo o precio de un artículo: nunca negativo (D-009). Aplica al
+    formulario, a la carga del Excel y al costo de cada movimiento."""
+    monto = to_money(value)
+    if monto < ZERO:
+        raise InvalidInputError(f"{campo} no puede ser negativo.", code="negative_amount")
+    return monto
 
 
 # ---------------------------------------------------------------------------
@@ -110,10 +120,10 @@ async def get_item(db: AsyncSession, organization_id, item_id) -> WarehouseItem:
 def _matches(q: str):
     """Lo que busca el buscador: nombre, código de AC Pro, número del fabricante,
     marca o proveedor (el técnico busca con lo que tenga a mano)."""
-    patron = f"%{q.strip()}%"
-    return or_(WarehouseItem.name.ilike(patron), WarehouseItem.sku.ilike(patron),
-               WarehouseItem.manufacturer_part.ilike(patron), WarehouseItem.brand.ilike(patron),
-               WarehouseItem.supplier_name.ilike(patron))
+    patron = contains_pattern(q)
+    return or_(WarehouseItem.name.ilike(patron, escape=LIKE_ESCAPE), WarehouseItem.sku.ilike(patron, escape=LIKE_ESCAPE),
+               WarehouseItem.manufacturer_part.ilike(patron, escape=LIKE_ESCAPE), WarehouseItem.brand.ilike(patron, escape=LIKE_ESCAPE),
+               WarehouseItem.supplier_name.ilike(patron, escape=LIKE_ESCAPE))
 
 
 def items_stmt(organization_id, *, q: str | None = None, category: str | None = None, active: bool | None = None):
@@ -183,8 +193,8 @@ async def save_item(db: AsyncSession, *, organization_id, user, data: dict, item
     item.brand = (data.get("brand") or "").strip() or None
     item.manufacturer_part = (data.get("manufacturer_part") or "").strip() or None
     item.category, item.unit = data["category"], data["unit"]
-    item.unit_cost = to_money(data.get("unit_cost") or 0)
-    item.sale_price = None if data.get("sale_price") in (None, "") else to_money(data["sale_price"])
+    item.unit_cost = _price(data.get("unit_cost") or 0)
+    item.sale_price = None if data.get("sale_price") in (None, "") else _price(data["sale_price"], "El precio de venta")
     item.supplier_name = (data.get("supplier_name") or "").strip() or None
     item.has_serial = bool(data.get("has_serial"))
     item.min_quantity = None if data.get("min_quantity") in (None, "") else _q(data["min_quantity"])
@@ -263,6 +273,7 @@ async def record_movement(
     movement_date: date | None = None,
     source_key: str | None = None,
     commit: bool = True,
+    serials: list[str] | None = None,
 ) -> WarehouseMovement:
     """Registra un movimiento y mueve el saldo en la misma transacción.
 
@@ -271,6 +282,10 @@ async def record_movement(
 
     Con `source_key` el movimiento es idempotente: repetir la misma factura o el
     mismo conteo devuelve el movimiento ya hecho y no vuelve a tocar el saldo.
+
+    Un artículo con serial (D-007) devuelve a bodega con el serial de cada
+    unidad, y puede entrar con ellos. La salida los anota en la entrega de la
+    orden (`releases.deliver_order`), no aquí.
     """
     if movement_type not in MOVEMENT_TYPES:
         raise InvalidInputError("El tipo de movimiento no existe.", code="invalid_movement_type")
@@ -296,6 +311,15 @@ async def record_movement(
         if delta == ZERO:
             raise InvalidInputError("La cantidad debe ser mayor que cero.", code="invalid_quantity")
 
+    con_serial = movement_type in (MovementType.ENTRADA, MovementType.DEVOLUCION) or bool(serials)
+    item = await db.get(WarehouseItem, item_id) if con_serial else None
+    if serials:
+        if item is None or not item.has_serial:
+            raise InvalidInputError("Este artículo no lleva serial.", code="serials_not_expected")
+        if movement_type not in (MovementType.ENTRADA, MovementType.DEVOLUCION):
+            raise InvalidInputError("Los seriales se anotan al recibir, al entregar y al devolver.",
+                                    code="serials_not_expected")
+
     if movement_type == MovementType.DEVOLUCION and project_id is not None:
         # A la obra solo vuelve lo que salió para ella: sin tope, una devolución
         # de más inflaba la existencia y dejaba negativo el costo de la obra
@@ -314,7 +338,7 @@ async def record_movement(
         organization_id=organization_id, item_id=item_id, location_id=location_id,
         to_location_id=to_location_id if movement_type == MovementType.TRASLADO else None,
         movement_type=movement_type, quantity=delta,
-        unit_cost=None if unit_cost is None else to_money(unit_cost),
+        unit_cost=None if unit_cost is None else _price(unit_cost),
         movement_date=movement_date or await _today(db, organization_id),
         reference=(reference or "").strip() or None, note=(note or "").strip() or None,
         project_id=project_id, source_key=source_key, created_by_user_id=user.id if user else None,
@@ -329,6 +353,17 @@ async def record_movement(
         await _apply_to_stock(db, organization_id, item_id=item_id, location_id=to_location_id, delta=-delta)
     else:
         await _avisar_si_bajo_del_minimo(db, organization_id, item_id=item_id, total_antes=total_antes, delta=delta)
+
+    if item is not None and item.has_serial:
+        from app.modules.warehouse import serials as serial_svc
+
+        if movement_type == MovementType.ENTRADA:
+            await serial_svc.receive(db, organization_id=organization_id, user=user, item=item, serials=serials,
+                                     cantidad=cantidad, location_id=location_id)
+        else:
+            await serial_svc.return_to_stock(db, organization_id=organization_id, user=user, item=item,
+                                             serials=serials, cantidad=cantidad, project_id=project_id,
+                                             location_id=location_id)
 
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id if user else None,
                              action=f"warehouse.movement_{movement_type}", entity_type="warehouse_movement",
@@ -395,11 +430,12 @@ def movements_stmt(organization_id, *, item_id=None, location_id=None, movement_
         stmt = stmt.where(WarehouseMovement.movement_date >= date_from)
     if date_to:
         stmt = stmt.where(WarehouseMovement.movement_date <= date_to)
-    # El id desempata: la carga inicial deja cientos de movimientos con la misma
-    # fecha y casi la misma hora, y sin desempate la paginación repite y omite
-    # filas (D-003).
+    # La carga inicial deja cientos de movimientos con la misma fecha y la misma
+    # hora de creación (`now()` es la del inicio de la transacción); sin
+    # desempate la paginación repite y omite filas (D-003). `recorded_at` lleva
+    # la hora exacta en que se registró cada uno y el id deja el orden único.
     return stmt.order_by(WarehouseMovement.movement_date.desc(), WarehouseMovement.created_at.desc(),
-                         WarehouseMovement.id.desc())
+                         WarehouseMovement.recorded_at.desc().nulls_last(), WarehouseMovement.id.desc())
 
 
 # ---------------------------------------------------------------------------
@@ -564,7 +600,7 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
                     item = WarehouseItem(
                         organization_id=organization_id, name=nombre, sku=sku, category=categoria, unit=unidad,
                         brand=marca, manufacturer_part=fabricante,
-                        unit_cost=to_money(fila.get("unit_cost") or 0),
+                        unit_cost=_price(fila.get("unit_cost") or 0),
                         supplier_name=(fila.get("supplier_name") or "").strip() or None,
                         has_serial=bool(fila.get("has_serial")),
                         min_quantity=None if fila.get("min_quantity") in (None, "") else _q(fila["min_quantity"]),
@@ -586,7 +622,7 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
                         item.sku = sku
                     item.brand = marca or item.brand
                     item.manufacturer_part = fabricante or item.manufacturer_part
-                    item.unit_cost = to_money(fila.get("unit_cost") or item.unit_cost or 0)
+                    item.unit_cost = _price(fila.get("unit_cost") or item.unit_cost or 0)
                     item.supplier_name = (fila.get("supplier_name") or "").strip() or item.supplier_name
                     item.has_serial = bool(fila.get("has_serial")) or item.has_serial
                     if fila.get("min_quantity") not in (None, ""):

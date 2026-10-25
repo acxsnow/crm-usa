@@ -234,6 +234,37 @@ class WarehouseReleaseLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
         "WarehouseReleaseOrder", back_populates="lines", lazy="raise")
 
 
+class WarehouseSerial(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Una unidad de un artículo «con serial» (D-007, spec de bodega del 19 oct).
+
+    Un serial está en un solo lugar: en bodega (`in_stock`), entregado a una
+    orden y su obra (`delivered`) o instalado en la obra (`installed`). Solo se
+    entrega si está en bodega o si se anota por primera vez al entregarlo, y
+    solo se instala en la obra a la que salió. Lo cambia `warehouse/serials.py`.
+    """
+
+    __tablename__ = "warehouse_serials"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "item_id", "serial", name="uq_warehouse_serial"),
+        Index("ix_warehouse_serials_org_status", "organization_id", "status"),
+    )
+
+    item_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), nullable=False, index=True)
+    serial: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="in_stock")
+    # Dónde quedó en bodega o de qué ubicación salió.
+    location_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_locations.id"))
+    # Mientras está afuera: la obra, la orden y el renglón con que salió.
+    project_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("projects.id"), index=True)
+    release_order_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_release_orders.id"))
+    release_line_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("warehouse_release_lines.id"))
+    installed_equipment_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("installed_equipment.id", ondelete="SET NULL"), index=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    installed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
 class WarehouseKitTemplate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     """La lista predefinida del punto 2: lo que un tipo de trabajo siempre lleva.
 

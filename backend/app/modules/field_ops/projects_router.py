@@ -21,6 +21,7 @@ from app.modules.field_ops.schemas import (
 from app.modules.users.models import User
 from app.shared.errors import NotFoundError
 from app.shared.pagination import paginate, paginate_list, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(tags=["field-ops"])
 
@@ -46,8 +47,8 @@ async def list_projects(
     if status_filter:
         stmt = stmt.where(Project.status == status_filter)
     if q:
-        like = f"%{q}%"
-        stmt = stmt.where((Project.title.ilike(like)) | (Project.address_street.ilike(like)))
+        like = contains_pattern(q)
+        stmt = stmt.where((Project.title.ilike(like, escape=LIKE_ESCAPE)) | (Project.address_street.ilike(like, escape=LIKE_ESCAPE)))
     if technician_id:
         stmt = stmt.where(Project.primary_technician_user_id == technician_id)
     limit, offset = pagination

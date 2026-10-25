@@ -331,6 +331,9 @@ class EquipmentCreate(BaseModel):
     quantity: int = Field(default=1, ge=1, le=50)
     unit_label: str | None = Field(default=None, max_length=100)
     notes: str | None = None
+    # El serial que salió de bodega para la obra (D-007), elegido de
+    # `GET /projects/{id}/serials`. Sin él, el serial escrito se cruza solo.
+    warehouse_serial_id: uuid.UUID | None = None
 
 
 class EquipmentResponse(EquipmentCreate):

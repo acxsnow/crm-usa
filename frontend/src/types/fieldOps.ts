@@ -232,6 +232,8 @@ export interface InstalledEquipment {
   unit_label: string | null;
   notes: string | null;
   created_at: string;
+  /** El serial de bodega con que se cruzó (D-007); nulo si no pasó por bodega. */
+  warehouse_serial_id?: string | null;
 }
 
 export interface ProjectMaterial {

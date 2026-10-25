@@ -1,8 +1,22 @@
 import { useState, type FormEvent } from "react";
+import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Icon } from "@/components/ui/Icon";
+
+/** D-005: el bloqueo por intentos y la falta de conexión no son una clave
+ * errada; si se dicen igual, quien está bloqueado sigue probando claves. */
+function loginErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (!err.response) return "No hay conexión con el servidor. Revisa la señal e inténtalo de nuevo.";
+    if (err.response.status === 429) {
+      const detail = (err.response.data as { detail?: unknown } | undefined)?.detail;
+      return typeof detail === "string" ? detail : "Demasiados intentos de ingreso. Espera unos minutos.";
+    }
+  }
+  return "El correo o la contraseña no son correctos.";
+}
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -22,8 +36,8 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate(redirectTo, { replace: true });
-    } catch {
-      setError("El correo o la contraseña no son correctos.");
+    } catch (err) {
+      setError(loginErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

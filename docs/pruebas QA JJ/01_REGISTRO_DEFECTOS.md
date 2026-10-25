@@ -9,17 +9,17 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | ID | Título | Módulo | Prioridad | Estado | Encontrado en | Responsable | Fecha |
 |---|---|---|---|---|---|---|---|
 | D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (validado por API; falta pantalla) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
-| D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Abierto | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
+| D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Corregido (pendiente de validar en pantalla) | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 | D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Cerrado (2026-10-25) | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
-| D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Abierto | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
-| D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
-| D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
-| D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Abierto | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Cerrado (2026-10-25) | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
+| D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Corregido (validado por API; falta pantalla) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
+| D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
+| D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Corregido (validado por API; falta pantalla) | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Cerrado (2026-10-25) | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
-| D-009 | Un artículo acepta costo unitario negativo | Bodega | P2 | Abierto | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-009 | Un artículo acepta costo unitario negativo | Bodega | P2 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
-| D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Abierto | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
-| D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Abierto | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Cerrado (2026-10-25) | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
+| D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Cerrado (2026-10-25) | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
@@ -73,16 +73,15 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 
 - **Módulo:** Finanzas › Conciliación y rentabilidad.
 - **Prioridad:** P2. Es visual y el dato es correcto, pero se lee mal.
-- **Estado:** Abierto.
+- **Estado:** Corregido (pendiente de validar).
 - **Encontrado en:** captura `rentabilidad` del manual de usuario (25 de octubre de 2026).
 - **Qué pasa:** con pérdida, la columna del margen muestra «$-80,705.0…»: el número se corta y el signo queda después del símbolo.
 - **Qué se espera:** «-$80,705.00» completo (o entre paréntesis), sin cortarse a 390 px ni en escritorio.
 - **Escenarios relacionados:** FIN-005.
 - **Evidencia:** `docs/manual/capturas/` (figura de Rentabilidad).
 - **Responsable:** paquete de Mateo (`finance`): avisarle antes de tocarlo.
-- **Corrección:**
-- **Commit:**
-- **Validación:**
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `finance/api.ts`, `money` usa el formato de moneda («-$80,705.00», con el signo antes del símbolo). En el indicador «Margen» de Rentabilidad el porcentaje pasa a una línea propia, y los montos de los indicadores de finanzas bajan de línea si no caben, en vez de cortarse con «…» (`finance.css`).
+- **Validación:** pendiente, reejecutar FIN-005 en pantalla (escritorio y 390 px).
 
 ## D-003 · Movimientos de bodega: paginación inestable
 
@@ -110,19 +109,21 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - `users/router.py`
   - `warehouse/kits.py`, `warehouse/releases.py` y `warehouse/service.py`
 - **Prioridad:** P2. No es una inyección (las consultas van parametrizadas y ningún texto alteró la consulta), pero buscar `%` o `_` trae todo.
-- **Estado:** Abierto.
+- **Estado:** Cerrado (25 oct).
 - **Encontrado en:** SEC-004.
 - **Pasos para reproducir:** `GET /api/v1/warehouse/items?q=%25` y `?q=_`.
 - **Resultado obtenido:** 244 artículos.
 - **Resultado esperado:** solo los que contienen el carácter literal.
 - **Análisis / causa:** esos filtros arman `ilike(f"%{q}%")` sin escapar. El buscador global, cobros, expedientes de intake y banca ya usan `escape="\\"`.
 - **Corrección propuesta:** usar el mismo helper de escape en todos los filtros.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** función común `app/shared/text_search.py` (`contains_pattern` + `escape=LIKE_ESCAPE`) en los 10 filtros que no escapaban: expedientes, clientes, obras, usuarios, proveedores, auditoría, artículos, kits y salidas. La categoría de bodega compara el nombre exacto con `lower()` en vez de `ilike`. Prueba `tests/test_text_search.py`.
+- **Validación:** SEC-004 reejecutado el 25 oct: 16 de 16 por API, `%` trae solo lo que contiene `%`. Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
 
 ## D-005 · Ingreso: mensajes en inglés y bloqueo indistinguible
 
 - **Módulo:** Acceso (`auth/router.py`, `frontend/src/features/auth/LoginPage.tsx`).
 - **Prioridad:** P2.
-- **Estado:** Abierto.
+- **Estado:** Corregido (pendiente de validar).
 - **Encontrado en:** AUTH-002.
 - **Resultado obtenido:**
   - La API responde «Invalid email or password.» y «Too many attempts. Try again later.».
@@ -131,17 +132,21 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Resultado esperado:**
   - Mensajes en español en la API.
   - Con 429, la pantalla dice algo como «Demasiados intentos. Espera 15 minutos o usa ¿Olvidaste tu contraseña?».
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `auth/router.py` responde en español: «El correo o la contraseña no son correctos.» (401) y «Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.» (429). También se tradujeron cerrar sesión y recuperar contraseña. `LoginPage.tsx` muestra el mensaje del bloqueo y uno propio cuando no hay conexión, en vez de decir siempre «clave errada». El código de error (`http_401`, `http_429`) no cambió. Pruebas en `test_auth.py`.
+- **Validación:** AUTH-002 reejecutado el 25 oct: 5 de 5 por API, con los mensajes en español. Falta ver en pantalla que el bloqueo muestra su propio mensaje.
 
 ## D-006 · Intentos fallidos y bloqueos fuera de la auditoría
 
 - **Módulo:** Acceso / Auditoría.
 - **Prioridad:** P2.
-- **Estado:** Abierto.
+- **Estado:** Cerrado (25 oct).
 - **Encontrado en:** AUTH-002, validación 2.
 - **Resultado obtenido:** `audit_events` solo tiene `auth.login.success`.
 - **Resultado esperado:**
   - Registrar el ingreso fallido, sin la clave y con el correo normalizado e IP.
   - Registrar el bloqueo, para detectar ataques de fuerza bruta.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `auth/service.py`, `record_failed_login`: cada intento fallido deja `auth.login.failed` y el bloqueo deja `auth.login.locked` (una sola vez por ventana de 15 minutos, para que un ataque no llene la tabla), en la organización del usuario, con la IP. Un correo que no existe no tiene organización: queda en el log del servidor (`auth.login_failed_unknown_email`). La respuesta al cliente no cambia, así que no revela si el correo existe. Prueba `test_los_ingresos_fallidos_y_el_bloqueo_quedan_en_la_auditoria`.
+- **Validación:** AUTH-002 reejecutado el 25 oct: la auditoría tiene `auth.login.failed` (6) y `auth.login.locked` (1). Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
 
 ## D-007 · «Con serial» no tiene efecto en bodega
 
@@ -154,6 +159,17 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - Al entregar un artículo con serial, bodega anota el serial de cada unidad.
   - El técnico, en «Equipos instalados», elige entre los seriales que salieron para su obra.
 - **Nota:** el formulario dice «Con serial: se rastrea por equipo», lo que promete algo que hoy no pasa. Si no se va a construir, quitar la promesa del texto.
+- **Decisión (25 oct, José Javier Miranda):** se construye el control de seriales antes de salir a producción, con su prueba.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** según la spec de bodega del 19 oct (`inventory_serials`, «un serial está en un solo lugar»):
+  - Tabla `warehouse_serials` (migración `0043`): un registro por unidad, con estado `in_stock` / `delivered` / `installed`, la obra, la orden y el renglón con que salió, y el equipo donde quedó instalado. Único por organización, artículo y serial.
+  - Servicio `warehouse/serials.py`, el único que cambia el estado de un serial.
+  - **Entrega** (`POST /warehouse/releases/{id}/deliver`, `lines[].serials`): un artículo con serial sale por unidades enteras y con un serial por unidad; sin ellos responde 400 `serials_count_mismatch`. Un serial que no está en bodega responde 409 `serial_not_in_stock`. Uno no registrado (lo que había antes del control) se registra al entregar.
+  - **Entrada** (`POST /warehouse/movements`, `serials`): opcional; si van, uno por unidad y ninguno ya registrado. **Devolución**: obligatoria; solo vuelven los entregados a esa obra y no instalados (409 `serial_not_delivered_here`).
+  - **Equipos instalados** (`warehouse_serial_id` o el serial escrito): se cruza con lo que salió para la obra y queda `installed`. Un serial en bodega, de otra obra o ya instalado responde 409 `serial_not_available_here`. Un equipo que no pasó por bodega (D-BOD-3) se registra sin cruce. Borrar el equipo devuelve el serial a `delivered`.
+  - Consulta: `GET /warehouse/serials` (Bodega › Seriales, con `warehouse.read`) y `GET /projects/{id}/serials` (el técnico, solo sus obras).
+  - Pantalla: campos de serial por unidad en **Entregar**, selector **Equipo que salió de bodega** en Equipos instalados, página **Bodega › Seriales**. Las entradas y devoluciones no tienen formulario en pantalla (tampoco antes): sus seriales van por API.
+  - Pruebas: `tests/test_warehouse_serials.py` (5: el recorrido completo, no sale dos veces ni se instala en otra obra, equipo directo sin cruce, reglas de captura, aislamiento por organización y por obra). Manual actualizado (8.4 Equipos instalados, Bodega › Movimientos, Seriales y Entregar).
+- **Validación:** BOD-011 reejecutado el 25 oct: lote 2 18 de 18 (entrega de la lista de 3 ton con los seriales del 85980, consulta, técnico, instalación y vuelta a «Entregado») y paso 2 aparte 4 de 4 (mismo serial en otra salida 409, vacío 400). Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. Falta la parte de pantalla: campos de serial al entregar, selector en Equipos instalados y Bodega › Seriales.
 
 ## D-008 · Devolución a bodega sin tope
 
@@ -174,6 +190,8 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Encontrado en:** BOD-002.
 - **Resultado obtenido:** `POST /warehouse/items` con `unit_cost: "-1"` responde 201.
 - **Resultado esperado:** 400, «El costo no puede ser negativo». Revisar también el precio de venta y la importación desde Excel.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/service.py`, `_price`: costo y precio de venta negativos responden 400 `negative_amount` en el formulario, en la carga del Excel (la fila mala queda como error y las demás se cargan) y en el costo de un movimiento. Los demás montos de bodega (presupuesto, plantillas, costos y cobros adicionales) ya lo validaban. Prueba `test_costo_y_precio_negativos_se_rechazan`.
+- **Validación:** BOD-002 reejecutado el 25 oct: 15 de 15. Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
 
 ## D-010 · SKU repetido responde 500
 
@@ -195,6 +213,8 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - El nuevo queda «desde el 25»: el anterior termina después de que empezó el nuevo.
   - `GET /projects/{id}/assignments` sale ordenado por `started_on` y el actual aparece primero.
 - **Resultado esperado:** si la obra no había empezado, el anterior queda sin días («no alcanzó a trabajarla») o se reemplaza su turno, y la lista sale en orden cronológico.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `field_ops/installation.py`, `_record_assignment`: si se rota antes de que empiece el turno del anterior, su turno se corre al día del cambio; ya no termina después de que empieza el nuevo y la lista sale en orden. Conserva la fila y con ella la obra en solo lectura. Prueba `test_rotar_antes_de_la_fecha_no_cruza_los_turnos`.
+- **Validación:** INS-008 reejecutado el 25 oct: 9 de 9. Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
 
 ## D-012 · Doble autorización simultánea
 
@@ -204,6 +224,8 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Resultado esperado:** una pasa y la otra recibe 409.
 - **Impacto:** hoy bajo, porque la entrega doble sí está protegida (BOD-016) y la autorización no mueve existencias. Pero el mismo patrón (leer el estado, decidir y escribir sin bloqueo) puede repetirse en acciones de dinero.
 - **Corrección propuesta:** `SELECT … FOR UPDATE` de la orden, o un `UPDATE … WHERE status = 'por_autorizar'` que verifique cuántas filas cambió. Revisar el mismo patrón en aprobar expediente, confirmar acta y radicar o pagar cobros.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/releases.py`, `get_order(..., for_update=True)` bloquea la fila de la orden (`SELECT … FOR UPDATE` y relectura) al autorizar, rechazar y entregar: la segunda persona espera y ve el estado que dejó la primera. Las pruebas automáticas corren en SQLite, que no tiene este bloqueo: se valida con `carrera.py` contra Postgres. Queda por revisar el mismo patrón en aprobar expediente, confirmar acta y radicar o pagar cobros.
+- **Validación:** CON-001 reejecutado el 25 oct: 2 de 2, y `carrera.py` 3 veces: 0 de 30 con doble autorización (antes 6 de 10). La segunda recibe 400 `release_not_pending` (el mismo código que ya daba al autorizar dos veces seguidas), no 409, para no cambiar el contrato. Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
 
 ## Plantilla para defectos nuevos
 

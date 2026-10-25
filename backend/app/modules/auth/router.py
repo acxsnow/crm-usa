@@ -22,7 +22,12 @@ from app.shared.permissions import modules_for_permissions
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
-GENERIC_LOGIN_ERROR = "Invalid email or password."
+GENERIC_LOGIN_ERROR = "El correo o la contraseña no son correctos."
+# D-005: el bloqueo se dice tal cual, para que quien quedó bloqueado no siga
+# probando claves creyendo que la suya está mal.
+LOCKED_LOGIN_ERROR = ("Demasiados intentos de ingreso. Espera {minutos} minutos e inténtalo de nuevo, "
+                      "o recupera tu contraseña.")
+RESET_SENT = "Si hay una cuenta activa con ese correo, te enviamos un enlace para recuperar la contraseña."
 
 # SEG-04: el refresh token (dura días) viaja solo en una cookie HttpOnly que
 # JavaScript no puede leer; el navegador la manda sola a /auth/*. El access
@@ -60,10 +65,19 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
         window_seconds=settings.LOGIN_WINDOW_MINUTES * 60,
     )
     if ip_limited or email_limited:
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many attempts. Try again later.")
+        # D-006: el bloqueo queda en la auditoría una vez por ventana, no en
+        # cada intento bloqueado (si no, un ataque llenaría la tabla).
+        primera_vez = not await is_rate_limited(
+            f"login:locked-audit:{normalized_email}", max_attempts=1,
+            window_seconds=settings.LOGIN_WINDOW_MINUTES * 60)
+        if primera_vez:
+            await auth_service.record_failed_login(db, normalized_email, reason="locked", ip=client_ip)
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                            detail=LOCKED_LOGIN_ERROR.format(minutos=settings.LOGIN_WINDOW_MINUTES))
 
     user = await auth_service.authenticate_user(db, payload.email, payload.password)
     if not user:
+        await auth_service.record_failed_login(db, normalized_email, reason="invalid_credentials", ip=client_ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=GENERIC_LOGIN_ERROR)
 
     access_token, refresh_token = await auth_service.issue_token_pair(db, user)
@@ -89,7 +103,7 @@ async def logout(request: Request, response: Response):
     if token:
         await auth_service.logout(token)
     _clear_refresh_cookie(response)
-    return MessageResponse(message="Logged out.")
+    return MessageResponse(message="Sesión cerrada.")
 
 
 @router.post("/password-reset/request", response_model=MessageResponse)
@@ -111,16 +125,16 @@ async def request_password_reset(
     )
     if email_limited or ip_limited:
         # Still return the generic message; do not reveal rate-limit state either.
-        return MessageResponse(message="If an active account exists for this email, a recovery link has been sent.")
+        return MessageResponse(message=RESET_SENT)
 
     await auth_service.request_password_reset(db, payload.email, client_ip)
-    return MessageResponse(message="If an active account exists for this email, a recovery link has been sent.")
+    return MessageResponse(message=RESET_SENT)
 
 
 @router.post("/password-reset/confirm", response_model=MessageResponse)
 async def confirm_password_reset(payload: PasswordResetConfirmSchema, db: AsyncSession = Depends(get_db)):
     await auth_service.confirm_password_reset(db, payload.token, payload.new_password)
-    return MessageResponse(message="Your password was changed.")
+    return MessageResponse(message="Tu contraseña se cambió.")
 
 
 async def _current_user_response(db: AsyncSession, user: User) -> CurrentUserResponse:

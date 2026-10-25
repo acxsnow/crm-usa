@@ -133,13 +133,30 @@ async def test_el_sku_repetido_responde_409(app_client, login, active_admin_user
     assert r.status_code == 200, r.text
 
 
+async def test_costo_y_precio_negativos_se_rechazan(app_client, login, active_admin_user):
+    """D-009: el artículo aceptaba costo -1. Igual en el formulario y en el Excel."""
+    h = await login(active_admin_user.email)
+    base = {"name": "Malo", "category": "pipe_copper", "unit": "ft"}
+    r = await app_client.post(f"{API}/warehouse/items", json={**base, "unit_cost": "-1"}, headers=h)
+    assert (r.status_code, r.json()["code"]) == (400, "negative_amount")
+    r = await app_client.post(f"{API}/warehouse/items", json={**base, "unit_cost": "2", "sale_price": "-5"},
+                              headers=h)
+    assert (r.status_code, r.json()["detail"]) == (400, "El precio de venta no puede ser negativo.")
+    assert await _articulos(app_client, h) == []
+
+    r = await app_client.post(f"{API}/warehouse/import/rows", json={"rows": [
+        {"name": "Fila buena", "unit_cost": "3"}, {"name": "Fila mala", "unit_cost": "-2"}]}, headers=h)
+    assert r.status_code == 200, r.text
+    assert r.json()["creados"] == 1
+    assert [e["fila"] for e in r.json()["errores"]] == [2]
+
+
 async def test_la_paginacion_de_movimientos_no_repite_filas(app_client, db, login, active_admin_user):
     """D-003: movimientos con la misma fecha y hora salían repetidos u omitidos
     al pasar de página; el orden desempata por id."""
     h = await login(active_admin_user.email)
     item = await _item(app_client, h)
-    for _ in range(7):
-        await _entrada(app_client, h, item["id"], "1")
+    creados = [(await _entrada(app_client, h, item["id"], "1"))["id"] for _ in range(7)]
     # Misma fecha y misma hora para todos, como deja la carga inicial.
     momento = (await db.execute(select(WarehouseMovement.created_at).limit(1))).scalar()
     await db.execute(WarehouseMovement.__table__.update().values(created_at=momento))
@@ -150,7 +167,8 @@ async def test_la_paginacion_de_movimientos_no_repite_filas(app_client, db, logi
         r = await app_client.get(f"{API}/warehouse/movements", params={"limit": 2, "offset": offset}, headers=h)
         ids += [m["id"] for m in r.json()]
     assert len(ids) == len(set(ids)) == 7
-    assert ids == sorted(ids, reverse=True)
+    # El último registrado primero, como en el libro.
+    assert ids == list(reversed(creados))
 
 
 async def test_el_mismo_movimiento_no_descuenta_dos_veces(app_client, db, login, active_admin_user):

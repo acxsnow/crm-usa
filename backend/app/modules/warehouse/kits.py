@@ -26,6 +26,7 @@ from app.modules.warehouse.models import (
 from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 Q2 = Decimal("0.01")
 
@@ -65,8 +66,8 @@ def kits_stmt(organization_id, *, q: str | None = None, project_type: str | None
               active: bool | None = None):
     stmt = select(WarehouseKitTemplate).where(WarehouseKitTemplate.organization_id == organization_id)
     if q:
-        patron = f"%{q.strip()}%"
-        stmt = stmt.where(or_(WarehouseKitTemplate.name.ilike(patron), WarehouseKitTemplate.description.ilike(patron)))
+        patron = contains_pattern(q)
+        stmt = stmt.where(or_(WarehouseKitTemplate.name.ilike(patron, escape=LIKE_ESCAPE), WarehouseKitTemplate.description.ilike(patron, escape=LIKE_ESCAPE)))
     if project_type:
         stmt = stmt.where(WarehouseKitTemplate.project_type == project_type)
     if active is not None:

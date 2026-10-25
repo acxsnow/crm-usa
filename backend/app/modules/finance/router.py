@@ -34,6 +34,7 @@ from app.shared.errors import InvalidInputError, NotFoundError
 from app.shared.files.storage import absolute_path
 from app.shared.files.validation import read_limited
 from app.shared.pagination import paginate, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(tags=["finance"])
 
@@ -202,9 +203,9 @@ async def list_suppliers(response: Response, q: str | None = None, active: bool 
                          current_user: User = Depends(_ap_read)) -> list[dict]:
     stmt = select(Supplier).where(Supplier.organization_id == organization_id)
     if q:
-        patron = f"%{q.strip()}%"
-        stmt = stmt.where(or_(Supplier.name.ilike(patron), Supplier.legal_name.ilike(patron),
-                              Supplier.contact_name.ilike(patron)))
+        patron = contains_pattern(q)
+        stmt = stmt.where(or_(Supplier.name.ilike(patron, escape=LIKE_ESCAPE), Supplier.legal_name.ilike(patron, escape=LIKE_ESCAPE),
+                              Supplier.contact_name.ilike(patron, escape=LIKE_ESCAPE)))
     if active is not None:
         stmt = stmt.where(Supplier.active.is_(active))
     items = await paginate(db, stmt.order_by(Supplier.name), limit=pag[0], offset=pag[1], response=response)

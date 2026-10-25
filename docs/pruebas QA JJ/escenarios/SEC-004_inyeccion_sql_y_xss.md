@@ -6,7 +6,7 @@
 - **Módulo:** Seguridad
 - **Prioridad:** P0
 - **Tipo de prueba:** Seguridad
-- **Estado:** FALLIDO
+- **Estado:** En ejecución
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
@@ -38,6 +38,7 @@ Lo que escribe el usuario nunca se ejecuta ni en la base ni en el navegador.
 
 - Qué pasó: Ninguna entrada rara produce error ni altera la consulta (todo va parametrizado). Pero en los filtros de artículos, `%` y `_` traen los 244 artículos: el texto se usa como comodín.
 - Diferencias con lo esperado: Unos 10 filtros de texto no escapan `%` y `_` (expedientes, clientes, obras, proveedores, auditoría, usuarios, listas, salidas y artículos); el buscador y otros sí los escapan. Falta la parte de pantalla (ver los textos guardados y el PDF del acta).
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): 16 de 16. `%` y `_` ya se buscan tal cual en los filtros (D-004). Sigue faltando la parte de pantalla (textos guardados y el PDF del acta).
 - Comprobaciones por API (14 de 16):
   - ✘ filtro de artículos «%» sin 500 y sin traer todo — `200 total=244`
   - ✔ filtro de clientes «%» sin 500 — `200`

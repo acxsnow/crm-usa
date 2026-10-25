@@ -37,6 +37,7 @@ from app.shared import events as domain_events
 from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
 from app.shared.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 Q2 = Decimal("0.01")
 
@@ -55,8 +56,11 @@ def _now() -> datetime:
 # Lectura
 # ---------------------------------------------------------------------------
 
-async def get_order(db: AsyncSession, organization_id, order_id) -> WarehouseReleaseOrder:
-    order = await db.get(WarehouseReleaseOrder, order_id)
+async def get_order(db: AsyncSession, organization_id, order_id, *, for_update: bool = False) -> WarehouseReleaseOrder:
+    """Con `for_update` bloquea la fila hasta el commit y la relee de la base:
+    dos personas que autorizan, rechazan o entregan la misma orden al tiempo
+    se turnan, y la segunda ve el estado que dejó la primera (D-012)."""
+    order = await db.get(WarehouseReleaseOrder, order_id, with_for_update=for_update, populate_existing=for_update)
     if order is None or order.organization_id != organization_id:
         raise NotFoundError("La orden de salida no existe.", code="release_order_not_found")
     return order
@@ -91,12 +95,13 @@ def releases_stmt(organization_id, *, status: str | None = None, project_id=None
     if project_id:
         stmt = stmt.where(WarehouseReleaseOrder.project_id == project_id)
     if q:
-        patron = f"%{q.strip()}%"
+        patron = contains_pattern(q)
         # También por el nombre de la obra, como el buscador global.
         from app.modules.field_ops.models import Project
 
-        obras =select(Project.id).where(Project.organization_id == organization_id, Project.title.ilike(patron))
-        stmt = stmt.where(or_(WarehouseReleaseOrder.number.ilike(patron), WarehouseReleaseOrder.note.ilike(patron),
+        obras =select(Project.id).where(Project.organization_id == organization_id, Project.title.ilike(patron, escape=LIKE_ESCAPE))
+        stmt = stmt.where(or_(WarehouseReleaseOrder.number.ilike(patron, escape=LIKE_ESCAPE),
+                              WarehouseReleaseOrder.note.ilike(patron, escape=LIKE_ESCAPE),
                               WarehouseReleaseOrder.project_id.in_(obras)))
     # Lo que espera decisión primero, y dentro de cada grupo lo más reciente.
     return stmt.order_by(WarehouseReleaseOrder.status, WarehouseReleaseOrder.created_at.desc())
@@ -290,7 +295,7 @@ async def submit_order(db: AsyncSession, *, organization_id, user, order_id) -> 
 
 
 async def authorize_order(db: AsyncSession, *, organization_id, user, order_id) -> WarehouseReleaseOrder:
-    order = await get_order(db, organization_id, order_id)
+    order = await get_order(db, organization_id, order_id, for_update=True)
     if order.status != ReleaseStatus.POR_AUTORIZAR:
         raise InvalidInputError("Esta orden no está esperando autorización.", code="release_not_pending")
     # Separación de funciones: quien pide el material no se lo autoriza.
@@ -313,7 +318,7 @@ async def reject_order(db: AsyncSession, *, organization_id, user, order_id, rea
     motivo = (reason or "").strip()
     if not motivo:
         raise InvalidInputError("Para rechazar hay que decir por qué.", code="reject_reason_required")
-    order = await get_order(db, organization_id, order_id)
+    order = await get_order(db, organization_id, order_id, for_update=True)
     if order.status != ReleaseStatus.POR_AUTORIZAR:
         raise InvalidInputError("Esta orden no está esperando autorización.", code="release_not_pending")
     order.status = ReleaseStatus.RECHAZADA
@@ -330,15 +335,18 @@ async def reject_order(db: AsyncSession, *, organization_id, user, order_id, rea
 
 
 async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, note: str | None = None,
-                        quantities: dict | None = None) -> dict:
+                        quantities: dict | None = None, serials: dict | None = None) -> dict:
     """Entrega el material: baja el saldo y carga lo entregado a la obra.
 
     `quantities` ({id de línea: cantidad}) es lo que Bodega confirma renglón por
     renglón (fase 2 del plan de cierre); sin él se entrega lo pedido. Nunca sale
     más de lo pedido ni más de lo que hay. Devuelve la orden y la lista de
     faltantes. Sin existencia no se bloquea (D-BOD-4).
+
+    `serials` ({id de línea: [seriales]}) es obligatorio para los artículos con
+    serial: uno por unidad que sale (D-007).
     """
-    order = await get_order(db, organization_id, order_id)
+    order = await get_order(db, organization_id, order_id, for_update=True)
     if order.status != ReleaseStatus.AUTORIZADA:
         raise InvalidInputError("Solo se entrega material de una orden autorizada.",
                                 code="release_not_authorized")
@@ -347,6 +355,11 @@ async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, no
     ajenas = set(confirmadas) - {str(l.id) for l in lineas}
     if ajenas:
         raise InvalidInputError("Una de las cantidades no es de esta orden.", code="release_line_not_found")
+    seriales = {str(k): v for k, v in (serials or {}).items()}
+    if set(seriales) - {str(l.id) for l in lineas}:
+        raise InvalidInputError("Uno de los seriales no es de esta orden.", code="release_line_not_found")
+    articulos = {i.id: i for i in (await db.execute(select(WarehouseItem).where(
+        WarehouseItem.id.in_({l.item_id for l in lineas})))).scalars().all()} if lineas else {}
     ubicacion = await wh.get_location(db, organization_id, order.location_id)
     hoy = await org_today(db, organization_id)
 
@@ -386,6 +399,16 @@ async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, no
         if order.project_id:
             await _cargar_a_la_obra(db, organization_id=organization_id, order=order, line_id=linea.id,
                                     item_id=linea.item_id, cantidad=_q(entregada))
+        articulo = articulos.get(linea.item_id)
+        if articulo is not None and articulo.has_serial:
+            from app.modules.warehouse import serials as serial_svc
+
+            await serial_svc.deliver(db, organization_id=organization_id, user=user, item=articulo,
+                                     serials=seriales.get(str(linea.id)), cantidad=_q(entregada),
+                                     location_id=ubicacion.id, order=order, line=linea)
+        elif seriales.get(str(linea.id)):
+            raise InvalidInputError(f"«{articulo.name if articulo else 'El artículo'}» no lleva serial.",
+                                    code="serials_not_expected")
 
     order.status = ReleaseStatus.ENTREGADA
     order.delivered_by_user_id = user.id
@@ -484,11 +507,15 @@ async def orders_out(db: AsyncSession, organization_id, orders: list[WarehouseRe
         WarehouseItem.id.in_(item_ids)))).scalars().all()} if item_ids else {}
     ubicaciones = {l.id: l.name for l in (await db.execute(select(WarehouseLocation).where(
         WarehouseLocation.id.in_({o.location_id for o in orders})))).scalars().all()}
-    return [order_out(o, agrupadas.get(o.id, []), items=items, location_name=ubicaciones.get(o.location_id))
-            for o in orders]
+    from app.modules.warehouse import serials as serial_svc
+
+    seriales = await serial_svc.of_lines(db, organization_id, [l.id for ls in agrupadas.values() for l in ls])
+    return [order_out(o, agrupadas.get(o.id, []), items=items, location_name=ubicaciones.get(o.location_id),
+                      serials=seriales) for o in orders]
 
 
-def line_out(linea: WarehouseReleaseLine, *, item: WarehouseItem | None = None) -> dict:
+def line_out(linea: WarehouseReleaseLine, *, item: WarehouseItem | None = None,
+             serials: list[str] | None = None) -> dict:
     pedida = _q(linea.quantity_requested)
     entregada = None if linea.quantity_delivered is None else _q(linea.quantity_delivered)
     return {
@@ -505,6 +532,8 @@ def line_out(linea: WarehouseReleaseLine, *, item: WarehouseItem | None = None) 
         "section": linea.section, "is_required": linea.is_required,
         "loaded": linea.loaded_at is not None,
         "loaded_at": linea.loaded_at.isoformat() if linea.loaded_at else None,
+        "has_serial": bool(item.has_serial) if item else False,
+        "serials": serials or [],
     }
 
 
@@ -519,8 +548,8 @@ def _carga(lineas: list[WarehouseReleaseLine]) -> dict:
 
 
 def order_out(order: WarehouseReleaseOrder, lineas: list[WarehouseReleaseLine], *, items: dict | None = None,
-              location_name: str | None = None) -> dict:
-    catalogo = items or {}
+              location_name: str | None = None, serials: dict | None = None) -> dict:
+    catalogo, por_linea = items or {}, serials or {}
     return {
         "id": str(order.id), "number": order.number, "status": order.status,
         "project_id": str(order.project_id) if order.project_id else None,
@@ -539,7 +568,7 @@ def order_out(order: WarehouseReleaseOrder, lineas: list[WarehouseReleaseLine], 
         "omissions": order.omissions or [],
         "loading": _carga(lineas) if order.status == ReleaseStatus.ENTREGADA else None,
         "created_at": order.created_at.isoformat() if order.created_at else None,
-        "lines": [line_out(l, item=catalogo.get(l.item_id)) for l in lineas],
+        "lines": [line_out(l, item=catalogo.get(l.item_id), serials=por_linea.get(l.id)) for l in lineas],
     }
 
 

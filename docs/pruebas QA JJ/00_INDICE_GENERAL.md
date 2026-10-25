@@ -20,27 +20,27 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 
 | Módulo | Escenarios | P0 | Bloqueados | Ejecución | Preparación | Aprobados | Fallidos | Defectos |
 |---|---|---|---|---|---|---|---|---|
-| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 0 | 1 | 2 |
+| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 1 | 0 | 2 |
 | Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
 | Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
-| Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 9 | 1 | 1 |
+| Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 10 | 0 | 1 |
 | Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 2 | 0 | 0 |
-| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 14 | 2 | 4 |
+| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 16 | 0 | 4 |
 | Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 4 | 0 | 0 |
 | Trabajo particular y facturación | 4 | 1 | 1 | 1 h 20 min | 0 min | 0 | 0 | 0 |
 | Finanzas | 6 | 0 | 1 | 2 h 00 min | 0 min | 0 | 0 | 0 |
 | Turnos, asistencia y mapa | 10 | 2 | 0 | 2 h 25 min | 0 min | 0 | 0 | 0 |
 | Notificaciones y buscador | 4 | 0 | 0 | 50 min | 0 min | 0 | 0 | 0 |
-| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 2 | 1 | 1 |
+| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 2 | 0 | 1 |
 | API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 3 | 0 | 1 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 0 | 0 | 0 |
-| Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 1 | 1 | 1 |
-| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **43** | **6** | **10** |
+| Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 2 | 0 | 1 |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **48** | **0** | **10** |
 
 ## Avance
 
-- Ejecutados completos: 49 de 109 (44 %). En ejecución (parte hecha): 14.
-- Aprobados: 43 · Fallidos: 6 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
+- Ejecutados completos: 48 de 109 (44 %). En ejecución (parte hecha): 15.
+- Aprobados: 48 · Fallidos: 0 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
@@ -48,7 +48,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | ID | Módulo | Escenario | Prioridad | Tipo | Archivo | Estado | Tiempo estimado (min) | Tiempo real | Defectos | Reejecución | Observaciones |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | AUTH-001 | Acceso y sesión | Ingreso válido con cada uno de los 6 roles | P0 | Funcional · seguridad | [AUTH-001_ingreso_valido_por_rol.md](escenarios/AUTH-001_ingreso_valido_por_rol.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta pantalla |
-| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | FALLIDO | 10 | 1 min (API) | D-005, D-006 |  | Bloqueo funciona; mensajes y auditoría fallan |
+| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | APROBADO | 10 | 1 min (API) | D-005, D-006 |  | 5/5 (reejecutado); falta ver el bloqueo en pantalla |
 | AUTH-003 | Acceso y sesión | Olvidé mi contraseña: enlace de un solo uso, 60 minutos y 3 por hora | P1 | Funcional · seguridad | [AUTH-003_olvido_de_clave.md](escenarios/AUTH-003_olvido_de_clave.md) | Pendiente | 15 | | | | |
 | AUTH-004 | Acceso y sesión | Invitar un usuario, aceptar la invitación y entrar | P1 | Funcional | [AUTH-004_invitacion_de_usuario.md](escenarios/AUTH-004_invitacion_de_usuario.md) | Pendiente | 15 | | | | |
 | AUTH-005 | Acceso y sesión | Sesión vencida y pérdida de señal | P2 | Funcional · celular | [AUTH-005_sesion_vencida_y_sin_senal.md](escenarios/AUTH-005_sesion_vencida_y_sin_senal.md) | Pendiente | 25 | | | | |
@@ -74,7 +74,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | INS-005 | Instalación en campo | Administración devuelve el acta al técnico y luego la confirma | P0 | Funcional | [INS-005_acta_devuelta_al_tecnico.md](escenarios/INS-005_acta_devuelta_al_tecnico.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 5/5 |
 | INS-006 | Instalación en campo | Inspección municipal aprobada | P1 | Funcional | [INS-006_inspeccion_aprobada.md](escenarios/INS-006_inspeccion_aprobada.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 5/5 |
 | INS-007 | Instalación en campo | Inspección fallida: la obra vuelve a campo | P1 | Funcional · regla de negocio | [INS-007_inspeccion_fallida_y_reinspeccion.md](escenarios/INS-007_inspeccion_fallida_y_reinspeccion.md) | APROBADO | 25 + 60 prep. | lote 2 por API (≈1 min) |  |  | 5/5 |
-| INS-008 | Instalación en campo | Cambiar el técnico de una obra en curso (rotación) | P0 | Funcional · seguridad | [INS-008_rotacion_de_tecnico.md](escenarios/INS-008_rotacion_de_tecnico.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-011 |  | D-011 |
+| INS-008 | Instalación en campo | Cambiar el técnico de una obra en curso (rotación) | P0 | Funcional · seguridad | [INS-008_rotacion_de_tecnico.md](escenarios/INS-008_rotacion_de_tecnico.md) | APROBADO | 20 | lote 2 por API (≈1 min) | D-011 |  | 9/9 (reejecutado) |
 | INS-009 | Instalación en campo | Cambiar las fechas de una obra programada | P2 | Funcional | [INS-009_reprogramar_fechas.md](escenarios/INS-009_reprogramar_fechas.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 3/3 |
 | INS-010 | Instalación en campo | El técnico llega y el cliente no estaba (visita fallida) | P0 | Funcional · regla de negocio | [INS-010_cliente_no_estaba.md](escenarios/INS-010_cliente_no_estaba.md) | En ejecución | 25 | lote 2 por API (≈1 min) |  |  | API 16/16; falta pantalla |
 | INS-011 | Instalación en campo | Límite parametrizable de reagendamientos | P1 | Funcional · regla de negocio | [INS-011_limite_de_reagendamientos.md](escenarios/INS-011_limite_de_reagendamientos.md) | En ejecución | 30 | lote 2 por API (≈1 min) |  |  | API 14/14; falta pantalla |
@@ -89,7 +89,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | TEC-004 | Técnicos | Desactivar un técnico que tiene obras y camioneta con material | P1 | Funcional · integridad | [TEC-004_tecnico_desactivado_con_obras.md](escenarios/TEC-004_tecnico_desactivado_con_obras.md) | Pendiente | 15 | | | | |
 | TEC-005 | Técnicos | Cobro en efectivo en campo y efectivo por entregar | P1 | Funcional · dinero | [TEC-005_efectivo_por_entregar.md](escenarios/TEC-005_efectivo_por_entregar.md) | Pendiente | 15 | | | | |
 | BOD-001 | Bodega | La carga inicial cuadra con los PDF de AC Pro | P0 | Datos · integridad | [BOD-001_carga_inicial_cuadra.md](escenarios/BOD-001_carga_inicial_cuadra.md) | APROBADO | 20 | 2 min (API + SQL) |  |  | 19/19 |
-| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-009, D-010 |  | 13/14; sigue D-009 |
+| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | APROBADO | 15 | lote 2 por API (≈1 min) | D-009, D-010 |  | 15/15 (reejecutado) |
 | BOD-003 | Bodega | Entrada de mercancía de proveedor | P1 | Funcional | [BOD-003_entrada_de_mercancia.md](escenarios/BOD-003_entrada_de_mercancia.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 4/4 |
 | BOD-004 | Bodega | Entrega parcial y rechazo de una salida | P0 | Funcional · regla de negocio | [BOD-004_salida_parcial_y_rechazo.md](escenarios/BOD-004_salida_parcial_y_rechazo.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
 | BOD-005 | Bodega | Pedir más de lo que hay en bodega | P0 | Funcional · integridad | [BOD-005_existencia_insuficiente.md](escenarios/BOD-005_existencia_insuficiente.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 4/4 |
@@ -98,7 +98,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | BOD-008 | Bodega | Traslado de material entre camionetas | P1 | Funcional | [BOD-008_traslado_entre_camionetas.md](escenarios/BOD-008_traslado_entre_camionetas.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 2/2 |
 | BOD-009 | Bodega | Conteo físico con diferencias (ajuste) | P1 | Funcional · auditoría | [BOD-009_conteo_y_ajuste.md](escenarios/BOD-009_conteo_y_ajuste.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 4/4 |
 | BOD-010 | Bodega | Importar el catálogo desde Excel | P1 | Funcional · validación | [BOD-010_importar_catalogo.md](escenarios/BOD-010_importar_catalogo.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 7/7 |
-| BOD-011 | Bodega | Equipos con serial: rastreo por equipo | P1 | Funcional · integridad | [BOD-011_articulo_con_serial.md](escenarios/BOD-011_articulo_con_serial.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-007 |  | D-007 |
+| BOD-011 | Bodega | Equipos con serial: rastreo por equipo | P1 | Funcional · integridad | [BOD-011_articulo_con_serial.md](escenarios/BOD-011_articulo_con_serial.md) | APROBADO | 15 | lote 2 por API (≈1 min) | D-007 |  | API ok (reejecutado); falta pantalla |
 | BOD-012 | Bodega | Bajo mínimo y compras sugeridas | P2 | Funcional | [BOD-012_minimos_y_compras_sugeridas.md](escenarios/BOD-012_minimos_y_compras_sugeridas.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 3/3 |
 | BOD-013 | Bodega | Crear, editar y borrar listas predefinidas | P2 | Funcional | [BOD-013_listas_predefinidas.md](escenarios/BOD-013_listas_predefinidas.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 22/22 |
 | BOD-014 | Bodega | Presupuesto de la obra contra lo real | P1 | Funcional · dinero | [BOD-014_presupuesto_vs_real.md](escenarios/BOD-014_presupuesto_vs_real.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
@@ -136,7 +136,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | SEC-001 | Seguridad | Aislamiento entre organizaciones (IDOR) | P0 | Seguridad | [SEC-001_aislamiento_entre_organizaciones.md](escenarios/SEC-001_aislamiento_entre_organizaciones.md) | APROBADO | 30 | 1 min (API) |  |  | 16/16; repetir con expedientes y facturas |
 | SEC-002 | Seguridad | API sin token, con token vencido o alterado | P0 | Seguridad | [SEC-002_api_sin_token_y_token_alterado.md](escenarios/SEC-002_api_sin_token_y_token_alterado.md) | APROBADO | 15 | 1 min (API) |  |  | 25/25 |
 | SEC-003 | Seguridad | Cada rol contra cada grupo de rutas | P0 | Seguridad | [SEC-003_permiso_por_ruta_backend.md](escenarios/SEC-003_permiso_por_ruta_backend.md) | Pendiente | 45 | | | | |
-| SEC-004 | Seguridad | Inyección SQL y XSS en formularios y filtros | P0 | Seguridad | [SEC-004_inyeccion_sql_y_xss.md](escenarios/SEC-004_inyeccion_sql_y_xss.md) | FALLIDO | 25 | 1 min (API) | D-004 |  | Sin inyección; comodines sin escapar |
+| SEC-004 | Seguridad | Inyección SQL y XSS en formularios y filtros | P0 | Seguridad | [SEC-004_inyeccion_sql_y_xss.md](escenarios/SEC-004_inyeccion_sql_y_xss.md) | En ejecución | 25 | 1 min (API) | D-004 |  | API 16/16; falta pantalla |
 | SEC-005 | Seguridad | Subida de archivos: tipo, tamaño y nombre | P0 | Seguridad | [SEC-005_subida_de_archivos.md](escenarios/SEC-005_subida_de_archivos.md) | Pendiente | 20 | | | | |
 | SEC-006 | Seguridad | Enlaces directos a archivos de otros | P0 | Seguridad | [SEC-006_enlaces_de_archivos.md](escenarios/SEC-006_enlaces_de_archivos.md) | Pendiente | 15 | | | | |
 | SEC-007 | Seguridad | Campos que el cliente no debe poder fijar | P1 | Seguridad | [SEC-007_asignacion_masiva.md](escenarios/SEC-007_asignacion_masiva.md) | Pendiente | 20 | | | | |
@@ -153,7 +153,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | PER-002 | Rendimiento | Listas con volumen alto | P2 | Rendimiento | [PER-002_volumen_de_datos.md](escenarios/PER-002_volumen_de_datos.md) | Pendiente | 30 + 20 prep. | | | | |
 | PER-003 | Rendimiento | Carga inicial de la app en celular con red lenta | P1 | Rendimiento · celular | [PER-003_celular_red_lenta.md](escenarios/PER-003_celular_red_lenta.md) | Pendiente | 15 | | | | |
 | PER-004 | Rendimiento | Tareas programadas (Celery beat) no bloquean la app | P2 | Rendimiento · operación | [PER-004_tareas_programadas.md](escenarios/PER-004_tareas_programadas.md) | Pendiente | 15 | | | | |
-| CON-001 | Concurrencia | Doble clic y reintentos en acciones que crean cosas | P0 | Concurrencia | [CON-001_doble_clic_y_reintentos.md](escenarios/CON-001_doble_clic_y_reintentos.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-012 |  | D-012 |
+| CON-001 | Concurrencia | Doble clic y reintentos en acciones que crean cosas | P0 | Concurrencia | [CON-001_doble_clic_y_reintentos.md](escenarios/CON-001_doble_clic_y_reintentos.md) | APROBADO | 20 | lote 2 por API (≈1 min) | D-012 |  | 2/2 + carrera 0/30 (reejecutado) |
 | CON-002 | Concurrencia | Numeración consecutiva con emisiones simultáneas | P1 | Concurrencia · dinero | [CON-002_numeracion_simultanea.md](escenarios/CON-002_numeracion_simultanea.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 1/1 |
 | CON-003 | Concurrencia | Dos personas editando lo mismo | P2 | Concurrencia | [CON-003_edicion_simultanea.md](escenarios/CON-003_edicion_simultanea.md) | Pendiente | 15 | | | | |
 

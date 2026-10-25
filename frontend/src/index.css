@@ -4414,3 +4414,9 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
   .global-search-option { padding: 12px 16px; }
 }
 
+
+/* Seriales de bodega (D-007): un campo por unidad al entregar y la marca «De bodega» en Equipos instalados. */
+.serial-inputs { display: grid; gap: 4px; margin-top: 6px; }
+.serial-inputs small { color: var(--ink-soft); font-size: 0.75rem; }
+.serial-inputs input { font-family: var(--mono-font, ui-monospace, monospace); text-transform: uppercase; }
+.serial-from-stock { display: block; color: var(--ink-soft); font-size: 0.75rem; }

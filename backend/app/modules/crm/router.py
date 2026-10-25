@@ -29,6 +29,7 @@ from app.modules.users.models import User
 from app.shared.audit import record_audit_event
 from app.shared.errors import NotFoundError
 from app.shared.pagination import paginate, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(tags=["crm"])
 
@@ -67,9 +68,9 @@ async def list_customers(
     if status_filter:
         stmt = stmt.where(Customer.status == status_filter)
     if q:
-        like = f"%{q}%"
+        like = contains_pattern(q)
         stmt = stmt.where(
-            (Customer.legal_name.ilike(like)) | (Customer.email.ilike(like)) | (Customer.main_phone.ilike(like))
+            (Customer.legal_name.ilike(like, escape=LIKE_ESCAPE)) | (Customer.email.ilike(like, escape=LIKE_ESCAPE)) | (Customer.main_phone.ilike(like, escape=LIKE_ESCAPE))
         )
     limit, offset = pagination
     return await paginate(db, stmt, limit=limit, offset=offset, response=response)

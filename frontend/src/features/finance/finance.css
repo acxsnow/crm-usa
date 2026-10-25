@@ -66,3 +66,6 @@
 .fin-page table.notices-table td { padding: 0.6rem 0.55rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 .fin-page table.notices-table td small { display: block; color: var(--ink-soft); font-size: 0.78rem; margin-top: 0.1rem; }
 .fin-page table.notices-table td.mono { white-space: nowrap; }
+
+/* D-002: un monto grande o negativo no se corta con «…»; si no cabe, baja de línea. */
+#root .fin-kpis .fin-kpi strong { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }

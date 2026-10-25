@@ -174,6 +174,13 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "≡",
         permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
       },
+      // Dónde está cada equipo con serial: en bodega, en una obra o instalado (D-007).
+      {
+        label: "Seriales",
+        to: "/warehouse/serials",
+        icon: "#",
+        permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
+      },
       // Las compras por adelantado: lo presupuestado por venir menos la existencia.
       {
         label: "Compras sugeridas",

@@ -20,6 +20,7 @@ export interface WarehouseCatalogs {
   line_origins: Record<string, string>;
   budget_categories: Record<string, string>;
   budget_statuses: Record<string, string>;
+  serial_statuses: Record<string, string>;
 }
 
 /** Cuánto hay de un artículo en una ubicación concreta (bodega o camioneta). */
@@ -96,6 +97,10 @@ export interface ReleaseLine {
   /** El técnico lo marcó «lo llevo» al cargar la camioneta. */
   loaded: boolean;
   loaded_at: string | null;
+  /** Artículo con serial (D-007): se entrega anotando el serial de cada unidad. */
+  has_serial: boolean;
+  /** Los seriales que salieron con este renglón. */
+  serials: string[];
 }
 
 /** Un obligatorio de la lista que no se lleva, con el motivo. */
@@ -489,14 +494,47 @@ export const approveRelease = async (id: string) =>
 export const rejectRelease = async (id: string, reason: string) =>
   (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/reject`, { reason })).data;
 
+/** Lo que Bodega confirma que sale de un renglón y, si lleva serial, el de cada unidad. */
+export interface DeliverLineInput { line_id: string; quantity: string; serials?: string[] }
+
 /** `lines`: lo que Bodega confirma que sale de cada renglón; sin él, lo pedido. */
-export const deliverRelease = async (id: string, note?: string | null,
-  lines?: { line_id: string; quantity: string }[]) =>
+export const deliverRelease = async (id: string, note?: string | null, lines?: DeliverLineInput[]) =>
   (await apiClient.post<DeliverResult>(`/warehouse/releases/${id}/deliver`, { note: note || null, lines: lines ?? null })).data;
 
 /** «Lo llevo»: el técnico marca (o desmarca) el renglón al cargar la camioneta. */
 export const loadReleaseLine = async (id: string, lineId: string, loaded: boolean) =>
   (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/lines/${lineId}/load`, { loaded })).data;
+
+// --- Seriales (D-007) ---------------------------------------------------------
+
+/** Una unidad de un equipo: en bodega, entregada a una obra o instalada. */
+export interface WarehouseSerial {
+  id: string;
+  serial: string;
+  status: "in_stock" | "delivered" | "installed";
+  status_label: string;
+  item_id: string;
+  item_name: string | null;
+  sku: string | null;
+  brand: string | null;
+  manufacturer_part: string | null;
+  project_id: string | null;
+  project_title: string | null;
+  release_order_id: string | null;
+  release_number: string | null;
+  installed_equipment_id: string | null;
+  delivered_at: string | null;
+  installed_at: string | null;
+}
+
+export const serialKeys = {
+  all: ["warehouse-serials"] as const,
+  project: (projectId: string) => ["warehouse-serials", "project", projectId] as const,
+};
+
+/** Los seriales que salieron de bodega para la obra: de aquí elige el técnico. */
+export const listProjectSerials = async (projectId: string) =>
+  (await apiClient.get<WarehouseSerial[]>(`/projects/${projectId}/serials`, { params: { limit: 500 } })).data;
 
 export const getItem = async (id: string) =>
   (await apiClient.get<WarehouseItem>(`/warehouse/items/${id}`)).data;

@@ -33,6 +33,7 @@ from app.modules.cases.schemas import (
 )
 from app.modules.users.models import User
 from app.shared.pagination import paginate, paginate_list, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -103,9 +104,9 @@ async def list_cases(
     if stage_code:
         stmt = stmt.where(Case.stage_code == stage_code)
     if q:
-        like = f"%{q}%"
+        like = contains_pattern(q)
         stmt = stmt.where(
-            Case.normalized_address.ilike(like) | Case.case_number.ilike(like)
+            Case.normalized_address.ilike(like, escape=LIKE_ESCAPE) | Case.case_number.ilike(like, escape=LIKE_ESCAPE)
         )
 
     limit, offset = pagination

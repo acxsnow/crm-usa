@@ -6,7 +6,7 @@
 - **Módulo:** Bodega
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · integridad
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -27,9 +27,9 @@ Cada condensadora o evaporadora entregada queda identificada por su serial.
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] Entregar con el serial.
-2. [ ] En otra salida, entregar el mismo serial.
-3. [ ] Entregar sin serial.
+1. [x] Entregar con el serial.
+2. [x] En otra salida, entregar el mismo serial.
+3. [x] Entregar sin serial.
 
 ## 6. Resultado esperado
 
@@ -39,6 +39,11 @@ Cada condensadora o evaporadora entregada queda identificada por su serial.
 
 - Qué pasó: 0 de 1 comprobaciones bien.
 - Diferencias con lo esperado: La entrega no pide ni guarda seriales; el serial solo se captura después en «Equipos instalados».
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): lote 2 18 de 18 y paso 2 aparte (`ejecucion/bod011_paso2.py`) 4 de 4. Sin seriales la entrega responde 400 `serials_count_mismatch`; el mismo serial en otra salida, 409 «… no está en bodega: está entregado a la obra.»; el serial vacío, 400 «hay un serial vacío». Bodega › Seriales muestra el estado y la orden, y el técnico lo elige en Equipos instalados (D-007). Falta ver en pantalla los campos de serial al entregar.
+  - ✔ Entrada de 1 unidad más del 85980 (sin serial: se anota al entregar) — `201`
+  - ✔ Entregar en otra salida el serial QA1025200829-0-0 que ya salió → 409 serial_not_in_stock — `409 El serial QA1025200829-0-0 de «B-Series Air Handler Multi Position 3 Ton 208/230V 19.63" wide ECM Motor R454B» no está en bodega: está entregado a la obra.`
+  - ✔ Con el serial vacío → 400 serial_empty — `400 «B-Series Air Handler Multi Position 3 Ton 208/230V 19.63" wide ECM Motor R454B»: hay un serial vacío.`
+  - ✔ Con un serial nuevo sí sale y queda registrado — `200`
 - Comprobaciones por API (0 de 1):
   - ✘ Al entregar el equipo con serial (85980) la bodega pide el serial — `DeliverIn solo recibe note y lines(line_id, quantity); `has_serial` no se usa fuera del catálogo`
 
@@ -55,8 +60,8 @@ Cada condensadora o evaporadora entregada queda identificada por su serial.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

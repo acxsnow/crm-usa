@@ -6,7 +6,7 @@
 - **Módulo:** Bodega
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · validación
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -28,9 +28,9 @@ El alta manual valida los campos y no permite códigos repetidos.
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] **Nuevo artículo** con cada dato inválido, uno a la vez.
-2. [ ] Crearlo con los datos válidos.
-3. [ ] Editar: cambiar el costo a 7.50 y marcar **Con serial**.
+1. [x] **Nuevo artículo** con cada dato inválido, uno a la vez.
+2. [x] Crearlo con los datos válidos.
+3. [x] Editar: cambiar el costo a 7.50 y marcar **Con serial**.
 
 ## 6. Resultado esperado
 
@@ -41,6 +41,7 @@ El alta manual valida los campos y no permite códigos repetidos.
 
 - Qué pasó: 12 de 14 comprobaciones bien.
 - Diferencias con lo esperado: Costo -1 se guarda (201) y un SKU repetido revienta con 500 (uq_warehouse_item_sku sin capturar).
+- Reejecución (25 oct, tras corregir los P2 y D-007, base QA reiniciada): 15 de 15. Costo -1 responde 400 «El costo no puede ser negativo.» (D-009) y el SKU repetido 409 (D-010).
 - Reejecución (25 oct, tras corregir D-010, base QA reiniciada): 13 de 14. El SKU repetido 3496 responde 409 «Ya existe un artículo con el código 3496» (D-010 cerrado). Sigue fallando solo por el costo -1 (D-009, abierto).
 - Comprobaciones por API (12 de 14):
   - ✘ Artículo con costo -1 se rechaza — `201 {"id":"5ff6c652-a29b-486f-8ee2-bce8fa48383a","name":"QA X","sku":null,"brand":null,"manufacturer_part":null,"category":"other","category_label":"Otro"`
@@ -71,8 +72,8 @@ El alta manual valida los campos y no permite códigos repetidos.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

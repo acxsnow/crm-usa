@@ -19,6 +19,7 @@ from app.modules.users.schemas import (
 )
 from app.shared.errors import NotFoundError
 from app.shared.pagination import paginate, pagination_params
+from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -39,8 +40,8 @@ async def list_users(
 ):
     stmt = select(User).where(User.organization_id == organization_id).order_by(User.full_name)
     if q:
-        like = f"%{q}%"
-        stmt = stmt.where((User.full_name.ilike(like)) | (User.email_display.ilike(like)))
+        like = contains_pattern(q)
+        stmt = stmt.where((User.full_name.ilike(like, escape=LIKE_ESCAPE)) | (User.email_display.ilike(like, escape=LIKE_ESCAPE)))
     if status_filter:
         stmt = stmt.where(User.status == status_filter)
     if role:

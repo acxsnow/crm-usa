@@ -9,7 +9,7 @@ las opciones.
 import re
 import unicodedata
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -110,7 +110,7 @@ async def update_category(db: AsyncSession, *, organization_id, user, category_i
                                     code="category_label_too_long")
         otra = (await db.execute(select(WarehouseCategory.id).where(
             WarehouseCategory.organization_id == organization_id, WarehouseCategory.id != categoria.id,
-            WarehouseCategory.label.ilike(nombre)))).first()
+            func.lower(WarehouseCategory.label) == nombre.lower()))).first()
         if otra:
             raise ConflictError(f"Ya existe la categoría «{nombre}».", code="category_exists")
         categoria.label = nombre
