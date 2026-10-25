@@ -41,6 +41,7 @@ El alta manual valida los campos y no permite códigos repetidos.
 
 - Qué pasó: 12 de 14 comprobaciones bien.
 - Diferencias con lo esperado: Costo -1 se guarda (201) y un SKU repetido revienta con 500 (uq_warehouse_item_sku sin capturar).
+- Reejecución (25 oct, tras corregir D-010, base QA reiniciada): 13 de 14. El SKU repetido 3496 responde 409 «Ya existe un artículo con el código 3496» (D-010 cerrado). Sigue fallando solo por el costo -1 (D-009, abierto).
 - Comprobaciones por API (12 de 14):
   - ✘ Artículo con costo -1 se rechaza — `201 {"id":"5ff6c652-a29b-486f-8ee2-bce8fa48383a","name":"QA X","sku":null,"brand":null,"manufacturer_part":null,"category":"other","category_label":"Otro"`
   - ✔ Artículo con costo abc se rechaza — `400 {"detail":"«abc» no es un número válido.","code":"invalid_number","request_id":"7428e99b-c3ec-4ca4-ae2b-b893c7fbf1e2"}`

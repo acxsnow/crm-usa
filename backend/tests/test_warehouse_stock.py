@@ -113,6 +113,46 @@ async def test_la_entrada_sube_y_la_salida_baja_el_saldo(app_client, db, login, 
     assert [m["quantity"] for m in movs] == ["-30.00", "100.00"]
 
 
+async def test_el_sku_repetido_responde_409(app_client, login, active_admin_user):
+    """D-010: antes llegaba a la restricción única de la base y respondía 500."""
+    h = await login(active_admin_user.email)
+    primero = await _item(app_client, h, sku="3496")
+    otro = await _item(app_client, h, "Cinta de espuma", sku="3088")
+
+    r = await app_client.post(f"{API}/warehouse/items", json={
+        "name": "Otro", "sku": " 3496 ", "category": "pipe_copper", "unit": "ft"}, headers=h)
+    assert (r.status_code, r.json()["code"]) == (409, "duplicate_sku")
+    assert "3496" in r.json()["detail"]
+
+    # Editar uno para ponerle el código de otro, igual; guardarlo con el suyo, no.
+    datos = {"name": "Cinta de espuma", "category": "pipe_copper", "unit": "ft"}
+    r = await app_client.put(f"{API}/warehouse/items/{otro['id']}", json={**datos, "sku": "3496"}, headers=h)
+    assert (r.status_code, r.json()["code"]) == (409, "duplicate_sku")
+    r = await app_client.put(f"{API}/warehouse/items/{primero['id']}",
+                             json={**datos, "name": "Tubo cobre 3/8", "sku": "3496"}, headers=h)
+    assert r.status_code == 200, r.text
+
+
+async def test_la_paginacion_de_movimientos_no_repite_filas(app_client, db, login, active_admin_user):
+    """D-003: movimientos con la misma fecha y hora salían repetidos u omitidos
+    al pasar de página; el orden desempata por id."""
+    h = await login(active_admin_user.email)
+    item = await _item(app_client, h)
+    for _ in range(7):
+        await _entrada(app_client, h, item["id"], "1")
+    # Misma fecha y misma hora para todos, como deja la carga inicial.
+    momento = (await db.execute(select(WarehouseMovement.created_at).limit(1))).scalar()
+    await db.execute(WarehouseMovement.__table__.update().values(created_at=momento))
+    await db.commit()
+
+    ids = []
+    for offset in range(0, 7, 2):
+        r = await app_client.get(f"{API}/warehouse/movements", params={"limit": 2, "offset": offset}, headers=h)
+        ids += [m["id"] for m in r.json()]
+    assert len(ids) == len(set(ids)) == 7
+    assert ids == sorted(ids, reverse=True)
+
+
 async def test_el_mismo_movimiento_no_descuenta_dos_veces(app_client, db, login, active_admin_user):
     h = await login(active_admin_user.email)
     item = await _item(app_client, h)

@@ -31,7 +31,7 @@ from app.modules.warehouse.models import (
 from app.shared import events as domain_events
 from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
-from app.shared.errors import InvalidInputError, NotFoundError
+from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 
 Q2 = Decimal("0.01")
 
@@ -164,11 +164,22 @@ async def save_item(db: AsyncSession, *, organization_id, user, data: dict, item
         raise InvalidInputError("La unidad no existe.", code="invalid_item_unit")
     item = await get_item(db, organization_id, item_id) if item_id else None
     await check_category(db, organization_id, data["category"], current=item.category if item else None)
+    sku = (data.get("sku") or "").strip() or None
+    if sku:
+        # Antes llegaba a la restricción única y respondía 500 (D-010). Se
+        # revisa antes de agregar el artículo a la sesión, para que la consulta
+        # no lo escriba primero.
+        repetido = select(WarehouseItem.id).where(WarehouseItem.organization_id == organization_id,
+                                                  WarehouseItem.sku == sku)
+        if item is not None:
+            repetido = repetido.where(WarehouseItem.id != item.id)
+        if (await db.execute(repetido)).first() is not None:
+            raise ConflictError(f"Ya existe un artículo con el código {sku}.", code="duplicate_sku")
     if item is None:
         item = WarehouseItem(organization_id=organization_id)
         db.add(item)
     item.name = data["name"].strip()
-    item.sku = (data.get("sku") or "").strip() or None
+    item.sku = sku
     item.brand = (data.get("brand") or "").strip() or None
     item.manufacturer_part = (data.get("manufacturer_part") or "").strip() or None
     item.category, item.unit = data["category"], data["unit"]
@@ -285,6 +296,16 @@ async def record_movement(
         if delta == ZERO:
             raise InvalidInputError("La cantidad debe ser mayor que cero.", code="invalid_quantity")
 
+    if movement_type == MovementType.DEVOLUCION and project_id is not None:
+        # A la obra solo vuelve lo que salió para ella: sin tope, una devolución
+        # de más inflaba la existencia y dejaba negativo el costo de la obra
+        # (D-008).
+        pendiente = await project_outstanding(db, organization_id, project_id=project_id, item_id=item_id)
+        if cantidad > pendiente:
+            raise InvalidInputError(
+                f"A esta obra solo le quedan {pendiente} por devolver de este artículo.",
+                code="return_exceeds_delivered")
+
     # Lo que había antes de mover: contra esto se detecta si el movimiento dejó
     # el artículo en su mínimo.
     total_antes = await _total_quantity(db, organization_id, item_id)
@@ -317,6 +338,16 @@ async def record_movement(
         await db.commit()
         await db.refresh(movimiento)
     return movimiento
+
+
+async def project_outstanding(db: AsyncSession, organization_id, *, project_id, item_id) -> Decimal:
+    """Lo que salió para la obra y no ha vuelto: la salida se guarda negativa y
+    la devolución positiva, así que es el negativo de la suma. Nunca menos de cero."""
+    total = (await db.execute(select(func.sum(WarehouseMovement.quantity)).where(
+        WarehouseMovement.organization_id == organization_id, WarehouseMovement.project_id == project_id,
+        WarehouseMovement.item_id == item_id,
+        WarehouseMovement.movement_type.in_((MovementType.SALIDA, MovementType.DEVOLUCION))))).scalar()
+    return max(_q(-(total or ZERO)), ZERO)
 
 
 async def _total_quantity(db: AsyncSession, organization_id, item_id) -> Decimal:
@@ -364,7 +395,11 @@ def movements_stmt(organization_id, *, item_id=None, location_id=None, movement_
         stmt = stmt.where(WarehouseMovement.movement_date >= date_from)
     if date_to:
         stmt = stmt.where(WarehouseMovement.movement_date <= date_to)
-    return stmt.order_by(WarehouseMovement.movement_date.desc(), WarehouseMovement.created_at.desc())
+    # El id desempata: la carga inicial deja cientos de movimientos con la misma
+    # fecha y casi la misma hora, y sin desempate la paginación repite y omite
+    # filas (D-003).
+    return stmt.order_by(WarehouseMovement.movement_date.desc(), WarehouseMovement.created_at.desc(),
+                         WarehouseMovement.id.desc())
 
 
 # ---------------------------------------------------------------------------

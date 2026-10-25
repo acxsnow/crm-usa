@@ -10,14 +10,14 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 |---|---|---|---|---|---|---|---|
 | D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (validado por API; falta pantalla) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
 | D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Abierto | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
-| D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Abierto | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Cerrado (2026-10-25) | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Abierto | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
 | D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Abierto | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
-| D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Abierto | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Cerrado (2026-10-25) | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-009 | Un artículo acepta costo unitario negativo | Bodega | P2 | Abierto | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
-| D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Abierto | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Abierto | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
 | D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Abierto | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 
@@ -88,7 +88,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 
 - **Módulo:** Bodega (`warehouse/router.py`, `list_movements`).
 - **Prioridad:** P1. El libro de movimientos es la base de la auditoría de bodega: una fila repetida o perdida al pasar de página confunde el conteo.
-- **Estado:** Abierto.
+- **Estado:** Cerrado (25 oct).
 - **Encontrado en:** API-002, paso 1.
 - **Pasos para reproducir:** con la base QA, bajar `GET /api/v1/warehouse/movements?limit=50&offset=0,50,100,150,200` y juntar los ids.
 - **Resultado obtenido:** 244 filas, 243 ids distintos.
@@ -96,6 +96,8 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Análisis / causa:** el orden es `movement_date desc, created_at desc`. Los 244 movimientos de la carga tienen la misma fecha y horas casi iguales; sin un desempate único (`id`), Postgres puede devolverlos en distinto orden en cada consulta. La regla del proyecto (`shared/pagination.py`) pide «un ORDER BY estable».
 - **Corrección propuesta:** agregar `WarehouseMovement.id` al final del `order_by`, y revisar con el mismo criterio los demás listados.
 - **Responsable:** paquete de Mateo: avisarle.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/service.py`, `movements_stmt` ordena por `movement_date desc, created_at desc, id desc`. Prueba `test_la_paginacion_de_movimientos_no_repite_filas` (7 movimientos con la misma fecha y hora, páginas de 2).
+- **Validación:** API-002 reejecutado el 25 oct con la base QA reiniciada: 244 de 244 distintos. Regresión: lotes 1 y 2 completos sin otros cambios y 760 pruebas del backend pasan. **Cerrado.**
 
 ## D-004 · Filtros de texto que no escapan `%` y `_`
 
@@ -163,6 +165,9 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Resultado esperado:** rechazar con un mensaje como «A esta obra solo le quedan 1 por devolver».
 - **Impacto:** infla la existencia y el valor de bodega, y descuadra el costo real de la obra. Afecta también la cancelación (D-001), que exige reintegrar el material.
 - **Nota de QA:** la existencia inflada por la prueba se corrigió con un ajuste de -50 («QA: deshacer la devolución de más»).
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/service.py`, `record_movement` rechaza una devolución con obra mayor que lo que salió para ella y no ha vuelto (nueva `project_outstanding`: salidas menos devoluciones de esa obra y artículo). Responde 400 `return_exceeds_delivered` con «A esta obra solo le quedan N por devolver de este artículo». Vale para cualquier camino que registre la devolución. Prueba en `test_field_visits.py` (devolver 4 cuando quedan 3).
+- **Límite que queda:** una devolución **sin obra** no tiene contra qué compararse y se sigue aceptando.
+- **Validación:** BOD-006 reejecutado el 25 oct: 4 de 4, el exceso responde 400 y la existencia no cambia. INS-012 (cancelación con reintegro) sigue pasando. Regresión: lotes 1 y 2 y 760 pruebas del backend. **Cerrado.**
 
 ## D-009 · Costo unitario negativo
 
@@ -176,6 +181,8 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Resultado obtenido:** `POST /warehouse/items` con un SKU que ya existe (`3496`) responde 500. El log muestra `UniqueViolationError uq_warehouse_item_sku`.
 - **Resultado esperado:** 409 con «Ya existe un artículo con el código 3496».
 - **Nota:** revisar la edición (cambiar el SKU a uno existente) y si el manejador global de `IntegrityError` debería devolver 409 en vez de 500.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/service.py`, `save_item` revisa el código antes de guardar, al crear y al editar, y responde 409 `duplicate_sku` con «Ya existe un artículo con el código N». Prueba `test_el_sku_repetido_responde_409`. El manejador global de `IntegrityError` no se tocó.
+- **Validación:** BOD-002 reejecutado el 25 oct: el SKU repetido responde 409. El escenario sigue fallido solo por D-009. Regresión: lotes 1 y 2 y 760 pruebas del backend. **Cerrado.**
 
 ## D-011 · Historial de responsables incoherente al rotar antes de la fecha
 

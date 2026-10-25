@@ -25,22 +25,22 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
 | Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 9 | 1 | 1 |
 | Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 2 | 0 | 0 |
-| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 13 | 3 | 4 |
+| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 14 | 2 | 4 |
 | Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 4 | 0 | 0 |
 | Trabajo particular y facturación | 4 | 1 | 1 | 1 h 20 min | 0 min | 0 | 0 | 0 |
 | Finanzas | 6 | 0 | 1 | 2 h 00 min | 0 min | 0 | 0 | 0 |
 | Turnos, asistencia y mapa | 10 | 2 | 0 | 2 h 25 min | 0 min | 0 | 0 | 0 |
 | Notificaciones y buscador | 4 | 0 | 0 | 50 min | 0 min | 0 | 0 | 0 |
 | Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 2 | 1 | 1 |
-| API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 2 | 1 | 1 |
+| API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 3 | 0 | 1 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 0 | 0 | 0 |
 | Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 1 | 1 | 1 |
-| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **41** | **8** | **10** |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **43** | **6** | **10** |
 
 ## Avance
 
 - Ejecutados completos: 49 de 109 (44 %). En ejecución (parte hecha): 14.
-- Aprobados: 41 · Fallidos: 8 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
+- Aprobados: 43 · Fallidos: 6 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
@@ -89,11 +89,11 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | TEC-004 | Técnicos | Desactivar un técnico que tiene obras y camioneta con material | P1 | Funcional · integridad | [TEC-004_tecnico_desactivado_con_obras.md](escenarios/TEC-004_tecnico_desactivado_con_obras.md) | Pendiente | 15 | | | | |
 | TEC-005 | Técnicos | Cobro en efectivo en campo y efectivo por entregar | P1 | Funcional · dinero | [TEC-005_efectivo_por_entregar.md](escenarios/TEC-005_efectivo_por_entregar.md) | Pendiente | 15 | | | | |
 | BOD-001 | Bodega | La carga inicial cuadra con los PDF de AC Pro | P0 | Datos · integridad | [BOD-001_carga_inicial_cuadra.md](escenarios/BOD-001_carga_inicial_cuadra.md) | APROBADO | 20 | 2 min (API + SQL) |  |  | 19/19 |
-| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-009, D-010 |  | D-009, D-010 |
+| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-009, D-010 |  | 13/14; sigue D-009 |
 | BOD-003 | Bodega | Entrada de mercancía de proveedor | P1 | Funcional | [BOD-003_entrada_de_mercancia.md](escenarios/BOD-003_entrada_de_mercancia.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 4/4 |
 | BOD-004 | Bodega | Entrega parcial y rechazo de una salida | P0 | Funcional · regla de negocio | [BOD-004_salida_parcial_y_rechazo.md](escenarios/BOD-004_salida_parcial_y_rechazo.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
 | BOD-005 | Bodega | Pedir más de lo que hay en bodega | P0 | Funcional · integridad | [BOD-005_existencia_insuficiente.md](escenarios/BOD-005_existencia_insuficiente.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 4/4 |
-| BOD-006 | Bodega | Reintegro: el material vuelve de la camioneta a bodega | P0 | Funcional · dinero | [BOD-006_reintegro_a_bodega.md](escenarios/BOD-006_reintegro_a_bodega.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-008 |  | D-008 |
+| BOD-006 | Bodega | Reintegro: el material vuelve de la camioneta a bodega | P0 | Funcional · dinero | [BOD-006_reintegro_a_bodega.md](escenarios/BOD-006_reintegro_a_bodega.md) | APROBADO | 20 | lote 2 por API (≈1 min) | D-008 |  | 4/4 (reejecutado) |
 | BOD-007 | Bodega | Obra que consume todo: sin reintegro | P1 | Funcional | [BOD-007_obra_sin_reintegro.md](escenarios/BOD-007_obra_sin_reintegro.md) | Pendiente | 10 | | | | |
 | BOD-008 | Bodega | Traslado de material entre camionetas | P1 | Funcional | [BOD-008_traslado_entre_camionetas.md](escenarios/BOD-008_traslado_entre_camionetas.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 2/2 |
 | BOD-009 | Bodega | Conteo físico con diferencias (ajuste) | P1 | Funcional · auditoría | [BOD-009_conteo_y_ajuste.md](escenarios/BOD-009_conteo_y_ajuste.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 4/4 |
@@ -144,7 +144,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | SEC-009 | Seguridad | Secretos fuera del navegador y cabeceras de seguridad | P1 | Seguridad | [SEC-009_secretos_y_cabeceras.md](escenarios/SEC-009_secretos_y_cabeceras.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta navegador |
 | SEC-010 | Seguridad | Bitácora de auditoría de acciones sensibles | P1 | Auditoría | [SEC-010_auditoria_de_acciones.md](escenarios/SEC-010_auditoria_de_acciones.md) | Pendiente | 15 | | | | |
 | API-001 | API y paginación | Paginación: límite por defecto, máximo y total | P0 | API · rendimiento | [API-001_paginacion_limites.md](escenarios/API-001_paginacion_limites.md) | En ejecución | 20 | 1 min (API) |  |  | API 8/8; falta pantalla |
-| API-002 | API y paginación | Orden estable entre páginas | P1 | API | [API-002_orden_estable.md](escenarios/API-002_orden_estable.md) | FALLIDO | 15 | 1 min (API) | D-003 |  | 243 de 244 distintos |
+| API-002 | API y paginación | Orden estable entre páginas | P1 | API | [API-002_orden_estable.md](escenarios/API-002_orden_estable.md) | APROBADO | 15 | 1 min (API) | D-003 |  | 244/244 distintos (reejecutado) |
 | API-003 | API y paginación | Filtros y búsqueda en listas | P2 | API | [API-003_filtros_y_busqueda.md](escenarios/API-003_filtros_y_busqueda.md) | APROBADO | 15 | 1 min (API) |  |  | 5/5 |
 | API-004 | API y paginación | Códigos HTTP y formato de error uniformes | P1 | API · contrato | [API-004_errores_y_codigos.md](escenarios/API-004_errores_y_codigos.md) | APROBADO | 15 | 1 min (API) |  |  | 15/15 |
 | API-005 | API y paginación | Límite de peticiones (rate limit) | P2 | Seguridad · disponibilidad | [API-005_limite_de_peticiones.md](escenarios/API-005_limite_de_peticiones.md) | En ejecución | 10 | 1 min (API) |  |  | Olvido de clave ok; falta firma pública |

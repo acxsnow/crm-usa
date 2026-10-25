@@ -237,6 +237,12 @@ async def test_cancelar_exige_resolver_salidas_y_material(app_client, db, login,
     assert r.status_code == 201, r.text
     chequeo = (await app_client.get(f"{API}/projects/{pid}/cancellation-check", headers=obra["oficina"])).json()
     assert [x["quantity"] for x in chequeo["material_in_field"]] == ["3.00"]
+    # No se devuelve más de lo que queda afuera (D-008).
+    r = await app_client.post(f"{API}/warehouse/movements", json={
+        "item_id": m["item"]["id"], "movement_type": "devolucion", "quantity": "4", "project_id": str(pid)},
+        headers=admin)
+    assert (r.status_code, r.json()["code"]) == (400, "return_exceeds_delivered")
+    assert "3.00" in r.json()["detail"]
     r = await app_client.post(f"{API}/projects/{pid}/cancel", json={
         "reason": "Cliente desistió", "material_note": "Los 3 ft quedaron cortados en la casa"},
         headers=obra["oficina"])

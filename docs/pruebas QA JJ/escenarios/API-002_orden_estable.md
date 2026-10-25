@@ -6,7 +6,7 @@
 - **Módulo:** API y paginación
 - **Prioridad:** P1
 - **Tipo de prueba:** API
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -38,6 +38,7 @@ Las páginas no repiten ni pierden filas cuando hay empates.
 
 - Qué pasó: Al bajar `/warehouse/movements` en páginas de 50 llegan 244 filas pero solo 243 ids distintos: un movimiento sale dos veces y otro no sale.
 - Diferencias con lo esperado: El orden es `movement_date desc, created_at desc` sin desempate por id; los 244 movimientos de la carga tienen la misma fecha y casi la misma hora, y Postgres los devuelve en distinto orden en cada página.
+- Reejecución (25 oct, tras corregir D-003, base QA reiniciada): 244 filas y 244 ids distintos en páginas de 50. Aprobado.
 - Comprobaciones por API (0 de 1):
   - ✘ movimientos en páginas de 50: 244 ids distintos — `244 filas, 243 distintas`
 
@@ -54,8 +55,8 @@ Las páginas no repiten ni pierden filas cuando hay empates.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN

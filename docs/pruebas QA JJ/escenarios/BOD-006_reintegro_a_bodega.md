@@ -6,7 +6,7 @@
 - **Módulo:** Bodega
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · dinero
-- **Estado:** FALLIDO
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -40,6 +40,7 @@ Lo que sobra en la obra vuelve a bodega y sale del costo de la obra.
 
 - Qué pasó: 3 de 4 comprobaciones bien.
 - Diferencias con lo esperado: Con 1 unidad afuera se registró una devolución de 50 a la obra (201) y la existencia subió 50.
+- Reejecución (25 oct, tras corregir D-008, base QA reiniciada): 4 de 4. Devolver 50 con 1 afuera responde 400 «A esta obra solo le quedan 1.00 por devolver de este artículo» y la existencia no cambia. Aprobado.
 - Comprobaciones por API (3 de 4):
   - ✔ Devolución de 3 a bodega con la obra
   - ✔ La bodega sube 3 — `7.0`
@@ -60,8 +61,8 @@ Lo que sobra en la obra vuelve a bodega y sale del costo de la obra.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
-- [x] FALLIDO
+- [x] APROBADO
+- [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN
