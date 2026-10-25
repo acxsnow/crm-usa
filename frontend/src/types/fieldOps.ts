@@ -35,7 +35,40 @@ export interface Project extends Address {
   equipment_confirmed_at?: string | null;
   /** Motivo de la última devolución al técnico, si el acta está devuelta. */
   returned_reason?: string | null;
+  /** Visitas fallidas y cancelación (D-001). */
+  failed_visits_count?: number;
+  extra_visits_authorized?: number;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
   created_at: string;
+}
+
+/** Cuántas visitas fallidas lleva la obra y cuántas admite (D-001). */
+export interface VisitStatus {
+  failed_visits: number;
+  limit: number;
+  limit_reached: boolean;
+  extra_visits_authorized: number;
+}
+
+export interface FailedVisit {
+  id: string;
+  scheduled_date: string | null;
+  reason_code: string;
+  reason_label: string;
+  notes: string;
+  latitude: number | null;
+  longitude: number | null;
+  technician_name: string | null;
+  recorded_by_name: string | null;
+  created_at: string | null;
+}
+
+/** Lo que hay que resolver antes de cancelar una obra. */
+export interface CancellationCheck extends VisitStatus {
+  can_cancel: boolean;
+  open_releases: { id: string; number: string | null; status: string; status_label: string }[];
+  material_in_field: { item_id: string; item_name: string; sku: string | null; unit: string | null; quantity: string }[];
 }
 
 export interface ProjectReview {
@@ -151,6 +184,7 @@ export interface FieldCatalogs {
   equipment_types: Record<string, string>;
   permit_statuses: Record<string, string>;
   inspection_results: Record<string, string>;
+  visit_failure_reasons?: Record<string, string>;
 }
 
 export type PermitStatus = "submitted" | "approved" | "rejected" | "not_required";

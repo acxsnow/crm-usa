@@ -23,7 +23,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 0 | 0 | 0 |
 | Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
 | Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
-| Instalación en campo | 16 | 8 | 3 | 5 h 35 min | 1 h 25 min | 0 | 0 | 0 |
+| Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 0 | 0 | 0 |
 | Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 0 | 0 | 0 |
 | Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 0 | 0 | 0 |
 | Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 0 | 0 | 0 |
@@ -35,12 +35,12 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 0 | 0 | 0 |
 | Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 0 | 0 | 0 |
-| **Total** | **109** | **35** | **5** | **32 h 05 min** | **2 h 15 min** | 0 | 0 | 0 |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | 0 | 0 | 0 |
 
 ## Avance
 
 - Ejecutados: 0 de 109 (0 %).
-- Aprobados: 0 · Fallidos: 0 · Bloqueados: 5 (D-001 y llaves de Stripe/Plaid).
+- Aprobados: 0 · Fallidos: 0 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos abiertos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
@@ -76,9 +76,9 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | INS-007 | Instalación en campo | Inspección fallida: la obra vuelve a campo | P1 | Funcional · regla de negocio | [INS-007_inspeccion_fallida_y_reinspeccion.md](escenarios/INS-007_inspeccion_fallida_y_reinspeccion.md) | Pendiente | 25 + 60 prep. | | | | |
 | INS-008 | Instalación en campo | Cambiar el técnico de una obra en curso (rotación) | P0 | Funcional · seguridad | [INS-008_rotacion_de_tecnico.md](escenarios/INS-008_rotacion_de_tecnico.md) | Pendiente | 20 | | | | |
 | INS-009 | Instalación en campo | Cambiar las fechas de una obra programada | P2 | Funcional | [INS-009_reprogramar_fechas.md](escenarios/INS-009_reprogramar_fechas.md) | Pendiente | 10 | | | | |
-| INS-010 | Instalación en campo | El técnico llega y el cliente no estaba | P0 | Funcional · regla de negocio | [INS-010_cliente_no_estaba.md](escenarios/INS-010_cliente_no_estaba.md) | Bloqueado (D-001) | 25 | | | | |
-| INS-011 | Instalación en campo | Límite parametrizable de reagendamientos | P1 | Funcional · regla de negocio | [INS-011_limite_de_reagendamientos.md](escenarios/INS-011_limite_de_reagendamientos.md) | Bloqueado (D-001) | 30 | | | | |
-| INS-012 | Instalación en campo | Cancelar una obra y reintegrar el material | P0 | Funcional · integración | [INS-012_cancelar_obra_con_reintegro.md](escenarios/INS-012_cancelar_obra_con_reintegro.md) | Bloqueado (D-001) | 25 | | | | |
+| INS-010 | Instalación en campo | El técnico llega y el cliente no estaba (visita fallida) | P0 | Funcional · regla de negocio | [INS-010_cliente_no_estaba.md](escenarios/INS-010_cliente_no_estaba.md) | Pendiente | 25 | | | | |
+| INS-011 | Instalación en campo | Límite parametrizable de reagendamientos | P1 | Funcional · regla de negocio | [INS-011_limite_de_reagendamientos.md](escenarios/INS-011_limite_de_reagendamientos.md) | Pendiente | 30 | | | | |
+| INS-012 | Instalación en campo | Cancelar una obra y reintegrar el material | P0 | Funcional · integración | [INS-012_cancelar_obra_con_reintegro.md](escenarios/INS-012_cancelar_obra_con_reintegro.md) | Pendiente | 30 | | | | |
 | INS-013 | Instalación en campo | Enlace de firma del cliente: reenviar, vencido e inválido | P1 | Seguridad | [INS-013_enlace_de_firma_del_cliente.md](escenarios/INS-013_enlace_de_firma_del_cliente.md) | Pendiente | 15 | | | | |
 | INS-014 | Instalación en campo | Material comprado en la obra (no sale de bodega) | P2 | Funcional | [INS-014_material_comprado_en_la_obra.md](escenarios/INS-014_material_comprado_en_la_obra.md) | Pendiente | 10 | | | | |
 | INS-015 | Instalación en campo | Señal débil: subir fotos y guardar con red lenta | P1 | Rendimiento · celular | [INS-015_senal_debil_en_campo.md](escenarios/INS-015_senal_debil_en_campo.md) | Pendiente | 20 | | | | |

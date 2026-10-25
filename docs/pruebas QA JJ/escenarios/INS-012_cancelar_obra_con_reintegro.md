@@ -6,37 +6,41 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** Bloqueado (D-001)
+- **Estado:** Pendiente
 - **Fecha de ejecución:**
 - **Responsable:** José Javier Miranda
-- **Tiempo estimado:** 25 min de ejecución
+- **Tiempo estimado:** 30 min de ejecución
 - **Tiempo real:**
 - **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
 
 ## 2. Objetivo
 
-Cancelar con motivo cierra la obra, devuelve el material a bodega y deja el expediente en su etapa de cierre.
+Cancelar exige motivo, salidas de bodega resueltas y el material reintegrado o explicado; la obra queda en solo lectura y el expediente se cierra.
 
 ## 3. Precondiciones
 
-- D-001 implementado.
-- Obra de INS-011 con el límite alcanzado y material en la camioneta.
+- La obra de INS-011 con material entregado y una salida nueva «Por autorizar».
 
 ## 4. Datos de prueba
 
-- Motivo: «Cliente desistió».
+- Motivo «El cliente desistió del programa»; devolver todo menos 1 unidad; nota «Se quedó cortado en la casa».
 
 ## 5. Procedimiento paso a paso
 
-1. [ ] Como administración, cancelar la obra sin motivo y luego con él.
-2. [ ] Reintegrar el material a bodega.
-3. [ ] Revisar la obra, el expediente y la existencia.
+1. [ ] Como Carlos, buscar **Cancelar la obra…** (no debe tenerlo).
+2. [ ] Como administración, **Cancelar la obra…**: leer lo que muestra (salidas abiertas y material afuera).
+3. [ ] Intentar cancelar con la salida «Por autorizar»: anotar el mensaje. Rechazarla en Bodega › Salidas.
+4. [ ] Intentar cancelar sin explicar el material: anotar el mensaje con la lista.
+5. [ ] En Bodega › Movimientos registrar la **Devolución** de casi todo con la obra; volver y ver que la lista baja.
+6. [ ] Escribir qué pasó con lo que falta y el motivo; **Cancelar la obra**.
+7. [ ] Revisar la obra (aviso «Obra cancelada»), el expediente y la existencia de bodega.
+8. [ ] Como Carlos: ver el aviso de la campana e intentar registrar algo en la obra.
 
 ## 6. Resultado esperado
 
-- Sin motivo no cancela.
-- La obra queda «Cancelado», sin acciones de campo.
-- La existencia vuelve a subir en lo reintegrado.
+- Sin motivo, con salidas abiertas o con material sin explicar no cancela, y dice qué falta.
+- Cancelada: solo lectura, sin «Orden liberada» ni acciones de campo; el expediente queda «Cerrado» con el motivo.
+- La existencia sube en lo devuelto.
 
 ## 7. Resultado obtenido
 
@@ -52,8 +56,9 @@ Cancelar con motivo cierra la obra, devuelve el material a bodega y deja el expe
 
 ## 9. Validaciones complementarias
 
-- [ ] No se puede crear cobro de una obra cancelada.
-- [ ] El historial del expediente registra la cancelación.
+- [ ] No se puede crear cobro ni pedir material para la obra cancelada.
+- [ ] Auditoría: `projects.cancelled` con el material afuera y la explicación.
+- [ ] Una instalación ya cerrada no se cancela (`installation_closed`).
 
 ## 10. Resultado final
 

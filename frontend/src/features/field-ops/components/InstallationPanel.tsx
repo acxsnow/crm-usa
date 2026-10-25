@@ -42,6 +42,7 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
     onError: (err) => setError(apiErrorMessage(err)),
   });
 
+  if (project.status === "cancelled") return null;
   if (!canSchedule || project.status === "completed") {
     return <p className="acta-empty">Solo Administración asigna el técnico y la fecha.</p>;
   }

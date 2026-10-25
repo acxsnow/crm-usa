@@ -82,7 +82,9 @@ SUBSTATUSES: dict[str, set[str]] = {
         "submitted_to_program",
         "program_review",
     },
-    "ready_to_install": {"install_scheduled"},
+    # «Visita fallida»: el técnico fue y no pudo instalar; la obra vuelve a
+    # agendarse sin que el expediente cambie de etapa (D-001).
+    "ready_to_install": {"install_scheduled", "visit_failed"},
     "inspection_pending": {"inspection_approved"},
     "billing_in_progress": {"invoice_pending", "submitted", "rejected_by_program"},
 }
@@ -94,6 +96,7 @@ SUBSTATUS_LABELS: dict[str, str] = {
     "submitted_to_program": "Sometido al programa",
     "program_review": "En revisión del programa",
     "install_scheduled": "Instalación agendada",
+    "visit_failed": "Visita fallida",
     "inspection_approved": "Inspección aprobada",
     "invoice_pending": "Factura pendiente",
     "submitted": "Radicado al programa",
@@ -165,6 +168,9 @@ SUBSTATUS_PERMISSION: dict[tuple[str, str], str] = {
     ("pending_approval", "ready_to_submit"): "cases.review",
     ("pending_approval", "submitted_to_program"): "cases.review",
     ("pending_approval", "program_review"): "cases.review",
+    # La visita fallida la registra el técnico en la puerta, que no programa
+    # la agenda (D-001). Reagendar sigue siendo de `dispatch.manage`.
+    ("ready_to_install", "visit_failed"): "checklists.complete",
 }
 
 

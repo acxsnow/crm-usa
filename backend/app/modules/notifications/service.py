@@ -174,6 +174,29 @@ async def _resolve(db, event: str, payload: dict) -> tuple[str | None, list, dic
         ctx["tecnico"] = tecnico[0].full_name if tecnico else "El técnico"
         revisores = [u for u in await _users_with(db, org, DEFAULT_PERMISSION[event]) if str(u.id) != str(cerro)]
         return (event, revisores, ctx, f"/projects/{p.id}?paso=review", ("project", str(p.id)))
+    if event == "installation.visit_failed":
+        # A quien agenda (D-001): reagendar o, al límite, decidir.
+        p, ctx = await _project_context(db, payload["project_id"])
+        if p is None:
+            return None, [], {}, None, (None, None)
+        quien = payload.get("recorded_by_user_id")
+        tecnico = await _user(db, quien)
+        ctx.update({"tecnico": tecnico[0].full_name if tecnico else "El técnico",
+                    "fecha": payload.get("scheduled_date", ""),
+                    "motivo": f"{payload.get('reason', '')}. {payload.get('notes', '')}".strip(". "),
+                    "intentos": str(payload.get("failed_visits", "")), "limite": str(payload.get("limit", "")),
+                    "siguiente": ("Llegó al límite: autoriza otro intento o cancela la obra."
+                                  if payload.get("limit_reached") else "Agéndala otra vez.")})
+        agenda = [u for u in await _users_with(db, org, DEFAULT_PERMISSION[event]) if str(u.id) != str(quien)]
+        return (event, agenda, ctx, f"/projects/{p.id}?paso=release", ("project", str(p.id)))
+    if event == "project.cancelled":
+        p, ctx = await _project_context(db, payload["project_id"])
+        if p is None:
+            return None, [], {}, None, (None, None)
+        ctx["motivo"] = payload.get("reason") or ""
+        destino = [u for u in await _user(db, payload.get("technician_user_id"))
+                   if str(u.id) != str(payload.get("cancelled_by_user_id"))]
+        return (event, destino, ctx, f"/projects/{p.id}", ("project", str(p.id)))
     if event == "project.returned_to_technician":
         p, ctx = await _project_context(db, payload["project_id"])
         if p is None:

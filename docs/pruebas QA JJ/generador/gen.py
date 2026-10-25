@@ -81,7 +81,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 ## Avance
 
 - Ejecutados: 0 de {len(TODOS)} (0 %).
-- Aprobados: 0 · Fallidos: 0 · Bloqueados: {tot_bl} (D-001 y llaves de Stripe/Plaid).
+- Aprobados: 0 · Fallidos: 0 · Bloqueados: {tot_bl} (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos abiertos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
@@ -230,7 +230,7 @@ El recorrido mínimo del negocio, de la puerta al pago:
 |---|---|---|
 {filas_p0}
 
-Más los escenarios bloqueados una vez se desbloqueen (D-001 y llaves de Stripe/Plaid).
+Más PAR-004 y FIN-004 cuando estén las llaves de prueba de Stripe/Plaid.
 
 ## 5. Reglas
 
@@ -288,7 +288,7 @@ Con 6 horas efectivas de prueba al día: **unos {dias:.1f} días hábiles** para
 ## Fuera de esta cuenta
 
 - **Corrección de defectos:** depende de lo que aparezca. Se registra por defecto en `01_REGISTRO_DEFECTOS.md`.
-- **D-001** (visita fallida, límite de reagendamiento y cancelación): desarrollo estimado en 1,5 a 2 días con pruebas automáticas, manual y aviso a Mateo; luego INS-010 a INS-012 (1 h 20 min).
+- **D-001** (visita fallida, límite de reagendamiento y cancelación): ya implementado en `devjj` con 14 pruebas automáticas (`tests/test_field_visits.py`); su validación manual son INS-010 a INS-012 y ya están dentro de la cuenta.
 - **Stripe y Plaid:** PAR-004 y FIN-004 (45 min) cuando estén las llaves de prueba.
 - **Prueba en celular real sobre Render:** ya hecha antes; se repite solo si cambia algo de campo.
 

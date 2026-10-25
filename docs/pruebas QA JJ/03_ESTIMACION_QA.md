@@ -9,7 +9,7 @@ Tiempos estimados de una persona que ya conoce la aplicación. Se reemplazan por
 | Acceso y sesión | 8 | 2 h 05 min | 0 min | 2 h 05 min |
 | Venta puerta a puerta | 6 | 1 h 35 min | 0 min | 1 h 35 min |
 | Revisión administrativa | 6 | 1 h 35 min | 0 min | 1 h 35 min |
-| Instalación en campo | 16 | 5 h 35 min | 1 h 25 min | 7 h 00 min |
+| Instalación en campo | 16 | 5 h 40 min | 1 h 25 min | 7 h 05 min |
 | Técnicos | 5 | 1 h 20 min | 30 min | 1 h 50 min |
 | Bodega | 17 | 4 h 30 min | 0 min | 4 h 30 min |
 | Cobro al programa | 4 | 1 h 10 min | 0 min | 1 h 10 min |
@@ -21,7 +21,7 @@ Tiempos estimados de una persona que ya conoce la aplicación. Se reemplazan por
 | API y paginación | 6 | 1 h 35 min | 0 min | 1 h 35 min |
 | Rendimiento | 4 | 1 h 30 min | 20 min | 1 h 50 min |
 | Concurrencia | 3 | 50 min | 0 min | 50 min |
-| **Total** | **109** | **32 h 05 min** | **2 h 15 min** | **34 h 20 min** |
+| **Total** | **109** | **32 h 10 min** | **2 h 15 min** | **34 h 25 min** |
 
 La preparación es la de los escenarios que necesitan datos propios (por ejemplo, otra obra completa). Los demás reutilizan lo que dejó el anterior, por eso el orden del índice importa.
 
@@ -29,18 +29,18 @@ La preparación es la de los escenarios que necesitan datos propios (por ejemplo
 
 | Concepto | Supuesto | Tiempo |
 |---|---|---|
-| Ejecución y preparación | suma de los escenarios | 34 h 20 min |
-| Evidencias y registro | 15 % de la ejecución | 5 h 09 min |
-| Análisis de defectos | 20 % (supone que 1 de cada 4 escenarios encuentra algo) | 6 h 52 min |
-| Reejecuciones y regresión | 25 % | 8 h 35 min |
-| **Total QA** | | **54 h 56 min** |
+| Ejecución y preparación | suma de los escenarios | 34 h 25 min |
+| Evidencias y registro | 15 % de la ejecución | 5 h 10 min |
+| Análisis de defectos | 20 % (supone que 1 de cada 4 escenarios encuentra algo) | 6 h 53 min |
+| Reejecuciones y regresión | 25 % | 8 h 36 min |
+| **Total QA** | | **55 h 04 min** |
 
 Con 6 horas efectivas de prueba al día: **unos 9.2 días hábiles** para una persona.
 
 ## Fuera de esta cuenta
 
 - **Corrección de defectos:** depende de lo que aparezca. Se registra por defecto en `01_REGISTRO_DEFECTOS.md`.
-- **D-001** (visita fallida, límite de reagendamiento y cancelación): desarrollo estimado en 1,5 a 2 días con pruebas automáticas, manual y aviso a Mateo; luego INS-010 a INS-012 (1 h 20 min).
+- **D-001** (visita fallida, límite de reagendamiento y cancelación): ya implementado en `devjj` con 14 pruebas automáticas (`tests/test_field_visits.py`); su validación manual son INS-010 a INS-012 y ya están dentro de la cuenta.
 - **Stripe y Plaid:** PAR-004 y FIN-004 (45 min) cuando estén las llaves de prueba.
 - **Prueba en celular real sobre Render:** ya hecha antes; se repite solo si cambia algo de campo.
 

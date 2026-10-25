@@ -8,14 +8,14 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 
 | ID | Título | Módulo | Prioridad | Estado | Encontrado en | Responsable | Fecha |
 |---|---|---|---|---|---|---|---|
-| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Abierto | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
+| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (pendiente de validar) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
 | D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Abierto | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
 - **Módulo:** Instalación en campo (`field_ops`), Bodega (`warehouse`) y Proyectos.
-- **Prioridad:** P0. Es un camino diario del negocio y hoy no tiene salida en el sistema.
-- **Estado:** Abierto.
+- **Prioridad:** P0. Es un camino diario del negocio y no tenía salida en el sistema.
+- **Estado:** Corregido (pendiente de validar con INS-010 a INS-012).
 - **Encontrado en:** diagnóstico de código previo al QA (25 de octubre de 2026).
 - **Qué pasa hoy (verificado en el código):**
   - La obra no tiene forma de registrar «llegué y el cliente no estaba». Solo se puede cambiar la fecha.
@@ -32,10 +32,32 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Escenarios relacionados:** INS-010, INS-011, INS-012, BOD-006.
 - **Evidencia:** no hay ruta en `field_ops/router.py` ni en `projects` que registre la visita fallida o cancele la obra.
 - **Análisis / causa:** el alcance original solo cubría el camino de instalación exitosa.
-- **Corrección:**
-- **Commit:**
-- **Validación (escenarios reejecutados):**
-- **Tiempos:** análisis · corrección · reejecución.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):**
+  - Servicio nuevo `backend/app/modules/field_ops/visits.py` y migración `0042_visitas_fallidas_y_cancelacion`.
+  - Tablas `project_visit_attempts` y `field_ops_settings` (límite por organización, 2 por defecto, de 1 a 10). La obra gana `failed_visits_count`, `extra_visits_authorized` y los datos de cancelación.
+  - Rutas:
+    - `POST /projects/{id}/failed-visits` (`checklists.complete`, solo el técnico responsable o la oficina) y `GET` paginado.
+    - `GET /projects/{id}/visit-status`.
+    - `POST /projects/{id}/extra-visit` (`dispatch.manage`).
+    - `GET /projects/{id}/cancellation-check` y `POST /projects/{id}/cancel` (`projects.close`).
+    - `GET` y `PUT /field-ops/settings` (`PUT` con `projects.close`).
+  - El catálogo de motivos viaja en `GET /field-ops/catalogs` (`visit_failure_reasons`).
+  - Sub-estado nuevo del expediente «Listo para instalar · Visita fallida» (`cases/stages.py`), con su permiso propio (`checklists.complete`). `mark_substatus` ahora respeta el permiso del sub-estado.
+  - «Liberar orden» se bloquea al llegar al límite (`visit_limit_reached`).
+  - La obra cancelada queda congelada (`ensure_installation_open`) y el expediente se cierra por `advance_case`.
+  - Avisos nuevos:
+    - `installation.visit_failed`, a quien agenda.
+    - `project.cancelled`, al técnico.
+  - Pantalla: en el paso «Orden liberada» de la obra:
+    - «No se pudo hacer la visita» e historial de visitas fallidas.
+    - «Autorizar otro intento».
+    - «Cancelar la obra…» con salidas abiertas y material afuera.
+    - Límite de visitas fallidas.
+  - Pruebas: `backend/tests/test_field_visits.py` (14).
+  - Paquetes de Mateo tocados (`field_ops`, `notifications`): solo líneas nuevas; avisarle.
+- **Commit:** ver el historial de `devjj` («feat(campo): visita fallida, límite de reagendamiento y cancelación de la obra»).
+- **Validación (escenarios reejecutados):** pendiente (INS-010, INS-011, INS-012, BOD-006).
+- **Tiempos:** análisis 1 h · corrección 3 h · reejecución pendiente.
 
 ## D-002 · Margen negativo cortado en Rentabilidad
 

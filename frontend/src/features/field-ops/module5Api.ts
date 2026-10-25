@@ -10,6 +10,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/apiClient";
 import type {
   AgendaRow,
+  CancellationCheck,
+  FailedVisit,
   FieldCatalogs,
   Inspection,
   InstallationGaps,
@@ -18,6 +20,7 @@ import type {
   Project,
   ProjectMaterial,
   ProjectReview,
+  VisitStatus,
 } from "@/types/fieldOps";
 
 export function apiErrorMessage(err: unknown, fallback = "No se pudo completar la acción."): string {
@@ -167,6 +170,58 @@ export async function closeInstallation(projectId: string, observations?: string
   return (await apiClient.post<Project>(`/projects/${projectId}/installation/close`, { observations })).data;
 }
 
+// --- Visitas fallidas, límite y cancelación (D-001) ---------------------------------
+
+export const visitKeys = {
+  status: (id: string) => ["project-visit-status", id] as const,
+  list: (id: string) => ["project-failed-visits", id] as const,
+  cancellation: (id: string) => ["project-cancellation-check", id] as const,
+  settings: ["field-ops-settings"] as const,
+};
+
+export async function getVisitStatus(projectId: string): Promise<VisitStatus> {
+  return (await apiClient.get<VisitStatus>(`/projects/${projectId}/visit-status`)).data;
+}
+
+export async function listFailedVisits(projectId: string): Promise<FailedVisit[]> {
+  return (await apiClient.get<FailedVisit[]>(`/projects/${projectId}/failed-visits`)).data;
+}
+
+export async function recordFailedVisit(
+  projectId: string,
+  input: { reason_code: string; notes: string; latitude?: number; longitude?: number },
+): Promise<VisitStatus> {
+  return (await apiClient.post<VisitStatus>(`/projects/${projectId}/failed-visits`, input)).data;
+}
+
+export async function authorizeExtraVisit(projectId: string, reason: string): Promise<VisitStatus> {
+  return (await apiClient.post<VisitStatus>(`/projects/${projectId}/extra-visit`, { reason })).data;
+}
+
+export async function getCancellationCheck(projectId: string): Promise<CancellationCheck> {
+  return (await apiClient.get<CancellationCheck>(`/projects/${projectId}/cancellation-check`)).data;
+}
+
+export async function cancelProject(projectId: string, reason: string, materialNote?: string): Promise<Project> {
+  return (await apiClient.post<Project>(`/projects/${projectId}/cancel`, {
+    reason, material_note: materialNote || undefined,
+  })).data;
+}
+
+export interface FieldOpsSettings {
+  max_failed_visits: number;
+  min_failed_visits: number;
+  max_allowed: number;
+}
+
+export async function getFieldOpsSettings(): Promise<FieldOpsSettings> {
+  return (await apiClient.get<FieldOpsSettings>("/field-ops/settings")).data;
+}
+
+export async function saveFieldOpsSettings(maxFailedVisits: number): Promise<FieldOpsSettings> {
+  return (await apiClient.put<FieldOpsSettings>("/field-ops/settings", { max_failed_visits: maxFailedVisits })).data;
+}
+
 /**
  * Un comando de campo puede cambiar varias cosas a la vez (cerrar la
  * instalación congela el checklist y cambia el estado del proyecto), así que
@@ -188,6 +243,9 @@ export function useRefreshProject(projectId: string) {
         ["project-evidence", projectId],
         ["project-billing", projectId],
         ["project-claims", projectId],
+        visitKeys.status(projectId),
+        visitKeys.list(projectId),
+        visitKeys.cancellation(projectId),
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
 }

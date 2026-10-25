@@ -17,6 +17,7 @@ import { ConditionsPanel } from "./components/ConditionsPanel";
 import { EquipmentPanel } from "./components/EquipmentPanel";
 import { InspectionsPanel } from "./components/InspectionsPanel";
 import { CloseInstallationStep, ReleaseOrderStep } from "./components/InstallationPanel";
+import { CancelProjectStep, FailedVisitsStep } from "./components/VisitsPanel";
 import { InstallationRecord, closeRequirements, deriveStates, openActaStep, useRecordData } from "./components/InstallationRecord";
 import { MaterialsPanel } from "./components/MaterialsPanel";
 import { PermitsPanel } from "./components/PermitsPanel";
@@ -119,7 +120,12 @@ export function ProjectDetailPage() {
       <Link to={backTo} className="acta-back">
         <span aria-hidden="true">‹</span> Volver a {backLabel}
       </Link>
-      {!trabaja && (
+      {project.status === "cancelled" && (
+        <div className="info-banner read-only-banner" role="status">
+          <strong>Obra cancelada.</strong> {project.cancel_reason ?? ""} Queda en solo lectura.
+        </div>
+      )}
+      {!trabaja && project.status !== "cancelled" && (
         <div className="info-banner read-only-banner" role="status">
           <strong>Solo lectura.</strong> El técnico responsable de esta obra hoy es{" "}
           {turnos?.find((t) => t.current)?.technician_name ?? "otro técnico"}. Ves lo que se ha hecho y lo que se
@@ -139,6 +145,10 @@ export function ProjectDetailPage() {
             body: (
               <>
                 <ReleaseOrderStep project={project} canSchedule={hasPermission("dispatch.manage")} />
+                <FailedVisitsStep project={project} coords={geo.coords}
+                  canReport={hasPermission("checklists.complete") && trabaja}
+                  canSchedule={hasPermission("dispatch.manage")} />
+                <CancelProjectStep project={project} canCancel={hasPermission("projects.close")} />
                 <h4 className="acta-section-title">Materiales de la orden</h4>
                 <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update") && trabaja} closed={cerrada} />
                 <AssignmentsHistory projectId={project.id} />

@@ -45,6 +45,17 @@ NOTICES: dict[str, dict] = {
         "title": "Instalación cerrada: {{expediente}}",
         "body": "{{tecnico}} cerró la instalación de {{cliente}} ({{direccion}}). Revisa y confirma el acta.",
     },
+    "installation.visit_failed": {
+        "label": "Visita de instalación fallida", "audience": "Agenda (dispatch.manage)",
+        "title": "Visita fallida: {{proyecto}}",
+        "body": "{{tecnico}} no pudo instalar en {{direccion}} ({{fecha}}): {{motivo}}. Visitas fallidas: "
+                "{{intentos}} de {{limite}}. {{siguiente}}",
+    },
+    "project.cancelled": {
+        "label": "Obra cancelada", "audience": "Técnico del proyecto",
+        "title": "Obra cancelada: {{proyecto}}",
+        "body": "Administración canceló la obra {{proyecto}}: {{motivo}}",
+    },
     "project.returned_to_technician": {
         "label": "Acta devuelta al técnico", "audience": "Técnico del proyecto",
         "title": "Acta devuelta: {{proyecto}}",
@@ -154,6 +165,7 @@ DEFAULT_PERMISSION = {
     "case.submitted": "cases.review",
     "case.approval_overdue": "cases.review",
     "installation.closed": "checklists.approve",
+    "installation.visit_failed": "dispatch.manage",
     "claim.rejected": "billing.submit",
     "claim.paid": "billing.submit",
     "permit.expiring": "permits.manage",

@@ -55,6 +55,17 @@ EQUIPMENT_TYPES: dict[str, str] = {
     "other": "Otro",
 }
 
+# Por qué no se pudo hacer una visita de instalación (D-001). La nota es
+# obligatoria con cualquier motivo: el motivo clasifica, la nota explica.
+VISIT_FAILURE_REASONS: dict[str, str] = {
+    "customer_absent": "El cliente no estaba",
+    "access_denied": "No dejaron entrar o el cliente no quiso",
+    "unsafe_conditions": "Condiciones inseguras en la casa",
+    "missing_material": "Faltó material o equipo",
+    "weather": "Clima",
+    "other": "Otro",
+}
+
 
 class PermitStatus(StrEnum):
     submitted = "submitted"

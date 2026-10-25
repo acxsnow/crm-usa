@@ -316,6 +316,11 @@ ul.billing-req li:last-child { border-bottom: 0; }
 .acta-history span { margin-left: 0.5rem; color: var(--ink-soft); font-size: 0.8rem; }
 .acta-history p { margin: 0.2rem 0 0; color: var(--ink-soft); }
 
+/* Visitas fallidas y cancelación de la obra (D-001), dentro de «Orden liberada». */
+.visits-step { margin-top: 1rem; display: grid; gap: 0.5rem; }
+.visits-step ul:not(.acta-history) { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; }
+.acta-lead.is-warning { color: var(--warn); background: var(--warn-wash); border-radius: 6px; padding: 0.45rem 0.6rem; }
+
 @media (max-width: 720px) {
   .flow-rail { grid-template-columns: repeat(5, minmax(4.2rem, 1fr)); overflow-x: auto; }
   .flow-rail::before { left: 2rem; right: 2rem; }

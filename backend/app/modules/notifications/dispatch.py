@@ -16,6 +16,8 @@ logger = structlog.get_logger(__name__)
 EVENTS = (
     "case.submitted", "case.substatus_changed", "case.stage_changed", "installation.scheduled",
     "installation.closed",
+    # Visita fallida y obra cancelada (D-001).
+    "installation.visit_failed", "project.cancelled",
     "project.returned_to_technician", "claim.rejected", "claim.paid",
     "expense.submitted", "expense.reviewed", "payable.pending_approval",
     "payable.paid_now", "supplier.bank_changed",

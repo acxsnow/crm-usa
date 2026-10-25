@@ -213,6 +213,10 @@ async def schedule_installation(
 ) -> Project:
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_installation_open(project)
+    # Con el límite de visitas fallidas alcanzado decide Administración (D-001).
+    from app.modules.field_ops.visits import ensure_can_reschedule
+
+    await ensure_can_reschedule(db, project)
     if scheduled_date < await org_today(db, organization_id):
         raise InvalidInputError("No se puede agendar una instalación en una fecha pasada.", code="schedule_in_past")
     await _require_installer(db, organization_id=organization_id, technician_id=technician_id)

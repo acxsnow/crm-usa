@@ -14,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -68,6 +69,15 @@ class Project(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin,
     # o quitar un equipo lo deshace (spec 2026-10-18-guardar-equipos-y-avisos).
     equipment_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     equipment_confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    # Visitas fallidas y cancelación (D-001, `visits.py`). El contador vive aquí
+    # para no contar filas en cada listado; el detalle está en
+    # `project_visit_attempts`. `extra_visits_authorized` son los intentos que
+    # Administración autorizó por encima del límite de la organización.
+    failed_visits_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    extra_visits_authorized: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    cancel_reason: Mapped[str | None] = mapped_column(Text)
 
     # Solo lectura: la etapa del expediente viaja con el proyecto porque el
     # técnico no puede leer expedientes (`cases.*`) y aun así necesita saber si
@@ -428,3 +438,35 @@ class ProjectReview(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     action: Mapped[str] = mapped_column(String(20), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
+class ProjectVisitAttempt(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Una visita de instalación que no se pudo hacer (D-001).
+
+    El técnico llega y el cliente no está, no lo dejan entrar o falta algo: deja
+    escrito qué pasó, con el GPS de donde lo registró, y la obra vuelve a quedar
+    sin fecha para agendarla otra vez. Nunca se borran: son la historia de los
+    reagendamientos y la base del límite de la organización."""
+
+    __tablename__ = "project_visit_attempts"
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    technician_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    # La fecha que estaba agendada y no se cumplió.
+    scheduled_date: Mapped[date | None] = mapped_column(Date)
+    reason_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    notes: Mapped[str] = mapped_column(Text, nullable=False)
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+
+
+class FieldOpsSettings(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Reglas de campo de cada organización (D-001). Se cambian en pantalla,
+    sin código: hoy, cuántas visitas fallidas se reagendan sin pedir permiso."""
+
+    __tablename__ = "field_ops_settings"
+    __table_args__ = (UniqueConstraint("organization_id", name="uq_field_ops_settings_org"),)
+
+    max_failed_visits: Mapped[int] = mapped_column(Integer, default=2, server_default="2", nullable=False)

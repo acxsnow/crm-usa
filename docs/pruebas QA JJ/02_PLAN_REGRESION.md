@@ -46,7 +46,7 @@ El recorrido mínimo del negocio, de la puerta al pago:
 | `shared/files` | SEC-005, SEC-006, INS-004, INS-015 |
 | `shared/pagination.py` o cualquier listado | API-001 a API-003 |
 
-## 4. Antes de salir a producción: todos los P0 (33 escenarios, 11 h 05 min)
+## 4. Antes de salir a producción: todos los P0 (35 escenarios, 12 h 00 min)
 
 | ID | Escenario | Min |
 |---|---|---|
@@ -61,6 +61,8 @@ El recorrido mínimo del negocio, de la puerta al pago:
 | INS-004 | Instalación completa: jornada, checklist, equipos y acta firmada | 40 |
 | INS-005 | Administración devuelve el acta al técnico y luego la confirma | 20 |
 | INS-008 | Cambiar el técnico de una obra en curso (rotación) | 20 |
+| INS-010 | El técnico llega y el cliente no estaba (visita fallida) | 25 |
+| INS-012 | Cancelar una obra y reintegrar el material | 30 |
 | TEC-001 | Cada técnico ve solo su agenda y sus obras | 15 |
 | TEC-002 | El técnico no autoriza salidas ni confirma su propia acta | 15 |
 | BOD-001 | La carga inicial cuadra con los PDF de AC Pro | 20 |
@@ -84,7 +86,7 @@ El recorrido mínimo del negocio, de la puerta al pago:
 | API-001 | Paginación: límite por defecto, máximo y total | 20 |
 | CON-001 | Doble clic y reintentos en acciones que crean cosas | 20 |
 
-Más los escenarios bloqueados una vez se desbloqueen (D-001 y llaves de Stripe/Plaid).
+Más PAR-004 y FIN-004 cuando estén las llaves de prueba de Stripe/Plaid.
 
 ## 5. Reglas
 

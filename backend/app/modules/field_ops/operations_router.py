@@ -8,17 +8,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
 from app.modules.field_ops import installation as installation_service
+from app.modules.field_ops import visits as visits_service
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.models import Project, ProjectStatus
 from app.modules.field_ops.schemas import (
     AgendaRow,
     AvailabilityUpdate,
+    CancelProjectRequest,
     CloseInstallationRequest,
+    FailedVisitRequest,
     FieldCatalogsResponse,
+    FieldOpsSettingsIn,
     InstallationGapsResponse,
     InstallerResponse,
     ProjectResponse,
+    ReasonRequest,
     ScheduleInstallationRequest,
     TechnicianMonitorRow,
 )
@@ -245,4 +250,116 @@ async def field_catalogs(
         equipment_types=catalogs.EQUIPMENT_TYPES,
         permit_statuses={str(key): value for key, value in catalogs.PERMIT_STATUS_LABELS.items()},
         inspection_results={str(key): value for key, value in catalogs.INSPECTION_RESULT_LABELS.items()},
+        visit_failure_reasons=catalogs.VISIT_FAILURE_REASONS,
     )
+
+
+# ---------------------------------------------------------------------------
+# Visitas fallidas, límite de reagendamiento y cancelación (D-001)
+# ---------------------------------------------------------------------------
+
+@router.post("/projects/{project_id}/failed-visits", status_code=201)
+async def record_failed_visit(
+    project_id: uuid.UUID,
+    payload: FailedVisitRequest,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("checklists.complete")),
+) -> dict:
+    return await visits_service.record_failed_visit(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        reason_code=payload.reason_code, notes=payload.notes,
+        latitude=payload.latitude, longitude=payload.longitude)
+
+
+@router.get("/projects/{project_id}/failed-visits")
+async def list_failed_visits(
+    project_id: uuid.UUID,
+    response: Response,
+    pagination: tuple[int, int] = Depends(pagination_params),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+) -> list[dict]:
+    stmt = await visits_service.list_failed_visits(db, organization_id=organization_id, user=current_user,
+                                                   project_id=project_id)
+    limit, offset = pagination
+    intentos = await paginate(db, stmt, limit=limit, offset=offset, response=response)
+    ids = {i for a in intentos for i in (a.technician_user_id, a.recorded_by_user_id) if i}
+    nombres = dict((await db.execute(select(User.id, User.full_name).where(
+        User.organization_id == organization_id, User.id.in_(ids)))).all()) if ids else {}
+    return [visits_service.attempt_out(a, nombres) for a in intentos]
+
+
+@router.get("/projects/{project_id}/visit-status")
+async def project_visit_status(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("projects.read_all", "projects.read_assigned")),
+) -> dict:
+    project = await get_visible_project(db, organization_id=organization_id, user=current_user,
+                                        project_id=project_id)
+    estado = await visits_service.visit_status(db, project)
+    await db.commit()
+    return estado
+
+
+@router.post("/projects/{project_id}/extra-visit")
+async def authorize_extra_visit(
+    project_id: uuid.UUID,
+    payload: ReasonRequest,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dispatch.manage")),
+) -> dict:
+    return await visits_service.authorize_extra_visit(
+        db, organization_id=organization_id, user=current_user, project_id=project_id, reason=payload.reason)
+
+
+@router.get("/projects/{project_id}/cancellation-check")
+async def project_cancellation_check(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("projects.close")),
+) -> dict:
+    datos = await visits_service.cancellation_check(db, organization_id=organization_id, user=current_user,
+                                                    project_id=project_id)
+    await db.commit()
+    return datos
+
+
+@router.post("/projects/{project_id}/cancel", response_model=ProjectResponse)
+async def cancel_project(
+    project_id: uuid.UUID,
+    payload: CancelProjectRequest,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("projects.close")),
+):
+    return await visits_service.cancel_project(
+        db, organization_id=organization_id, user=current_user, project_id=project_id,
+        reason=payload.reason, material_note=payload.material_note)
+
+
+@router.get("/field-ops/settings")
+async def get_field_ops_settings(
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_any_permission("dispatch.manage", "projects.read_all")),
+) -> dict:
+    datos = visits_service.settings_out(await visits_service.get_settings(db, organization_id))
+    await db.commit()
+    return datos
+
+
+@router.put("/field-ops/settings")
+async def put_field_ops_settings(
+    payload: FieldOpsSettingsIn,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("projects.close")),
+) -> dict:
+    return await visits_service.update_settings(db, organization_id=organization_id, user=current_user,
+                                                max_failed_visits=payload.max_failed_visits)

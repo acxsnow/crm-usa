@@ -37,6 +37,8 @@ def ensure_installation_open(project: Project) -> None:
             "La instalación ya está cerrada; lo registrado en ella no se modifica.",
             code="installation_closed",
         )
+    if project.status == ProjectStatus.cancelled:
+        raise ConflictError("La obra está cancelada; ya no se registra nada en ella.", code="project_cancelled")
 
 
 async def select_template_for_case(db: AsyncSession, *, case) -> ChecklistTemplate | None:

@@ -77,6 +77,11 @@ class ProjectResponse(AddressSchema):
     # Para quien pide: «full» si llena la obra, «read_only» si la ve porque fue
     # su responsable antes o va de ayudante (plan bodega-cierre, fase 5).
     my_access: str = "full"
+    # Visitas fallidas y cancelación (D-001).
+    failed_visits_count: int = 0
+    extra_visits_authorized: int = 0
+    cancelled_at: datetime | None = None
+    cancel_reason: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 
@@ -363,6 +368,27 @@ class CloseInstallationRequest(BaseModel):
     observations: str | None = Field(default=None, max_length=2000)
 
 
+class FailedVisitRequest(BaseModel):
+    reason_code: str = Field(max_length=40)
+    notes: str = Field(max_length=2000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+
+class ReasonRequest(BaseModel):
+    reason: str = Field(max_length=2000)
+
+
+class CancelProjectRequest(BaseModel):
+    reason: str = Field(max_length=2000)
+    # Qué pasó con el material entregado que no volvió a bodega.
+    material_note: str | None = Field(default=None, max_length=2000)
+
+
+class FieldOpsSettingsIn(BaseModel):
+    max_failed_visits: int
+
+
 class AgendaRow(BaseModel):
     project_id: uuid.UUID
     title: str
@@ -445,6 +471,7 @@ class FieldCatalogsResponse(BaseModel):
     equipment_types: dict[str, str]
     permit_statuses: dict[str, str]
     inspection_results: dict[str, str]
+    visit_failure_reasons: dict[str, str] = {}
 
 
 class InstallerResponse(BaseModel):

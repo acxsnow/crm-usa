@@ -93,11 +93,12 @@ async def mark_substatus(
     reason: str | None = None,
 ) -> bool:
     """Marca el sub-estado si el expediente está en `stage`. Misma regla que
-    `advance_case`: exige el permiso de la etapa y no falla si no aplica."""
+    `advance_case`: exige el permiso del sub-estado (el de la etapa, salvo los
+    que `stages.SUBSTATUS_PERMISSION` asigna a otro rol) y no falla si no aplica."""
     case = await case_for_project(db, project)
     if case is None or case.stage_code != stage or case.substatus_code == substatus:
         return False
-    if not _may_enter(user, stage):
+    if stages.substatus_permission(stage, substatus) not in get_effective_permissions(user):
         return False
     await case_service.set_substatus(
         db, case=case, substatus=substatus, actor_id=user.id,
