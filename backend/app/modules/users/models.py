@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Table, Column, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Table, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
@@ -46,7 +46,9 @@ class PermissionModule(UUIDPKMixin, TimestampMixin, Base):
         UniqueConstraint("organization_id", "key", name="uq_permission_module_org_key"),
     )
 
-    organization_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     key: Mapped[str] = mapped_column(String(50), nullable=False)
     label: Mapped[str] = mapped_column(String(150), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

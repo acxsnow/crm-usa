@@ -8,9 +8,9 @@ mismas guardas, así que las dos vías dicen lo mismo.
 Se registran en `case_hooks.register()`. Todas son `async` porque consultan la
 base (COD-08).
 """
+from app.core.config import get_settings
 from app.modules.field_ops.case_flow import project_for_case
 from app.modules.field_ops.clock import org_today
-from app.core.config import get_settings
 from app.modules.field_ops.permits import all_allow_install, permits_of
 from app.shared.errors import InvalidInputError
 

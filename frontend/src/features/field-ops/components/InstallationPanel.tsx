@@ -84,7 +84,6 @@ export function CloseInstallationStep({ project, canClose, requirements }: {
   project: Project; canClose: boolean; requirements: Requirement[];
 }) {
   const refresh = useRefreshProject(project.id);
-  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [observaciones, setObservaciones] = useState("");
   const cerrada = project.status === "completed";

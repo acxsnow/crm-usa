@@ -98,6 +98,7 @@ class WarehouseItem(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     category: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
     unit: Mapped[str] = mapped_column(String(20), nullable=False, default="unit")
     unit_cost: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    sale_price: Mapped[Decimal | None] = mapped_column(MONEY)
     supplier_name: Mapped[str | None] = mapped_column(String(255))
     # Los equipos con serial propio (respuesta 12: «TODOS»).
     has_serial: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

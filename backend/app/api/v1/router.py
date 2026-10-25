@@ -1,26 +1,26 @@
 from fastapi import APIRouter
 
+from app.modules.attendance.router import router as attendance_router
 from app.modules.auth.router import router as auth_router
-from app.modules.billing.router import router as billing_router
-from app.modules.billing.program_router import router as billing_program_router
 from app.modules.billing.claims_router import router as billing_claims_router
+from app.modules.billing.program_router import router as billing_program_router
 from app.modules.billing.quotes_router import router as billing_quotes_router
+from app.modules.billing.router import router as billing_router
+from app.modules.cases.intake_router import router as cases_intake_router
 from app.modules.cases.router import router as cases_router
 from app.modules.crm.router import router as crm_router
 from app.modules.field_ops.router import router as field_ops_router
+from app.modules.finance.router import router as finance_router
+from app.modules.notifications.campaigns_router import router as campaigns_router
+from app.modules.notifications.router import router as notifications_router
 from app.modules.organizations.audit_router import router as audit_router
 from app.modules.organizations.router import router as organizations_router
+from app.modules.programs.router import router as programs_router
+from app.modules.search.router import router as search_router
 from app.modules.users.roles_router import router as roles_router
 from app.modules.users.router import router as users_router
-from app.modules.programs.router import router as programs_router
-from app.modules.cases.intake_router import router as cases_intake_router
-from app.modules.notifications.router import router as notifications_router
-from app.modules.notifications.campaigns_router import router as campaigns_router
-from app.modules.finance.router import router as finance_router
-from app.modules.warehouse.router import router as warehouse_router
 from app.modules.warehouse.jobcost_router import router as jobcost_router
-from app.modules.search.router import router as search_router
-from app.modules.attendance.router import router as attendance_router
+from app.modules.warehouse.router import router as warehouse_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)

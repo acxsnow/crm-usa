@@ -50,7 +50,7 @@ _release_read = require_any_permission("warehouse.read", "warehouse.manage", "wa
 _COST_PERMS = {"warehouse.read", "warehouse.manage", "budgets.manage", "budgets.approve"}
 # Quien ve todas las órdenes de salida (no solo las propias).
 _ALL_RELEASES_PERMS = {"warehouse.read", "warehouse.manage", "warehouse.approve_release", "warehouse.deliver"}
-_COST_KEYS = {"unit_cost", "value"}
+_COST_KEYS = {"unit_cost", "sale_price", "margin_pct", "value"}
 
 
 def _ve_costos(user) -> bool:
@@ -165,6 +165,7 @@ class ItemIn(BaseModel):
     category: str = "other"
     unit: str = "unit"
     unit_cost: str = "0"
+    sale_price: str | None = None
     supplier_name: str | None = Field(default=None, max_length=255)
     has_serial: bool = False
     min_quantity: str | None = None

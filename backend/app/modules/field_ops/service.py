@@ -6,16 +6,14 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.crm.models import Customer
-from app.modules.organizations.models import Organization
-from app.modules.notifications.email import send_email
 from app.core.config import get_settings
 from app.core.security import generate_secure_token, hash_token
+from app.modules.crm.models import Customer
 from app.modules.field_ops.models import (
     Attestation,
-    CustomerSignatureToken,
     ChecklistTemplate,
     ChecklistTemplateItem,
+    CustomerSignatureToken,
     Evidence,
     InstalledEquipment,
     Project,
@@ -24,11 +22,18 @@ from app.modules.field_ops.models import (
     TaskStatus,
 )
 from app.modules.field_ops.pdf import build_attestation_pdf, decode_signature_png
-from app.shared.files.storage import save_bytes
-from app.shared.datetime_utils import as_utc
-from app.shared.files.watermark import VIDEO_MIME_TYPES, WATERMARKABLE_MIME_TYPES, apply_gps_watermark, apply_video_watermark
+from app.modules.notifications.email import send_email
+from app.modules.organizations.models import Organization
 from app.shared.audit import record_audit_event
-from app.shared.errors import ConflictError, InvalidInputError
+from app.shared.datetime_utils import as_utc
+from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+from app.shared.files.storage import save_bytes
+from app.shared.files.watermark import (
+    VIDEO_MIME_TYPES,
+    WATERMARKABLE_MIME_TYPES,
+    apply_gps_watermark,
+    apply_video_watermark,
+)
 
 settings = get_settings()
 logger = structlog.get_logger(__name__)
@@ -56,7 +61,7 @@ async def apply_checklist_template(
     )
     template = result.scalar_one_or_none()
     if not template:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown checklist template.")
+        raise InvalidInputError("La plantilla de checklist no existe.", code="checklist_template_not_found")
 
     items = []
     for template_item in template.items:
@@ -248,13 +253,14 @@ async def upload_evidence(
         select(Project).where(Project.id == project_id, Project.organization_id == organization_id)
     )
     if not project_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        raise NotFoundError("El proyecto no existe.", code="project_not_found")
 
     mime_type = (file.content_type or "").lower()
     if mime_type not in ALLOWED_EVIDENCE_MIME_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type: {mime_type or 'unknown'}. Accepted: photos (JPEG, PNG, WEBP, HEIC) and videos (MP4, MOV, WEBM).",
+        raise InvalidInputError(
+            f"Tipo de archivo no permitido: {mime_type or 'desconocido'}. "
+            "Aceptados: fotos (JPEG, PNG, WEBP, HEIC) y videos (MP4, MOV, WEBM).",
+            code="unsupported_evidence_type",
         )
 
     category = await _resolve_evidence_category(
@@ -266,9 +272,9 @@ async def upload_evidence(
         (await db.execute(select(Evidence).where(Evidence.project_id == project_id, Evidence.deleted_at.is_(None)))).scalars().all()
     )
     if existing_count >= MAX_EVIDENCE_PER_PROJECT:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"This project already has {existing_count} evidence files, the maximum allowed ({MAX_EVIDENCE_PER_PROJECT}).",
+        raise InvalidInputError(
+            f"Este proyecto ya tiene {existing_count} evidencias. El máximo permitido es {MAX_EVIDENCE_PER_PROJECT}.",
+            code="too_many_evidence_files",
         )
 
     # Tamaño mientras se recibe y tipo real por contenido (SEG-01, SEG-02).
@@ -396,7 +402,7 @@ async def technician_sign(
         await db.execute(select(Project).where(Project.id == project_id, Project.organization_id == organization_id))
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        raise NotFoundError("El proyecto no existe.", code="project_not_found")
 
     attestation = await _get_or_create_attestation(db, organization_id=organization_id, project_id=project_id)
     _ensure_not_signed(attestation.technician_signed_at, "El técnico ya firmó el acta.")
@@ -427,7 +433,7 @@ async def customer_sign(
         await db.execute(select(Project).where(Project.id == project_id, Project.organization_id == organization_id))
     ).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        raise NotFoundError("El proyecto no existe.", code="project_not_found")
 
     attestation = await _get_or_create_attestation(db, organization_id=organization_id, project_id=project_id)
     _ensure_not_signed(attestation.customer_signed_at, "El cliente ya firmó el acta.")
@@ -463,7 +469,7 @@ async def create_customer_signature_request(
 ) -> CustomerSignatureToken:
     project = (await db.execute(select(Project).where(Project.id == project_id, Project.organization_id == organization_id))).scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+        raise NotFoundError("El proyecto no existe.", code="project_not_found")
     customer = (await db.execute(select(Customer).where(Customer.id == project.customer_id))).scalar_one_or_none()
     if not customer or not customer.email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El cliente no tiene un correo registrado.")
@@ -472,7 +478,7 @@ async def create_customer_signature_request(
     existing = (await db.execute(select(CustomerSignatureToken).where(CustomerSignatureToken.attestation_id == attestation.id))).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     if existing and existing.signed_at is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="La atestación ya fue firmada por el cliente.")
+        raise ConflictError("La constancia ya fue firmada por el cliente.", code="already_signed")
     raw_token, token_hash = generate_secure_token()
     if existing:
         token = existing
@@ -520,7 +526,7 @@ async def pending_signature_link(db: AsyncSession, attestation_id: uuid.UUID) ->
 
 async def get_public_signature_request(db: AsyncSession, *, raw_token: str) -> tuple[CustomerSignatureToken, Attestation, Project]:
     token = (await db.execute(select(CustomerSignatureToken).where(CustomerSignatureToken.token_hash == hash_token(raw_token)))).scalar_one_or_none()
-    invalid = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El enlace no es válido o ya expiró.")
+    invalid = NotFoundError("El enlace no es válido o ya expiró.", code="public_signature_not_found")
     if not token or token.revoked_at or token.signed_at or as_utc(token.expires_at) < datetime.now(timezone.utc):
         raise invalid
     attestation = (await db.execute(select(Attestation).where(Attestation.id == token.attestation_id))).scalar_one()
@@ -545,8 +551,8 @@ async def public_customer_sign(db: AsyncSession, *, raw_token: str, customer_nam
     await _maybe_generate_pdf(db, organization_id=token.organization_id, project=project, attestation=attestation)
     # Firmar el acta es también autorizar el tratamiento de los datos: el
     # cliente que abre el enlace ve el aviso antes de firmar.
-    from app.modules.crm.models import Customer
     from app.modules.crm import privacy
+    from app.modules.crm.models import Customer
 
     cliente = await db.get(Customer, project.customer_id) if project.customer_id else None
     await privacy.record_consent(

@@ -7,13 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
-from app.shared.errors import NotFoundError
-from app.shared.pagination import paginate, pagination_params
-from app.shared.audit import record_audit_event
-from app.modules.crm import privacy
-from app.modules.crm import service as crm_service
 from app.modules.cases.models import Case
 from app.modules.cases.schemas import CaseResponse
+from app.modules.crm import privacy
+from app.modules.crm import service as crm_service
 from app.modules.crm.models import Activity, Customer, CustomerContact, CustomerStatus, FunderStatus
 from app.modules.crm.schemas import (
     ActivityCreate,
@@ -29,6 +26,9 @@ from app.modules.crm.schemas import (
     FunderStatusResponse,
 )
 from app.modules.users.models import User
+from app.shared.audit import record_audit_event
+from app.shared.errors import NotFoundError
+from app.shared.pagination import paginate, pagination_params
 
 router = APIRouter(tags=["crm"])
 

@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import { fetchPage, type Page } from "@/lib/pagination";
+import { fetchPage } from "@/lib/pagination";
 
 /**
  * Bodega: artículos, existencias y movimientos (spec `2026-10-19-control-bodega-design.md`).
@@ -42,6 +42,8 @@ export interface WarehouseItem {
   unit: string;
   unit_label: string;
   unit_cost: string;
+  sale_price: string | null;
+  margin_pct: number | null;
   supplier_name: string | null;
   has_serial: boolean;
   min_quantity: string | null;

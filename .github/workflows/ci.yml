@@ -23,6 +23,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
+      - run: python -m ruff check app/api app/db app/modules/crm app/modules/field_ops app/modules/users
       # Las pruebas usan SQLite en memoria; el .env de ejemplo deja correo y SMS en consola.
       - run: cp .env.example .env
       - run: python -m pytest -q --cov=app --cov-report=term --cov-fail-under=70
@@ -46,6 +47,7 @@ jobs:
       # SEG-03/SEG-05: las dependencias que llegan al navegador, sin vulnerabilidades
       # conocidas. Las de desarrollo (servidor de Vite) no se publican y no bloquean.
       - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm run lint
       # Hooks después de un return temprano rompen la pantalla en ejecución (no lo ve tsc).
       - run: python3 scripts/check_hooks.py
       - run: npm run build

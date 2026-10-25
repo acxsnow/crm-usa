@@ -13,8 +13,8 @@ mecanismo (`register_effect`) y aquí se declara qué hacer.
 import structlog
 
 from app.modules.cases import stages
-from app.shared import events as domain_events
 from app.modules.field_ops.service import auto_create_project_from_case
+from app.shared import events as domain_events
 
 logger = structlog.get_logger(__name__)
 

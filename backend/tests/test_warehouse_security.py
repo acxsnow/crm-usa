@@ -94,10 +94,10 @@ async def test_el_tecnico_ve_el_catalogo_sin_costos_ni_existencias(app_client, l
     assert lista.status_code == 200, lista.text
     fila = lista.json()[0]
     assert fila["name"] == "Tubo cobre 3/8"
-    assert "unit_cost" not in fila and "value" not in fila
+    assert "unit_cost" not in fila and "sale_price" not in fila and "margin_pct" not in fila and "value" not in fila
 
     detalle = (await app_client.get(f"{API}/warehouse/items/{item['id']}", headers=tecnico)).json()
-    assert "unit_cost" not in detalle
+    assert "unit_cost" not in detalle and "sale_price" not in detalle and "margin_pct" not in detalle
     # Bodega sí ve el costo.
     assert (await app_client.get(f"{API}/warehouse/items/{item['id']}", headers=admin)).json()["unit_cost"] == "3.25"
 

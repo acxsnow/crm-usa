@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import status
-from sqlalchemy import delete as sa_delete, func, select
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 

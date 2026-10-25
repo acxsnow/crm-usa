@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case
-from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.catalogs import PERMIT_STATUS_LABELS, PermitStatus
+from app.modules.field_ops.clock import org_today
 from app.modules.field_ops.models import Permit, Project
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event

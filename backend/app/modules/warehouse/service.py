@@ -173,6 +173,7 @@ async def save_item(db: AsyncSession, *, organization_id, user, data: dict, item
     item.manufacturer_part = (data.get("manufacturer_part") or "").strip() or None
     item.category, item.unit = data["category"], data["unit"]
     item.unit_cost = to_money(data.get("unit_cost") or 0)
+    item.sale_price = None if data.get("sale_price") in (None, "") else to_money(data["sale_price"])
     item.supplier_name = (data.get("supplier_name") or "").strip() or None
     item.has_serial = bool(data.get("has_serial"))
     item.min_quantity = None if data.get("min_quantity") in (None, "") else _q(data["min_quantity"])
@@ -630,12 +631,19 @@ def item_out(item: WarehouseItem, totals: dict | None = None, labels: dict[str, 
     total = datos["total"]
     bajo_minimo = item.min_quantity is not None and total <= _q(item.min_quantity)
     etiquetas = labels or ITEM_CATEGORIES
+    venta = to_money(item.sale_price) if item.sale_price is not None else None
+    margen = None
+    if venta is not None and venta > ZERO:
+        margen = round(float(((venta - to_money(item.unit_cost)) / venta) * Decimal("100")), 1)
     return {
         "id": str(item.id), "name": item.name, "sku": item.sku,
         "brand": item.brand, "manufacturer_part": item.manufacturer_part,
         "category": item.category, "category_label": etiquetas.get(item.category, item.category),
         "unit": item.unit, "unit_label": ITEM_UNITS.get(item.unit, item.unit),
-        "unit_cost": str(to_money(item.unit_cost)), "supplier_name": item.supplier_name,
+        "unit_cost": str(to_money(item.unit_cost)),
+        "sale_price": None if venta is None else str(venta),
+        "margin_pct": margen,
+        "supplier_name": item.supplier_name,
         "has_serial": item.has_serial,
         "min_quantity": None if item.min_quantity is None else str(_q(item.min_quantity)),
         "notes": item.notes, "active": item.active,

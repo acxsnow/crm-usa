@@ -1,11 +1,10 @@
 import uuid
 from datetime import date, datetime
 
-from app.modules.cases.schemas import CaseResponse
 from pydantic import BaseModel, Field
 
+from app.modules.cases.schemas import CaseResponse
 from app.modules.crm.models import ActivityType, CustomerStatus, CustomerType
-
 
 # --- Address (shared) -------------------------------------------------------
 

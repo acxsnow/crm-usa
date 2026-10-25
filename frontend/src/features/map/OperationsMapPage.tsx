@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -47,6 +47,7 @@ export function OperationsMapPage() {
   const [estado, setEstado] = useState("");
   const [ubicando, setUbicando] = useState<MapProject | null>(null);
   const [ruta, setRuta] = useState(false);
+  const mapaRef = useRef<HTMLDivElement | null>(null);
 
   const { data: gente } = useQuery({ queryKey: ["attendance-people"], queryFn: listPeople, enabled: veGente });
   const { data: ubicaciones } = useQuery({ queryKey: ["map-people"], queryFn: getMapPeople, refetchInterval: 30_000 });
@@ -82,6 +83,11 @@ export function OperationsMapPage() {
     },
     onError: (e) => toast(apiErrorMessage(e, "No se pudo ubicar por dirección.")),
   });
+
+  function empezarAFijar(p: MapProject) {
+    setUbicando(p);
+    requestAnimationFrame(() => mapaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 
   const { markers, lines } = useMemo(() => {
     const ms: MapMarker[] = [];
@@ -146,12 +152,16 @@ export function OperationsMapPage() {
           Orden sugerido del día</label>
       </div>
 
-      {ubicando && (
-        <p className="att-banner is-info" role="status">Toca el mapa donde está «{ubicando.title}».
-          <button type="button" className="att-btn is-link" onClick={() => setUbicando(null)}>Cancelar</button></p>
-      )}
-      <LeafletMap label="Mapa operativo" markers={markers} lines={lines} height="min(68vh, 620px)" fit={!ubicando}
-        onMapClick={ubicando ? (lat, lng) => fijar.mutate({ id: ubicando.id, lat, lng }) : undefined} />
+      <div ref={mapaRef}>
+        {ubicando && (
+          <p className="att-banner is-info" role="status">
+            <strong>Paso 2 de 2:</strong> toca el mapa donde esta «{ubicando.title}» para guardar el punto.
+            <button type="button" className="att-btn is-link" onClick={() => setUbicando(null)}>Cancelar</button>
+          </p>
+        )}
+        <LeafletMap label="Mapa operativo" markers={markers} lines={lines} height="min(68vh, 620px)" fit={!ubicando}
+          onMapClick={ubicando ? (lat, lng) => fijar.mutate({ id: ubicando.id, lat, lng }) : undefined} />
+      </div>
 
       <div className="att-legend">
         <span><i className="map-dot tone-ok" />Persona, ubicación reciente (menos de 15 min)</span>
@@ -182,7 +192,7 @@ export function OperationsMapPage() {
         <section className="att-card" aria-labelledby="att-sin-ubicar">
           <h2 id="att-sin-ubicar">Obras sin ubicar ({obras.unlocated.length})</h2>
           <p className="att-muted">No tienen el GPS de la visita del vendedor.{puedeUbicar
-            ? " «Ubicar por dirección» las pone en el mapa con su dirección; si alguna no aparece, toca «Fijar en el mapa» y luego el punto."
+            ? " «Ubicar por dirección» intenta ubicarlas por su dirección en lotes de hasta 25 por clic. Si alguna no aparece, usa «Elegir punto en el mapa» y luego toca el mapa para guardarla."
             : ""}</p>
           {puedeUbicar && (
             <p><button type="button" className="att-btn is-primary" disabled={porDireccion.isPending}
@@ -191,7 +201,7 @@ export function OperationsMapPage() {
           )}
           <ul className="att-list">{obras.unlocated.map((p) => (
             <li key={p.id}><a href={`/projects/${p.id}`}>{p.title}</a> <span className="att-muted">· {p.address || "sin dirección"}</span>
-              {puedeUbicar && <button type="button" className="att-btn is-link" onClick={() => setUbicando(p)}>Fijar en el mapa</button>}</li>
+              {puedeUbicar && <button type="button" className="att-btn is-link" onClick={() => empezarAFijar(p)}>Elegir punto en el mapa</button>}</li>
           ))}</ul>
         </section>
       )}

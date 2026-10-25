@@ -21,7 +21,6 @@ from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
 from app.db.types import GUID
 from app.modules.crm.models import PropertyAddressMixin
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------

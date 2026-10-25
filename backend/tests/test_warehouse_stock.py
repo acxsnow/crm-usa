@@ -66,8 +66,11 @@ async def _articulos(app_client, headers) -> list[dict]:
 
 async def test_crear_articulo(app_client, login, active_admin_user):
     h = await login(active_admin_user.email)
-    item = await _item(app_client, h, min_quantity="50")
-    assert (item["name"], item["sku"], item["unit_cost"]) == ("Tubo cobre 3/8", "CU-38", "3.25")
+    item = await _item(app_client, h, min_quantity="50", sale_price="8.50")
+    assert (item["name"], item["sku"], item["unit_cost"], item["sale_price"]) == (
+        "Tubo cobre 3/8", "CU-38", "3.25", "8.50"
+    )
+    assert item["margin_pct"] == 61.8
     # Las etiquetas en español viajan con el artículo: el frontend no repite el catálogo.
     assert (item["category_label"], item["unit_label"]) == ("Tubería y cobre", "pies (ft)")
     assert (item["total_quantity"], item["below_minimum"]) == ("0.00", True)  # 0 ≤ 50

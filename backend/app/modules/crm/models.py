@@ -3,6 +3,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -10,7 +11,6 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    JSON,
     Numeric,
     String,
     Text,
@@ -20,7 +20,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
 from app.db.types import GUID
-
 
 # ---------------------------------------------------------------------------
 # Shared enums

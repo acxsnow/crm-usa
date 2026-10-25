@@ -6,19 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
-from app.shared.errors import NotFoundError
-from app.shared.pagination import paginate, pagination_params
 from app.modules.users import service as users_service
 from app.modules.users.models import Invitation, Role, User, UserRole, UserStatus
 from app.modules.users.schemas import (
     UserInviteRequest,
     UserListResponse,
     UserProfileResponse,
-    UserZoneInfo,
     UserResponse,
     UserRolesUpdate,
     UserUpdate,
+    UserZoneInfo,
 )
+from app.shared.errors import NotFoundError
+from app.shared.pagination import paginate, pagination_params
 
 router = APIRouter(prefix="/users", tags=["users"])
 

@@ -72,7 +72,11 @@ export function ChecklistTemplatesPage() {
 }
 
 function sinId(items: ChecklistTemplateItem[]): Item[] {
-  return items.map(({ id: _id, ...resto }) => resto);
+  return items.map((item) => {
+    const resto: Item & { id?: string } = { ...item };
+    delete resto.id;
+    return resto;
+  });
 }
 
 const vacio = (n: number): Item => ({ label: "", sort_order: n, is_required: true, requires_evidence: false, section: null,

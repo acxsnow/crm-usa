@@ -13,7 +13,6 @@ import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { ItemPicker } from "./ItemPicker";
 import {
   deleteKit,
-  listKitsPage,
   saveKit,
   warehouseKeys,
   type KitInput,

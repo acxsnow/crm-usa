@@ -14,11 +14,11 @@ from datetime import datetime, timezone
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.cases.models import Case
+from app.modules.crm.models import Customer
 from app.modules.field_ops.access import get_visible_project
 from app.modules.field_ops.case_flow import advance_case, case_for_project, mark_substatus
 from app.modules.field_ops.catalogs import InspectionResult
-from app.modules.cases.models import Case
-from app.modules.crm.models import Customer
 from app.modules.field_ops.models import Inspection, Project, ProjectStatus
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event

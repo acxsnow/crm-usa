@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.db.types import GUID
@@ -30,5 +30,5 @@ class OrgScopedMixin:
     """Every business entity carries organization_id (spec 8, 8.3)."""
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(), nullable=False, index=True
+        GUID(), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )

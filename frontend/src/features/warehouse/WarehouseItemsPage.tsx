@@ -27,10 +27,9 @@ import {
 const PAGE_SIZE = 25;
 
 /**
- * Catálogo de la bodega: los materiales con su referencia, categoría, unidad y
- * mínimo. Es el dato que después usan las listas predefinidas y el presupuesto,
- * así que las categorías y las unidades salen del catálogo del backend y no se
- * escriben a mano.
+ * Catálogo de la bodega: los materiales con su referencia, categoría, unidad,
+ * costo y precio de venta. Es el dato que después usan las listas
+ * predefinidas, el presupuesto y el price book para cotizar rápido.
  */
 export function WarehouseItemsPage() {
   const { hasPermission } = useAuth();
@@ -67,7 +66,7 @@ export function WarehouseItemsPage() {
       <header className="billing-head">
         <div>
           <h1>Artículos de bodega</h1>
-          <p>El catálogo de materiales: referencia, categoría, unidad, costo y el mínimo desde el que hay que reponer.</p>
+          <p>El catálogo de materiales: referencia, categoría, unidad, costo, precio de venta y el mínimo desde el que hay que reponer.</p>
         </div>
         {puede && editando === null && (
           <div className="acta-actions">
@@ -94,7 +93,7 @@ export function WarehouseItemsPage() {
           <p className="acta-empty">Ningún artículo con este filtro.</p>
         ) : (
           <div className="tablewrap"><table className="notices-table">
-            <thead><tr><th>Artículo</th><th>Categoría</th><th>Unidad</th><th>Costo</th><th>Mínimo</th><th>Existencia</th><th /></tr></thead>
+            <thead><tr><th>Artículo</th><th>Categoría</th><th>Unidad</th><th>Costo</th><th>Venta</th><th>Margen</th><th>Mínimo</th><th>Existencia</th><th /></tr></thead>
             <tbody>
               {lista.items.map((i) => (
                 <tr key={i.id} className={i.active ? "" : "fin-inactive"}>
@@ -107,6 +106,8 @@ export function WarehouseItemsPage() {
                   <td>{i.category_label}</td>
                   <td>{i.unit_label}</td>
                   <td className="mono">{money(i.unit_cost)}</td>
+                  <td className="mono">{i.sale_price ? money(i.sale_price) : "—"}</td>
+                  <td className="mono">{i.margin_pct == null ? "—" : `${i.margin_pct.toFixed(1)}%`}</td>
                   <td className="mono">{i.min_quantity ?? "—"}</td>
                   <td className="mono">{i.total_quantity}
                     {i.below_minimum && <span className="billing-chip is-rejected">Bajo mínimo</span>}</td>
@@ -130,7 +131,7 @@ function ItemForm({ initial, catalogs, onClose }: {
   const qc = useQueryClient();
   const [item, setItem] = useState<Partial<WarehouseItem>>(initial ?? {
     name: "", sku: "", brand: "", manufacturer_part: "", category: "other", unit: "unit", unit_cost: "0",
-    supplier_name: "", has_serial: false, min_quantity: "", notes: "", active: true,
+    sale_price: "", supplier_name: "", has_serial: false, min_quantity: "", notes: "", active: true,
   });
   const [error, setError] = useState<string | null>(null);
   // Las categorías que se pueden elegir, más la que el artículo ya tiene aunque
@@ -148,6 +149,7 @@ function ItemForm({ initial, catalogs, onClose }: {
       category: item.category || "other",
       unit: item.unit || "unit",
       unit_cost: item.unit_cost || "0",
+      sale_price: item.sale_price || null,
       supplier_name: item.supplier_name || null,
       has_serial: !!item.has_serial,
       min_quantity: item.min_quantity || null,
@@ -208,8 +210,19 @@ function ItemForm({ initial, catalogs, onClose }: {
           <input id="it-cost" inputMode="decimal" value={item.unit_cost ?? "0"} onChange={(e) => setItem({ ...item, unit_cost: e.target.value })} />
         </div>
         <div className="form-field">
+          <label className="form-label" htmlFor="it-sale">Precio de venta (USD)</label>
+          <input id="it-sale" inputMode="decimal" placeholder="Vacío = sin price book" value={item.sale_price ?? ""}
+            onChange={(e) => setItem({ ...item, sale_price: e.target.value })} />
+        </div>
+      </div>
+      <div className="fin-row">
+        <div className="form-field">
           <label className="form-label" htmlFor="it-min">Cantidad mínima (avisa al llegar aquí)</label>
           <input id="it-min" inputMode="decimal" placeholder="Vacío = sin aviso" value={item.min_quantity ?? ""} onChange={(e) => setItem({ ...item, min_quantity: e.target.value })} />
+        </div>
+        <div className="form-field">
+          <label className="form-label" htmlFor="it-margin">Margen estimado</label>
+          <input id="it-margin" value={marginLabel(item.unit_cost, item.sale_price)} readOnly />
         </div>
       </div>
       <div className="form-field">
@@ -237,6 +250,14 @@ function ItemForm({ initial, catalogs, onClose }: {
       </div>
     </form>
   );
+}
+
+function marginLabel(cost?: string | null, sale?: string | null): string {
+  const costo = Number(cost || 0);
+  const venta = Number(sale || 0);
+  if (!Number.isFinite(venta) || venta <= 0) return "—";
+  const margen = ((venta - costo) / venta) * 100;
+  return `${margen.toFixed(1)}%`;
 }
 
 /**

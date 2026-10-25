@@ -1,25 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
-  createTask,
-  createTaskComment,
-  fetchEvidenceObjectUrl,
   getProject,
   getProjectAssignments,
   getProjectChecklist,
-  listProjectEvidencePage,
-  listProjectTasks,
-  listTaskComments,
-  updateTask,
-  uploadEvidence,
 } from "./api";
+import { ProjectEvidencePanel } from "./components/ProjectEvidencePanel";
+import { ProjectTaskBoard } from "./components/ProjectTaskBoard";
 import { SignaturesPanel } from "./components/SignaturesPanel";
-import { PaginationControls } from "@/components/PaginationControls";
-import { type Evidence, type EvidenceCategory, type FieldTask, type TaskStatus } from "@/types/fieldOps";
 import { useAuth } from "@/features/auth/AuthContext";
-import { useFieldCatalogs, useInstallers } from "./module5Api";
-import { CameraIcon, CheckCircleIcon, CheckIcon, ClockIcon, GearIcon, PinIcon, SendIcon, VideoIcon } from "./components/icons";
+import { useInstallers } from "./module5Api";
+import { PinIcon } from "./components/icons";
 import { ChecklistPanel } from "./components/ChecklistPanel";
 import { ConditionsPanel } from "./components/ConditionsPanel";
 import { EquipmentPanel } from "./components/EquipmentPanel";
@@ -35,274 +27,6 @@ import { ExtraChargeForm } from "@/features/warehouse/ExtraChargeForm";
 import { ProjectDayLogPanel } from "@/features/warehouse/ProjectDayLogPanel";
 import { ProjectMiniMap } from "@/features/map/ProjectMiniMap";
 import { hasAnyPermission } from "@/config/navigation";
-
-const EVIDENCE_PAGE_SIZE = 12;
-
-
-const COLUMN_ICON: Record<TaskStatus, JSX.Element> = {
-  pending: <ClockIcon size={17} />,
-  in_progress: <GearIcon size={17} />,
-  done: <CheckCircleIcon size={17} />,
-};
-
-const TASK_COLUMNS: { status: TaskStatus; label: string }[] = [
-  { status: "pending", label: "Pendiente" },
-  { status: "in_progress", label: "En progreso" },
-  { status: "done", label: "Completada" },
-];
-
-function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: () => void }) {
-  const { data: categoryLabels } = useFieldCatalogs();
-  const [url, setUrl] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const isVideo = evidence.mime_type?.startsWith("video/");
-
-  useEffect(() => {
-    let active = true;
-    fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined);
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => { active = false; window.removeEventListener("keydown", closeOnEscape); };
-  }, [evidence.id, onClose]);
-
-  return <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label="Vista ampliada de evidencia" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="evidence-viewer">
-      <header className="evidence-viewer-header">
-        <div><strong>{evidence.original_filename ?? "Evidencia"}</strong><small>{categoryLabels?.evidence_categories[evidence.category] ?? evidence.category} · {evidence.watermarked ? "Marca visible aplicada" : "Sin marca"}</small></div>
-        <button type="button" className="evidence-viewer-close" onClick={onClose} aria-label="Cerrar vista ampliada">×</button>
-      </header>
-      <div className="evidence-viewer-stage">
-        {url ? (isVideo
-          ? <video controls autoPlay preload="metadata" src={url} />
-          : <img src={url} alt={evidence.original_filename ?? "Evidencia ampliada"} style={{ transform: `scale(${zoom})` }} />)
-          : <div className="evidence-placeholder">Cargando evidencia...</div>}
-      </div>
-      <footer className="evidence-viewer-footer">
-        {!isVideo && <div className="evidence-zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(1, value - 0.25))}>−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(3, value + 0.25))}>+</button><button type="button" onClick={() => setZoom(1)}>Restablecer</button></div>}
-        <div className="evidence-watermark-detail"><strong>Marca de evidencia</strong><span>{evidence.latitude != null && evidence.longitude != null ? `GPS: ${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}` : "GPS: no disponible"}</span><span>{evidence.captured_at ? `Fecha: ${new Date(evidence.captured_at).toLocaleString("es-CO")}` : "Fecha: no disponible"}</span></div>
-      </footer>
-    </div>
-  </div>;
-}
-
-function EvidenceCard({ evidence, onOpen }: { evidence: Evidence; onOpen: (evidence: Evidence) => void }) {
-  const { data: categoryLabels } = useFieldCatalogs();
-  const [url, setUrl] = useState<string | null>(null);
-  const isVideo = evidence.mime_type?.startsWith("video/");
-  useEffect(() => {
-    let active = true;
-    fetchEvidenceObjectUrl(evidence.id).then((value) => { if (active) setUrl(value); }).catch(() => undefined);
-    return () => { active = false; };
-  }, [evidence.id]);
-  const categoria = categoryLabels?.evidence_categories[evidence.category] ?? evidence.category;
-  const cuando = evidence.captured_at ?? evidence.created_at;
-
-  return (
-    <figure className="annex-thumb">
-      <button type="button" className="annex-thumb-img" onClick={() => onOpen(evidence)} aria-label={`Ver ${categoria} en detalle`}>
-        {url ? (isVideo ? <video muted preload="metadata" src={url} /> : <img src={url} alt={categoria} />) : <span className="annex-thumb-loading">Cargando…</span>}
-        {isVideo && <span className="annex-thumb-play" aria-hidden="true">▶</span>}
-      </button>
-      {/* La foto ya trae la marca grabada en los píxeles; repetirla encima la
-          tapaba. Aquí va como dato legible. */}
-      <figcaption>
-        <strong>{categoria}</strong>
-        <span><ClockIcon size={11} /> {new Date(cuando).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</span>
-        <span><PinIcon size={11} /> {evidence.latitude != null && evidence.longitude != null ? `${evidence.latitude.toFixed(4)}, ${evidence.longitude.toFixed(4)}` : "Sin GPS"}</span>
-      </figcaption>
-    </figure>
-  );
-}
-
-function TaskComments({ taskId }: { taskId: string }) {
-  const queryClient = useQueryClient();
-  const { data: comments } = useQuery({ queryKey: ["task-comments", taskId], queryFn: () => listTaskComments(taskId) });
-  const [body, setBody] = useState("");
-
-  const addMutation = useMutation({
-    mutationFn: () => createTaskComment(taskId, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task-comments", taskId] });
-      setBody("");
-    },
-  });
-
-  return (
-    <div style={{ marginTop: "0.4rem", borderTop: "1px solid #f3f4f6", paddingTop: "0.4rem" }}>
-      <ul className="plain-list">
-        {(comments ?? []).map((c) => (
-          <li key={c.id} style={{ fontSize: "0.78rem" }}>
-            {c.body}
-            <div className="pipeline-card-meta">{new Date(c.created_at).toLocaleString()}</div>
-          </li>
-        ))}
-        {(comments ?? []).length === 0 && <li className="page-subtitle">Sin comentarios.</li>}
-      </ul>
-      <form
-        className="inline-form"
-        style={{ marginTop: "0.25rem" }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (body.trim()) addMutation.mutate();
-        }}
-      >
-        <input
-          placeholder="Agregar comentario"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          style={{ fontSize: "0.8rem" }}
-        />
-        <button type="submit" disabled={addMutation.isPending}>
-          Comentar
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function TaskBoard({ projectId }: { projectId: string }) {
-  const queryClient = useQueryClient();
-  const { data: tasks } = useQuery({ queryKey: ["project-tasks", projectId], queryFn: () => listProjectTasks(projectId) });
-  // Best-effort: only users with users.manage see the assignee dropdown
-  // populated with real names; everyone else can still create/move tasks,
-  // just without a name-based picker.
-  // Responsables posibles: quien puede instalar. El listado general de
-  // usuarios exige `users.manage`, que Administración no tiene.
-  const { hasPermission } = useAuth();
-  const { data: installers } = useInstallers(hasPermission("dispatch.manage"));
-
-  const [title, setTitle] = useState("");
-  const [assignedUserId, setAssignedUserId] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createTask(projectId, {
-        title,
-        assigned_user_id: assignedUserId || undefined,
-        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
-      setTitle("");
-      setAssignedUserId("");
-      setDueDate("");
-    },
-  });
-
-  const moveMutation = useMutation({
-    mutationFn: ({ taskId, status }: { taskId: string; status: TaskStatus }) => updateTask(taskId, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] }),
-  });
-
-  const assigneeName = (userId?: string | null) => {
-    if (!userId) return "Sin asignar";
-    const match = installers?.find((u) => u.id === userId);
-    return match ? match.full_name : "Asignado";
-  };
-
-  return (
-    <section className="annex-section" aria-labelledby="anexo-tareas">
-      <div className="annex-section-head">
-        <h3 id="anexo-tareas">Tareas internas</h3>
-        <span className="annex-count">{(tasks ?? []).length} en total</span>
-      </div>
-      <form
-        className="panel-form annex-task-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (title.trim()) createMutation.mutate();
-        }}
-      >
-        <div className="field annex-task-title">
-          <label htmlFor="tarea-titulo">Tarea</label>
-          <input id="tarea-titulo" placeholder="Llevar soporte antivibración" value={title}
-            onChange={(e) => setTitle(e.target.value)} required />
-        </div>
-        <div className="field">
-          <label htmlFor="tarea-responsable">Responsable</label>
-          <select id="tarea-responsable" value={assignedUserId} onChange={(e) => setAssignedUserId(e.target.value)}>
-            <option value="">Sin asignar</option>
-            {(installers ?? []).map((u) => (
-              <option key={u.id} value={u.id}>{u.full_name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="tarea-vence">Vence</label>
-          <input id="tarea-vence" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-        </div>
-        <button type="submit" className="acta-btn is-primary" disabled={createMutation.isPending}>
-          Agregar tarea
-        </button>
-      </form>
-
-      <div className="annex-board">
-        {TASK_COLUMNS.map((column) => {
-          const enColumna = (tasks ?? []).filter((t) => t.status === column.status);
-          return (
-            <div key={column.status} className={`annex-column is-${column.status}`}>
-              <h4>
-                <span className="annex-column-title">{COLUMN_ICON[column.status]} {column.label}</span>
-                <span className="annex-count">{enColumna.length}</span>
-              </h4>
-              <ul className="annex-task-list">
-                {enColumna.map((task: FieldTask) => {
-                  const hecha = task.status === "done";
-                  return (
-                    <li key={task.id} className="annex-task">
-                      <div className="annex-task-row">
-                        {hecha ? (
-                          <span className="annex-task-done" aria-hidden="true"><CheckIcon size={16} strokeWidth={2.4} /></span>
-                        ) : (
-                          <input
-                            type="checkbox"
-                            className="annex-task-check"
-                            aria-label={`Marcar «${task.title}» como completada`}
-                            onChange={() => moveMutation.mutate({ taskId: task.id, status: "done" })}
-                          />
-                        )}
-                        <div className="annex-task-text">
-                          <span className="annex-task-name">
-                            {task.title}
-                            {task.is_overdue && <span className="annex-overdue">Vencida</span>}
-                          </span>
-                          <span className="annex-task-meta">
-                            {assigneeName(task.assigned_user_id)}
-                            {task.due_date ? `, vence el ${new Date(task.due_date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}
-                          </span>
-                          <span className="annex-task-links">
-                            {task.status === "pending" && (
-                              <button type="button" className="acta-link" onClick={() => moveMutation.mutate({ taskId: task.id, status: "in_progress" })}>
-                                Empezar
-                              </button>
-                            )}
-                            {hecha && (
-                              <button type="button" className="acta-link" onClick={() => moveMutation.mutate({ taskId: task.id, status: "pending" })}>
-                                Reabrir
-                              </button>
-                            )}
-                            <button type="button" className="acta-link"
-                              onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
-                              {expandedTaskId === task.id ? "Ocultar comentarios" : "Comentarios"}
-                            </button>
-                          </span>
-                        </div>
-                      </div>
-                      {expandedTaskId === task.id && <TaskComments taskId={task.id} />}
-                    </li>
-                  );
-                })}
-              </ul>
-              {enColumna.length === 0 && <p className="acta-empty">Sin tareas.</p>}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 
 function useGeolocation() {
@@ -346,7 +70,6 @@ export function ProjectDetailPage() {
   const volver = (useLocation().state as { backTo?: string; backLabel?: string } | null) ?? {};
   const backTo = volver.backTo ?? "/projects";
   const backLabel = volver.backLabel ?? "Proyectos";
-  const queryClient = useQueryClient();
   const geo = useGeolocation();
 
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -359,37 +82,10 @@ export function ProjectDetailPage() {
     queryFn: () => getProjectChecklist(projectId!),
     enabled: !!projectId,
   });
-  const [evidencePage, setEvidencePage] = useState(1);
-  const { data: evidenceData } = useQuery({
-    queryKey: ["project-evidence", projectId, evidencePage],
-    queryFn: () => listProjectEvidencePage(projectId!, evidencePage, EVIDENCE_PAGE_SIZE),
-    enabled: !!projectId && puedeVerEvidencias,
-  });
-  const evidence = evidenceData?.items;
-  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
-
   useEffect(() => {
     geo.request();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
-
-  const { data: catalogs } = useFieldCatalogs();
-  const [category, setCategory] = useState<EvidenceCategory>("additional_photo");
-  const [file, setFile] = useState<File | null>(null);
-  const [dragging, setDragging] = useState(false);
-
-  const uploadMutation = useMutation({
-    mutationFn: () =>
-      uploadEvidence(projectId!, file!, {
-        category,
-        latitude: geo.coords?.latitude,
-        longitude: geo.coords?.longitude,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-evidence", projectId], exact: false });
-      setFile(null);
-    },
-  });
 
   const recordData = useRecordData(projectId!, project?.status === "completed");
   const paso = useSearchParams()[0].get("paso");
@@ -510,69 +206,12 @@ export function ProjectDetailPage() {
         </header>
 
         {puedeVerEvidencias && (
-        <section className="annex-section" aria-labelledby="anexo-evidencias">
-          <div className="annex-section-head">
-            <h3 id="anexo-evidencias">Evidencias</h3>
-            <span className="annex-count">{evidenceData?.total ?? 0} archivos</span>
-          </div>
-          <p className="acta-lead">
-            Las fotos del checklist se toman desde su línea; aquí van las adicionales.
-          </p>
-          {trabaja && (
-          <form
-            className="annex-evidence"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (file) uploadMutation.mutate();
-            }}
-          >
-            <label
-              className={`annex-drop ${dragging ? "is-over" : ""} ${file ? "has-file" : ""}`}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                const dropped = e.dataTransfer.files?.[0];
-                if (dropped) setFile(dropped);
-              }}
-            >
-              <input type="file" hidden accept="image/*,video/mp4,video/quicktime,video/webm" capture="environment"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <strong>{file ? file.name : "Arrastra y suelta o toca para subir"}</strong>
-              <span className="annex-drop-icons"><CameraIcon size={26} /> <span>o</span> <VideoIcon size={26} /></span>
-            </label>
-
-            <div className="annex-evidence-controls">
-              <label htmlFor="evidencia-categoria" className="visually-hidden">Categoría</label>
-              <select id="evidencia-categoria" value={category} onChange={(e) => setCategory(e.target.value)}>
-                {Object.entries(catalogs?.evidence_categories ?? {}).map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
-              </select>
-              <button type="submit" className="acta-btn is-primary" disabled={!file || uploadMutation.isPending}>
-                {uploadMutation.isPending ? "Subiendo…" : "Subir evidencia"}
-              </button>
-            </div>
-          </form>
-          )}
-          <p className="annex-note"><PinIcon size={14} /> Ubicación GPS y hora grabadas automáticamente en cada archivo.</p>
-            <div className="annex-thumbs">
-              {(evidence ?? []).length > 0
-                ? (evidence ?? []).map((ev) => <EvidenceCard key={ev.id} evidence={ev} onOpen={setSelectedEvidence} />)
-                : <p className="acta-empty">Todavía no hay evidencias.</p>}
-            </div>
-
-          {selectedEvidence && <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />}
-          {evidenceData && evidenceData.total > EVIDENCE_PAGE_SIZE && (
-            <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
-          )}
-        </section>
+          <ProjectEvidencePanel projectId={project.id} canUpload={trabaja} geoStatus={geo.status} coords={geo.coords} />
         )}
 
         <ProjectMiniMap projectId={project.id} />
 
-        <TaskBoard projectId={project.id} />
+        <ProjectTaskBoard projectId={project.id} />
 
         {puedeVerPresupuesto && <JobCostPanel projectId={project.id} />}
         {puedeAnotarExtra && trabaja && (
