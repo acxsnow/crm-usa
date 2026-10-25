@@ -451,6 +451,49 @@ def buscador(pg):
     ], None
 
 
+def mi_turno(pg):
+    pg.wait_for_timeout(2500)
+    return [
+        (pg.locator(".att-card").first, "Su turno de hoy: reloj, obra y los botones del momento (iniciar, en camino, llegué, pausa, finalizar).", "inside"),
+        (pg.get_by_text("Registrar novedad").first, "«Registrar novedad»: no pudo iniciar, llegó tarde, se le olvidó marcar…", "inside"),
+    ], None
+
+
+def malla_turnos(pg):
+    pg.wait_for_timeout(2500)
+    return [
+        (pg.locator(".att-weeknav"), "Semana que se ve; «Copiar a la semana siguiente» repite la semana.", "inside"),
+        (pg.locator(".att-week, .att-scroll").first, "Un turno por persona y día, con su obra.", "inside"),
+    ], None
+
+
+def panel_asistencia(pg):
+    pg.wait_for_timeout(3500)
+    return [
+        (pg.locator(".att-filters"), "Rango de fechas, persona y obra.", "inside"),
+        (pg.locator(".att-kpis"), "Indicadores: programados, iniciados, pendientes, tardanzas, horas y cumplimiento.", "inside"),
+        (pg.locator("#att-por-persona"), "Horas programadas, registradas y aprobadas por persona.", "left"),
+    ], None
+
+
+def nomina(pg):
+    pg.wait_for_timeout(3000)
+    return [
+        (pg.locator(".att-filters"), "Período del reporte y exportar a Excel o PDF.", "inside"),
+        (pg.locator("#att-periodos"), "Períodos: cerrarlos bloquea los cambios de esas fechas; reabrir pide motivo.", "left"),
+    ], None
+
+
+def mapa_operativo(pg):
+    pg.wait_for_timeout(3000)  # las teselas del mapa cargan después
+    return [
+        (pg.locator(".att-segment"), "Obras abiertas o las de un día del calendario.", "top"),
+        (pg.locator(".att-filters select").first, "Filtrar por persona, cliente o estado.", "top"),
+        (pg.locator(".leaflet-container"), "Pines de las obras por estado y del personal en su última ubicación.", "inside"),
+        (pg.get_by_text("Orden sugerido del día"), "Orden de las obras de una persona por distancia, con la ruta en Google Maps.", "right"),
+    ], None
+
+
 def buscador_celular(pg):
     pg.wait_for_timeout(1500)
     lupa = pg.locator(".global-search-trigger")
@@ -505,6 +548,11 @@ PANTALLAS = [
     ("equipo", "admin", ESCRITORIO, "/users", "Equipo", equipo),
     ("buscador", "adm", {"width": 1280, "height": 900}, "/", "Buscador global", buscador),
     ("buscador_celular", "adm", CELULAR, "/", "Buscador global en el celular", buscador_celular),
+    ("mi_turno", "tecnico", alto(1100), "/my-shift", "Mi turno (celular del técnico)", mi_turno),
+    ("malla_turnos", "adm", {"width": 1280, "height": 1000}, "/shifts", "Malla de turnos", malla_turnos),
+    ("panel_asistencia", "adm", {"width": 1280, "height": 1300}, "/attendance", "Panel de asistencia", panel_asistencia),
+    ("nomina", "conta", {"width": 1280, "height": 1000}, "/payroll", "Nómina", nomina),
+    ("mapa_operativo", "adm", {"width": 1280, "height": 1000}, "/operations-map", "Mapa operativo", mapa_operativo),
 ]
 
 

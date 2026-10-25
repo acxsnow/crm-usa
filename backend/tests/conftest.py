@@ -27,6 +27,7 @@ from app.modules.programs import models as programs_models  # noqa: F401
 from app.modules.notifications import models as notifications_models  # noqa: F401
 from app.modules.finance import models as finance_models  # noqa: F401
 from app.modules.warehouse import models as warehouse_models  # noqa: F401
+from app.modules.attendance import models as attendance_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -58,6 +59,8 @@ def _isolate_external_services(monkeypatch):
     monkeypatch.setattr(rate_limit_module, "get_redis_if_available", _no_redis)
     monkeypatch.setattr(token_denylist_module, "get_redis_if_available", _no_redis)
     monkeypatch.setattr(email_module.settings, "EMAIL_PROVIDER", "console")
+    # Ubicar por dirección: nunca el servicio real del Censo desde las pruebas.
+    monkeypatch.setattr(email_module.settings, "GEOCODER", "off")
     yield
 
 

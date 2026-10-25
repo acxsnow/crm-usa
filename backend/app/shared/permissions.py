@@ -140,6 +140,13 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("budgets.manage", "Armar el presupuesto de un proyecto"),
     ("budgets.approve", "Aprobar el presupuesto de un proyecto"),
     ("daylogs.manage", "Registrar el diario de obra (jornadas de un proyecto)"),
+    # Turnos, asistencia y mapa (spec 2026-10-24-turnos-mapa)
+    ("attendance.clock", "Marcar el turno propio, pausas, desplazamientos y novedades"),
+    ("shifts.manage", "Administrar la malla de turnos"),
+    ("attendance.review", "Aprobar horas, novedades y correcciones de asistencia"),
+    ("attendance.dashboard", "Ver el panel de asistencia y el reporte de nómina"),
+    ("payroll.close", "Cerrar y reabrir períodos de nómina"),
+    ("locations.view", "Ver la ubicación del personal y el mapa operativo"),
     # Usuarios y roles
     ("users.manage", "Administrar usuarios"),
     # Solo listar: lo necesitan pantallas que eligen o muestran personas
@@ -255,6 +262,17 @@ DEFAULT_MODULES: dict[str, Module] = {
             "daylogs.manage",
         ],
     ),
+    "attendance": Module(
+        "Turnos y asistencia",
+        [
+            "attendance.clock",
+            "shifts.manage",
+            "attendance.review",
+            "attendance.dashboard",
+            "payroll.close",
+            "locations.view",
+        ],
+    ),
     # --- Finanzas ---
     "billing": Module(
         "Facturación y cobros",
@@ -360,6 +378,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "programs.read",
         "expenses.create_own",
         "notifications.read_own",
+        "attendance.clock",
         "profile.manage",
     ],
     "admin_staff": [
@@ -418,6 +437,11 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "users.read",
         "audit.read",
         "notifications.manage",
+        "attendance.clock",
+        "shifts.manage",
+        "attendance.review",
+        "attendance.dashboard",
+        "locations.view",
         "profile.manage",
     ],
     "field_technician": [
@@ -436,6 +460,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "warehouse.request_release",
         "daylogs.manage",
         "notifications.read_own",
+        "attendance.clock",
         "profile.manage",
     ],
     "accounting": [
@@ -466,6 +491,9 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "audit.read",
         "users.read",
         "notifications.read_own",
+        "attendance.clock",
+        "attendance.dashboard",
+        "payroll.close",
         "profile.manage",
     ],
     "management": [
@@ -487,6 +515,9 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         # Lectura de bodega y de lo que hay que comprar (Gerencia).
         "warehouse.read",
         "notifications.read_own",
+        "attendance.clock",
+        "attendance.dashboard",
+        "locations.view",
         "profile.manage",
     ],
 }

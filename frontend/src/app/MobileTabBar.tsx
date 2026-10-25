@@ -3,7 +3,8 @@ import type { NavGroup } from "@/config/navigation";
 import { Icon, NavIcon } from "@/components/ui/Icon";
 
 /** Destinos de la barra inferior, en orden de prioridad (propuesta UI/UX V1). */
-const PRIORIDAD = ["/", "/customers", "/cases", "/my-schedule", "/projects", "/review"];
+// «Mi turno» va segundo: el técnico marca entrada y salida desde aquí todos los días.
+const PRIORIDAD = ["/", "/my-shift", "/customers", "/cases", "/my-schedule", "/projects", "/review"];
 
 /**
  * Barra inferior del celular (hasta 767 px): hasta 4 destinos que el usuario

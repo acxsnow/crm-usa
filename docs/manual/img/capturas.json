@@ -338,5 +338,43 @@
       "La lupa junto a la campana abre el buscador a pantalla completa; tocar un resultado lo abre.",
       "«Cerrar» vuelve a la pantalla en que estaba."
     ]
+  },
+  "mapa_operativo": {
+    "titulo": "Mapa operativo",
+    "leyenda": [
+      "Obras abiertas o las de un día del calendario.",
+      "Filtrar por persona, cliente o estado.",
+      "Pines de las obras por estado y del personal en su última ubicación.",
+      "Orden de las obras de una persona por distancia, con la ruta en Google Maps."
+    ]
+  },
+  "mi_turno": {
+    "titulo": "Mi turno (celular del técnico)",
+    "leyenda": [
+      "Su turno de hoy: reloj, obra y los botones del momento (iniciar, en camino, llegué, pausa, finalizar).",
+      "«Registrar novedad»: no pudo iniciar, llegó tarde, se le olvidó marcar…"
+    ]
+  },
+  "malla_turnos": {
+    "titulo": "Malla de turnos",
+    "leyenda": [
+      "Semana que se ve; «Copiar a la semana siguiente» repite la semana.",
+      "Un turno por persona y día, con su obra."
+    ]
+  },
+  "panel_asistencia": {
+    "titulo": "Panel de asistencia",
+    "leyenda": [
+      "Rango de fechas, persona y obra.",
+      "Indicadores: programados, iniciados, pendientes, tardanzas, horas y cumplimiento.",
+      "Horas programadas, registradas y aprobadas por persona."
+    ]
+  },
+  "nomina": {
+    "titulo": "Nómina",
+    "leyenda": [
+      "Período del reporte y exportar a Excel o PDF.",
+      "Períodos: cerrarlos bloquea los cambios de esas fechas; reabrir pide motivo."
+    ]
   }
 }

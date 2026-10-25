@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { buildNavForUser } from "@/config/navigation";
 import { MobileTabBar } from "./MobileTabBar";
 import { NavIcon } from "@/components/ui/Icon";
+import { requestLogout, ShiftGate } from "@/features/attendance/ShiftGate";
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -63,7 +64,7 @@ export function DashboardLayout() {
         <div className="menu-account">
           <strong>{user?.full_name}</strong>
           {user?.role_names?.length ? <small>{user.role_names.join(", ")}</small> : null}
-          <button type="button" onClick={() => logout()}>Salir</button>
+          <button type="button" onClick={() => requestLogout(logout)}>Salir</button>
         </div>
         {/* Sin la tarjeta «¿Necesitas ayuda? Visita el centro de soporte»: no
             llevaba a ningún lado (propuesta UI/UX V1: nada de información de relleno). */}
@@ -91,12 +92,14 @@ export function DashboardLayout() {
               ) : null}
             </div>
           </div>
-          <button className="sign-out" onClick={() => logout()}>Salir</button>
+          <button className="sign-out" onClick={() => requestLogout(logout)}>Salir</button>
         </header>
         <main className="app-content">
           <Outlet />
         </main>
       </div>
+      {/* Marcación obligatoria y cola sin señal (turnos, spec 2026-10-24). */}
+      <ShiftGate />
       <MobileTabBar groups={navGroups} menuOpen={menuOpen} onMore={() => setMenuOpen((v) => !v)} />
     </div>
   );

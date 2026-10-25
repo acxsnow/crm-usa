@@ -122,6 +122,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // Turnos, asistencia y nómina (spec 2026-10-24-turnos-mapa).
+    label: "Turnos y asistencia",
+    items: [
+      { label: "Mi turno", to: "/my-shift", icon: "⏱", permission: "attendance.clock" },
+      { label: "Malla de turnos", to: "/shifts", icon: "▤", permission: ["shifts.manage", "attendance.review"] },
+      { label: "Panel de asistencia", to: "/attendance", icon: "◔", permission: "attendance.dashboard" },
+      { label: "Novedades y horas", to: "/attendance-review", icon: "✎", permission: "attendance.review" },
+      { label: "Nómina", to: "/payroll", icon: "$", permission: "attendance.dashboard" },
+      { label: "Mapa operativo", to: "/operations-map", icon: "⌖", permission: ["locations.view", "projects.read_all"] },
+    ],
+  },
+  {
     label: "Bodega",
     items: [
       // Existencias: saldo por artículo y por ubicación, aviso de lo que está en

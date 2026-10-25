@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     SMS_PROVIDER: str = "console"  # console | masiv
     # Módulo 7: "celery" encola los eventos para el worker; "off" no avisa (pruebas, scripts).
     NOTIFICATIONS_DISPATCH: str = "celery"
+    # Mapa: ubicar por dirección las obras sin GPS de la visita. "census" (Censo de
+    # EE. UU., gratis y sin llave) | "off" (se fijan a mano en el mapa).
+    GEOCODER: str = "census"
     # API de SMS de Masiv (masivapp). Con SMS_PROVIDER=masiv solo faltan usuario y contraseña.
     MASIV_SMS_URL: str = "https://api-sms.masivapp.com/send-message"
     MASIV_USERNAME: str = ""

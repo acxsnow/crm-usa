@@ -47,6 +47,11 @@ celery_app.conf.beat_schedule = {
         "task": "workers.sweep_overdue_invoices",
         "schedule": crontab(hour=6, minute=0),  # once a day, 06:00 UTC
     },
+    # Turnos: retención de la ubicación del personal (spec 2026-10-24).
+    "attendance-purge-old-locations": {
+        "task": "attendance.purge_old_locations",
+        "schedule": crontab(hour=9, minute=30),
+    },
 }
 
 # Registers the tasks defined there (sweep_overdue_invoices_task) with this

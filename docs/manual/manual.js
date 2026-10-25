@@ -122,7 +122,7 @@ add(
   new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: "Manual de usuario", font: FONT, size: 56, bold: true })] }),
   new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: "Venta puerta a puerta, revisión, instalación, cobro y finanzas", font: FONT, size: 26, color: GRIS })] }),
   p("**Versión:** 24 de octubre de 2026 · ambiente de pruebas"),
-  p("Este manual describe la aplicación tal como funciona hoy. Si una pantalla no se ve como aquí se describe, repórtelo (sección 14)."),
+  p("Este manual describe la aplicación tal como funciona hoy. Si una pantalla no se ve como aquí se describe, repórtelo (sección 15)."),
   p("Las capturas son de la aplicación real con datos de demostración. Los números rojos señalan cada parte de la pantalla; debajo de cada imagen dice qué es cada número."),
   new Paragraph({ children: [new PageBreak()] }),
   new TableOfContents("Contenido", { hyperlink: true, headingStyleRange: "1-2" }),
@@ -190,6 +190,10 @@ add(
     ["", "Calendario de obras", "Quién estuvo en cada obra y qué se hizo cada día"],
     ["", "Checklists de instalación", "Plantillas del checklist por programa"],
     ["", "Permisos e inspecciones", "Vista general de permisos municipales e inspecciones"],
+    ["Turnos y asistencia", "Mi turno", "Iniciar y finalizar el turno, pausas, en camino, llegué y novedades"],
+    ["", "Malla de turnos", "Programar turnos por persona y día; reglas, motivos y borrado de ubicaciones"],
+    ["", "Panel de asistencia · Novedades y horas", "Indicadores del día; aprobar novedades, correcciones y horas"],
+    ["", "Nómina · Mapa operativo", "Reporte por período en Excel o PDF; personal y obras en el mapa"],
     ["Bodega", "Existencias", "Qué hay en la bodega y en las camionetas; importar el catálogo"],
     ["", "Artículos · Listas", "El catálogo de materiales y las listas predefinidas por tipo de trabajo"],
     ["", "Salidas", "Órdenes de salida: se piden, se autorizan y se entregan"],
@@ -448,7 +452,41 @@ add(
 
 // --- 13 ---------------------------------------------------------------------------
 add(
-  h1("13. Guía de pruebas sugerida"),
+  h1("13. Turnos, asistencia y mapa"),
+  p("Menú **Turnos y asistencia**. Las horas se marcan con un botón; la ubicación se guarda solo en esas marcas (no hay rastreo continuo) y ninguna marca depende de tener señal en ese momento. Las reglas (tolerancias, extras, retención) son valores por defecto que Don Aldo todavía debe confirmar y se cambian sin programar."),
+  h2("13.1 Mi turno (todos los roles)"),
+  li("**Al entrar a la app**, si tiene un turno hoy y no ha marcado, aparece una ventana que no se puede cerrar: su turno, la obra, si va tarde y qué ubicación se guarda. Debajo: **INICIAR TURNO**, **No puedo iniciar: registrar novedad** y **Cerrar sesión**."),
+  li("**Iniciar:** el navegador pide permiso de ubicación. Si lo niega o no hay GPS, el turno inicia igual y queda «sin ubicación»; nunca se marca ausente por eso."),
+  li("**Durante el turno**, en **Mi turno**: **En camino**, **Llegué** y **Salida de obra**; **Pausa** y **Reanudar** con motivo; **Registrar novedad**. Sin señal, las marcas esperan en el teléfono y una franja dice cuántas faltan por enviar; se envían solas al volver la señal, sin duplicarse."),
+  li("**FINALIZAR TURNO** muestra antes un resumen: entrada y salida, pausas, horas efectivas y diferencia con la malla, con campo de observaciones. Salir de la app con el turno abierto pide finalizarlo; lo que quede abierto se regulariza con una novedad."),
+  ...fig("mi_turno"),
+  h2("13.2 Malla de turnos (Administrador y Administración)"),
+  li("Programa turnos por persona y día, con hora de entrada y salida (puede cruzar medianoche), descanso y obra. **Copiar a la semana siguiente** repite la semana y salta los que choquen."),
+  li("**Reglas de asistencia:** tolerancia de entrada y de salida (10 min), extras desde 8 h al día y 40 h a la semana (0 apaga), ubicación cada N minutos con la app abierta (0 = solo en las marcas), días para borrar coordenadas (90), si las pausas se pagan y si se bloquea el trabajo de campo hasta iniciar el turno (apagado)."),
+  li("**Motivos de novedad:** la lista que se elige al registrar una novedad; uno que ya no se usa se desactiva."),
+  li("**Borrar ubicaciones de una persona:** borra ya las coordenadas de todas sus marcas, sin esperar la retención. Las horas quedan y el borrado queda en la auditoría."),
+  ...fig("malla_turnos"),
+  h2("13.3 Panel de asistencia, novedades y nómina"),
+  li("**Panel de asistencia** (Administrador, Administración, Contabilidad y Gerencia): personal programado, turnos iniciados y pendientes, llegadas tarde, salidas anticipadas, turnos incompletos, horas programadas, registradas y aprobadas, novedades pendientes y cumplimiento de la malla, con gráficas por persona y por día. Separa tres cosas: si el turno está activo, si hay ubicación reciente y si está verificado; quien no tiene señal no aparece como ausente."),
+  li("**Novedades y horas:** Administración aprueba o rechaza novedades y correcciones y aprueba las horas. Nadie aprueba las suyas. Cada corrección guarda el valor original."),
+  li("**Nómina:** por período, una fila por persona con horas programadas, registradas, pausas, extras diarias y semanales, aprobadas, ausencias, tardanzas y correcciones; en Excel o PDF. Cerrar el período (Administrador y Contabilidad) bloquea los cambios de esas fechas; reabrirlo pide motivo. El sistema no calcula pagos."),
+  ...fig("panel_asistencia"),
+  ...fig("nomina"),
+  h2("13.4 Mapa operativo"),
+  p("**Mapa operativo** (menú Turnos y asistencia) muestra las obras como pines por estado y al personal en su última ubicación conocida, con cuánto hace que se tomó. Se actualiza cada 30 segundos. Filtros: obras abiertas o un día del calendario, persona, cliente y estado. **Orden sugerido del día** ordena las obras de una persona por distancia en línea recta y abre la ruta en Google Maps."),
+  h2("13.5 De dónde sale el punto de la obra"),
+  li("**El GPS de la visita:** cuando el vendedor registra la visita con el celular y da permiso de ubicación, ese punto pasa a la obra al aprobarse el expediente. Es el más exacto."),
+  li("**Obras sin ubicar:** si la visita no tomó GPS (no se dio permiso, la obra se creó a mano o son datos de prueba), la obra aparece abajo del mapa en **Obras sin ubicar** con el aviso «No tienen el GPS de la visita del vendedor». Es normal y se arregla así:"),
+  li("**Ubicar por dirección:** pone en el mapa, de una vez, las obras sin ubicar usando su dirección (hasta 25 por vez). La busca el geocodificador del Censo de EE. UU.: solo se le envía la calle, la ciudad, el estado y el ZIP, nunca el nombre del cliente. El punto queda en la calle del parque, no en el espacio exacto.", 1),
+  li("**Fijar en el mapa:** para la que no se encuentre por dirección, o para corregir un punto: tóquelo y luego toque el lugar en el mapa.", 1),
+  li("Las dos acciones las hace quien puede editar obras (Administrador y Administración). Una obra que ya tiene punto no se cambia al ubicar por dirección. Cada cambio queda en la auditoría."),
+  li("En la ficha de la obra, **Ubicación de la obra** muestra el mismo punto, el técnico responsable y la distancia en línea recta, con **Cómo llegar** (Google Maps) y los mismos botones."),
+  ...fig("mapa_operativo"),
+);
+
+// --- 14 ---------------------------------------------------------------------------
+add(
+  h1("14. Guía de pruebas sugerida"),
   h2("Prueba 1 — Un expediente de punta a punta"),
   n("Vendedor: tocar una puerta con el código postal de una zona de cobro, llenar el formulario con fotos, firmar y enviar a revisión.", "l5"),
   n("Administración: en Por revisar › Documentos, aceptar los documentos y aprobar con un código. Verificar que nació el proyecto.", "l5"),
@@ -467,18 +505,18 @@ add(
   li("Quitar la señal a mitad de un paso: debe avisar y no perder lo escrito."),
 );
 
-// --- 14 ---------------------------------------------------------------------------
+// --- 15 ---------------------------------------------------------------------------
 add(
-  h1("14. Cómo reportar un problema"),
+  h1("15. Cómo reportar un problema"),
   li("Usuario y rol con el que pasó."),
   li("Qué esperaba y qué pasó, y si bloquea el trabajo o es solo visual."),
   li("Los pasos exactos para repetirlo: pantalla, expediente o proyecto y datos usados."),
   li("Captura o video corto, navegador, dispositivo y fecha y hora."),
 );
 
-// --- 15 ---------------------------------------------------------------------------
+// --- 16 ---------------------------------------------------------------------------
 add(
-  h1("15. Lo que todavía no hace"),
+  h1("16. Lo que todavía no hace"),
   li("Órdenes de compra a proveedores y precios por proveedor. Planear de antemano qué técnico va cada día a una obra (hoy se ve lo que pasó y quién es el responsable)."),
   li("Pagar desde la plataforma (solo registra pagos hechos por fuera), sincronizar con QuickBooks y los 1099."),
   li("Llenar automáticamente los formularios municipales y sincronizar con Microsoft Forms."),
