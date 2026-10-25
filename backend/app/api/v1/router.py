@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
 from app.modules.attendance.router import router as attendance_router
-from app.modules.payments.router import router as payments_router
 from app.modules.auth.router import router as auth_router
 from app.modules.billing.claims_router import router as billing_claims_router
 from app.modules.billing.program_router import router as billing_program_router
@@ -16,6 +15,7 @@ from app.modules.notifications.campaigns_router import router as campaigns_route
 from app.modules.notifications.router import router as notifications_router
 from app.modules.organizations.audit_router import router as audit_router
 from app.modules.organizations.router import router as organizations_router
+from app.modules.payments.router import router as payments_router
 from app.modules.programs.router import router as programs_router
 from app.modules.search.router import router as search_router
 from app.modules.users.roles_router import router as roles_router
