@@ -46,4 +46,6 @@
 
 - [ ] Recorrido en el navegador de los cuatro puntos (Administración y Vendedor; el enlace público con el token del acta), a 1440 px y 390 px.
 - [x] `docs/qa/recorrido-manual.md`: Fase 1.5, tabla transversal de la Fase 6 y la migración `0038` en «Antes de empezar».
-- [ ] Commit en `CadenaB` (committer `mateom`, sin rastro de IA) y merge a `main`; al publicar, Render corre `alembic upgrade head` en la API.
+- [x] Commit en `CadenaB` (committer `mateom`, sin rastro de IA) y merge a `main`: `7998a96`, ya en las dos ramas; al publicar, Render corre `alembic upgrade head` en la API.
+- [ ] Publicar en Render (API + frontend) y confirmar en producción que el aviso sale y que la migración `0038` quedó aplicada.
+- [ ] Artefacto del plan (claude.ai): no se pudo actualizar desde esta sesión (pide sesión de Claude). El resumen para la próxima actualización quedó anotado en `CLAUDE.md`.
