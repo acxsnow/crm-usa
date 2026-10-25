@@ -15,7 +15,7 @@ export function AcceptInvitationPage() {
     event.preventDefault();
     setError(null);
     if (password.length < 12) {
-      setError("Password must be at least 12 characters.");
+      setError("La contraseña debe tener al menos 12 caracteres.");
       return;
     }
     setIsSubmitting(true);
@@ -26,7 +26,7 @@ export function AcceptInvitationPage() {
       // guardar la sesión y saltar directo al tablero.
       navigate("/login", { replace: true, state: { activated: true } });
     } catch {
-      setError("This invitation link is invalid or has expired.");
+      setError("El enlace de la invitación no es válido o ya venció. Pide una invitación nueva.");
     } finally {
       setIsSubmitting(false);
     }
@@ -35,14 +35,14 @@ export function AcceptInvitationPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Activate your account</h1>
+        <h1>Activa tu cuenta</h1>
         <label>
-          Choose a password
+          Elige una contraseña
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={isSubmitting || !token}>
-          {isSubmitting ? "Activating..." : "Activate account"}
+          {isSubmitting ? "Activando…" : "Activar cuenta"}
         </button>
       </form>
     </div>

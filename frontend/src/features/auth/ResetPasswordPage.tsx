@@ -16,11 +16,11 @@ export function ResetPasswordPage() {
     event.preventDefault();
     setError(null);
     if (password.length < 12) {
-      setError("Password must be at least 12 characters.");
+      setError("La contraseña debe tener al menos 12 caracteres.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
     setIsSubmitting(true);
@@ -28,7 +28,7 @@ export function ResetPasswordPage() {
       await apiClient.post("/auth/password-reset/confirm", { token, new_password: password });
       setSuccess(true);
     } catch {
-      setError("This reset link is invalid or has expired.");
+      setError("El enlace no es válido o ya venció. Pide uno nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -37,24 +37,24 @@ export function ResetPasswordPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Reset password</h1>
+        <h1>Nueva contraseña</h1>
         {success ? (
           <p>
-            Your password was changed. <a href="/login">Sign in</a>
+            Tu contraseña cambió. <a href="/login">Iniciar sesión</a>
           </p>
         ) : (
           <>
             <label>
-              New password
+              Contraseña nueva
               <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} />
             </label>
             <label>
-              Confirm password
+              Confirma la contraseña
               <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={12} />
             </label>
             {error && <p className="form-error">{error}</p>}
             <button type="submit" disabled={isSubmitting || !token}>
-              {isSubmitting ? "Saving..." : "Set new password"}
+              {isSubmitting ? "Guardando…" : "Guardar contraseña"}
             </button>
           </>
         )}

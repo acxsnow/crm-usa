@@ -13,7 +13,7 @@ export function ForgotPasswordPage() {
       const response = await apiClient.post("/auth/password-reset/request", { email });
       setMessage(response.data.message);
     } catch {
-      setMessage("If an active account exists for this email, a recovery link has been sent.");
+      setMessage("Si hay una cuenta activa con ese correo, te enviamos un enlace para recuperar la contraseña.");
     } finally {
       setIsSubmitting(false);
     }
@@ -22,22 +22,22 @@ export function ForgotPasswordPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Forgot password?</h1>
+        <h1>¿Olvidaste tu contraseña?</h1>
         {message ? (
           <p>{message}</p>
         ) : (
           <>
             <label>
-              Email
+              Correo
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
             </label>
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Sending..." : "Send recovery link"}
+              {isSubmitting ? "Enviando…" : "Enviar enlace"}
             </button>
           </>
         )}
         <a className="auth-link" href="/login">
-          Back to sign in
+          Volver a iniciar sesión
         </a>
       </form>
     </div>
