@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 30 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -43,14 +43,29 @@ Al llegar al límite de la organización (2 por defecto) ya no se agenda: Admini
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 14 de 14 comprobaciones bien.
+- Diferencias con lo esperado: Falta la pantalla: aviso del límite, «Autorizar otro intento» y «Límite de visitas fallidas».
+- Comprobaciones por API (14 de 14):
+  - ✔ Segunda visita fallida
+  - ✔ Llegó al límite (2 de 2) — `{'failed_visits': 2, 'limit': 2, 'limit_reached': True, 'extra_visits_authorized': 0}`
+  - ✔ Liberar orden con el límite alcanzado → 409 visit_limit_reached — `409 {"detail":"La obra ya tuvo 2 visitas fallidas (límite 2). Para agendarla otra vez, autoriza otro intento o cancela la obra.","code":"visit_limit_reached","r`
+  - ✔ El técnico no autoriza otro intento
+  - ✔ Administración autoriza otro intento con motivo
+  - ✔ El tope sube a 3 — `{'failed_visits': 2, 'limit': 3, 'limit_reached': False, 'extra_visits_authorized': 1}`
+  - ✔ Ahora sí agenda
+  - ✔ Límite 0 se rechaza
+  - ✔ Límite 11 se rechaza
+  - ✔ El técnico no cambia el límite
+  - ✔ Administración (projects.close) cambia el límite a 3
+  - ✔ El nuevo límite aplica de inmediato (3 + 1 autorizada = 4) — `{'failed_visits': 2, 'limit': 4, 'limit_reached': False, 'extra_visits_authorized': 1}`
+  - ✔ Volver el límite a 2
+  - ✔ Auditoría de intento extra y de límite
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -74,7 +89,7 @@ Al llegar al límite de la organización (2 por defecto) ya no se agenda: Admini
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

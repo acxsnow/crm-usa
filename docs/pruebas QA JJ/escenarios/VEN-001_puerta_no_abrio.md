@@ -6,12 +6,12 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,19 @@ Registrar una visita sin contacto, sin pedir datos del cliente, para volver otro
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 4 de 4 comprobaciones bien.
+- Diferencias con lo esperado: Falta ver en pantalla que no aparece en el tablero hasta «Mostrar puertas cerradas».
+- Comprobaciones por API (4 de 4):
+  - ✔ Visita «no_contact» en 201 QA 1025164900 Mobile Park Dr
+  - ✔ Queda en «Sin contacto» — `no_contact`
+  - ✔ No pide ni crea cliente — `None`
+  - ✔ El historial de etapas tiene la entrada inicial — `1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -70,7 +75,7 @@ Registrar una visita sin contacto, sin pedir datos del cliente, para volver otro
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

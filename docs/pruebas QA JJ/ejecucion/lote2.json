@@ -1,0 +1,1755 @@
+{
+ "VEN-001": [
+  {
+   "check": "Visita «no_contact» en 201 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en «Sin contacto»",
+   "ok": true,
+   "dato": "no_contact"
+  },
+  {
+   "check": "No pide ni crea cliente",
+   "ok": true,
+   "dato": "None"
+  },
+  {
+   "check": "El historial de etapas tiene la entrada inicial",
+   "ok": true,
+   "dato": "1"
+  }
+ ],
+ "VEN-002": [
+  {
+   "check": "Visita «not_interested» en 202 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en «not_interested» sin cliente",
+   "ok": true,
+   "dato": "not_interested"
+  },
+  {
+   "check": "Visita «not_eligible» en 203 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en «not_eligible» sin cliente",
+   "ok": true,
+   "dato": "not_eligible"
+  },
+  {
+   "check": "Las salidas tempranas no crean obra ni cliente (obras/clientes)",
+   "ok": true,
+   "dato": "0/1"
+  }
+ ],
+ "VEN-003": [
+  {
+   "check": "Visita «opened» en 201 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La misma dirección exacta reabre el expediente",
+   "ok": true,
+   "dato": "reopened"
+  },
+  {
+   "check": "Visita «no_contact» en 201 qa 1025164900 mobile park dr.",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La variante en minúsculas y con punto reconoce la misma puerta",
+   "ok": true,
+   "dato": "outcome=recorded mismo=True"
+  },
+  {
+   "check": "Un solo expediente para esa dirección",
+   "ok": true,
+   "dato": "1"
+  }
+ ],
+ "VEN-004": [
+  {
+   "check": "Visita «opened» en 121 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (10 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El cliente quedó creado",
+   "ok": true,
+   "dato": "ac9f2701-74fe-4d57-9567-6d12e09593da"
+  },
+  {
+   "check": "data_consents tiene la autorización con versión e IP",
+   "ok": true,
+   "dato": "1|2026.1|True"
+  },
+  {
+   "check": "Los archivos del formulario quedaron con GPS (total|con GPS)",
+   "ok": true,
+   "dato": "10|10"
+  },
+  {
+   "check": "Administración recibe el aviso del expediente enviado",
+   "ok": true,
+   "dato": "1"
+  }
+ ],
+ "VEN-005": [
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Visita «opened» en 302 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "email inválido «sin-arroba»: rechazado o marcado con error",
+   "ok": true,
+   "dato": "400 error=None {\"detail\":\"Revisa: Correo electrónico: No es un correo válido.\",\"code\":\"invalid_answers\",\"request_id\":\"f0ab3688-7609-419"
+  },
+  {
+   "check": "phone inválido «abc»: rechazado o marcado con error",
+   "ok": true,
+   "dato": "400 error=None {\"detail\":\"Revisa: Teléfono: No es un teléfono válido.\",\"code\":\"invalid_answers\",\"request_id\":\"b8296595-cbeb-41b7-98f2-4"
+  },
+  {
+   "check": "Número por encima del máximo (home.household_members > 30.0)",
+   "ok": true,
+   "dato": "400 error=None"
+  },
+  {
+   "check": "Ningún 500 en las validaciones",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "REV-006": [
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "VEN-006": [
+  {
+   "check": "Valeria no ve el expediente de Vicky en su lista",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "GET del expediente de Vicky → 404",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "GET del formulario de Vicky → 404",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "El buscador de Valeria no lo encuentra («CASE-2026-0004»)",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "El buscador de Valeria no lo encuentra («QA»)",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "REV-001": [
+  {
+   "check": "Administración ve los documentos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Todos los documentos por revisar",
+   "ok": true,
+   "dato": "10"
+  },
+  {
+   "check": "El expediente aparece en la cola de documentos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Extra: Administración agrega una factura de luz",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Rechazar sin nota se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Rechazar con nota",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobar con documento rechazado se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Todos los documentos aceptados",
+   "ok": true,
+   "dato": "11"
+  }
+ ],
+ "REV-002": [
+  {
+   "check": "Devolver al vendedor",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El vendedor puede editar el devuelto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reenviar con el rechazado vigente se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Vendedor sube la foto de nuevo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guarda el paso con la foto nueva",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reenviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Vuelve a «en revisión»",
+   "ok": true,
+   "dato": "pending_review"
+  },
+  {
+   "check": "El contador de días no se reinicia al reenviar (submitted_at igual)",
+   "ok": true,
+   "dato": "2026-10-25T16:49:16.679272Z → 2026-10-25T16:49:16.679272Z"
+  }
+ ],
+ "REV-003": [
+  {
+   "check": "Avance con el programa: ready_to_submit",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Avance con el programa: submitted_to_program",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Avance con el programa: program_review",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobar con código",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobado con código y solicitud guardados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobar dos veces no se permite",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una sola obra para el expediente",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "La obra copia la dirección y las coordenadas de la visita",
+   "ok": true,
+   "dato": "True|True"
+  }
+ ],
+ "REV-004": [
+  {
+   "check": "Visita «opened» en 304 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (10 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Rechazar sin motivo se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Rechazar con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El vendedor puede corregir el rechazado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Corrige un dato",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reenvía a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Vuelve a pendiente de aprobación",
+   "ok": true,
+   "dato": "pending_approval"
+  },
+  {
+   "check": "Poner en espera del programa",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "REV-005": [
+  {
+   "check": "Vendedor NO puede cerrar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cierre administrativo desde «En espera»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Visita «opened» en 305 QA 1025164900 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar un «Nuevo prospecto» sin motivo se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrado ya no se edita",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se creó obra",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "INS-002": [
+  {
+   "check": "Registrar el permiso solo radicado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con solo el radicado, el paso manual a «Listo para instalar» se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Todos los permisos deben estar aprobados y vigentes, o marcados como no requeridos, antes de pasar a «Listo para instalar».\",\"code\":\"permits_not_cleared\",\"request_id\":\"68330bda-1c47-44aa-9f"
+  },
+  {
+   "check": "Con solo el radicado, «Liberar orden» también se rechaza (permits_not_cleared)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Todos los permisos deben estar aprobados y vigentes, o marcados como no requeridos, antes de pasar a «Listo para instalar».\",\"code\":\"permits_not_cleared\",\"request_id\":\"1ecbc14c-70bf-4f78-b2"
+  },
+  {
+   "check": "Registrar el permiso como aprobado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con el permiso aprobado el expediente pasa a «Listo para instalar»",
+   "ok": true,
+   "dato": "ready_to_install"
+  },
+  {
+   "check": "Permiso municipal aprobado con vencimiento",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-001": [
+  {
+   "check": "Asignar técnico y fecha (Liberar orden)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La obra queda programada con técnico y fecha",
+   "ok": true,
+   "dato": "scheduled 2026-10-26"
+  },
+  {
+   "check": "El técnico la ve en su agenda",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "Otro técnico (Luis) no la ve en su agenda",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "La auditoría registra quién asignó",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "Al aprobar se creó el proyecto de instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Agendar instalación con técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve su orden",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-003": [
+  {
+   "check": "Un borrador sin renglones se rechaza (422)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "El técnico arma el borrador de salida para la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cargar la lista «3 ton desde cero»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La lista agrega sus renglones (46, menos el que ya estaba)",
+   "ok": true,
+   "dato": "45"
+  },
+  {
+   "check": "Guardar y enviar a autorizar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Recibe su número SAL-",
+   "ok": true,
+   "dato": "SAL-2026-0001"
+  },
+  {
+   "check": "Bodega la autoriza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Bodega la entrega",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Existencia baja exactamente en lo entregado (Z & Y-Series Smart Communicating WiFi Th)",
+   "ok": true,
+   "dato": "antes=1.0 entregado=1.0 ahora=0.0"
+  },
+  {
+   "check": "Existencia baja exactamente en lo entregado (B-Series Air Handler Multi Position 3 To)",
+   "ok": true,
+   "dato": "antes=1.0 entregado=1.0 ahora=0.0"
+  },
+  {
+   "check": "Existencia baja exactamente en lo entregado (B-Series Heat Pump Condenser 2-3 Ton 20 )",
+   "ok": true,
+   "dato": "antes=1.0 entregado=1.0 ahora=0.0"
+  },
+  {
+   "check": "Movimientos `salida` con la obra",
+   "ok": true,
+   "dato": "46"
+  },
+  {
+   "check": "El material entregado quedó cargado a la obra",
+   "ok": true,
+   "dato": "46"
+  }
+ ],
+ "BOD-011": [
+  {
+   "check": "Al entregar el equipo con serial (85980) la bodega pide el serial",
+   "ok": false,
+   "dato": "DeliverIn solo recibe note y lines(line_id, quantity); `has_serial` no se usa fuera del catálogo"
+  }
+ ],
+ "INS-004": [
+  {
+   "check": "Cerrar sin completar está bloqueado",
+   "ok": true,
+   "dato": "{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Registrar el equipo existente (furnace y s"
+  },
+  {
+   "check": "Cerrar instalación incompleta se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Checklist resuelto (14 ítems)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Equipo instalado con serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar equipos instalados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del técnico en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del cliente en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Equipo después del cierre se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Descargar acta firmada (PDF)",
+   "ok": true,
+   "dato": "200 application/pdf"
+  },
+  {
+   "check": "Etapa del expediente después del cierre",
+   "ok": true,
+   "dato": "installed"
+  }
+ ],
+ "INS-005": [
+  {
+   "check": "Devolver el acta sin motivo se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración devuelve el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico corrige y cierra de nuevo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico recibió el aviso de acta devuelta",
+   "ok": true,
+   "dato": "['project.returned_to_technician', 'installation.scheduled', 'warehouse.release_delivered', 'installation.scheduled']"
+  }
+ ],
+ "TEC-002": [
+  {
+   "check": "El técnico no puede confirmar su propia acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede autorizar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Nadie autoriza la salida que pidió → 403",
+   "ok": true,
+   "dato": "403 {\"detail\":\"Otra persona debe autorizar esta salida: tú la pediste.\",\"code\":\"release_self_authorization\",\"request_id\":\"7d"
+  },
+  {
+   "check": "El técnico no autoriza su salida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no entrega",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-007": [
+  {
+   "check": "Agendar inspección",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Falla sin observaciones se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Inspección fallida con observaciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Técnico corrige y cierra de nuevo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma de nuevo",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-006": [
+  {
+   "check": "Segunda inspección",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobar sin permiso firmado se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sube el permiso firmado por el inspector",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Inspección aprobada",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Etapa tras la inspección aprobada",
+   "ok": true,
+   "dato": "inspection_pending"
+  }
+ ],
+ "COB-001": [
+  {
+   "check": "Elegibilidad del proyecto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Crear cobro AZ_EFFICIENCY",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cobro duplicado del mismo programa se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Radicar el cobro",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El expediente pasó a «En cobro»",
+   "ok": true,
+   "dato": "billing_in_progress"
+  }
+ ],
+ "COB-002": [
+  {
+   "check": "Rechazo sin motivo suficiente se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Programa rechaza el cobro",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se vuelve a radicar",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "COB-003": [
+  {
+   "check": "Administración NO registra pagos (Contabilidad sí)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Contabilidad registra el pago",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El expediente quedó «Pagado»",
+   "ok": true,
+   "dato": "paid"
+  },
+  {
+   "check": "Cerrar sin motivo se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cierre administrativo con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Expediente «Cerrado»",
+   "ok": true,
+   "dato": "closed"
+  },
+  {
+   "check": "El historial de etapas recorre el ciclo completo",
+   "ok": true,
+   "dato": "new_prospect,pending_approval,pending_approval,pending_approval,pending_approval,pending_approval,pending_approval,approved,permit_in_progress,ready_to_install,ready_to_install,installed,inspection_pending,ready_to_install,installed,inspection_pending,inspection_pending,billing_in_progress,billing_i"
+  }
+ ],
+ "INS-010": [
+  {
+   "check": "Liberar orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Material entregado a la obra (4 × PVC 3496)",
+   "ok": true,
+   "dato": "4.0"
+  },
+  {
+   "check": "Sin motivo no guarda",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con nota de 2 letras no guarda",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Registrar visita fallida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "1 de 2 visitas fallidas",
+   "ok": true,
+   "dato": "{'failed_visits': 1, 'limit': 2, 'limit_reached': False, 'extra_visits_authorized': 0}"
+  },
+  {
+   "check": "La obra queda sin fecha, «Sin agendar», con el mismo técnico",
+   "ok": true,
+   "dato": "None planning"
+  },
+  {
+   "check": "Expediente «Listo para instalar · Visita fallida»",
+   "ok": true,
+   "dato": "('ready_to_install', 'visit_failed')"
+  },
+  {
+   "check": "project_visit_attempts con motivo, fecha y GPS",
+   "ok": true,
+   "dato": "customer_absent|2026-10-26|33.45|-112.07"
+  },
+  {
+   "check": "Auditoría projects.visit_failed",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El material sigue cargado a la obra",
+   "ok": true,
+   "dato": "4.0"
+  },
+  {
+   "check": "Administración recibe el aviso de visita fallida",
+   "ok": true,
+   "dato": "['installation.visit_failed', 'warehouse.release_pending', 'case.submitted', 'claim.paid', 'claim.rejected']"
+  },
+  {
+   "check": "El técnico que la registró no se avisa a sí mismo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sin fecha agendada no hay visita fallida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reagendar con «Liberar orden»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Vuelve a «Instalación agendada»",
+   "ok": true,
+   "dato": "install_scheduled"
+  }
+ ],
+ "INS-011": [
+  {
+   "check": "Segunda visita fallida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Llegó al límite (2 de 2)",
+   "ok": true,
+   "dato": "{'failed_visits': 2, 'limit': 2, 'limit_reached': True, 'extra_visits_authorized': 0}"
+  },
+  {
+   "check": "Liberar orden con el límite alcanzado → 409 visit_limit_reached",
+   "ok": true,
+   "dato": "409 {\"detail\":\"La obra ya tuvo 2 visitas fallidas (límite 2). Para agendarla otra vez, autoriza otro intento o cancela la obra.\",\"code\":\"visit_limit_reached\",\"request_id\":\"ff335098-1b75-498d-a1c9-0123f3e2"
+  },
+  {
+   "check": "El técnico no autoriza otro intento",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración autoriza otro intento con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El tope sube a 3",
+   "ok": true,
+   "dato": "{'failed_visits': 2, 'limit': 3, 'limit_reached': False, 'extra_visits_authorized': 1}"
+  },
+  {
+   "check": "Ahora sí agenda",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Límite 0 se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Límite 11 se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no cambia el límite",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración (projects.close) cambia el límite a 3",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El nuevo límite aplica de inmediato (3 + 1 autorizada = 4)",
+   "ok": true,
+   "dato": "{'failed_visits': 2, 'limit': 4, 'limit_reached': False, 'extra_visits_authorized': 1}"
+  },
+  {
+   "check": "Volver el límite a 2",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Auditoría de intento extra y de límite",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-012": [
+  {
+   "check": "El técnico no cancela",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sin motivo no cancela",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con una salida «Por autorizar» → 409 open_releases",
+   "ok": true,
+   "dato": "{\"detail\":\"Primero resuelve las salidas de bodega abiertas de la obra: SAL-2026-0003 (Por autorizar). Recházalas o entrégalas antes de cancelar.\",\"code\":\"open_releases\",\"request_id\":\"e27dd4da-603c-4a6"
+  },
+  {
+   "check": "cancellation-check lista el material afuera (4)",
+   "ok": true,
+   "dato": "{'can_cancel': True, 'open_releases': [], 'material_in_field': [{'item_id': 'c283275b-2900-4b1b-bc3f-02c3f9363b92', 'item_name': 'PVC Pipe 3/4\" x 10\\'', 'sku': '3496', 'unit': 'unit', 'quantity': '4.00'}], 'failed_visits': 2, 'limit': 3, 'limit_reached': False, 'extra_visits_authorized': 1}"
+  },
+  {
+   "check": "Sin explicar el material → 409 material_pending_return",
+   "ok": true,
+   "dato": "{\"detail\":\"Hay material entregado a la obra sin reintegrar: 4.00 × PVC Pipe 3/4\\\" x 10'. Regístralo como devolución a bodega, o explica qué pasó con él para cancelar.\",\"code\":\"material_pending_return\""
+  },
+  {
+   "check": "Cancelar con motivo y la explicación del material",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La obra queda «cancelled» con el motivo",
+   "ok": true,
+   "dato": "cancelled"
+  },
+  {
+   "check": "El expediente queda «Cerrado»",
+   "ok": true,
+   "dato": "closed"
+  },
+  {
+   "check": "Liberar orden en la cancelada → 409",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Registrar visita fallida en la cancelada → 409",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Pedir material para la cancelada → 409",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Auditoría projects.cancelled",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico recibe el aviso de obra cancelada",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-006": [
+  {
+   "check": "Devolución de 3 a bodega con la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La bodega sube 3",
+   "ok": true,
+   "dato": "7.0"
+  },
+  {
+   "check": "Lo que sigue afuera baja a 1",
+   "ok": true,
+   "dato": "{'can_cancel': True, 'open_releases': [], 'material_in_field': [{'item_id': 'c283275b-2900-4b1b-bc3f-02c3f9363b92', 'item_name': 'PVC Pipe 3/4\" x 10\\'', 'sku': '3496', 'unit': 'unit', 'quantity': '1.00'}], 'failed_visits': 2, 'limit': 3, 'limit_reached': False, 'extra_visits_authorized': 1}"
+  },
+  {
+   "check": "Devolver más de lo entregado a la obra se rechaza",
+   "ok": false,
+   "dato": "201 {\"id\":\"7f16136b-e65a-4345-b8fe-801a5e7d498a\",\"item_id\":\"c283275b-2900-4b1b-bc3f-02c3f9363b92\",\"item_name\":\"PVC Pipe 3/4\\\" x 10'\",\"unit_label\":\"unidade"
+  }
+ ],
+ "COB-004": [
+  {
+   "check": "No se crea cobro de una obra cancelada (sin acta confirmada)",
+   "ok": true,
+   "dato": "409 {\"detail\":\"Administración tiene que confirmar la información técnica del acta antes de crear el cobro.\",\"code\":\"acta_not_confirmed\",\"request_id\":\"f98c"
+  },
+  {
+   "check": "Tampoco por la transición manual a cobro",
+   "ok": true,
+   "dato": "400 {\"detail\":\"No se puede pasar de «Cerrado» a «En proceso de cobro».\",\"code\":\"invalid_transition\",\"request_id\":\"40c6eab6-be82-4b68-9457-d4a5c3251267\"}"
+  }
+ ],
+ "BOD-002": [
+  {
+   "check": "Artículo con costo -1 se rechaza",
+   "ok": false,
+   "dato": "201 {\"id\":\"5ff6c652-a29b-486f-8ee2-bce8fa48383a\",\"name\":\"QA X\",\"sku\":null,\"brand\":null,\"manufacturer_part\":null,\"category\":\"other\",\"category_label\":\"Otro\""
+  },
+  {
+   "check": "Artículo con costo abc se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"«abc» no es un número válido.\",\"code\":\"invalid_number\",\"request_id\":\"7428e99b-c3ec-4ca4-ae2b-b893c7fbf1e2\"}"
+  },
+  {
+   "check": "Artículo con código repetido 3496 se rechaza",
+   "ok": false,
+   "dato": "500 Internal Server Error"
+  },
+  {
+   "check": "Artículo con nombre vacío se rechaza",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: name.\",\"code\":\"validation_error\",\"request_id\":\"6476a444-8176-4eae-b927-90af4830225b\",\"errors\":[{\"field\":\"name\",\"mes"
+  },
+  {
+   "check": "Crear «Cinta de aluminio QA» (QA-0001)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Existencia inicial 0",
+   "ok": true,
+   "dato": "0.0"
+  },
+  {
+   "check": "Editar costo a 7.50 y marcar «con serial»",
+   "ok": true,
+   "dato": "200 {\"id\":\"c251c4af-7d68-42f6-8977-8a9a230949ab\",\"name\":\"Cinta de aluminio QA\",\"sku\":\"QA-0001-1025164900\",\"brand\":null,\"manufacturer_part\":null,\"category\""
+  },
+  {
+   "check": "Administración crea una categoría propia",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no administra categorías",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Artículo con código AC Pro, número del fabricante y marca",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El buscador lo encuentra por el número del fabricante",
+   "ok": true,
+   "dato": "[{\"id\": \"eef1c8c1-230c-4453-b491-c6096717802c\", \"name\": \"QA 1025164900 Condensate Pump 22' Lift\", \"sku\": \"QA1025164900-1936\", \"brand\": \"Diversitech\", \"manufacturer_part\": \"CP-22T-1025164900\", \"categor"
+  },
+  {
+   "check": "Desactivar la categoría",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La categoría desactivada ya no se ofrece",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Un artículo nuevo no puede usar la categoría desactivada",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "BOD-003": [
+  {
+   "check": "Entrada de 10 rollos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Existencia 10",
+   "ok": true,
+   "dato": "10.0"
+  },
+  {
+   "check": "El valor de bodega sube USD 75.00",
+   "ok": true,
+   "dato": "7182.39 → 7257.39"
+  },
+  {
+   "check": "Movimiento `entrada` con usuario y costo",
+   "ok": true,
+   "dato": "entrada|True|7.50"
+  }
+ ],
+ "BOD-005": [
+  {
+   "check": "Pedir 15 con 10 en bodega: ¿avisa al pedir? (anotar)",
+   "ok": true,
+   "dato": "200 {\"id\":\"879d68bf-976b-450d-ac1f-2db8afa32eeb\",\"number\":\"SAL-2026-0004\",\"status\":\"por_autorizar\",\"project_id\":null,\"location_id\":\"bde44503-d601-48e5-a6c"
+  },
+  {
+   "check": "¿Avisa al autorizar? (anotar)",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "Entrega solo los 10 y lo deja como faltante",
+   "ok": true,
+   "dato": "stock=0.0 faltantes=[{'line_id': 'ca4bb21c-3731-4f8d-8f4d-cabd656de5a5', 'item_id': 'c251c4af-7d68-42f6-8977-8a9a230949ab', 'pedida': '15.00', 'entregada': '10.00', 'motivo': 'Solo había 10.00 de 15.00.'}]"
+  },
+  {
+   "check": "Ninguna existencia negativa en toda la base",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "BOD-015": [
+  {
+   "check": "Entrada con cantidad 0: rechaza (anotar)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"La cantidad debe ser mayor que cero.\",\"code\":\"invalid_quantity\",\"request_id\":\"24fc3c28-fb49-4d19-8cea-f21082a"
+  },
+  {
+   "check": "Entrada con cantidad -1: rechaza (anotar)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"La cantidad debe ser mayor que cero.\",\"code\":\"invalid_quantity\",\"request_id\":\"efded4b9-c6a7-4381-aacf-eb415a9"
+  },
+  {
+   "check": "Entrada con cantidad 0.0001: acepta (anotar)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"La cantidad debe ser mayor que cero.\",\"code\":\"invalid_quantity\",\"request_id\":\"7602df7f-5a9e-4a6d-8153-9cc4b9f"
+  },
+  {
+   "check": "Entrada con cantidad 1000000000: acepta (anotar)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"«1000000000» no es un número válido o es demasiado grande.\",\"code\":\"invalid_number\",\"request_id\":\"d74f1581-d5"
+  },
+  {
+   "check": "Entrada con cantidad 1,5: rechaza (anotar)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"«1,5» no es un número válido.\",\"code\":\"invalid_number\",\"request_id\":\"df726713-a454-4a1a-b516-c7027eb488de\"}"
+  },
+  {
+   "check": "Costo 9,999,999.99 se acepta sin desbordar",
+   "ok": true,
+   "dato": "201 {\"id\":\"fdcb5668-655b-4dde-9a22-3a07f6044445\",\"name\":\"QA costo grande\",\"sku\":\"QA-BIG-1025164900\",\"brand\":null,\"manufactur"
+  },
+  {
+   "check": "Sin existencias negativas después de los valores extremos",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "BOD-016": [
+  {
+   "check": "Entrada de 1 unidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Existencia final 0 (había 1.0), nunca negativa",
+   "ok": true,
+   "dato": "0.0"
+  },
+  {
+   "check": "Una sola salida efectiva entre las dos entregas simultáneas",
+   "ok": true,
+   "dato": "salidas=1 códigos=[200, 200]"
+  }
+ ],
+ "CON-002": [
+  {
+   "check": "Dos salidas enviadas a la vez reciben números SAL distintos",
+   "ok": true,
+   "dato": "['SAL-2026-0008', 'SAL-2026-0007']"
+  }
+ ],
+ "CON-001": [
+  {
+   "check": "Dos autorizaciones simultáneas de la misma salida: una pasa",
+   "ok": true,
+   "dato": "[400, 200]"
+  },
+  {
+   "check": "Y queda una sola autorización en la auditoría",
+   "ok": true,
+   "dato": "1"
+  }
+ ],
+ "BOD-010": [
+  {
+   "check": "Administración sube el Excel del catálogo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Subir el mismo Excel otra vez no suma la existencia dos veces",
+   "ok": true,
+   "dato": "{\"creados\": 0, \"actualizados\": 3, \"omitidos\": 0, \"conteo_inicial\": 0, \"errores\": [], \"categorias_nuevas\": [], \"sheet\": \"Cat\\u00e1logo\", \"rows_read\": 3}"
+  },
+  {
+   "check": "Un archivo que no es Excel → 400",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El archivo no es un Excel (.xlsx) válido.\",\"code\":\"invalid_workbook\",\"request_id\":\"768173af-d0dd-401e-ac59-25"
+  },
+  {
+   "check": "El técnico no puede importar el catálogo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Los tres artículos quedaron en el catálogo",
+   "ok": true,
+   "dato": "['QA1025164900-CAP', 'QA1025164900-CIN', 'QA1025164900-CU38']"
+  },
+  {
+   "check": "Existencia inicial del tubo: 200 ft",
+   "ok": true,
+   "dato": "200.00"
+  },
+  {
+   "check": "El capacitor (4, mínimo 5) cuenta como «por reponer»",
+   "ok": true,
+   "dato": "{\"low_count\": 2}"
+  }
+ ],
+ "BOD-009": [
+  {
+   "check": "Carga 3 artículos y su conteo inicial; la fila de ejemplo no entra",
+   "ok": true,
+   "dato": "{\"creados\": 3, \"actualizados\": 0, \"omitidos\": 0, \"conteo_inicial\": 3, \"errores\": [], \"categorias_nuevas\": [], \"sheet\": \"Cat\\u00e1logo\", \"rows_read\": 3}"
+  },
+  {
+   "check": "Conteo mensual: la cinta tenía 28, no 30",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El conteo cuadra el saldo con un ajuste",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El ajuste queda en el libro de movimientos",
+   "ok": true,
+   "dato": "[{\"id\": \"2c5cac0b-5926-4361-898a-f259581a0290\", \"item_id\": \"5f7f025f-71e2-44d3-8a4a-01d237d08b89\", \"item_name\": \"QA 1025164900 Cinta de aluminio\", \"un"
+  }
+ ],
+ "BOD-017": [
+  {
+   "check": "Administración crea la camioneta del técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve el artículo sin costo",
+   "ok": true,
+   "dato": "{\"id\": \"f0441f61-835e-4d8a-b21f-c714e9403720\", \"name\": \"QA 1025164900 Tubo cobre 3/8\", \"sku\": \"QA1025164900-CU38\", \"brand\": null, \"manufacturer_part\":"
+  },
+  {
+   "check": "De existencias, el técnico solo ve su camioneta (20 ft)",
+   "ok": true,
+   "dato": "[{\"location_id\": \"115fbb6d-8eb3-4bb9-a201-9ad6d045aaef\", \"name\": \"QA 1025164900 Camioneta\", \"kind\": \"truck\", \"quantity\": \"20.00\"}]"
+  },
+  {
+   "check": "El buscador del técnico encuentra el capacitor por su referencia, sin costo",
+   "ok": true,
+   "dato": "[{\"id\": \"dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd\", \"name\": \"QA 1025164900 Capacitor 35/5\", \"sku\": \"QA1025164900-CAP\", \"brand\": null, \"manufacturer_part\": null, \"category\": \"electrical\", \"category_label\":"
+  },
+  {
+   "check": "técnico GET /warehouse/stock → 403",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "técnico GET /warehouse/movements → 403",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "técnico GET /warehouse/purchasing → 403",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "técnico GET /warehouse/budgets → 403",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El vendedor no entra a bodega",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Contabilidad ve existencias (las entradas por compra son suyas)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gerencia ve existencias",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gerencia no mueve existencias",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-008": [
+  {
+   "check": "Carga 20 ft de tubo a la camioneta (traslado)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Una salida manual por fuera de una orden → 400",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-013": [
+  {
+   "check": "Administración arma la lista «Mini split 12k»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede crear listas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico arma su borrador para la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aplica la lista a su borrador",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La lista agrega sus 2 renglones",
+   "ok": true,
+   "dato": "{\"id\": \"63e589c9-768e-4544-9ddf-67e583d9514f\", \"number\": null, \"status\": \"borrador\", \"project_id\": \"fa6117a2-a3dd-4f5c-9c1a-628e954d7a83\", \"location_i"
+  },
+  {
+   "check": "La orden del técnico no muestra costos",
+   "ok": true,
+   "dato": "[{\"id\": \"cc181025-2ffc-487b-9aef-901571230cbf\", \"item_id\": \"dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd\", \"item_name\": \"QA 1025164900 Capacitor 35/5\", \"sku\":"
+  },
+  {
+   "check": "El técnico la manda a autorizar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Recibe número de la serie SAL",
+   "ok": true,
+   "dato": "SAL-2026-0010"
+  },
+  {
+   "check": "La orden aparece en «Por autorizar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración la autoriza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Los renglones de la lista traen su sección y si son obligatorios",
+   "ok": true,
+   "dato": "[{\"id\": \"8ba6417e-4500-49ca-92ce-b1804202f756\", \"item_id\": \"f0441f61-835e-4d8a-b21f-c714e9403720\", \"item_name\": \"QA 1025164900 Tubo cobre 3/8\", \"sku\": \"QA1025164900-CU38\", \"unit\": \"ft\", \"unit_label\": "
+  },
+  {
+   "check": "El técnico marca «lo llevo» el tubo al cargar la camioneta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La orden cuenta lo cargado",
+   "ok": true,
+   "dato": "{\"loadable\": 3, \"loaded\": 1, \"required_pending\": 1}"
+  },
+  {
+   "check": "El vendedor no marca la carga",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Quitar un obligatorio sin motivo → 400",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Quitar un obligatorio con motivo queda en la orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El motivo viaja con la orden",
+   "ok": true,
+   "dato": "[{\"item_id\": \"5f7f025f-71e2-44d3-8a4a-01d237d08b89\", \"item_name\": \"QA 1025164900 Cinta de aluminio\", \"spec_label\": null, \"reason\": \"QA 1025164900: ya "
+  },
+  {
+   "check": "Segunda orden del técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración arma una orden para sí",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no ve la orden de otra persona",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El Administrador sí la autoriza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico solo lista sus órdenes",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-004": [
+  {
+   "check": "Administración la entrega",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se entrega aunque falte capacitor, con aviso de faltante (pidió 6, había 4)",
+   "ok": true,
+   "dato": "[{\"line_id\": \"cc181025-2ffc-487b-9aef-901571230cbf\", \"item_id\": \"dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd\", \"pedida\": \"6.00\", \"entregada\": \"4.00\", \"motivo\": \"Solo hab\\u00eda 4.00 de 6.00.\"}]"
+  },
+  {
+   "check": "Entregar dos veces no descuenta dos veces (tubo 200 − 25 = 175)",
+   "ok": true,
+   "dato": "400 · tubo 175.00"
+  },
+  {
+   "check": "Rechazar exige motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración la rechaza con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda rechazada con su motivo",
+   "ok": true,
+   "dato": "rechazada"
+  }
+ ],
+ "BOD-014": [
+  {
+   "check": "Administración arma el presupuesto de la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Le agrega la lista «Mini split 12k»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gerencia solo lee: no aprueba presupuestos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El Administrador aprueba el presupuesto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Presupuesto contra costo real de la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El material entregado ya cuenta como costo real de la obra",
+   "ok": true,
+   "dato": "{\"category\": \"materials\", \"label\": \"Material\", \"estimated\": \"280.25\", \"actual\": \"169.25\", \"deviation\": \"-111.00\", \"deviation_pct\": -39.6}"
+  }
+ ],
+ "BOD-012": [
+  {
+   "check": "Compras sugeridas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sugiere comprar el capacitor que falta",
+   "ok": true,
+   "dato": "{\"item_id\": \"dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd\", \"item_name\": \"QA 1025164900 Capacitor 35/5\", \"sku\": \"QA1025164900-CAP\", \"unit\": \"unit\", \"budgeted\": \"10.00\", \"delivered\": \"4.00\", \"pending\": \"6.00\","
+  },
+  {
+   "check": "Descuenta lo que ya salió para la obra (pendiente = presupuestado − entregado)",
+   "ok": true,
+   "dato": "{\"item_id\": \"dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd\", \"item_name\": \"QA 1025164900 Capacitor 35/5\", \"sku\": \"QA1025164900-CAP\", \"unit\": \"unit\", \"budgeted\": \"10.00\", \"delivered\": \"4.00\", \"pending\": \"6.00\","
+  }
+ ],
+ "INS-016": [
+  {
+   "check": "El material del diario no puede salir de la bodega principal → 400",
+   "ok": true,
+   "dato": "400 {\"detail\":\"«QA 1025164900 Tubo cobre 3/8» solo puede salir de tu camioneta; lo de bodega se pide con una orden de salida"
+  },
+  {
+   "check": "El técnico registra la jornada con material de su camioneta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Lo de la camioneta descuenta; lo comprado en la obra solo se anota",
+   "ok": true,
+   "dato": "[{\"id\": \"f521c2ce-c68b-4e1f-8823-300d0aaecf4f\", \"item_id\": \"f0441f61-835e-4d8a-b21f-c714e9403720\", \"item_name\": \"QA 1025164900 Tubo cobre 3/8\", \"sku\": \"QA1025164900-CU38\", \"description\": \"QA 102516490"
+  },
+  {
+   "check": "La camioneta bajó de 20 a 14 ft",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Una sola jornada por día y obra → 400",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Esa obra ya tiene una jornada de ese día.\",\"code\":\"day_log_date_taken\",\"request_id\":\"a5497548-bf7f-4a56-b2aa-"
+  },
+  {
+   "check": "Gerencia lee el diario de la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El diario trae la jornada con su avance",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-008": [
+  {
+   "check": "Hay una obra abierta del técnico para rotar",
+   "ok": true,
+   "dato": "ninguna abierta"
+  },
+  {
+   "check": "Hay otro técnico a quien pasarla",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La oficina pasa la obra a otro técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico anterior la sigue viendo, en solo lectura",
+   "ok": true,
+   "dato": "read_only"
+  },
+  {
+   "check": "Ya no registra jornadas → 403",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El historial muestra al anterior y al de hoy",
+   "ok": false,
+   "dato": "[{\"technician_user_id\": \"a7426653-fc1a-4369-9718-d18d2e318b62\", \"technician_name\": \"Andr\\u00e9s Morales\", \"started_on\": \"2026-10-25\", \"ended_on\": null, \"current\": true}, {\"technician_user_id\": \"6f7ea6"
+  },
+  {
+   "check": "El calendario muestra el cambio de responsable",
+   "ok": true,
+   "dato": "[{\"project_id\": \"fa6117a2-a3dd-4f5c-9c1a-628e954d7a83\", \"project_title\": \"Instalaci\\u00f3n \\u00b7 CASE-2026-0009\", \"project_status\": \"scheduled\", \"technician_user_id\": \"a7426653-fc1a-4369-9718-d18d2e3"
+  },
+  {
+   "check": "La obra vuelve a su técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Y él vuelve a llenarla",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-009": [
+  {
+   "check": "Cambiar fechas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La obra aparece en la nueva fecha en la agenda del técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La auditoría registra la fecha anterior y la nueva",
+   "ok": true,
+   "dato": "{\"technician\": \"6f7ea603-b361-484a-b02b-dea603ae0a88\", \"scheduled_date\": \"2026-10-25\"}|{\"technician\": \"6f7ea603-b361-484a-b02b-dea603ae0a88\", \"scheduled_date\": \"2026-10-29\"}"
+  }
+ ],
+ "INS-014": [
+  {
+   "check": "La oficina anota material comprado en la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aparece en los materiales de la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La bodega no cambia",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "TEC-001": [
+  {
+   "check": "Luis no ve la obra de Tito en Proyectos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Luis: GET de la obra de Tito → 404",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El buscador de Luis no la encuentra",
+   "ok": true,
+   "dato": ""
+  }
+ ]
+}

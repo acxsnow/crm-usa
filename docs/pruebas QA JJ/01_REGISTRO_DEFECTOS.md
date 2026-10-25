@@ -8,12 +8,18 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 
 | ID | Título | Módulo | Prioridad | Estado | Encontrado en | Responsable | Fecha |
 |---|---|---|---|---|---|---|---|
-| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (pendiente de validar) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
+| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (validado por API; falta pantalla) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
 | D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Abierto | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 | D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Abierto | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Abierto | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
 | D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Abierto | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
+| D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Abierto | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Abierto | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-009 | Un artículo acepta costo unitario negativo | Bodega | P2 | Abierto | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Abierto | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Abierto | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
+| D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Abierto | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
@@ -60,7 +66,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - Pruebas: `backend/tests/test_field_visits.py` (14).
   - Paquetes de Mateo tocados (`field_ops`, `notifications`): solo líneas nuevas; avisarle.
 - **Commit:** ver el historial de `devjj` («feat(campo): visita fallida, límite de reagendamiento y cancelación de la obra»).
-- **Validación (escenarios reejecutados):** pendiente (INS-010, INS-011, INS-012, BOD-006).
+- **Validación (escenarios reejecutados):** por API el 25 oct (lote 2): INS-010 16/16, INS-011 14/14, INS-012 13/13. Falta la parte de pantalla de los tres. BOD-006 encontró D-008 (devolución sin tope), que afecta el reintegro antes de cancelar.
 - **Tiempos:** análisis 1 h · corrección 3 h · reejecución pendiente.
 
 ## D-002 · Margen negativo cortado en Rentabilidad
@@ -134,6 +140,63 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Resultado esperado:**
   - Registrar el ingreso fallido, sin la clave y con el correo normalizado e IP.
   - Registrar el bloqueo, para detectar ataques de fuerza bruta.
+
+## D-007 · «Con serial» no tiene efecto en bodega
+
+- **Encontrado en:** BOD-011.
+- **Resultado obtenido:**
+  - La entrega de una salida (`DeliverIn`) solo recibe nota y cantidades.
+  - `has_serial` se guarda en el artículo pero ningún proceso lo usa.
+  - El serial aparece recién en «Equipos instalados» de la obra, sin cruce con lo que salió de bodega.
+- **Resultado esperado:**
+  - Al entregar un artículo con serial, bodega anota el serial de cada unidad.
+  - El técnico, en «Equipos instalados», elige entre los seriales que salieron para su obra.
+- **Nota:** el formulario dice «Con serial: se rastrea por equipo», lo que promete algo que hoy no pasa. Si no se va a construir, quitar la promesa del texto.
+
+## D-008 · Devolución a bodega sin tope
+
+- **Encontrado en:** BOD-006 (lote 2).
+- **Pasos para reproducir:**
+  - Obra con 4 unidades entregadas y 3 ya devueltas (queda 1 afuera).
+  - `POST /warehouse/movements` con `movement_type=devolucion`, `quantity=50` y la obra.
+- **Resultado obtenido:** 201; la existencia de bodega sube 50 y el costo de la obra queda negativo para ese artículo.
+- **Resultado esperado:** rechazar con un mensaje como «A esta obra solo le quedan 1 por devolver».
+- **Impacto:** infla la existencia y el valor de bodega, y descuadra el costo real de la obra. Afecta también la cancelación (D-001), que exige reintegrar el material.
+- **Nota de QA:** la existencia inflada por la prueba se corrigió con un ajuste de -50 («QA: deshacer la devolución de más»).
+
+## D-009 · Costo unitario negativo
+
+- **Encontrado en:** BOD-002.
+- **Resultado obtenido:** `POST /warehouse/items` con `unit_cost: "-1"` responde 201.
+- **Resultado esperado:** 400, «El costo no puede ser negativo». Revisar también el precio de venta y la importación desde Excel.
+
+## D-010 · SKU repetido responde 500
+
+- **Encontrado en:** BOD-002.
+- **Resultado obtenido:** `POST /warehouse/items` con un SKU que ya existe (`3496`) responde 500. El log muestra `UniqueViolationError uq_warehouse_item_sku`.
+- **Resultado esperado:** 409 con «Ya existe un artículo con el código 3496».
+- **Nota:** revisar la edición (cambiar el SKU a uno existente) y si el manejador global de `IntegrityError` debería devolver 409 en vez de 500.
+
+## D-011 · Historial de responsables incoherente al rotar antes de la fecha
+
+- **Encontrado en:** INS-008 (rotación de `qa_e2e`).
+- **Pasos para reproducir:**
+  - Obra agendada para dentro de 2 días con Tito.
+  - Hoy, cambiar el técnico a otro con fecha de hoy.
+- **Resultado obtenido:**
+  - El turno de Tito queda «del 27 al 27».
+  - El nuevo queda «desde el 25»: el anterior termina después de que empezó el nuevo.
+  - `GET /projects/{id}/assignments` sale ordenado por `started_on` y el actual aparece primero.
+- **Resultado esperado:** si la obra no había empezado, el anterior queda sin días («no alcanzó a trabajarla») o se reemplaza su turno, y la lista sale en orden cronológico.
+
+## D-012 · Doble autorización simultánea
+
+- **Encontrado en:** CON-001.
+- **Pasos para reproducir:** dos `POST /warehouse/releases/{id}/approve` al mismo tiempo (script `ejecucion/carrera.py`, 10 repeticiones).
+- **Resultado obtenido:** en 6 de 10 las dos responden 200 y quedan dos `warehouse.release_authorized` en la auditoría.
+- **Resultado esperado:** una pasa y la otra recibe 409.
+- **Impacto:** hoy bajo, porque la entrega doble sí está protegida (BOD-016) y la autorización no mueve existencias. Pero el mismo patrón (leer el estado, decidir y escribir sin bloqueo) puede repetirse en acciones de dinero.
+- **Corrección propuesta:** `SELECT … FOR UPDATE` de la orden, o un `UPDATE … WHERE status = 'por_autorizar'` que verifique cuántas filas cambió. Revisar el mismo patrón en aprobar expediente, confirmar acta y radicar o pagar cobros.
 
 ## Plantilla para defectos nuevos
 

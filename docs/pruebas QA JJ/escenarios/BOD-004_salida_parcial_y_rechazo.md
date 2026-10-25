@@ -6,12 +6,12 @@
 - **Módulo:** Bodega
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,21 @@ Bodega puede entregar menos de lo pedido o rechazar con motivo, y la existencia 
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 6 de 6 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (6 de 6):
+  - ✔ Administración la entrega
+  - ✔ Se entrega aunque falte capacitor, con aviso de faltante (pidió 6, había 4) — `[{"line_id": "cc181025-2ffc-487b-9aef-901571230cbf", "item_id": "dd8f228d-f675-4f7b-a5a7-04daa1f1f6bd", "pedida": "6.00", "entregada": "4.00", "motivo": "Solo h`
+  - ✔ Entregar dos veces no descuenta dos veces (tubo 200 − 25 = 175) — `400 · tubo 175.00`
+  - ✔ Rechazar exige motivo
+  - ✔ Administración la rechaza con motivo
+  - ✔ Queda rechazada con su motivo — `rechazada`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -55,7 +62,7 @@ Bodega puede entregar menos de lo pedido o rechazar con motivo, y la existencia 
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -69,7 +76,7 @@ Bodega puede entregar menos de lo pedido o rechazar con motivo, y la existencia 
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

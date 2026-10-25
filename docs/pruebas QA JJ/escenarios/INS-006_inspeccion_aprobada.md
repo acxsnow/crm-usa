@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -37,14 +37,20 @@ Registrar la inspección aprobada deja la obra lista para el cobro.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ Segunda inspección
+  - ✔ Aprobar sin permiso firmado se bloquea
+  - ✔ Sube el permiso firmado por el inspector
+  - ✔ Inspección aprobada
+  - ✔ Etapa tras la inspección aprobada — `inspection_pending`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +59,7 @@ Registrar la inspección aprobada deja la obra lista para el cobro.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +73,7 @@ Registrar la inspección aprobada deja la obra lista para el cobro.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

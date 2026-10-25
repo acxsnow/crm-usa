@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,18 @@ Reprogramar mueve la obra en la agenda sin perder nada.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 3 de 3 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (3 de 3):
+  - ✔ Cambiar fechas
+  - ✔ La obra aparece en la nueva fecha en la agenda del técnico
+  - ✔ La auditoría registra la fecha anterior y la nueva — `{"technician": "6f7ea603-b361-484a-b02b-dea603ae0a88", "scheduled_date": "2026-10-25"}|{"technician": "6f7ea603-b361-484a-b02b-dea603ae0a88", "scheduled_date": `
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +57,7 @@ Reprogramar mueve la obra en la agenda sin perder nada.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +71,7 @@ Reprogramar mueve la obra en la agenda sin perder nada.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

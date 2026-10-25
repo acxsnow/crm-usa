@@ -6,12 +6,12 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -37,14 +37,20 @@ Las dos salidas tempranas quedan registradas con su etapa propia.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ Visita «not_interested» en 202 QA 1025164900 Mobile Park Dr
+  - ✔ Queda en «not_interested» sin cliente — `not_interested`
+  - ✔ Visita «not_eligible» en 203 QA 1025164900 Mobile Park Dr
+  - ✔ Queda en «not_eligible» sin cliente — `not_eligible`
+  - ✔ Las salidas tempranas no crean obra ni cliente (obras/clientes) — `0/1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +59,7 @@ Las dos salidas tempranas quedan registradas con su etapa propia.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +73,7 @@ Las dos salidas tempranas quedan registradas con su etapa propia.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

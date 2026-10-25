@@ -6,12 +6,12 @@
 - **Módulo:** Bodega
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · auditoría
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,19 @@ El conteo del fin de semana corrige la existencia con un ajuste trazable.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 4 de 4 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (4 de 4):
+  - ✔ Carga 3 artículos y su conteo inicial; la fila de ejemplo no entra — `{"creados": 3, "actualizados": 0, "omitidos": 0, "conteo_inicial": 3, "errores": [], "categorias_nuevas": [], "sheet": "Cat\u00e1logo", "rows_read": 3}`
+  - ✔ Conteo mensual: la cinta tenía 28, no 30
+  - ✔ El conteo cuadra el saldo con un ajuste
+  - ✔ El ajuste queda en el libro de movimientos — `[{"id": "2c5cac0b-5926-4361-898a-f259581a0290", "item_id": "5f7f025f-71e2-44d3-8a4a-01d237d08b89", "item_name": "QA 1025164900 Cinta de aluminio", "un`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +58,7 @@ El conteo del fin de semana corrige la existencia con un ajuste trazable.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +72,7 @@ El conteo del fin de semana corrige la existencia con un ajuste trazable.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

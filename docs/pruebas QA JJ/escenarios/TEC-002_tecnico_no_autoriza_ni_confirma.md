@@ -6,12 +6,12 @@
 - **Módulo:** Técnicos
 - **Prioridad:** P0
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,20 @@ Separación de funciones en campo, también por la API.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ El técnico no puede confirmar su propia acta
+  - ✔ El técnico no puede autorizar
+  - ✔ Nadie autoriza la salida que pidió → 403 — `403 {"detail":"Otra persona debe autorizar esta salida: tú la pediste.","code":"release_self_authorization","request_id":"7d`
+  - ✔ El técnico no autoriza su salida
+  - ✔ El técnico no entrega
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -52,7 +58,7 @@ Separación de funciones en campo, también por la API.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -66,7 +72,7 @@ Separación de funciones en campo, también por la API.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

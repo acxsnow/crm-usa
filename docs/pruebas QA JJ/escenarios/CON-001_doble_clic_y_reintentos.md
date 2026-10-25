@@ -6,12 +6,12 @@
 - **Módulo:** Concurrencia
 - **Prioridad:** P0
 - **Tipo de prueba:** Concurrencia
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** FALLIDO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -35,14 +35,17 @@ Un toque doble o un reintento por mala señal no duplica registros.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: 2 de 2 comprobaciones bien.
+- Diferencias con lo esperado: En el lote pasó una sola, pero al repetirlo 10 veces (script `carrera.py`) en 6 casos las dos respondieron 200 y quedaron dos `warehouse.release_authorized` en la auditoría. La entrega doble sí está protegida (BOD-016).
+- Comprobaciones por API (2 de 2):
+  - ✔ Dos autorizaciones simultáneas de la misma salida: una pasa — `[400, 200]`
+  - ✔ Y queda una sola autorización en la auditoría — `1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -52,7 +55,7 @@ Un toque doble o un reintento por mala señal no duplica registros.
 ## 10. Resultado final
 
 - [ ] APROBADO
-- [ ] FALLIDO
+- [x] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN
@@ -61,11 +64,11 @@ Un toque doble o un reintento por mala señal no duplica registros.
 
 | ID defecto | Descripción | Prioridad | Registrado en |
 |---|---|---|---|
-| | | | `01_REGISTRO_DEFECTOS.md` |
+| D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | P2 | `01_REGISTRO_DEFECTOS.md` |
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

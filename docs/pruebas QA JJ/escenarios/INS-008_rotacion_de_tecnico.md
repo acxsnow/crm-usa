@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** FALLIDO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,24 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: 8 de 9 comprobaciones bien.
+- Diferencias con lo esperado: Al rotar hoy una obra agendada para dentro de 2 días, el anterior queda «del 27 al 27» y el nuevo «desde el 25»: el anterior termina después de que empieza el nuevo y la lista sale en desorden.
+- Comprobaciones por API (8 de 9):
+  - ✔ Hay una obra abierta del técnico para rotar — `ninguna abierta`
+  - ✔ Hay otro técnico a quien pasarla
+  - ✔ La oficina pasa la obra a otro técnico
+  - ✔ El técnico anterior la sigue viendo, en solo lectura — `read_only`
+  - ✔ Ya no registra jornadas → 403 — `403`
+  - ✘ El historial muestra al anterior y al de hoy — `[{"technician_user_id": "a7426653-fc1a-4369-9718-d18d2e318b62", "technician_name": "Andr\u00e9s Morales", "started_on": "2026-10-25", "ended_on": null, "current`
+  - ✔ El calendario muestra el cambio de responsable — `[{"project_id": "fa6117a2-a3dd-4f5c-9c1a-628e954d7a83", "project_title": "Instalaci\u00f3n \u00b7 CASE-2026-0009", "project_status": "scheduled", "technician_us`
+  - ✔ La obra vuelve a su técnico
+  - ✔ Y él vuelve a llenarla
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -57,7 +67,7 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 ## 10. Resultado final
 
 - [ ] APROBADO
-- [ ] FALLIDO
+- [x] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN
@@ -66,11 +76,11 @@ Al rotar, el técnico nuevo continúa y el anterior queda en solo lectura, sin p
 
 | ID defecto | Descripción | Prioridad | Registrado en |
 |---|---|---|---|
-| | | | `01_REGISTRO_DEFECTOS.md` |
+| D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | P2 | `01_REGISTRO_DEFECTOS.md` |
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

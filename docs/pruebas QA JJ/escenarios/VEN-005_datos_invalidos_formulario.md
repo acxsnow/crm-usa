@@ -6,12 +6,12 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional · validación
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -38,14 +38,21 @@ Los campos rechazan formatos imposibles en la pantalla y en la API.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 6 de 6 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (6 de 6):
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Visita «opened» en 302 QA 1025164900 Mobile Park Dr
+  - ✔ email inválido «sin-arroba»: rechazado o marcado con error — `400 error=None {"detail":"Revisa: Correo electrónico: No es un correo válido.","code":"invalid_answers","request_id":"f0ab3688-7609-419`
+  - ✔ phone inválido «abc»: rechazado o marcado con error — `400 error=None {"detail":"Revisa: Teléfono: No es un teléfono válido.","code":"invalid_answers","request_id":"b8296595-cbeb-41b7-98f2-4`
+  - ✔ Número por encima del máximo (home.household_members > 30.0) — `400 error=None`
+  - ✔ Ningún 500 en las validaciones
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -55,7 +62,7 @@ Los campos rechazan formatos imposibles en la pantalla y en la API.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -69,7 +76,7 @@ Los campos rechazan formatos imposibles en la pantalla y en la API.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

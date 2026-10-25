@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución + 60 min de preparación
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,20 @@ Una inspección fallida reabre la obra con observaciones obligatorias y exige un
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ Agendar inspección
+  - ✔ Falla sin observaciones se rechaza
+  - ✔ Inspección fallida con observaciones
+  - ✔ Técnico corrige y cierra de nuevo
+  - ✔ Administración confirma de nuevo
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -56,7 +62,7 @@ Una inspección fallida reabre la obra con observaciones obligatorias y exige un
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -70,7 +76,7 @@ Una inspección fallida reabre la obra con observaciones obligatorias y exige un
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

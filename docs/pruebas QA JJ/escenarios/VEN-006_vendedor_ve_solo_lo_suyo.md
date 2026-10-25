@@ -6,12 +6,12 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P0
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -38,14 +38,20 @@ Aislamiento entre vendedores: ni por la lista, ni por el buscador, ni escribiend
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ Valeria no ve el expediente de Vicky en su lista — `0`
+  - ✔ GET del expediente de Vicky → 404 — `404`
+  - ✔ GET del formulario de Vicky → 404 — `404`
+  - ✔ El buscador de Valeria no lo encuentra («CASE-2026-0004») — `0`
+  - ✔ El buscador de Valeria no lo encuentra («QA») — `0`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -54,7 +60,7 @@ Aislamiento entre vendedores: ni por la lista, ni por el buscador, ni escribiend
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -68,7 +74,7 @@ Aislamiento entre vendedores: ni por la lista, ni por el buscador, ni escribiend
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

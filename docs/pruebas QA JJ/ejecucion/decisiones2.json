@@ -1,0 +1,483 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj 07e97c7 (base QA reiniciada con seed_qa)",
+ "BOD-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "FALLIDO",
+  "marca": "FALLIDO",
+  "defectos": [
+   {
+    "id": "D-009",
+    "texto": "Un artículo acepta costo unitario negativo",
+    "prioridad": "P2"
+   },
+   {
+    "id": "D-010",
+    "texto": "Crear un artículo con un SKU repetido responde 500",
+    "prioridad": "P1"
+   }
+  ],
+  "que_paso": "12 de 14 comprobaciones bien.",
+  "diferencias": "Costo -1 se guarda (201) y un SKU repetido revienta con 500 (uq_warehouse_item_sku sin capturar).",
+  "indice": "D-009, D-010"
+ },
+ "BOD-003": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 4 de 4 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "4/4"
+ },
+ "BOD-004": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 6 de 6 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "6/6"
+ },
+ "BOD-005": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 4 de 4 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "4/4",
+  "observaciones": "No avisa al pedir ni al autorizar: la entrega sale parcial y deja el faltante escrito (decisión D-BOD-4 del cliente). Ninguna existencia negativa."
+ },
+ "BOD-006": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "FALLIDO",
+  "marca": "FALLIDO",
+  "defectos": [
+   {
+    "id": "D-008",
+    "texto": "La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra",
+    "prioridad": "P1"
+   }
+  ],
+  "que_paso": "3 de 4 comprobaciones bien.",
+  "diferencias": "Con 1 unidad afuera se registró una devolución de 50 a la obra (201) y la existencia subió 50.",
+  "indice": "D-008"
+ },
+ "BOD-008": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 2 de 2 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "2/2"
+ },
+ "BOD-009": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 4 de 4 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "4/4"
+ },
+ "BOD-010": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 7 de 7 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7"
+ },
+ "BOD-011": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "FALLIDO",
+  "marca": "FALLIDO",
+  "defectos": [
+   {
+    "id": "D-007",
+    "texto": "«Con serial» no tiene efecto: la bodega no registra seriales al entregar",
+    "prioridad": "P2"
+   }
+  ],
+  "que_paso": "0 de 1 comprobaciones bien.",
+  "diferencias": "La entrega no pide ni guarda seriales; el serial solo se captura después en «Equipos instalados».",
+  "indice": "D-007"
+ },
+ "BOD-012": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3"
+ },
+ "BOD-013": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 22 de 22 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "22/22"
+ },
+ "BOD-014": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 6 de 6 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "6/6"
+ },
+ "BOD-015": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 7 de 7 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7",
+  "observaciones": "0.0001 se rechaza con «La cantidad debe ser mayor que cero» (las cantidades van con 2 decimales); el mensaje podría decir «mínimo 0.01». 1,000,000,000 se rechaza por grande."
+ },
+ "BOD-016": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3"
+ },
+ "BOD-017": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 12 de 12 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "12/12"
+ },
+ "COB-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5",
+  "observaciones": "Antes hubo que cargar la tarifa vigente y la zona de cobro del programa (P-03); sin ellas el cobro dice «sin tarifa» o «fuera de zona»."
+ },
+ "COB-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3"
+ },
+ "COB-003": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 7 de 7 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7"
+ },
+ "COB-004": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 2 de 2 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "2/2"
+ },
+ "CON-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "FALLIDO",
+  "marca": "FALLIDO",
+  "defectos": [
+   {
+    "id": "D-012",
+    "texto": "Dos autorizaciones simultáneas de la misma salida pasan las dos",
+    "prioridad": "P2"
+   }
+  ],
+  "que_paso": "2 de 2 comprobaciones bien.",
+  "diferencias": "En el lote pasó una sola, pero al repetirlo 10 veces (script `carrera.py`) en 6 casos las dos respondieron 200 y quedaron dos `warehouse.release_authorized` en la auditoría. La entrega doble sí está protegida (BOD-016).",
+  "indice": "D-012"
+ },
+ "CON-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 1 de 1 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "1/1"
+ },
+ "INS-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 8 de 8 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "8/8"
+ },
+ "INS-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 6 de 6 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "6/6",
+  "observaciones": "Sin ningún permiso registrado se puede liberar la orden (spec D6.4: se instala antes del permiso); con un permiso solo radicado, no."
+ },
+ "INS-003": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 13 de 13 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "13/13"
+ },
+ "INS-004": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 11 de 11 comprobaciones bien.",
+  "diferencias": "Falta la parte del celular: fotos con «Tomar foto», firma con el dedo y el PDF abierto.",
+  "indice": "API 11/11; falta pantalla"
+ },
+ "INS-005": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ },
+ "INS-006": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ },
+ "INS-007": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ },
+ "INS-008": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "FALLIDO",
+  "marca": "FALLIDO",
+  "defectos": [
+   {
+    "id": "D-011",
+    "texto": "Rotar antes de la fecha agendada deja el historial de responsables incoherente",
+    "prioridad": "P2"
+   }
+  ],
+  "que_paso": "8 de 9 comprobaciones bien.",
+  "diferencias": "Al rotar hoy una obra agendada para dentro de 2 días, el anterior queda «del 27 al 27» y el nuevo «desde el 25»: el anterior termina después de que empieza el nuevo y la lista sale en desorden.",
+  "indice": "D-011"
+ },
+ "INS-009": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3"
+ },
+ "INS-010": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 16 de 16 comprobaciones bien.",
+  "diferencias": "Falta la pantalla: botón «No se pudo hacer la visita», formulario y sección «Visitas fallidas».",
+  "indice": "API 16/16; falta pantalla"
+ },
+ "INS-011": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 14 de 14 comprobaciones bien.",
+  "diferencias": "Falta la pantalla: aviso del límite, «Autorizar otro intento» y «Límite de visitas fallidas».",
+  "indice": "API 14/14; falta pantalla"
+ },
+ "INS-012": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 13 de 13 comprobaciones bien.",
+  "diferencias": "Falta la pantalla: «Cancelar la obra…» con salidas abiertas, material afuera y el aviso «Obra cancelada».",
+  "indice": "API 13/13; falta pantalla"
+ },
+ "INS-014": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3",
+  "observaciones": "El técnico no puede anotarlo en «Materiales de la orden» (pide `projects.update`): lo anota en el diario de obra (INS-016). La oficina sí lo anota en la orden."
+ },
+ "INS-016": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 7 de 7 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7"
+ },
+ "REV-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 8 de 8 comprobaciones bien.",
+  "diferencias": "Falta ver en pantalla que «Aprobar» queda bloqueado y dice cuántos documentos faltan.",
+  "indice": "API 8/8; falta pantalla"
+ },
+ "REV-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 8 de 8 comprobaciones bien.",
+  "diferencias": "Falta ver en pantalla la tarjeta «Devuelto al vendedor» con el motivo.",
+  "indice": "API 8/8; falta pantalla"
+ },
+ "REV-003": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 8 de 8 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "8/8"
+ },
+ "REV-004": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 17 de 17 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "17/17"
+ },
+ "REV-005": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 7 de 7 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7"
+ },
+ "REV-006": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 1 de 1 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "1/1"
+ },
+ "TEC-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 3 de 3 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "3/3"
+ },
+ "TEC-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ },
+ "VEN-001": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 4 de 4 comprobaciones bien.",
+  "diferencias": "Falta ver en pantalla que no aparece en el tablero hasta «Mostrar puertas cerradas».",
+  "indice": "API 4/4; falta pantalla"
+ },
+ "VEN-002": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ },
+ "VEN-003": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5",
+  "observaciones": "La variante «101 qa … dr.» reconoce la misma puerta (no crea otro expediente)."
+ },
+ "VEN-004": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "En ejecución",
+  "que_paso": "Por API, 12 de 12 comprobaciones bien.",
+  "diferencias": "Falta la parte del celular (390 px), ver la marca de agua en las fotos y el aviso de la campana en pantalla.",
+  "indice": "API 12/12; falta pantalla"
+ },
+ "VEN-005": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 6 de 6 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "6/6"
+ },
+ "VEN-006": {
+  "tiempo": "lote 2 por API (≈1 min)",
+  "lote": 2,
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "que_paso": "Por API, 5 de 5 comprobaciones bien.",
+  "diferencias": "Ninguna.",
+  "indice": "5/5"
+ }
+}

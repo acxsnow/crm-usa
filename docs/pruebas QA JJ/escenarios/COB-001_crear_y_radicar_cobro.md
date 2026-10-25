@@ -6,12 +6,12 @@
 - **Módulo:** Cobro al programa
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -41,14 +41,20 @@ Con el acta confirmada y la inspección aprobada, el cobro nace, se radica y mue
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 5 de 5 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ Elegibilidad del proyecto
+  - ✔ Crear cobro AZ_EFFICIENCY
+  - ✔ Cobro duplicado del mismo programa se bloquea
+  - ✔ Radicar el cobro
+  - ✔ El expediente pasó a «En cobro» — `billing_in_progress`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -58,7 +64,7 @@ Con el acta confirmada y la inspección aprobada, el cobro nace, se radica y mue
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -72,8 +78,8 @@ Con el acta confirmada y la inspección aprobada, el cobro nace, se radica y mue
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: Antes hubo que cargar la tarifa vigente y la zona de cobro del programa (P-03); sin ellas el cobro dice «sin tarifa» o «fuera de zona».

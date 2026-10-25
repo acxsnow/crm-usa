@@ -6,12 +6,12 @@
 - **Módulo:** Revisión administrativa
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,23 @@ La devolución llega al vendedor, que corrige y reenvía sin reiniciar los días
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 8 de 8 comprobaciones bien.
+- Diferencias con lo esperado: Falta ver en pantalla la tarjeta «Devuelto al vendedor» con el motivo.
+- Comprobaciones por API (8 de 8):
+  - ✔ Devolver al vendedor
+  - ✔ El vendedor puede editar el devuelto
+  - ✔ Reenviar con el rechazado vigente se bloquea
+  - ✔ Vendedor sube la foto de nuevo
+  - ✔ Guarda el paso con la foto nueva
+  - ✔ Reenviar a revisión
+  - ✔ Vuelve a «en revisión» — `pending_review`
+  - ✔ El contador de días no se reinicia al reenviar (submitted_at igual) — `2026-10-25T16:49:16.679272Z → 2026-10-25T16:49:16.679272Z`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -69,7 +78,7 @@ La devolución llega al vendedor, que corrige y reenvía sin reiniciar los días
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

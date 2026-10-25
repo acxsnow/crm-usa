@@ -388,10 +388,19 @@ docker compose exec postgres pg_restore -U crm -d crm --clean --if-exists /tmp/r
 1. P-01.
 2. INS-001 (técnico y fecha) e INS-002 (permiso aprobado).
 
-### P-03 · Cobro del programa configurado (unos 10 min, una sola vez)
+### P-03 · Programas listos para vender y cobrar (unos 15 min, una sola vez después de reiniciar la base)
 
-1. Como admin: **Configuración de programas** › Eficiencia de Arizona.
-2. Verificar que el programa tenga su valor de cobro y su checklist de radicación. Si falta, completarlo y anotarlo en el escenario (no es un defecto si el dato simplemente no se había cargado).
+La base limpia trae los dos programas sin zonas ni tarifas. Sin esto, la venta dice «Elige primero el programa del expediente» y el cobro dice «no tiene tarifa vigente» o «la dirección no está en la zona».
+
+1. **Zona de venta del vendedor**, en Configuración de programas:
+   - una zona de Arizona (Phoenix, AZ) para Eficiencia de Arizona;
+   - una de California (San Fernando, CA) para TECH Clean California;
+   - asignar a Vicky (y a Valeria, si va a vender) en cada una.
+2. **Tarifa vigente de cada programa**, en Facturación y cobros › configuración del programa: por ejemplo USD 6,500.00 desde hace un mes.
+3. **Zona de cobro de cada programa** (ciudad o código postal con vigencia): Phoenix para Arizona y San Fernando para TECH.
+4. TECH no exige inspección este año: desactivar ese requisito en la configuración de cobro de TECH.
+
+El lote 2 por API (`ejecucion/lote2.py`) hace estos cuatro pasos solo.
 
 ## Llaves de servicios externos
 

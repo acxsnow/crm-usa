@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -42,14 +42,28 @@ El técnico pide el material con la lista predefinida, bodega lo autoriza y lo e
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 13 de 13 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (13 de 13):
+  - ✔ Un borrador sin renglones se rechaza (422) — `422`
+  - ✔ El técnico arma el borrador de salida para la obra
+  - ✔ Cargar la lista «3 ton desde cero»
+  - ✔ La lista agrega sus renglones (46, menos el que ya estaba) — `45`
+  - ✔ Guardar y enviar a autorizar
+  - ✔ Recibe su número SAL- — `SAL-2026-0001`
+  - ✔ Bodega la autoriza
+  - ✔ Bodega la entrega
+  - ✔ Existencia baja exactamente en lo entregado (Z & Y-Series Smart Communicating WiFi Th) — `antes=1.0 entregado=1.0 ahora=0.0`
+  - ✔ Existencia baja exactamente en lo entregado (B-Series Air Handler Multi Position 3 To) — `antes=1.0 entregado=1.0 ahora=0.0`
+  - ✔ Existencia baja exactamente en lo entregado (B-Series Heat Pump Condenser 2-3 Ton 20 ) — `antes=1.0 entregado=1.0 ahora=0.0`
+  - ✔ Movimientos `salida` con la obra — `46`
+  - ✔ El material entregado quedó cargado a la obra — `46`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -60,7 +74,7 @@ El técnico pide el material con la lista predefinida, bodega lo autoriza y lo e
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -74,7 +88,7 @@ El técnico pide el material con la lista predefinida, bodega lo autoriza y lo e
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

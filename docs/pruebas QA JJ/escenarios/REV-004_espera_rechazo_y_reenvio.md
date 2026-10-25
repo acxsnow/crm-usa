@@ -6,12 +6,12 @@
 - **Módulo:** Revisión administrativa
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,32 @@ Las salidas no felices del programa quedan registradas y un rechazado se puede c
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 17 de 17 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (17 de 17):
+  - ✔ Visita «opened» en 304 QA 1025164900 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Rechazar sin motivo se bloquea
+  - ✔ Rechazar con motivo
+  - ✔ El vendedor puede corregir el rechazado
+  - ✔ Corrige un dato
+  - ✔ Reenvía a revisión
+  - ✔ Vuelve a pendiente de aprobación — `pending_approval`
+  - ✔ Poner en espera del programa
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -55,7 +73,7 @@ Las salidas no felices del programa quedan registradas y un rechazado se puede c
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -69,7 +87,7 @@ Las salidas no felices del programa quedan registradas y un rechazado se puede c
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

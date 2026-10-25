@@ -6,12 +6,12 @@
 - **Módulo:** Bodega
 - **Prioridad:** P2
 - **Tipo de prueba:** Validación
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,22 @@ La bodega no acepta cantidades imposibles.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 7 de 7 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (7 de 7):
+  - ✔ Entrada con cantidad 0: rechaza (anotar) — `400 {"detail":"La cantidad debe ser mayor que cero.","code":"invalid_quantity","request_id":"24fc3c28-fb49-4d19-8cea-f21082a`
+  - ✔ Entrada con cantidad -1: rechaza (anotar) — `400 {"detail":"La cantidad debe ser mayor que cero.","code":"invalid_quantity","request_id":"efded4b9-c6a7-4381-aacf-eb415a9`
+  - ✔ Entrada con cantidad 0.0001: acepta (anotar) — `400 {"detail":"La cantidad debe ser mayor que cero.","code":"invalid_quantity","request_id":"7602df7f-5a9e-4a6d-8153-9cc4b9f`
+  - ✔ Entrada con cantidad 1000000000: acepta (anotar) — `400 {"detail":"«1000000000» no es un número válido o es demasiado grande.","code":"invalid_number","request_id":"d74f1581-d5`
+  - ✔ Entrada con cantidad 1,5: rechaza (anotar) — `400 {"detail":"«1,5» no es un número válido.","code":"invalid_number","request_id":"df726713-a454-4a1a-b516-c7027eb488de"}`
+  - ✔ Costo 9,999,999.99 se acepta sin desbordar — `201 {"id":"fdcb5668-655b-4dde-9a22-3a07f6044445","name":"QA costo grande","sku":"QA-BIG-1025164900","brand":null,"manufactur`
+  - ✔ Sin existencias negativas después de los valores extremos — `0`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -52,7 +60,7 @@ La bodega no acepta cantidades imposibles.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -66,8 +74,8 @@ La bodega no acepta cantidades imposibles.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: 0.0001 se rechaza con «La cantidad debe ser mayor que cero» (las cantidades van con 2 decimales); el mensaje podría decir «mínimo 0.01». 1,000,000,000 se rechaza por grande.

@@ -6,12 +6,12 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 35 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -50,14 +50,27 @@ El camino principal del negocio: la puerta que abre termina en revisión con tod
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 12 de 12 comprobaciones bien.
+- Diferencias con lo esperado: Falta la parte del celular (390 px), ver la marca de agua en las fotos y el aviso de la campana en pantalla.
+- Comprobaciones por API (12 de 12):
+  - ✔ Visita «opened» en 121 QA 1025164900 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ El cliente quedó creado — `ac9f2701-74fe-4d57-9567-6d12e09593da`
+  - ✔ data_consents tiene la autorización con versión e IP — `1|2026.1|True`
+  - ✔ Los archivos del formulario quedaron con GPS (total|con GPS) — `10|10`
+  - ✔ Administración recibe el aviso del expediente enviado — `1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -82,7 +95,7 @@ El camino principal del negocio: la puerta que abre termina en revisión con tod
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

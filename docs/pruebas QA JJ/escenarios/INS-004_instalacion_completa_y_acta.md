@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · celular
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 40 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -45,14 +45,26 @@ El camino feliz del técnico en el celular, del primer día al acta firmada por 
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 11 de 11 comprobaciones bien.
+- Diferencias con lo esperado: Falta la parte del celular: fotos con «Tomar foto», firma con el dedo y el PDF abierto.
+- Comprobaciones por API (11 de 11):
+  - ✔ Cerrar sin completar está bloqueado — `{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Re`
+  - ✔ Cerrar instalación incompleta se rechaza
+  - ✔ Checklist resuelto (14 ítems) — `[]`
+  - ✔ Equipo instalado con serial
+  - ✔ Guardar equipos instalados
+  - ✔ Firma del técnico en el acta
+  - ✔ Firma del cliente en el acta
+  - ✔ Cerrar instalación
+  - ✔ Equipo después del cierre se bloquea
+  - ✔ Descargar acta firmada (PDF) — `200 application/pdf`
+  - ✔ Etapa del expediente después del cierre — `installed`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -77,7 +89,7 @@ El camino feliz del técnico en el celular, del primer día al acta firmada por 
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

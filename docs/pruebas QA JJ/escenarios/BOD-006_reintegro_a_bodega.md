@@ -6,12 +6,12 @@
 - **Módulo:** Bodega
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · dinero
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** FALLIDO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -38,14 +38,19 @@ Lo que sobra en la obra vuelve a bodega y sale del costo de la obra.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: 3 de 4 comprobaciones bien.
+- Diferencias con lo esperado: Con 1 unidad afuera se registró una devolución de 50 a la obra (201) y la existencia subió 50.
+- Comprobaciones por API (3 de 4):
+  - ✔ Devolución de 3 a bodega con la obra
+  - ✔ La bodega sube 3 — `7.0`
+  - ✔ Lo que sigue afuera baja a 1 — `{'can_cancel': True, 'open_releases': [], 'material_in_field': [{'item_id': 'c283275b-2900-4b1b-bc3f-02c3f9363b92', 'item_name': 'PVC Pipe 3/4" x 10\'', 'sku': `
+  - ✘ Devolver más de lo entregado a la obra se rechaza — `201 {"id":"7f16136b-e65a-4345-b8fe-801a5e7d498a","item_id":"c283275b-2900-4b1b-bc3f-02c3f9363b92","item_name":"PVC Pipe 3/4\" x 10'","unit_label":"unidade`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -56,7 +61,7 @@ Lo que sobra en la obra vuelve a bodega y sale del costo de la obra.
 ## 10. Resultado final
 
 - [ ] APROBADO
-- [ ] FALLIDO
+- [x] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN
@@ -65,11 +70,11 @@ Lo que sobra en la obra vuelve a bodega y sale del costo de la obra.
 
 | ID defecto | Descripción | Prioridad | Registrado en |
 |---|---|---|---|
-| | | | `01_REGISTRO_DEFECTOS.md` |
+| D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | P1 | `01_REGISTRO_DEFECTOS.md` |
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -21,12 +21,12 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | Módulo | Escenarios | P0 | Bloqueados | Ejecución | Preparación | Aprobados | Fallidos | Defectos |
 |---|---|---|---|---|---|---|---|---|
 | Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 0 | 1 | 2 |
-| Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
-| Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
-| Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 0 | 0 | 0 |
-| Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 0 | 0 | 0 |
-| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 1 | 0 | 0 |
-| Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 0 | 0 | 0 |
+| Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
+| Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
+| Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 9 | 1 | 1 |
+| Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 2 | 0 | 0 |
+| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 13 | 3 | 4 |
+| Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 4 | 0 | 0 |
 | Trabajo particular y facturación | 4 | 1 | 1 | 1 h 20 min | 0 min | 0 | 0 | 0 |
 | Finanzas | 6 | 0 | 1 | 2 h 00 min | 0 min | 0 | 0 | 0 |
 | Turnos, asistencia y mapa | 10 | 2 | 0 | 2 h 25 min | 0 min | 0 | 0 | 0 |
@@ -34,13 +34,13 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 2 | 1 | 1 |
 | API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 2 | 1 | 1 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 0 | 0 | 0 |
-| Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 0 | 0 | 0 |
-| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **5** | **3** | **4** |
+| Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 1 | 1 | 1 |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **41** | **8** | **10** |
 
 ## Avance
 
-- Ejecutados completos: 8 de 109 (7 %). En ejecución (parte hecha): 6.
-- Aprobados: 5 · Fallidos: 3 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
+- Ejecutados completos: 49 de 109 (44 %). En ejecución (parte hecha): 14.
+- Aprobados: 41 · Fallidos: 8 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
@@ -55,60 +55,60 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | AUTH-006 | Acceso y sesión | Escribir a mano la dirección de una pantalla sin permiso | P1 | Seguridad | [AUTH-006_rutas_sin_permiso_por_url.md](escenarios/AUTH-006_rutas_sin_permiso_por_url.md) | En ejecución | 15 | 1 min (API) |  |  | API 20/20; falta pantalla |
 | AUTH-007 | Acceso y sesión | Rol nuevo sin permisos marcados | P1 | Seguridad | [AUTH-007_rol_sin_permisos.md](escenarios/AUTH-007_rol_sin_permisos.md) | Pendiente | 15 | | | | |
 | AUTH-008 | Acceso y sesión | Quitar un permiso a un rol con usuarios conectados | P2 | Seguridad | [AUTH-008_cambiar_rol_en_caliente.md](escenarios/AUTH-008_cambiar_rol_en_caliente.md) | Pendiente | 15 | | | | |
-| VEN-001 | Venta puerta a puerta | La puerta no abrió (sin contacto) | P1 | Funcional | [VEN-001_puerta_no_abrio.md](escenarios/VEN-001_puerta_no_abrio.md) | Pendiente | 10 | | | | |
-| VEN-002 | Venta puerta a puerta | No le interesa y no califica | P2 | Funcional | [VEN-002_puerta_no_le_interesa_y_no_califica.md](escenarios/VEN-002_puerta_no_le_interesa_y_no_califica.md) | Pendiente | 10 | | | | |
-| VEN-003 | Venta puerta a puerta | La misma puerta otra vez reabre su expediente | P1 | Funcional · integridad | [VEN-003_misma_puerta_dos_veces.md](escenarios/VEN-003_misma_puerta_dos_veces.md) | Pendiente | 10 | | | | |
-| VEN-004 | Venta puerta a puerta | Venta completa: abrió, formulario, autorización, firma y envío | P0 | Funcional · integración | [VEN-004_venta_completa_hasta_revision.md](escenarios/VEN-004_venta_completa_hasta_revision.md) | Pendiente | 35 | | | | |
-| VEN-005 | Venta puerta a puerta | Datos inválidos en el formulario | P2 | Funcional · validación | [VEN-005_datos_invalidos_formulario.md](escenarios/VEN-005_datos_invalidos_formulario.md) | Pendiente | 15 | | | | |
-| VEN-006 | Venta puerta a puerta | Un vendedor no ve los expedientes del otro | P0 | Seguridad | [VEN-006_vendedor_ve_solo_lo_suyo.md](escenarios/VEN-006_vendedor_ve_solo_lo_suyo.md) | Pendiente | 15 | | | | |
-| REV-001 | Revisión administrativa | Revisar documentos: aceptar, rechazar con nota y agregar uno | P1 | Funcional | [REV-001_revisar_documentos.md](escenarios/REV-001_revisar_documentos.md) | Pendiente | 20 | | | | |
-| REV-002 | Revisión administrativa | Devolver al vendedor con motivo y reenviar | P1 | Funcional · integración | [REV-002_devolver_al_vendedor_y_reenviar.md](escenarios/REV-002_devolver_al_vendedor_y_reenviar.md) | Pendiente | 20 | | | | |
-| REV-003 | Revisión administrativa | Aprobar con el código del programa: nace la obra | P0 | Funcional · integración | [REV-003_aprobar_expediente.md](escenarios/REV-003_aprobar_expediente.md) | Pendiente | 15 | | | | |
-| REV-004 | Revisión administrativa | Poner en espera, rechazar con motivo y reenviar un rechazado | P2 | Funcional | [REV-004_espera_rechazo_y_reenvio.md](escenarios/REV-004_espera_rechazo_y_reenvio.md) | Pendiente | 20 | | | | |
-| REV-005 | Revisión administrativa | Cerrar un expediente desde cualquier etapa | P2 | Funcional | [REV-005_cierre_administrativo.md](escenarios/REV-005_cierre_administrativo.md) | Pendiente | 10 | | | | |
-| REV-006 | Revisión administrativa | El vendedor no puede aprobar su propio expediente (SEG-07) | P0 | Seguridad | [REV-006_vendedor_no_aprueba.md](escenarios/REV-006_vendedor_no_aprueba.md) | Pendiente | 10 | | | | |
-| INS-001 | Instalación en campo | Asignar técnico y fecha a la obra | P0 | Funcional | [INS-001_asignar_tecnico_y_fecha.md](escenarios/INS-001_asignar_tecnico_y_fecha.md) | Pendiente | 15 + 25 prep. | | | | |
-| INS-002 | Instalación en campo | Permiso municipal: sin permiso no se instala | P0 | Funcional · regla de negocio | [INS-002_permiso_municipal.md](escenarios/INS-002_permiso_municipal.md) | Pendiente | 20 | | | | |
-| INS-003 | Instalación en campo | Salida de material con la lista «3 ton desde cero» | P0 | Funcional · integración | [INS-003_salida_de_material_con_lista.md](escenarios/INS-003_salida_de_material_con_lista.md) | Pendiente | 25 | | | | |
-| INS-004 | Instalación en campo | Instalación completa: jornada, checklist, equipos y acta firmada | P0 | Funcional · celular | [INS-004_instalacion_completa_y_acta.md](escenarios/INS-004_instalacion_completa_y_acta.md) | Pendiente | 40 | | | | |
-| INS-005 | Instalación en campo | Administración devuelve el acta al técnico y luego la confirma | P0 | Funcional | [INS-005_acta_devuelta_al_tecnico.md](escenarios/INS-005_acta_devuelta_al_tecnico.md) | Pendiente | 20 | | | | |
-| INS-006 | Instalación en campo | Inspección municipal aprobada | P1 | Funcional | [INS-006_inspeccion_aprobada.md](escenarios/INS-006_inspeccion_aprobada.md) | Pendiente | 15 | | | | |
-| INS-007 | Instalación en campo | Inspección fallida: la obra vuelve a campo | P1 | Funcional · regla de negocio | [INS-007_inspeccion_fallida_y_reinspeccion.md](escenarios/INS-007_inspeccion_fallida_y_reinspeccion.md) | Pendiente | 25 + 60 prep. | | | | |
-| INS-008 | Instalación en campo | Cambiar el técnico de una obra en curso (rotación) | P0 | Funcional · seguridad | [INS-008_rotacion_de_tecnico.md](escenarios/INS-008_rotacion_de_tecnico.md) | Pendiente | 20 | | | | |
-| INS-009 | Instalación en campo | Cambiar las fechas de una obra programada | P2 | Funcional | [INS-009_reprogramar_fechas.md](escenarios/INS-009_reprogramar_fechas.md) | Pendiente | 10 | | | | |
-| INS-010 | Instalación en campo | El técnico llega y el cliente no estaba (visita fallida) | P0 | Funcional · regla de negocio | [INS-010_cliente_no_estaba.md](escenarios/INS-010_cliente_no_estaba.md) | Pendiente | 25 | | | | |
-| INS-011 | Instalación en campo | Límite parametrizable de reagendamientos | P1 | Funcional · regla de negocio | [INS-011_limite_de_reagendamientos.md](escenarios/INS-011_limite_de_reagendamientos.md) | Pendiente | 30 | | | | |
-| INS-012 | Instalación en campo | Cancelar una obra y reintegrar el material | P0 | Funcional · integración | [INS-012_cancelar_obra_con_reintegro.md](escenarios/INS-012_cancelar_obra_con_reintegro.md) | Pendiente | 30 | | | | |
+| VEN-001 | Venta puerta a puerta | La puerta no abrió (sin contacto) | P1 | Funcional | [VEN-001_puerta_no_abrio.md](escenarios/VEN-001_puerta_no_abrio.md) | En ejecución | 10 | lote 2 por API (≈1 min) |  |  | API 4/4; falta pantalla |
+| VEN-002 | Venta puerta a puerta | No le interesa y no califica | P2 | Funcional | [VEN-002_puerta_no_le_interesa_y_no_califica.md](escenarios/VEN-002_puerta_no_le_interesa_y_no_califica.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| VEN-003 | Venta puerta a puerta | La misma puerta otra vez reabre su expediente | P1 | Funcional · integridad | [VEN-003_misma_puerta_dos_veces.md](escenarios/VEN-003_misma_puerta_dos_veces.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| VEN-004 | Venta puerta a puerta | Venta completa: abrió, formulario, autorización, firma y envío | P0 | Funcional · integración | [VEN-004_venta_completa_hasta_revision.md](escenarios/VEN-004_venta_completa_hasta_revision.md) | En ejecución | 35 | lote 2 por API (≈1 min) |  |  | API 12/12; falta pantalla |
+| VEN-005 | Venta puerta a puerta | Datos inválidos en el formulario | P2 | Funcional · validación | [VEN-005_datos_invalidos_formulario.md](escenarios/VEN-005_datos_invalidos_formulario.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 6/6 |
+| VEN-006 | Venta puerta a puerta | Un vendedor no ve los expedientes del otro | P0 | Seguridad | [VEN-006_vendedor_ve_solo_lo_suyo.md](escenarios/VEN-006_vendedor_ve_solo_lo_suyo.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| REV-001 | Revisión administrativa | Revisar documentos: aceptar, rechazar con nota y agregar uno | P1 | Funcional | [REV-001_revisar_documentos.md](escenarios/REV-001_revisar_documentos.md) | En ejecución | 20 | lote 2 por API (≈1 min) |  |  | API 8/8; falta pantalla |
+| REV-002 | Revisión administrativa | Devolver al vendedor con motivo y reenviar | P1 | Funcional · integración | [REV-002_devolver_al_vendedor_y_reenviar.md](escenarios/REV-002_devolver_al_vendedor_y_reenviar.md) | En ejecución | 20 | lote 2 por API (≈1 min) |  |  | API 8/8; falta pantalla |
+| REV-003 | Revisión administrativa | Aprobar con el código del programa: nace la obra | P0 | Funcional · integración | [REV-003_aprobar_expediente.md](escenarios/REV-003_aprobar_expediente.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 8/8 |
+| REV-004 | Revisión administrativa | Poner en espera, rechazar con motivo y reenviar un rechazado | P2 | Funcional | [REV-004_espera_rechazo_y_reenvio.md](escenarios/REV-004_espera_rechazo_y_reenvio.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 17/17 |
+| REV-005 | Revisión administrativa | Cerrar un expediente desde cualquier etapa | P2 | Funcional | [REV-005_cierre_administrativo.md](escenarios/REV-005_cierre_administrativo.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 7/7 |
+| REV-006 | Revisión administrativa | El vendedor no puede aprobar su propio expediente (SEG-07) | P0 | Seguridad | [REV-006_vendedor_no_aprueba.md](escenarios/REV-006_vendedor_no_aprueba.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 1/1 |
+| INS-001 | Instalación en campo | Asignar técnico y fecha a la obra | P0 | Funcional | [INS-001_asignar_tecnico_y_fecha.md](escenarios/INS-001_asignar_tecnico_y_fecha.md) | APROBADO | 15 + 25 prep. | lote 2 por API (≈1 min) |  |  | 8/8 |
+| INS-002 | Instalación en campo | Permiso municipal: sin permiso no se instala | P0 | Funcional · regla de negocio | [INS-002_permiso_municipal.md](escenarios/INS-002_permiso_municipal.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
+| INS-003 | Instalación en campo | Salida de material con la lista «3 ton desde cero» | P0 | Funcional · integración | [INS-003_salida_de_material_con_lista.md](escenarios/INS-003_salida_de_material_con_lista.md) | APROBADO | 25 | lote 2 por API (≈1 min) |  |  | 13/13 |
+| INS-004 | Instalación en campo | Instalación completa: jornada, checklist, equipos y acta firmada | P0 | Funcional · celular | [INS-004_instalacion_completa_y_acta.md](escenarios/INS-004_instalacion_completa_y_acta.md) | En ejecución | 40 | lote 2 por API (≈1 min) |  |  | API 11/11; falta pantalla |
+| INS-005 | Instalación en campo | Administración devuelve el acta al técnico y luego la confirma | P0 | Funcional | [INS-005_acta_devuelta_al_tecnico.md](escenarios/INS-005_acta_devuelta_al_tecnico.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| INS-006 | Instalación en campo | Inspección municipal aprobada | P1 | Funcional | [INS-006_inspeccion_aprobada.md](escenarios/INS-006_inspeccion_aprobada.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| INS-007 | Instalación en campo | Inspección fallida: la obra vuelve a campo | P1 | Funcional · regla de negocio | [INS-007_inspeccion_fallida_y_reinspeccion.md](escenarios/INS-007_inspeccion_fallida_y_reinspeccion.md) | APROBADO | 25 + 60 prep. | lote 2 por API (≈1 min) |  |  | 5/5 |
+| INS-008 | Instalación en campo | Cambiar el técnico de una obra en curso (rotación) | P0 | Funcional · seguridad | [INS-008_rotacion_de_tecnico.md](escenarios/INS-008_rotacion_de_tecnico.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-011 |  | D-011 |
+| INS-009 | Instalación en campo | Cambiar las fechas de una obra programada | P2 | Funcional | [INS-009_reprogramar_fechas.md](escenarios/INS-009_reprogramar_fechas.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 3/3 |
+| INS-010 | Instalación en campo | El técnico llega y el cliente no estaba (visita fallida) | P0 | Funcional · regla de negocio | [INS-010_cliente_no_estaba.md](escenarios/INS-010_cliente_no_estaba.md) | En ejecución | 25 | lote 2 por API (≈1 min) |  |  | API 16/16; falta pantalla |
+| INS-011 | Instalación en campo | Límite parametrizable de reagendamientos | P1 | Funcional · regla de negocio | [INS-011_limite_de_reagendamientos.md](escenarios/INS-011_limite_de_reagendamientos.md) | En ejecución | 30 | lote 2 por API (≈1 min) |  |  | API 14/14; falta pantalla |
+| INS-012 | Instalación en campo | Cancelar una obra y reintegrar el material | P0 | Funcional · integración | [INS-012_cancelar_obra_con_reintegro.md](escenarios/INS-012_cancelar_obra_con_reintegro.md) | En ejecución | 30 | lote 2 por API (≈1 min) |  |  | API 13/13; falta pantalla |
 | INS-013 | Instalación en campo | Enlace de firma del cliente: reenviar, vencido e inválido | P1 | Seguridad | [INS-013_enlace_de_firma_del_cliente.md](escenarios/INS-013_enlace_de_firma_del_cliente.md) | Pendiente | 15 | | | | |
-| INS-014 | Instalación en campo | Material comprado en la obra (no sale de bodega) | P2 | Funcional | [INS-014_material_comprado_en_la_obra.md](escenarios/INS-014_material_comprado_en_la_obra.md) | Pendiente | 10 | | | | |
+| INS-014 | Instalación en campo | Material comprado en la obra (no sale de bodega) | P2 | Funcional | [INS-014_material_comprado_en_la_obra.md](escenarios/INS-014_material_comprado_en_la_obra.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 3/3 |
 | INS-015 | Instalación en campo | Señal débil: subir fotos y guardar con red lenta | P1 | Rendimiento · celular | [INS-015_senal_debil_en_campo.md](escenarios/INS-015_senal_debil_en_campo.md) | Pendiente | 20 | | | | |
-| INS-016 | Instalación en campo | Obra de varios días con cuadrilla y ayudantes | P2 | Funcional | [INS-016_obra_de_varios_dias.md](escenarios/INS-016_obra_de_varios_dias.md) | Pendiente | 20 | | | | |
-| TEC-001 | Técnicos | Cada técnico ve solo su agenda y sus obras | P0 | Seguridad | [TEC-001_agenda_solo_lo_suyo.md](escenarios/TEC-001_agenda_solo_lo_suyo.md) | Pendiente | 15 | | | | |
-| TEC-002 | Técnicos | El técnico no autoriza salidas ni confirma su propia acta | P0 | Seguridad | [TEC-002_tecnico_no_autoriza_ni_confirma.md](escenarios/TEC-002_tecnico_no_autoriza_ni_confirma.md) | Pendiente | 15 | | | | |
+| INS-016 | Instalación en campo | Obra de varios días con cuadrilla y ayudantes | P2 | Funcional | [INS-016_obra_de_varios_dias.md](escenarios/INS-016_obra_de_varios_dias.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 7/7 |
+| TEC-001 | Técnicos | Cada técnico ve solo su agenda y sus obras | P0 | Seguridad | [TEC-001_agenda_solo_lo_suyo.md](escenarios/TEC-001_agenda_solo_lo_suyo.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 3/3 |
+| TEC-002 | Técnicos | El técnico no autoriza salidas ni confirma su propia acta | P0 | Seguridad | [TEC-002_tecnico_no_autoriza_ni_confirma.md](escenarios/TEC-002_tecnico_no_autoriza_ni_confirma.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 5/5 |
 | TEC-003 | Técnicos | Agenda con los 15 técnicos cargados | P2 | Rendimiento · usabilidad | [TEC-003_quince_tecnicos_en_agenda.md](escenarios/TEC-003_quince_tecnicos_en_agenda.md) | Pendiente | 20 + 30 prep. | | | | |
 | TEC-004 | Técnicos | Desactivar un técnico que tiene obras y camioneta con material | P1 | Funcional · integridad | [TEC-004_tecnico_desactivado_con_obras.md](escenarios/TEC-004_tecnico_desactivado_con_obras.md) | Pendiente | 15 | | | | |
 | TEC-005 | Técnicos | Cobro en efectivo en campo y efectivo por entregar | P1 | Funcional · dinero | [TEC-005_efectivo_por_entregar.md](escenarios/TEC-005_efectivo_por_entregar.md) | Pendiente | 15 | | | | |
 | BOD-001 | Bodega | La carga inicial cuadra con los PDF de AC Pro | P0 | Datos · integridad | [BOD-001_carga_inicial_cuadra.md](escenarios/BOD-001_carga_inicial_cuadra.md) | APROBADO | 20 | 2 min (API + SQL) |  |  | 19/19 |
-| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | Pendiente | 15 | | | | |
-| BOD-003 | Bodega | Entrada de mercancía de proveedor | P1 | Funcional | [BOD-003_entrada_de_mercancia.md](escenarios/BOD-003_entrada_de_mercancia.md) | Pendiente | 10 | | | | |
-| BOD-004 | Bodega | Entrega parcial y rechazo de una salida | P0 | Funcional · regla de negocio | [BOD-004_salida_parcial_y_rechazo.md](escenarios/BOD-004_salida_parcial_y_rechazo.md) | Pendiente | 20 | | | | |
-| BOD-005 | Bodega | Pedir más de lo que hay en bodega | P0 | Funcional · integridad | [BOD-005_existencia_insuficiente.md](escenarios/BOD-005_existencia_insuficiente.md) | Pendiente | 15 | | | | |
-| BOD-006 | Bodega | Reintegro: el material vuelve de la camioneta a bodega | P0 | Funcional · dinero | [BOD-006_reintegro_a_bodega.md](escenarios/BOD-006_reintegro_a_bodega.md) | Pendiente | 20 | | | | |
+| BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-009, D-010 |  | D-009, D-010 |
+| BOD-003 | Bodega | Entrada de mercancía de proveedor | P1 | Funcional | [BOD-003_entrada_de_mercancia.md](escenarios/BOD-003_entrada_de_mercancia.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 4/4 |
+| BOD-004 | Bodega | Entrega parcial y rechazo de una salida | P0 | Funcional · regla de negocio | [BOD-004_salida_parcial_y_rechazo.md](escenarios/BOD-004_salida_parcial_y_rechazo.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
+| BOD-005 | Bodega | Pedir más de lo que hay en bodega | P0 | Funcional · integridad | [BOD-005_existencia_insuficiente.md](escenarios/BOD-005_existencia_insuficiente.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 4/4 |
+| BOD-006 | Bodega | Reintegro: el material vuelve de la camioneta a bodega | P0 | Funcional · dinero | [BOD-006_reintegro_a_bodega.md](escenarios/BOD-006_reintegro_a_bodega.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-008 |  | D-008 |
 | BOD-007 | Bodega | Obra que consume todo: sin reintegro | P1 | Funcional | [BOD-007_obra_sin_reintegro.md](escenarios/BOD-007_obra_sin_reintegro.md) | Pendiente | 10 | | | | |
-| BOD-008 | Bodega | Traslado de material entre camionetas | P1 | Funcional | [BOD-008_traslado_entre_camionetas.md](escenarios/BOD-008_traslado_entre_camionetas.md) | Pendiente | 15 | | | | |
-| BOD-009 | Bodega | Conteo físico con diferencias (ajuste) | P1 | Funcional · auditoría | [BOD-009_conteo_y_ajuste.md](escenarios/BOD-009_conteo_y_ajuste.md) | Pendiente | 20 | | | | |
-| BOD-010 | Bodega | Importar el catálogo desde Excel | P1 | Funcional · validación | [BOD-010_importar_catalogo.md](escenarios/BOD-010_importar_catalogo.md) | Pendiente | 20 | | | | |
-| BOD-011 | Bodega | Equipos con serial: rastreo por equipo | P1 | Funcional · integridad | [BOD-011_articulo_con_serial.md](escenarios/BOD-011_articulo_con_serial.md) | Pendiente | 15 | | | | |
-| BOD-012 | Bodega | Bajo mínimo y compras sugeridas | P2 | Funcional | [BOD-012_minimos_y_compras_sugeridas.md](escenarios/BOD-012_minimos_y_compras_sugeridas.md) | Pendiente | 10 | | | | |
-| BOD-013 | Bodega | Crear, editar y borrar listas predefinidas | P2 | Funcional | [BOD-013_listas_predefinidas.md](escenarios/BOD-013_listas_predefinidas.md) | Pendiente | 15 | | | | |
-| BOD-014 | Bodega | Presupuesto de la obra contra lo real | P1 | Funcional · dinero | [BOD-014_presupuesto_vs_real.md](escenarios/BOD-014_presupuesto_vs_real.md) | Pendiente | 20 | | | | |
-| BOD-015 | Bodega | Cantidades y costos extremos | P2 | Validación | [BOD-015_valores_extremos.md](escenarios/BOD-015_valores_extremos.md) | Pendiente | 15 | | | | |
-| BOD-016 | Bodega | Dos entregas a la vez sobre la misma existencia | P0 | Concurrencia | [BOD-016_concurrencia_misma_existencia.md](escenarios/BOD-016_concurrencia_misma_existencia.md) | Pendiente | 20 | | | | |
-| BOD-017 | Bodega | El técnico ve su camioneta sin costos | P1 | Seguridad | [BOD-017_tecnico_ve_sin_costos.md](escenarios/BOD-017_tecnico_ve_sin_costos.md) | Pendiente | 10 | | | | |
-| COB-001 | Cobro al programa | Crear el cobro al programa y radicarlo | P0 | Funcional · integración | [COB-001_crear_y_radicar_cobro.md](escenarios/COB-001_crear_y_radicar_cobro.md) | Pendiente | 20 | | | | |
-| COB-002 | Cobro al programa | El programa rechaza el cobro: corregir y volver a radicar | P1 | Funcional | [COB-002_cobro_rechazado_y_corregido.md](escenarios/COB-002_cobro_rechazado_y_corregido.md) | Pendiente | 20 | | | | |
-| COB-003 | Cobro al programa | El programa paga: expediente pagado y cerrado | P0 | Funcional · dinero | [COB-003_pago_del_programa_y_cierre.md](escenarios/COB-003_pago_del_programa_y_cierre.md) | Pendiente | 15 | | | | |
-| COB-004 | Cobro al programa | No se puede cobrar sin acta confirmada ni permiso aprobado | P0 | Funcional · seguridad | [COB-004_cobro_sin_acta_confirmada.md](escenarios/COB-004_cobro_sin_acta_confirmada.md) | Pendiente | 15 | | | | |
+| BOD-008 | Bodega | Traslado de material entre camionetas | P1 | Funcional | [BOD-008_traslado_entre_camionetas.md](escenarios/BOD-008_traslado_entre_camionetas.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 2/2 |
+| BOD-009 | Bodega | Conteo físico con diferencias (ajuste) | P1 | Funcional · auditoría | [BOD-009_conteo_y_ajuste.md](escenarios/BOD-009_conteo_y_ajuste.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 4/4 |
+| BOD-010 | Bodega | Importar el catálogo desde Excel | P1 | Funcional · validación | [BOD-010_importar_catalogo.md](escenarios/BOD-010_importar_catalogo.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 7/7 |
+| BOD-011 | Bodega | Equipos con serial: rastreo por equipo | P1 | Funcional · integridad | [BOD-011_articulo_con_serial.md](escenarios/BOD-011_articulo_con_serial.md) | FALLIDO | 15 | lote 2 por API (≈1 min) | D-007 |  | D-007 |
+| BOD-012 | Bodega | Bajo mínimo y compras sugeridas | P2 | Funcional | [BOD-012_minimos_y_compras_sugeridas.md](escenarios/BOD-012_minimos_y_compras_sugeridas.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 3/3 |
+| BOD-013 | Bodega | Crear, editar y borrar listas predefinidas | P2 | Funcional | [BOD-013_listas_predefinidas.md](escenarios/BOD-013_listas_predefinidas.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 22/22 |
+| BOD-014 | Bodega | Presupuesto de la obra contra lo real | P1 | Funcional · dinero | [BOD-014_presupuesto_vs_real.md](escenarios/BOD-014_presupuesto_vs_real.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 6/6 |
+| BOD-015 | Bodega | Cantidades y costos extremos | P2 | Validación | [BOD-015_valores_extremos.md](escenarios/BOD-015_valores_extremos.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 7/7 |
+| BOD-016 | Bodega | Dos entregas a la vez sobre la misma existencia | P0 | Concurrencia | [BOD-016_concurrencia_misma_existencia.md](escenarios/BOD-016_concurrencia_misma_existencia.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 3/3 |
+| BOD-017 | Bodega | El técnico ve su camioneta sin costos | P1 | Seguridad | [BOD-017_tecnico_ve_sin_costos.md](escenarios/BOD-017_tecnico_ve_sin_costos.md) | APROBADO | 10 | lote 2 por API (≈1 min) |  |  | 12/12 |
+| COB-001 | Cobro al programa | Crear el cobro al programa y radicarlo | P0 | Funcional · integración | [COB-001_crear_y_radicar_cobro.md](escenarios/COB-001_crear_y_radicar_cobro.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 5/5 |
+| COB-002 | Cobro al programa | El programa rechaza el cobro: corregir y volver a radicar | P1 | Funcional | [COB-002_cobro_rechazado_y_corregido.md](escenarios/COB-002_cobro_rechazado_y_corregido.md) | APROBADO | 20 | lote 2 por API (≈1 min) |  |  | 3/3 |
+| COB-003 | Cobro al programa | El programa paga: expediente pagado y cerrado | P0 | Funcional · dinero | [COB-003_pago_del_programa_y_cierre.md](escenarios/COB-003_pago_del_programa_y_cierre.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 7/7 |
+| COB-004 | Cobro al programa | No se puede cobrar sin acta confirmada ni permiso aprobado | P0 | Funcional · seguridad | [COB-004_cobro_sin_acta_confirmada.md](escenarios/COB-004_cobro_sin_acta_confirmada.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 2/2 |
 | PAR-001 | Trabajo particular y facturación | Cotización particular: armar, enviar y aceptar | P1 | Funcional | [PAR-001_cotizacion_particular.md](escenarios/PAR-001_cotizacion_particular.md) | Pendiente | 20 | | | | |
 | PAR-002 | Trabajo particular y facturación | Emitir y anular una factura | P0 | Funcional · dinero | [PAR-002_factura_emitir_anular.md](escenarios/PAR-002_factura_emitir_anular.md) | Pendiente | 20 | | | | |
 | PAR-003 | Trabajo particular y facturación | Registrar el pago de una factura (efectivo, cheque, transferencia) | P1 | Funcional · dinero | [PAR-003_pago_manual_de_factura.md](escenarios/PAR-003_pago_manual_de_factura.md) | Pendiente | 15 | | | | |
@@ -153,8 +153,8 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | PER-002 | Rendimiento | Listas con volumen alto | P2 | Rendimiento | [PER-002_volumen_de_datos.md](escenarios/PER-002_volumen_de_datos.md) | Pendiente | 30 + 20 prep. | | | | |
 | PER-003 | Rendimiento | Carga inicial de la app en celular con red lenta | P1 | Rendimiento · celular | [PER-003_celular_red_lenta.md](escenarios/PER-003_celular_red_lenta.md) | Pendiente | 15 | | | | |
 | PER-004 | Rendimiento | Tareas programadas (Celery beat) no bloquean la app | P2 | Rendimiento · operación | [PER-004_tareas_programadas.md](escenarios/PER-004_tareas_programadas.md) | Pendiente | 15 | | | | |
-| CON-001 | Concurrencia | Doble clic y reintentos en acciones que crean cosas | P0 | Concurrencia | [CON-001_doble_clic_y_reintentos.md](escenarios/CON-001_doble_clic_y_reintentos.md) | Pendiente | 20 | | | | |
-| CON-002 | Concurrencia | Numeración consecutiva con emisiones simultáneas | P1 | Concurrencia · dinero | [CON-002_numeracion_simultanea.md](escenarios/CON-002_numeracion_simultanea.md) | Pendiente | 15 | | | | |
+| CON-001 | Concurrencia | Doble clic y reintentos en acciones que crean cosas | P0 | Concurrencia | [CON-001_doble_clic_y_reintentos.md](escenarios/CON-001_doble_clic_y_reintentos.md) | FALLIDO | 20 | lote 2 por API (≈1 min) | D-012 |  | D-012 |
+| CON-002 | Concurrencia | Numeración consecutiva con emisiones simultáneas | P1 | Concurrencia · dinero | [CON-002_numeracion_simultanea.md](escenarios/CON-002_numeracion_simultanea.md) | APROBADO | 15 | lote 2 por API (≈1 min) |  |  | 1/1 |
 | CON-003 | Concurrencia | Dos personas editando lo mismo | P2 | Concurrencia | [CON-003_edicion_simultanea.md](escenarios/CON-003_edicion_simultanea.md) | Pendiente | 15 | | | | |
 
 ## Documentos de control

@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -46,14 +46,31 @@ El técnico registra la visita fallida con motivo, nota y GPS; la obra queda sin
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 16 de 16 comprobaciones bien.
+- Diferencias con lo esperado: Falta la pantalla: botón «No se pudo hacer la visita», formulario y sección «Visitas fallidas».
+- Comprobaciones por API (16 de 16):
+  - ✔ Liberar orden
+  - ✔ Material entregado a la obra (4 × PVC 3496) — `4.0`
+  - ✔ Sin motivo no guarda
+  - ✔ Con nota de 2 letras no guarda
+  - ✔ Registrar visita fallida
+  - ✔ 1 de 2 visitas fallidas — `{'failed_visits': 1, 'limit': 2, 'limit_reached': False, 'extra_visits_authorized': 0}`
+  - ✔ La obra queda sin fecha, «Sin agendar», con el mismo técnico — `None planning`
+  - ✔ Expediente «Listo para instalar · Visita fallida» — `('ready_to_install', 'visit_failed')`
+  - ✔ project_visit_attempts con motivo, fecha y GPS — `customer_absent|2026-10-26|33.45|-112.07`
+  - ✔ Auditoría projects.visit_failed
+  - ✔ El material sigue cargado a la obra — `4.0`
+  - ✔ Administración recibe el aviso de visita fallida — `['installation.visit_failed', 'warehouse.release_pending', 'case.submitted', 'claim.paid', 'claim.rejected']`
+  - ✔ El técnico que la registró no se avisa a sí mismo
+  - ✔ Sin fecha agendada no hay visita fallida
+  - ✔ Reagendar con «Liberar orden»
+  - ✔ Vuelve a «Instalación agendada» — `install_scheduled`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -78,7 +95,7 @@ El técnico registra la visita fallida con motivo, nota y GPS; la obra queda sin
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

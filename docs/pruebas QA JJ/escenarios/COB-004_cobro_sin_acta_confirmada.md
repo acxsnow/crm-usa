@@ -6,12 +6,12 @@
 - **Módulo:** Cobro al programa
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -37,14 +37,17 @@ Las guardas del cobro no se saltan ni por la pantalla ni por la API.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 2 de 2 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (2 de 2):
+  - ✔ No se crea cobro de una obra cancelada (sin acta confirmada) — `409 {"detail":"Administración tiene que confirmar la información técnica del acta antes de crear el cobro.","code":"acta_not_confirmed","request_id":"f98c`
+  - ✔ Tampoco por la transición manual a cobro — `400 {"detail":"No se puede pasar de «Cerrado» a «En proceso de cobro».","code":"invalid_transition","request_id":"40c6eab6-be82-4b68-9457-d4a5c3251267"}`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +56,7 @@ Las guardas del cobro no se saltan ni por la pantalla ni por la API.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +70,7 @@ Las guardas del cobro no se saltan ni por la pantalla ni por la API.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

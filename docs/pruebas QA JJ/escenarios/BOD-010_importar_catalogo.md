@@ -6,12 +6,12 @@
 - **Módulo:** Bodega
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · validación
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -41,14 +41,22 @@ La importación crea los nuevos, reconoce los existentes y reporta los errores p
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 7 de 7 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (7 de 7):
+  - ✔ Administración sube el Excel del catálogo
+  - ✔ Subir el mismo Excel otra vez no suma la existencia dos veces — `{"creados": 0, "actualizados": 3, "omitidos": 0, "conteo_inicial": 0, "errores": [], "categorias_nuevas": [], "sheet": "Cat\u00e1logo", "rows_read": 3}`
+  - ✔ Un archivo que no es Excel → 400 — `400 {"detail":"El archivo no es un Excel (.xlsx) válido.","code":"invalid_workbook","request_id":"768173af-d0dd-401e-ac59-25`
+  - ✔ El técnico no puede importar el catálogo
+  - ✔ Los tres artículos quedaron en el catálogo — `['QA1025164900-CAP', 'QA1025164900-CIN', 'QA1025164900-CU38']`
+  - ✔ Existencia inicial del tubo: 200 ft — `200.00`
+  - ✔ El capacitor (4, mínimo 5) cuenta como «por reponer» — `{"low_count": 2}`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -57,7 +65,7 @@ La importación crea los nuevos, reconoce los existentes y reporta los errores p
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -71,7 +79,7 @@ La importación crea los nuevos, reconoce los existentes y reporta los errores p
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

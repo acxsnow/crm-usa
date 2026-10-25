@@ -6,12 +6,12 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución + 25 min de preparación
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 2 por API (≈1 min)
+- **Versión o commit probado:** devjj 07e97c7 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -40,14 +40,23 @@ La obra pasa de «Sin técnico ni fecha» a programada y le aparece al técnico 
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Por API, 8 de 8 comprobaciones bien.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (8 de 8):
+  - ✔ Asignar técnico y fecha (Liberar orden)
+  - ✔ La obra queda programada con técnico y fecha — `scheduled 2026-10-26`
+  - ✔ El técnico la ve en su agenda — `1`
+  - ✔ Otro técnico (Luis) no la ve en su agenda — `0`
+  - ✔ La auditoría registra quién asignó — `1`
+  - ✔ Al aprobar se creó el proyecto de instalación
+  - ✔ Agendar instalación con técnico
+  - ✔ El técnico ve su orden
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote2` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -57,7 +66,7 @@ La obra pasa de «Sin técnico ni fecha» a programada y le aparece al técnico 
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -71,7 +80,7 @@ La obra pasa de «Sin técnico ni fecha» a programada y le aparece al técnico 
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 2 por API (≈1 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
