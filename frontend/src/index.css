@@ -447,7 +447,7 @@ a {
   align-items: center;
   gap: 9px;
   font-size: 0.82rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .user-avatar {
@@ -4413,3 +4413,4 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
   }
   .global-search-option { padding: 12px 16px; }
 }
+

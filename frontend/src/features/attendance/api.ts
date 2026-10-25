@@ -381,6 +381,13 @@ export function hm(minutes: number | null | undefined): string {
   return `${signo}${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`;
 }
 
+/** Para indicadores: «29 h 50» cabe en una línea; el detalle lleva «min». */
+export function hmCorto(minutes: number | null | undefined): string {
+  if (minutes == null) return "—";
+  const m = Math.max(0, Math.round(minutes));
+  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
+}
+
 export function clockTime(iso: string | null | undefined, timeZone?: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString("es-US", { hour: "2-digit", minute: "2-digit", timeZone });

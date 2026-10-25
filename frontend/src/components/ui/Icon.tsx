@@ -45,6 +45,13 @@ const TRAZOS: Record<string, ReactNode> = {
   door: <><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17" /><path d="M3 21h18M14.5 12h.01" /></>,
   chevronLeft: <><path d="m15 5-7 7 7 7" /></>,
   chevronRight: <><path d="m9 5 7 7-7 7" /></>,
+  clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
+  grid: <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9.5h17M9 9.5v10M14.5 9.5v10" /></>,
+  gauge: <><path d="M4 16a8 8 0 1 1 16 0" /><path d="m12 16 3.5-4.5" /><path d="M4 16h2M18 16h2" /></>,
+  edit: <><path d="M4 20h4L19 9l-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></>,
+  dollar: <><path d="M12 3v18" /><path d="M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3 2 2.6 4.5 3 4.5 1.4 4.5 3.2-2 3-4.5 3-4.5-1.3-4.5-3" /></>,
+  bank: <><path d="M3 9.5 12 4l9 5.5" /><path d="M4.5 10v8M9.5 10v8M14.5 10v8M19.5 10v8M3 20.5h18" /></>,
+  map: <><path d="m3.5 6.5 5.5-2 6 2 5.5-2v13l-5.5 2-6-2-5.5 2Z" /><path d="M9 4.5v13M15 6.5v13" /></>,
 };
 
 export type IconName = keyof typeof TRAZOS;
@@ -80,6 +87,13 @@ export const ICONO_DE_RUTA: Record<string, IconName> = {
   "/roles": "key",
   "/audit-log": "history",
   "/notifications": "bell",
+  "/my-shift": "clock",
+  "/shifts": "grid",
+  "/attendance": "gauge",
+  "/attendance-review": "edit",
+  "/payroll": "dollar",
+  "/operations-map": "map",
+  "/banking": "bank",
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
