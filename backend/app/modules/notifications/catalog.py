@@ -132,6 +132,22 @@ NOTICES: dict[str, dict] = {
         "title": "Toca contar la bodega",
         "body": "El último conteo físico fue el {{fecha}} (hace {{dias}} días). Toca el conteo mensual.",
     },
+    # Pagos en línea (payments/, spec 2026-10-25-pagos-tarjeta)
+    "payment.received": {
+        "label": "Pago en línea recibido", "audience": "Quien registra pagos (invoices.record_payment)",
+        "title": "Pago recibido: {{factura}} · {{monto}}",
+        "body": "{{cliente}} pagó {{monto}} de la factura {{factura}} con {{metodo}}. Saldo: {{saldo}}.",
+    },
+    "payment.failed": {
+        "label": "Pago en línea fallido", "audience": "Quien registra pagos (invoices.record_payment)",
+        "title": "Pago fallido: {{factura}}",
+        "body": "El pago de {{cliente}} por {{monto}} de la factura {{factura}} no se completó ({{metodo}}). Contacta al cliente.",
+    },
+    "payment.disputed": {
+        "label": "Disputa de un pago con tarjeta", "audience": "Quien registra pagos (invoices.record_payment)",
+        "title": "Disputa abierta: {{factura}} · {{monto}}",
+        "body": "{{cliente}} abrió una disputa por {{monto}} en la factura {{factura}}. Responde en Stripe antes de la fecha límite.",
+    },
 }
 
 DEFAULT_PERMISSION = {
@@ -149,6 +165,9 @@ DEFAULT_PERMISSION = {
     "warehouse.release_pending": "warehouse.approve_release",
     "warehouse.stock_low": "warehouse.manage",
     "warehouse.count_due": "warehouse.manage",
+    "payment.received": "invoices.record_payment",
+    "payment.failed": "invoices.record_payment",
+    "payment.disputed": "invoices.record_payment",
 }
 
 

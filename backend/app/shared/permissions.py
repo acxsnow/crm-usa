@@ -147,6 +147,9 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("attendance.dashboard", "Ver el panel de asistencia y el reporte de nómina"),
     ("payroll.close", "Cerrar y reabrir períodos de nómina"),
     ("locations.view", "Ver la ubicación del personal y el mapa operativo"),
+    # Pagos en línea y banca conectada (spec 2026-10-25-pagos-tarjeta)
+    ("payments.collect", "Cobrar facturas en línea: enlace de pago, QR y anticipos"),
+    ("bankfeeds.manage", "Conectar bancos y tarjetas, revisar y clasificar sus movimientos"),
     # Usuarios y roles
     ("users.manage", "Administrar usuarios"),
     # Solo listar: lo necesitan pantallas que eligen o muestran personas
@@ -223,6 +226,10 @@ DEFAULT_MODULES: dict[str, Module] = {
             "projects.update",
             "projects.assign",
             "projects.close",
+            # Cobrar en línea se hace desde la obra (técnico) o la factura
+            # (oficina). Va aquí y no en facturación: si no, el técnico abriría
+            # el módulo de facturas.
+            "payments.collect",
             "tasks.manage",
             "checklists.manage",
             "checklists.complete",
@@ -298,7 +305,7 @@ DEFAULT_MODULES: dict[str, Module] = {
     ),
     "finance_close": Module(
         "Conciliación y rentabilidad",
-        ["reconciliation.manage", "profitability.read", "accounting.export"],
+        ["reconciliation.manage", "profitability.read", "accounting.export", "bankfeeds.manage"],
     ),
     # --- Administración ---
     "reports": Module(
@@ -442,6 +449,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "attendance.review",
         "attendance.dashboard",
         "locations.view",
+        "payments.collect",
         "profile.manage",
     ],
     "field_technician": [
@@ -461,6 +469,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "daylogs.manage",
         "notifications.read_own",
         "attendance.clock",
+        "payments.collect",
         "profile.manage",
     ],
     "accounting": [
@@ -494,6 +503,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "attendance.clock",
         "attendance.dashboard",
         "payroll.close",
+        "payments.collect",
+        "bankfeeds.manage",
         "profile.manage",
     ],
     "management": [

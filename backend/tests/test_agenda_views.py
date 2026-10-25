@@ -3,7 +3,7 @@
 Pendientes: lo que falta por hacer, atrasado incluido, de lo más viejo a lo más
 nuevo. Historial: lo cerrado o cancelado de un rango, de lo más nuevo a lo más
 viejo. Sin `view`, la agenda sigue como antes (ver test_field_installation)."""
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -12,7 +12,9 @@ from app.modules.field_ops import case_hooks
 from app.modules.field_ops.models import ProjectStatus
 from tests.field_helpers import approved_case_with_project, headers_for
 
-HOY = date.today()
+# El «hoy» del servidor (organización de prueba en UTC): con `date.today()` local,
+# después de las 7 p. m. en Bogotá ya es mañana en UTC y la prueba fallaba por la hora.
+HOY = datetime.now(timezone.utc).date()
 URL = "/api/v1/dispatch/agenda"
 
 

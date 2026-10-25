@@ -51,6 +51,8 @@ import { AttendanceDashboardPage } from "@/features/attendance/AttendanceDashboa
 import { AttendanceReviewPage } from "@/features/attendance/AttendanceReviewPage";
 import { PayrollPage } from "@/features/attendance/PayrollPage";
 import { OperationsMapPage } from "@/features/map/OperationsMapPage";
+import { BankingPage } from "@/features/payments/BankingPage";
+import { PayInvoicePage } from "@/features/payments/PayInvoicePage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -65,6 +67,8 @@ export const router = createBrowserRouter([
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/accept-invitation", element: <AcceptInvitationPage /> },
   { path: "/customer-signature", element: <CustomerSignaturePage /> },
+  // Factura en línea del cliente, sin sesión (pagos, spec 2026-10-25).
+  { path: "/pagar/:token", element: <PayInvoicePage /> },
   {
     path: "/",
     element: (
@@ -410,6 +414,10 @@ export const router = createBrowserRouter([
             <OperationsMapPage />
           </RequireAccess>
         ),
+      },
+      {
+        path: "banking",
+        element: <RequireAccess permission={["bankfeeds.manage"]} moduleLabel="la banca"><BankingPage /></RequireAccess>,
       },
       { path: "*", element: <Navigate to="/" replace /> },
     ],

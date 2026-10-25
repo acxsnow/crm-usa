@@ -1,0 +1,471 @@
+/* ==========================================================================
+   Sistema visual V3 (25 oct 2026)
+
+   Panel de operaciones claro y sobrio: menú lateral blanco, contenido sobre un
+   gris muy suave, tarjetas planas con borde fino, Geist para la interfaz y
+   Geist Mono para los códigos (expedientes, SKU, números de orden). El rojo de
+   la marca solo marca la acción principal y lo que está activo.
+
+   Se carga después de index.css y todas las reglas van bajo #root: así ganan a
+   los estilos de cada módulo (acta-, billing-, fin-, att-, notices-…) sin tener
+   que reescribirlos uno por uno. Los colores de los módulos salen de los mismos
+   tokens, así que cambian solos.
+   ========================================================================== */
+
+:root {
+  /* Marca */
+  --red: #d4162b;
+  --red-dark: #b0101f;
+  --red-wash: #fdf0f1;
+  --brand: #d4162b;
+
+  /* Texto y superficies */
+  --ink: #101828;
+  --ink-soft: #475467;
+  --ink-faint: #98a2b3;
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --card-soft: #f9fafb;
+  --line: #e4e7ec;
+  --line-soft: #eef0f3;
+  --line-input: #d0d5dd;
+
+  /* Estados */
+  --ok: #067647;
+  --ok-wash: #ecfdf3;
+  --warn: #b54708;
+  --warn-wash: #fffaeb;
+  --info: #175cd3;
+  --info-wash: #eff8ff;
+  --muted-wash: #f2f4f7;
+
+  /* Menú lateral (claro) */
+  --sidebar: #ffffff;
+  --sidebar-text: #475467;
+  --sidebar-hover: #f2f4f7;
+
+  /* Forma */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 12px 24px -6px rgba(16, 24, 40, 0.10), 0 4px 8px -4px rgba(16, 24, 40, 0.05);
+  --ring: 0 0 0 4px rgba(212, 22, 43, 0.12);
+
+  /* Tipografía */
+  --ui-font: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display-font: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* --mono-font lo usan muchas cifras y fechas de los módulos: va con la fuente
+     de la interfaz y números tabulares. Los códigos usan --code-font. */
+  --mono-font: "Geist", "Inter", system-ui, sans-serif;
+  --code-font: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --topbar-h: 60px;
+  font-family: var(--ui-font);
+  font-feature-settings: normal;
+}
+
+html, body { background: var(--canvas); }
+body { font-family: var(--ui-font); font-size: 14px; line-height: 1.5; color: var(--ink); font-variant-numeric: normal; -webkit-font-smoothing: antialiased; }
+#root { font-family: var(--ui-font); }
+#root button, #root input, #root select, #root textarea { font-family: inherit; }
+#root ::selection { background: rgba(212, 22, 43, 0.14); }
+
+/* --- Tipografía ------------------------------------------------------------- */
+#root h1, #root h2, #root h3, #root h4 { font-family: var(--display-font); color: var(--ink); letter-spacing: -0.015em; text-wrap: balance; }
+#root .app-content h1 { font-size: 1.5rem; font-weight: 600; line-height: 1.25; margin: 0; }
+#root .app-content h2 { font-size: 1rem; font-weight: 600; line-height: 1.35; }
+#root .app-content h3 { font-size: 0.9375rem; font-weight: 600; }
+#root code { font-family: var(--code-font); font-size: 0.86em; letter-spacing: 0; }
+#root .mono, #root .money, #root .billing-amount { font-family: var(--ui-font); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+#root .money, #root .num, #root .is-num { font-variant-numeric: tabular-nums; }
+#root .eyebrow { font: 500 0.75rem/1.2 var(--ui-font); letter-spacing: 0.02em; text-transform: none; color: var(--ink-faint); margin: 0 0 6px; }
+#root .page-subtitle { color: var(--ink-soft); font-size: 0.875rem; }
+#root a { color: inherit; }
+
+/* --- Estructura ------------------------------------------------------------- */
+#root .app-shell { background: var(--canvas); }
+
+#root .app-sidebar {
+  width: 248px; background: var(--sidebar); color: var(--ink);
+  border-right: 1px solid var(--line); padding: 16px 12px; box-shadow: none;
+}
+#root .app-brand {
+  display: flex; align-items: center; gap: 10px; padding: 4px 8px 12px; margin: 0;
+  font: 600 1rem/1 var(--display-font); color: var(--ink); letter-spacing: -0.01em; text-transform: none;
+  border-bottom: 1px solid var(--line-soft);
+}
+#root .brand-mark {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px;
+  background: var(--red); color: #fff; font: 700 0.875rem/1 var(--display-font); box-shadow: none;
+}
+#root .brand-dot { color: var(--red); }
+#root .sidebar-caption { display: none; }
+#root .app-sidebar nav { margin-top: 12px; display: flex; flex-direction: column; gap: 1px; }
+#root .nav-group + .nav-group { margin-top: 16px; }
+#root .nav-group-label {
+  padding: 0 10px; margin: 0 0 4px; font: 500 0.6875rem/1.4 var(--ui-font); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-faint); opacity: 1;
+}
+#root .nav-link {
+  display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 6px 10px; border-radius: var(--radius);
+  color: var(--sidebar-text); font-size: 0.875rem; font-weight: 500; text-decoration: none; border: 0; box-shadow: none;
+  background: transparent; transition: background-color 0.12s, color 0.12s;
+}
+#root .nav-link:hover { background: var(--sidebar-hover); color: var(--ink); }
+#root .nav-link.active { background: var(--red-wash); color: var(--red-dark); font-weight: 600; box-shadow: none; }
+#root .nav-icon { display: inline-grid; place-items: center; width: 18px; height: 18px; color: var(--ink-faint); opacity: 1; }
+#root .nav-link:hover .nav-icon { color: var(--ink-soft); }
+#root .nav-link.active .nav-icon { color: var(--red); }
+#root .nav-link.disabled { opacity: 0.45; }
+#root .menu-account { border-top: 1px solid var(--line-soft); color: var(--ink); }
+#root .menu-account small { color: var(--ink-soft); }
+#root .menu-close { color: var(--ink-soft); }
+
+#root .app-topbar {
+  height: var(--topbar-h); padding: 0 28px; gap: 12px; background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(1.4) blur(8px); border-bottom: 1px solid var(--line); box-shadow: none;
+}
+#root .topbar-search, #root .global-search-box {
+  height: 36px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card-soft); color: var(--ink-faint);
+  box-shadow: none;
+}
+#root .topbar-search:focus-within { background: var(--surface); border-color: var(--line-input); box-shadow: var(--ring); }
+#root .topbar-search input { font-size: 0.875rem; color: var(--ink); background: transparent; }
+#root .global-search-hint { border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink-faint); font: 500 0.6875rem var(--mono-font); }
+#root .global-search-panel { border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+#root .user-menu { gap: 10px; }
+#root .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; font: 600 0.8125rem/1 var(--ui-font); }
+#root .user-name { font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
+#root .user-role { font-size: 0.75rem; color: var(--ink-faint); font-weight: 400; }
+#root .sign-out {
+  height: 32px; padding: 0 12px; border: 1px solid var(--line) !important; border-radius: var(--radius) !important;
+  background: var(--surface); color: var(--ink-soft); font: 500 0.8125rem var(--ui-font); box-shadow: none;
+}
+#root .sign-out:hover { color: var(--ink); background: var(--card-soft); }
+#root .notification-button { border-radius: var(--radius); color: var(--ink-soft); }
+#root .notification-button:hover { background: var(--sidebar-hover); color: var(--ink); }
+#root .notice-badge { background: var(--red); border: 2px solid var(--surface); font: 600 0.625rem/1 var(--ui-font); }
+#root .notice-panel { border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+
+#root .app-content { max-width: 1400px; padding: 28px 32px 64px; }
+
+/* --- Encabezado de página (todas las variantes) ------------------------------ */
+#root .ui-page-header, #root .page-heading, #root .app-content .billing-head, #root .acta-header {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 24px;
+  margin: 0 0 24px; padding: 0; border: 0; background: none; box-shadow: none;
+}
+#root .ui-page-header > div:first-child, #root .page-heading > div:first-child, #root .app-content .billing-head > div:first-child { min-width: 0; flex: 1 1 360px; }
+#root .ui-page-header h1, #root .page-heading h1, #root .app-content .billing-head h1 { font-size: 1.5rem; font-weight: 600; margin: 0; }
+#root .ui-page-header p, #root .page-heading p, #root .app-content .billing-head p { margin: 4px 0 0; color: var(--ink-soft); font-size: 0.875rem; max-width: 72ch; }
+/* Encabezados con título y texto sueltos (sin <div>): uno debajo del otro. */
+#root .app-content .billing-head:not(:has(> div)) { display: block; }
+#root .ui-page-header-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#root .app-content > div > h1:first-child { margin: 0 0 4px; }
+#root .app-content > div > h1:first-child + .page-subtitle { margin: 0 0 24px; max-width: 72ch; }
+
+/* --- Botones ------------------------------------------------------------------ */
+#root .primary-button, #root .acta-btn, #root .att-btn, #root .ghost-button, #root .link-button, #root .icon-btn,
+#root .filter-bar-actions button, #root .auth-card button[type="submit"] {
+  font-family: var(--ui-font); letter-spacing: 0; text-transform: none;
+}
+#root .primary-button, #root .acta-btn.is-primary, #root .att-btn.is-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px;
+  border: 1px solid var(--red); border-radius: var(--radius); background: var(--red); color: #fff;
+  font-size: 0.875rem; font-weight: 600; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-decoration: none; cursor: pointer;
+}
+#root .primary-button:hover:not(:disabled), #root .acta-btn.is-primary:hover:not(:disabled), #root .att-btn.is-primary:hover:not(:disabled) { background: var(--red-dark); border-color: var(--red-dark); }
+#root .acta-btn, #root .att-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px;
+  border: 1px solid var(--line-input); border-radius: var(--radius); background: var(--surface); color: var(--ink);
+  font-size: 0.875rem; font-weight: 500; box-shadow: var(--shadow-sm); text-decoration: none; cursor: pointer;
+}
+#root .acta-btn:hover:not(:disabled), #root .att-btn:hover:not(:disabled) { background: var(--card-soft); border-color: var(--line-input); }
+#root .acta-btn.is-quiet, #root .ghost-button { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink-soft); }
+#root .acta-btn.is-quiet:hover:not(:disabled), #root .ghost-button:hover { background: var(--sidebar-hover); color: var(--ink); }
+#root .acta-btn.is-line { background: var(--surface); border-color: var(--line-input); color: var(--ink); }
+#root .acta-btn.is-link, #root .link-button, #root .att-btn.is-link, #root .acta-link {
+  background: none; border: 0; box-shadow: none; padding: 0; min-height: 0; color: var(--red-dark); font-weight: 500; text-decoration: none; cursor: pointer;
+}
+#root .acta-btn.is-link:hover, #root .link-button:hover, #root .acta-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+#root .att-btn.is-danger { background: var(--ink); border-color: var(--ink); color: #fff; }
+#root .att-btn.is-big, #root .acta-btn.is-big { min-height: 48px; font-size: 0.9375rem; border-radius: 10px; }
+#root .icon-btn { border-radius: var(--radius); border-color: var(--line); }
+#root button:disabled, #root .acta-btn:disabled, #root .primary-button:disabled { opacity: 0.5; cursor: not-allowed; }
+#root button:focus-visible, #root a:focus-visible, #root input:focus-visible, #root select:focus-visible, #root textarea:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* --- Formularios ---------------------------------------------------------------- */
+#root .app-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+#root .app-content select, #root .app-content textarea {
+  min-height: 36px; padding: 0 12px; border: 1px solid var(--line-input); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink); font-size: 0.875rem; font-weight: 400; box-shadow: var(--shadow-sm);
+}
+#root .app-content textarea { padding: 8px 12px; min-height: 84px; line-height: 1.5; }
+#root .app-content input:focus, #root .app-content select:focus, #root .app-content textarea:focus { outline: none; border-color: #f2a3ab; box-shadow: var(--ring); }
+#root .app-content input::placeholder, #root .app-content textarea::placeholder { color: var(--ink-faint); }
+#root .app-content input[type="checkbox"], #root .app-content input[type="radio"] { accent-color: var(--red); width: 16px; height: 16px; }
+#root .form-label, #root .field > span, #root .filter-bar-field, #root .att-form label, #root .att-field, #root .acta .panel-form label {
+  font-size: 0.8125rem; font-weight: 500; color: var(--ink-soft); letter-spacing: 0; text-transform: none;
+}
+#root .form-error { color: var(--red-dark); font-size: 0.8125rem; }
+
+/* --- Tarjetas y secciones --------------------------------------------------------- */
+#root .acta, #root .panel, #root .fin-box, #root .fin-card, #root .att-card, #root .annex-section, #root .card,
+#root .billing-card, #root .sales-block, #root .program-section, #root .notices-page > section {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+#root .acta, #root .panel, #root .att-card { padding: 20px; }
+#root .acta-title, #root .acta-section-title, #root .panel-heading h2, #root .fin-card-head h2, #root .fin-card-head h3, #root .annex-section-head h3 {
+  font-family: var(--display-font); font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); text-transform: none;
+}
+#root .panel-heading { border-bottom: 1px solid var(--line-soft); padding-bottom: 12px; margin-bottom: 16px; }
+#root .acta-lead, #root .acta-empty, #root .att-muted, #root .notices-hint { color: var(--ink-soft); font-size: 0.875rem; }
+#root .acta-empty { padding: 20px; text-align: center; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--card-soft); }
+#root .info-banner { border: 1px solid #b2ddff; background: var(--info-wash); color: #194185; border-radius: var(--radius); }
+
+/* --- Indicadores ------------------------------------------------------------------- */
+#root .metric-card, #root .fin-kpi, #root .kpi {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+#root .metric-card .ui-kpi-icon { display: none; }
+#root .metric-card .ui-kpi-head span, #root .metric-card > span, #root .fin-kpi small {
+  font-size: 0.8125rem; font-weight: 500; color: var(--ink-soft); letter-spacing: 0; text-transform: none;
+}
+#root .metric-card strong, #root .fin-kpi strong {
+  font-family: var(--display-font); font-size: 1.625rem; font-weight: 600; letter-spacing: -0.025em; line-height: 1.2;
+  color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#root .metric-card small { font-size: 0.75rem; color: var(--ink-faint); }
+#root a.metric-card:hover { border-color: var(--line-input); box-shadow: var(--shadow-md); }
+#root .fin-kpi.is-alert { background: var(--surface); border-color: var(--line); box-shadow: inset 3px 0 0 var(--red), var(--shadow-sm); }
+
+/* --- Filtros ------------------------------------------------------------------------- */
+#root .filter-bar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; padding: 12px 14px; margin-bottom: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+#root .filter-bar-toggle {
+  flex-basis: 100%; display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; border: 0;
+  font: 600 0.75rem/1 var(--ui-font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); text-align: left;
+}
+#root .filter-bar-fields { display: flex; flex-wrap: wrap; gap: 10px 12px; flex: 1 1 auto; margin: 0; }
+#root .filter-bar-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 180px; max-width: 320px; }
+#root .filter-bar-actions { display: flex; align-items: center; gap: 8px; margin: 0; }
+
+/* --- Tablas ----------------------------------------------------------------------------- */
+#root .table-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: auto; }
+#root .data-table, #root .notices-table, #root .materials-table, #root .tablewrap table, #root .acta table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; color: var(--ink);
+}
+#root .data-table th, #root .notices-table th, #root .materials-table th, #root .tablewrap th, #root .acta table th {
+  position: sticky; top: 0; z-index: 1; padding: 10px 16px; text-align: left; white-space: nowrap;
+  background: var(--card-soft); color: var(--ink-soft); font: 500 0.75rem/1.3 var(--ui-font); letter-spacing: 0.01em; text-transform: none;
+  border-bottom: 1px solid var(--line);
+}
+#root .notices-table td, #root .materials-table td, #root .tablewrap td, #root .acta table td,
+#root .data-table:not(.is-cards) td {
+  padding: 12px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; background: transparent;
+}
+/* La tabla común se vuelve tarjeta por fila en el celular (index.css); su celda solo cambia en escritorio. */
+@media (min-width: 768px) {
+  #root .data-table.is-cards td { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; background: transparent; }
+}
+#root .data-table tbody tr:last-child td, #root .notices-table tbody tr:last-child td { border-bottom: 0; }
+#root .data-table tbody tr:hover td, #root .notices-table tbody tr:hover td { background: #fcfcfd; }
+#root .data-table td:first-child, #root .data-table td.is-title { font-weight: 500; }
+#root tr.fin-overdue, #root tr.fin-overdue td { background: transparent !important; }
+#root tr.fin-overdue td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+
+/* --- Estados ------------------------------------------------------------------------------ */
+#root .status-pill, #root .billing-chip, #root .pill, #root .att-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px;
+  font: 500 0.75rem/1.5 var(--ui-font); letter-spacing: 0; text-transform: none; white-space: nowrap;
+  border: 1px solid transparent;
+}
+#root .status-pill::before, #root .billing-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+#root .status-active, #root .status-completed, #root .status-done, #root .status-paid, #root .status-converted,
+#root .billing-chip.is-paid, #root .billing-chip.is-accepted, #root .billing-chip.is-issued { color: var(--ok); background: var(--ok-wash); border-color: #abefc6; }
+#root .billing-chip.is-preparing, #root .billing-chip.is-draft, #root .billing-chip.is-unpaid, #root .billing-chip.is-sent { color: var(--warn); background: var(--warn-wash); border-color: #fedf89; }
+#root .billing-chip.is-submitted, #root .billing-chip.is-partial { color: var(--info); background: var(--info-wash); border-color: #b2ddff; }
+#root .billing-chip.is-rejected, #root .billing-chip.is-overdue, #root .billing-chip.is-expired { color: var(--red-dark); background: var(--red-wash); border-color: #fecdd2; }
+
+/* --- Pestañas ----------------------------------------------------------------------------- */
+#root .billing-tabs, #root .ui-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; overflow-x: auto; }
+#root .billing-tab { padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; color: var(--ink-soft); font: 500 0.875rem var(--ui-font); }
+#root .billing-tab:hover { color: var(--ink); }
+#root .billing-tab.is-active { color: var(--ink); border-bottom-color: var(--red); font-weight: 600; }
+
+/* --- Turnos (mismo lenguaje) --------------------------------------------------------------- */
+#root .att-segment { border: 1px solid var(--line-input); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+#root .att-segment button { font: 500 0.8125rem var(--ui-font); color: var(--ink-soft); min-height: 34px; }
+#root .att-segment button.is-on { background: var(--muted-wash); color: var(--ink); font-weight: 600; }
+#root .att-kpis { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+#root .att-clock-big { font-family: var(--display-font); font-weight: 600; letter-spacing: -0.03em; }
+#root .att-week thead th { background: var(--card-soft); font: 500 0.75rem var(--ui-font); color: var(--ink-soft); }
+#root .att-gate-card { border-radius: 16px; }
+
+/* --- Barra inferior del celular ------------------------------------------------------------- */
+#root .tabbar { background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); box-shadow: none; }
+#root .tabbar-item { color: var(--ink-faint); font: 500 0.6875rem var(--ui-font); }
+#root .tabbar-item.active { color: var(--red); }
+
+/* --- Ingreso: se conserva el diseño anterior (fondo oscuro con la cuadrícula), con la fuente nueva. */
+#root .auth-card h1 { font-family: var(--display-font); letter-spacing: -0.02em; }
+
+/* --- Celular ------------------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  #root .app-topbar { padding: 0 16px; }
+  #root .app-content { padding: 20px 16px 96px; }
+  #root .app-sidebar { box-shadow: var(--shadow-md); }
+  #root .menu-toggle { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); font: 500 0.8125rem var(--ui-font); min-height: 36px; }
+}
+@media (max-width: 767px) {
+  #root .app-content h1, #root .ui-page-header h1, #root .page-heading h1, #root .app-content .billing-head h1 { font-size: 1.3rem; }
+  #root .ui-page-header, #root .page-heading, #root .app-content .billing-head { margin-bottom: 16px; }
+  #root .ui-page-header > div:first-child, #root .page-heading > div:first-child, #root .app-content .billing-head > div:first-child { flex: 0 0 auto; }
+  #root .att-kpis, #root .ui-kpi-grid, #root .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #root .metric-card, #root .fin-kpi { padding: 12px 14px; }
+  #root .metric-card strong, #root .fin-kpi strong { font-size: 1.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root * { transition: none !important; animation: none !important; }
+}
+
+/* ==========================================================================
+   Identidad Delta HVAC: frío y calor.
+   Azul marino (el frío del aire acondicionado) para la estructura: menú,
+   títulos y datos. Rojo de marca (el calor) solo para la acción principal y lo
+   activo. Cada módulo abre con una franja blanca de lado a lado con su título,
+   sus acciones y sus pestañas, y el contenido va debajo sobre un gris frío.
+   ========================================================================== */
+:root {
+  --navy-950: #071426;
+  --navy-900: #0b1d36;
+  --navy-800: #12294a;
+  --navy-700: #1d3a63;
+  --navy-100: #e8eef7;
+  --navy-50: #f3f6fb;
+  --cool: #0e7fc0;
+  --cool-wash: #e6f3fb;
+  --canvas: #f2f5f9;
+  --ink: #0b1d36;
+  --ink-soft: #4a5b74;
+  --ink-faint: #8a98ad;
+  --line: #dfe5ee;
+  --line-soft: #ebeff5;
+  --card-soft: #f6f8fb;
+  --sidebar: var(--navy-900);
+}
+html, body, #root .app-shell { background: var(--canvas); }
+
+/* Menú lateral azul marino */
+#root .app-sidebar {
+  background: linear-gradient(180deg, var(--navy-900) 0%, var(--navy-950) 100%);
+  border-right: 0; color: #dbe4f0;
+}
+#root .app-brand { color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; }
+#root .brand-dot { color: #ff5d6c; }
+#root .nav-group-label { color: #6f84a6; }
+#root .nav-link { position: relative; color: #c3cfe0; font-weight: 500; }
+#root .nav-link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+#root .nav-link .nav-icon { color: #7f93b3; }
+#root .nav-link:hover .nav-icon { color: #c3cfe0; }
+#root .nav-link.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 600; }
+#root .nav-link.active::before {
+  content: ""; position: absolute; left: -12px; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--red);
+}
+#root .nav-link.active .nav-icon { color: #ff6b79; }
+#root .menu-account { border-top: 1px solid rgba(255, 255, 255, 0.08); color: #fff; }
+#root .menu-account small { color: #8fa1bd; }
+#root .menu-close { color: #c3cfe0; }
+
+/* Barra superior */
+#root .app-topbar { background: #fff; border-bottom: 1px solid var(--line); }
+#root .user-avatar { background: var(--navy-800); }
+
+/* Franja del encabezado: blanca de lado a lado, con título, texto y acciones. */
+#root .app-content > div > .ui-page-header:first-child,
+#root .app-content > div > .page-heading:first-child,
+#root .app-content > div > .billing-head:first-child {
+  margin: -28px -32px 24px; padding: 24px 32px 22px; background: #fff; border-bottom: 1px solid var(--line);
+}
+#root .app-content > div > h1:first-child { margin: -28px -32px 0; padding: 24px 32px 0; background: #fff; }
+#root .app-content > div > h1:first-child + .page-subtitle {
+  margin: 0 -32px 24px; padding: 4px 32px 22px; max-width: none; background: #fff; border-bottom: 1px solid var(--line);
+}
+#root .ui-page-header h1, #root .page-heading h1, #root .app-content .billing-head h1, #root .app-content > div > h1:first-child {
+  font-size: 1.625rem; font-weight: 650; letter-spacing: -0.025em; color: var(--navy-900);
+}
+#root .eyebrow { color: var(--cool); font-weight: 600; font-size: 0.75rem; }
+/* Las pestañas del módulo quedan pegadas a la franja, como parte del encabezado. */
+#root .app-content > div > .billing-head:first-child:has(+ .billing-tabs) { border-bottom: 0; padding-bottom: 8px; margin-bottom: 0; }
+#root .app-content > div > .billing-head:first-child + .billing-tabs {
+  margin: 0 -32px 24px; padding: 0 28px; background: #fff; border-bottom: 1px solid var(--line);
+}
+#root .billing-tab { padding: 10px 12px 12px; color: var(--ink-soft); }
+#root .billing-tab.is-active { color: var(--navy-900); border-bottom-color: var(--red); }
+
+/* Indicadores: franja de color arriba (frío, aire, bien, calor) y cifra grande. */
+#root .metric-card, #root .fin-kpi { position: relative; overflow: hidden; padding: 18px 20px 16px; border-color: var(--line); }
+#root .metric-card::before, #root .fin-kpi::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--navy-700); }
+#root .metric-grid > :nth-child(4n+2)::before, #root .fin-kpis > :nth-child(4n+2)::before, #root .att-kpis > :nth-child(4n+2)::before { background: var(--cool); }
+#root .metric-grid > :nth-child(4n+3)::before, #root .fin-kpis > :nth-child(4n+3)::before, #root .att-kpis > :nth-child(4n+3)::before { background: var(--ok); }
+#root .metric-grid > :nth-child(4n+4)::before, #root .fin-kpis > :nth-child(4n+4)::before, #root .att-kpis > :nth-child(4n+4)::before { background: var(--red); }
+#root .metric-card .ui-kpi-icon {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--navy-50); color: var(--navy-700); font-size: 0.85rem;
+}
+#root .metric-card .ui-kpi-head span:last-child, #root .metric-card > span, #root .fin-kpi small {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint);
+}
+#root .metric-card strong, #root .fin-kpi strong { font-size: 1.875rem; font-weight: 650; color: var(--navy-900); letter-spacing: -0.03em; }
+
+/* Paneles y tarjetas: título con su línea, borde frío. */
+#root .acta, #root .panel, #root .fin-box, #root .fin-card, #root .att-card, #root .annex-section, #root .overdue-section {
+  border-color: var(--line); box-shadow: 0 1px 2px rgba(11, 29, 54, 0.04);
+}
+#root .panel-heading { margin: -20px -20px 16px; padding: 16px 20px; border-bottom: 1px solid var(--line-soft); background: transparent; }
+#root .panel-heading h2, #root .acta-title, #root .acta-section-title, #root .fin-card-head h2, #root .fin-card-head h3, #root .att-card h2 {
+  color: var(--navy-900); font-size: 0.9375rem; font-weight: 650;
+}
+#root .panel-heading p { color: var(--ink-faint); font-size: 0.8125rem; }
+
+/* Tablas: encabezado azul hielo en mayúsculas pequeñas, filas limpias. */
+#root .data-table th, #root .notices-table th, #root .materials-table th, #root .tablewrap th, #root .acta table th {
+  background: var(--navy-50); color: #52627a; font: 600 0.6875rem/1.3 var(--ui-font); letter-spacing: 0.06em; text-transform: uppercase;
+}
+#root .data-table tbody tr:hover td, #root .notices-table tbody tr:hover td { background: #f8fafd; }
+#root .data-table td:first-child { color: var(--navy-900); }
+
+/* Filtros dentro del mismo lenguaje */
+#root .filter-bar { border-color: var(--line); }
+#root .filter-bar-toggle { color: var(--cool); }
+
+/* Botones secundarios con borde frío */
+#root .acta-btn, #root .att-btn { border-color: #cfd8e5; color: var(--navy-900); }
+#root .acta-btn:hover:not(:disabled), #root .att-btn:hover:not(:disabled) { background: var(--navy-50); }
+#root .link-button, #root .acta-link, #root .acta-btn.is-link { color: var(--cool); }
+
+/* Estados en el mismo tono */
+#root .billing-chip.is-submitted, #root .billing-chip.is-partial { color: var(--cool); background: var(--cool-wash); border-color: #b9dcf2; }
+
+/* Inicio: saludo como portada del día */
+#root .dashboard-heading h1 { font-size: 1.875rem; }
+#root .dashboard-heading .wave { color: var(--red); }
+#root .activity-item { border-radius: 8px; }
+#root .activity-item:hover { background: var(--navy-50); }
+#root .quick-action:hover { background: var(--navy-50); }
+
+/* Celular */
+@media (max-width: 1023px) {
+  #root .app-content > div > .ui-page-header:first-child,
+  #root .app-content > div > .page-heading:first-child,
+  #root .app-content > div > .billing-head:first-child { margin: -20px -16px 16px; padding: 18px 16px 16px; }
+  #root .app-content > div > h1:first-child { margin: -20px -16px 0; padding: 18px 16px 0; }
+  #root .app-content > div > h1:first-child + .page-subtitle { margin: 0 -16px 16px; padding: 4px 16px 16px; }
+  #root .app-content > div > .billing-head:first-child + .billing-tabs { margin: 0 -16px 16px; padding: 0 12px; }
+}
+@media (max-width: 767px) {
+  #root .metric-card strong, #root .fin-kpi strong { font-size: 1.375rem; }
+}

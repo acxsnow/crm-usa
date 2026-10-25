@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ageLabel, clockTime, getDashboard, getLive, hm, listPeople, SHIFT_STATUS_LABELS,
+import { ageLabel, clockTime, getDashboard, getLive, hm, hmCorto, listPeople, SHIFT_STATUS_LABELS,
   type Dashboard } from "./api";
 import { useMyAttendance } from "./useAttendance";
 import "./attendance.css";
@@ -145,10 +145,10 @@ export function AttendanceDashboardPage() {
         <KpiCard label="Turnos completados" value={n("completed")} loading={isLoading} />
         <KpiCard label="Turnos incompletos" value={n("incomplete")} loading={isLoading} note="Sin salida, por regularizar" />
         <KpiCard label="Sin marcación" value={n("missed")} loading={isLoading} note="Turno vencido sin entrada" />
-        <KpiCard label="Horas programadas" value={hm(n("scheduled_minutes"))} loading={isLoading} />
-        <KpiCard label="Horas registradas" value={hm(n("recorded_minutes"))} loading={isLoading}
+        <KpiCard label="Horas programadas" value={hmCorto(n("scheduled_minutes"))} loading={isLoading} />
+        <KpiCard label="Horas registradas" value={hmCorto(n("recorded_minutes"))} loading={isLoading}
           note={n("open_minutes") ? `+ ${hm(n("open_minutes"))} en turnos abiertos` : "Turnos cerrados"} />
-        <KpiCard label="Horas aprobadas" value={hm(n("approved_minutes"))} loading={isLoading} />
+        <KpiCard label="Horas aprobadas" value={hmCorto(n("approved_minutes"))} loading={isLoading} />
         <KpiCard label="Novedades pendientes" value={n("pending_novelties")} loading={isLoading} to="/attendance-review" />
         <KpiCard label="Cumplimiento de malla" value={k.compliance_pct == null ? "—" : `${k.compliance_pct}%`}
           loading={isLoading} note="Cumplidos ÷ turnos vencidos" />

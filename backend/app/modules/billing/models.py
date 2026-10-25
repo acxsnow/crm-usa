@@ -163,6 +163,11 @@ class InvoicePayment(UUIDPKMixin, TimestampMixin, Base):
     method: Mapped[str | None] = mapped_column(String(100))
     reference: Mapped[str | None] = mapped_column(String(255))
     notes: Mapped[str | None] = mapped_column(Text)
+    # Pagos en línea (payments/): quién lo procesó, su id allá (el PaymentIntent
+    # de Stripe, para reconocer reembolsos y reintentos) y la comisión cobrada.
+    provider: Mapped[str | None] = mapped_column(String(20))
+    external_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    fee_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
 
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="payments")
 

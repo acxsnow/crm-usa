@@ -90,6 +90,18 @@ class Settings(BaseSettings):
     # URL pública de la API para el enlace de baja; vacío = FRONTEND_APP_URL (mismo dominio con /api).
     PUBLIC_API_URL: str = ""
 
+    # Pagos en línea (payments/, spec 2026-10-25-pagos-tarjeta). Vacío = apagado:
+    # el botón «Cobrar en línea» no aparece y la banca conectada no se ofrece.
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_API_BASE: str = "https://api.stripe.com"
+    PLAID_CLIENT_ID: str = ""
+    PLAID_SECRET: str = ""
+    PLAID_ENV: str = "sandbox"  # sandbox | production
+    # Llave Fernet (base64 de 32 bytes) para cifrar los tokens de Plaid. Fuera de
+    # desarrollo es obligatoria; en desarrollo se deriva de JWT_SECRET_KEY.
+    PAYMENTS_ENCRYPTION_KEY: str = ""
+
     # S3 (evidence/report storage). When S3_BUCKET is empty, the evidence
     # module falls back to local disk storage under STORAGE_DIR — fine for
     # dev/demo, must be swapped for S3 (signed URLs) before production.

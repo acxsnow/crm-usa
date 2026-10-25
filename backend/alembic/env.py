@@ -20,6 +20,7 @@ from app.modules.notifications import models as notifications_models  # noqa: F4
 from app.modules.finance import models as finance_models  # noqa: F401
 from app.shared import audit_models  # noqa: F401
 from app.modules.attendance import models as attendance_models  # noqa: F401
+from app.modules.payments import models as payments_models  # noqa: F401
 
 config = context.config
 settings = get_settings()

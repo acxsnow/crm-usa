@@ -27,6 +27,8 @@ export interface InvoicePayment {
   method?: string | null;
   reference?: string | null;
   notes?: string | null;
+  provider?: string | null;
+  fee_amount?: number | null;
 }
 
 export interface InvoiceAttachment {

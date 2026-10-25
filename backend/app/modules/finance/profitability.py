@@ -21,6 +21,9 @@ from app.modules.finance.models import COST_CATEGORIES, Expense, SupplierInvoice
 
 COST_KEYS = list(COST_CATEGORIES) + ["field_expenses"]
 COST_LABELS = {**COST_CATEGORIES, "field_expenses": "Gastos de campo"}
+# Lo que se compró para la obra con un gasto (material menor, herramienta) suma
+# como material; lo demás (gasolina, comida, hotel...) queda en gastos de campo.
+EXPENSE_COST_KEY = {"small_materials": "materials", "tools": "materials"}
 
 
 def _spread(total_extra: Decimal, partes: list[Decimal]) -> list[Decimal]:
@@ -62,7 +65,7 @@ async def project_costs(db: AsyncSession, organization_id, project_ids: set, *,
         Expense.organization_id == organization_id, Expense.project_id.in_(project_ids),
         Expense.status.in_(("approved", "reimbursed"))))).scalars().all()
     for g in gastos:
-        costos[g.project_id]["field_expenses"] += to_money(g.amount)
+        costos[g.project_id][EXPENSE_COST_KEY.get(g.category, "field_expenses")] += to_money(g.amount)
     return costos
 
 

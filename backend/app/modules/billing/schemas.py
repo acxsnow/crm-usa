@@ -78,6 +78,9 @@ class InvoicePaymentResponse(BaseModel):
     method: str | None
     reference: str | None
     notes: str | None
+    # Pagos en línea: «stripe» o «stripe_refund», y la comisión cobrada.
+    provider: str | None = None
+    fee_amount: Money | None = None
     model_config = {"from_attributes": True}
 
 

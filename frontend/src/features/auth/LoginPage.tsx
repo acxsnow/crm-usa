@@ -23,7 +23,7 @@ export function LoginPage() {
       await login(email, password);
       navigate(redirectTo, { replace: true });
     } catch {
-      setError("Invalid email or password.");
+      setError("El correo o la contraseña no son correctos.");
     } finally {
       setIsSubmitting(false);
     }
@@ -33,21 +33,21 @@ export function LoginPage() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-brand"><span className="auth-logo" aria-hidden="true">P</span><span className="auth-brand-name">PAP CRM</span></div>
-        <h1>Sign in</h1>
+        <h1>Iniciar sesión</h1>
         <label>
-          Email
+          Correo
           <span className="auth-input"><Icon name="mail" /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus /></span>
         </label>
         <label>
-          Password
+          Contraseña
           <span className="auth-input"><Icon name="lock" /><PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required /></span>
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Sign in"}
+          {isSubmitting ? "Entrando…" : "Entrar"}
         </button>
         <a className="auth-link" href="/forgot-password">
-          Forgot password?
+          ¿Olvidaste tu contraseña?
         </a>
       </form>
     </div>
