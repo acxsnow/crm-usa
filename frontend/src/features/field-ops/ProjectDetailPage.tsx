@@ -33,6 +33,7 @@ import { BillingStep } from "./components/BillingStep";
 import { JobCostPanel } from "@/features/warehouse/JobCostPanel";
 import { ExtraChargeForm } from "@/features/warehouse/ExtraChargeForm";
 import { ProjectDayLogPanel } from "@/features/warehouse/ProjectDayLogPanel";
+import { ProjectMiniMap } from "@/features/map/ProjectMiniMap";
 import { hasAnyPermission } from "@/config/navigation";
 
 const EVIDENCE_PAGE_SIZE = 12;
@@ -568,6 +569,8 @@ export function ProjectDetailPage() {
           )}
         </section>
         )}
+
+        <ProjectMiniMap projectId={project.id} />
 
         <TaskBoard projectId={project.id} />
 

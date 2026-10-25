@@ -1,0 +1,138 @@
+/* Turnos, asistencia y mapa operativo. Móvil primero: botones grandes para usar
+   con guantes y al sol en el parque; nada se sale del ancho a 390 px. */
+
+.att-page { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.att-page.is-wide { max-width: none; }
+.att-card {
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 18px; min-width: 0;
+}
+.att-card h2 { font-size: 1rem; margin: 0 0 12px; }
+.att-card h3 { font-size: 0.9rem; margin: 14px 0 8px; }
+.att-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.att-card-head h2 { margin: 0; }
+.att-eyebrow { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+.att-muted { color: var(--ink-soft); font-size: 0.85rem; margin: 4px 0; }
+.att-error { color: var(--red); font-size: 0.85rem; }
+.att-warn { color: var(--warn); font-weight: 700; }
+
+.att-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px;
+  padding: 0 14px; border: 1px solid var(--line-input); border-radius: var(--radius); background: var(--surface);
+  color: var(--ink); font: 600 0.875rem inherit; cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.att-btn:hover:not(:disabled) { border-color: var(--ink-faint); }
+.att-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.att-btn.is-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.att-btn.is-primary:hover:not(:disabled) { background: var(--red-dark); }
+.att-btn.is-danger { background: #17202b; border-color: #17202b; color: #fff; }
+.att-btn.is-link { border: 0; background: transparent; color: var(--info); min-height: 32px; padding: 0 6px; }
+.att-btn.is-big { min-height: 56px; font-size: 1rem; border-radius: 12px; }
+.att-btn.is-block { width: 100%; }
+.att-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.att-actions.is-stacked { flex-direction: column; align-items: stretch; }
+
+.att-banner { margin: 0; padding: 10px 14px; border-radius: var(--radius); font-size: 0.875rem; }
+.att-banner.is-warn { background: var(--warn-wash); color: #7a4a06; }
+.att-banner.is-info { background: var(--info-wash); color: #1e40af; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.att-clock { text-align: center; }
+.att-clock-big { display: block; font-size: 2.4rem; font-variant-numeric: tabular-nums; margin: 6px 0; }
+.att-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+
+.att-form { display: flex; flex-direction: column; gap: 10px; }
+.att-form label, .att-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 600; color: var(--ink); min-width: 0; }
+.att-form input, .att-form select, .att-form textarea, .att-field input, .att-field select {
+  min-height: 40px; border: 1px solid var(--line-input); border-radius: var(--radius-sm); padding: 0 10px;
+  font: inherit; font-weight: 400; color: var(--ink); background: #fff; width: 100%;
+}
+.att-form textarea { min-height: 76px; padding: 8px 10px; resize: vertical; }
+.att-form small { font-weight: 400; color: var(--ink-soft); }
+.att-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+.att-check { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px; font-weight: 500 !important; }
+.att-check input { min-height: 0 !important; width: auto !important; }
+.att-people, .att-days { border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 10px; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.att-people legend, .att-days legend { font-size: 0.8rem; font-weight: 700; padding: 0 4px; }
+
+.att-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.att-segment { display: inline-flex; border: 1px solid var(--line-input); border-radius: var(--radius); overflow: hidden; }
+.att-segment button { min-height: 40px; padding: 0 14px; border: 0; background: var(--surface); font: 600 0.85rem inherit; cursor: pointer; color: var(--ink-soft); }
+.att-segment button.is-on { background: var(--ink); color: #fff; }
+
+.att-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.att-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.att-scroll { overflow-x: auto; max-width: 100%; }
+.att-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.att-table th, .att-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.att-table thead th { font-size: 0.72rem; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
+.att-table.is-numbers td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.att-total th, .att-total td { font-weight: 700; border-top: 2px solid var(--line); }
+.att-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 0.875rem; }
+.att-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.att-novelty { border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 12px; }
+.att-novelty p { margin: 6px 0 0; }
+
+.att-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: var(--muted-wash); color: var(--ink-soft); }
+.att-pill.is-approved, .att-pill.is-completed, .att-pill.is-in_progress { background: var(--ok-wash); color: var(--ok); }
+.att-pill.is-closed, .att-pill.is-pending, .att-pill.is-upcoming { background: var(--info-wash); color: var(--info); }
+.att-pill.is-late, .att-pill.is-early_departure, .att-pill.is-late_and_early, .att-pill.is-incomplete, .att-pill.is-open { background: var(--warn-wash); color: var(--warn); }
+.att-pill.is-missed { background: var(--red-wash); color: var(--red); }
+.att-fresh { color: var(--ok); font-weight: 600; }
+.att-stale { color: var(--ink-soft); }
+
+.att-weeknav { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.att-week { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.8rem; background: var(--surface); }
+.att-week th, .att-week td { border: 1px solid var(--line-soft); padding: 6px; vertical-align: top; }
+.att-week thead th { background: var(--card-soft); font-size: 0.72rem; }
+.att-week tbody th { text-align: left; white-space: nowrap; }
+.att-shift { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 6px 22px 6px 8px; margin-bottom: 4px;
+  border-radius: 8px; background: var(--info-wash); border-left: 3px solid var(--info); }
+.att-shift small { color: var(--ink-soft); }
+.att-shift.is-completed, .att-shift.is-in_progress { background: var(--ok-wash); border-left-color: var(--ok); }
+.att-shift.is-late, .att-shift.is-early_departure, .att-shift.is-late_and_early, .att-shift.is-incomplete { background: var(--warn-wash); border-left-color: var(--warn); }
+.att-shift.is-missed { background: var(--red-wash); border-left-color: var(--red); }
+.att-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border: 0; background: transparent; cursor: pointer; color: var(--ink-soft); font-size: 1rem; }
+
+.att-detail { background: var(--card-soft); border-radius: var(--radius); padding: 12px; }
+.att-timeline { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+
+.att-chart { margin: 0; }
+.att-chart svg { width: 100%; height: auto; }
+.att-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.78rem; color: var(--ink-soft); }
+.att-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+/* La ventana obligatoria: tapa la app y no se cierra tocando afuera. */
+.att-gate { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 16px;
+  background: rgba(16, 24, 40, 0.6); overflow-y: auto; }
+.att-gate-card { width: min(460px, 100%); background: var(--surface); border-radius: 18px; padding: 22px; box-shadow: var(--shadow-md);
+  display: flex; flex-direction: column; gap: 10px; }
+.att-gate-card h2 { margin: 0; font-size: 1.35rem; }
+.att-gate-date { margin: 0; color: var(--ink-soft); }
+.att-gate-facts { margin: 0; display: grid; gap: 6px; }
+.att-gate-facts div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.att-gate-facts dt { color: var(--ink-soft); font-size: 0.85rem; }
+.att-gate-facts dd { margin: 0; text-align: right; font-weight: 600; }
+.att-gate-privacy { margin: 0; font-size: 0.8rem; color: var(--ink-soft); background: var(--card-soft); border-radius: var(--radius); padding: 10px; }
+@media (max-width: 600px) {
+  .att-gate { place-items: end center; padding: 0; }
+  .att-gate-card { border-radius: 18px 18px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .att-grid-3 { grid-template-columns: 1fr; }
+  .att-clock-big { font-size: 2rem; }
+}
+
+/* Mapa */
+.map-box { width: 100%; border-radius: var(--radius-lg); border: 1px solid var(--line-soft); overflow: hidden; z-index: 0; }
+.map-pin-wrap { background: transparent; border: 0; }
+.map-pin { display: grid; place-items: center; width: 30px; height: 30px; color: #fff; font: 700 11px var(--display-font);
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }
+.map-pin.is-person, .map-pin.is-origin { border-radius: 50%; }
+.map-pin.is-project { border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+.map-pin, .map-dot { background: var(--info); }
+.tone-ok { background: var(--ok) !important; }
+.tone-warn { background: var(--warn) !important; }
+.tone-muted { background: #8a8f98 !important; }
+.tone-info { background: var(--info) !important; }
+.tone-brand { background: var(--brand) !important; }
+.map-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.map-popup { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; }
+.map-popup a { margin-top: 4px; font-weight: 600; }

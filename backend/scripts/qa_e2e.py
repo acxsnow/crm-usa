@@ -847,6 +847,21 @@ def xlsx_catalogo(filas: list[list]) -> bytes:
     return buf.getvalue()
 
 
+def obra_abierta_del_tecnico(adm: "Client", tec: "Client", preferida: str | None) -> str | None:
+    """Desde el ataque del 24 oct (A4) no se pide material para una obra cerrada.
+    La obra de Arizona ya terminó su instalación cuando llega esta sección, así
+    que bodega usa una obra abierta del técnico (o la preferida si sigue abierta)."""
+    for estado in ("in_progress", "scheduled", "planning"):
+        filas = adm.get("/projects", params={"status": estado, "limit": 200}).json()
+        filas = filas.get("items", filas) if isinstance(filas, dict) else filas
+        mias = [p["id"] for p in filas if p.get("primary_technician_user_id") == tec.me["id"]]
+        if preferida in mias:
+            return preferida
+        if mias:
+            return mias[0]
+    return preferida
+
+
 def flujo_bodega(c: dict, pid: str | None) -> None:
     """Bodega (cuestionario del 19 oct): catálogo, salidas autorizadas, listas,
     presupuesto contra costo real y diario de obra, con lo que cada rol NO puede."""
@@ -1169,6 +1184,116 @@ def flujo_costo_del_trabajo(c: dict, pid: str | None) -> None:
     RECORDS["Costo del trabajo"] = f"proyecto {pid}: estimado pedestal propio, mano de obra 600, Luis 800, efectivo 150"
 
 
+def flujo_turnos(c: dict) -> None:
+    """Turnos, asistencia y mapa (spec 2026-10-24-turnos-mapa): malla, ventana
+    obligatoria, entrada con GPS, en camino / llegué, pausa, cola sin señal,
+    reintentos sin duplicar, dos teléfonos a la vez, novedad aprobada, panel,
+    nómina y mapa. Contra Postgres de verdad, donde el índice parcial de «una
+    sola marcación abierta» se prueba con peticiones simultáneas."""
+    import threading
+    import uuid as _uuid
+
+    adm, tec, admin, conta, ger, v = c["adm"], c["tecnico"], c["admin"], c["conta"], c["gerencia"], c["vendedor"]
+    section("23. Turnos, asistencia, nómina y mapa")
+    yo = tec.get("/attendance/me").json()
+    if yo.get("entry"):
+        tec.post("/attendance/events", json={"event_type": "clock_out", "note": f"QA {RUN} cierre previo"})
+    zona = ZoneInfo(yo.get("timezone") or "America/Bogota")
+    ahora = datetime.now(zona)
+    inicio = (ahora - timedelta(minutes=20)).strftime("%H:%M")
+    fin = (ahora + timedelta(hours=6)).strftime("%H:%M")
+    dia = ahora.date().isoformat()
+    r = expect("Administración programa el turno del técnico hoy", adm.post("/attendance/shifts", json={
+        "user_ids": [tec.me["id"]], "date_from": dia, "date_to": dia, "start_time": inicio, "end_time": fin,
+        "break_minutes": 30, "notes": f"QA {RUN}"}), 201) or {}
+    check("El turno queda creado (o ya había uno a esa hora)", bool(r.get("created") or r.get("skipped")), json.dumps(r)[:200])
+    expect("El técnico no programa turnos", tec.post("/attendance/shifts", json={
+        "user_ids": [tec.me["id"]], "date_from": dia, "date_to": dia, "start_time": "01:00", "end_time": "02:00"}), 403)
+    yo = tec.get("/attendance/me").json()
+    # Al repetir el QA el mismo día, el turno nuevo choca con el de la corrida anterior (ya marcado).
+    check("Al entrar, la ventana obligatoria aparece", yo.get("must_clock_in") is True or bool(r.get("skipped")),
+          json.dumps({k: yo.get(k) for k in ("must_clock_in", "shift_status")}))
+
+    # Dos teléfonos marcan entrada a la vez: solo uno abre turno (índice parcial en Postgres).
+    codigos: list[int] = []
+
+    def marcar(n: int) -> None:
+        codigos.append(tec.post("/attendance/events", json={
+            "event_type": "clock_in", "client_event_id": f"qa-{RUN}-tel{n}", "latitude": 33.4484,
+            "longitude": -112.074, "accuracy_m": 15, "location_status": "ok"}).status_code)
+
+    hilos = [threading.Thread(target=marcar, args=(n,)) for n in range(3)]
+    [h.start() for h in hilos]
+    [h.join() for h in hilos]
+    check("Tres entradas simultáneas: una 201 y dos 409", sorted(codigos) == [201, 409, 409], str(sorted(codigos)))
+    abiertas = sql(f"SELECT count(*) FROM time_entries WHERE user_id = '{tec.me['id']}' AND status = 'open'")
+    check("Queda una sola marcación abierta en la base", abiertas == "1", abiertas)
+    dup = tec.post("/attendance/events", json={"event_type": "clock_in", "client_event_id": f"qa-{RUN}-tel0"})
+    check("Reintentar la misma marca no duplica", dup.status_code in (201, 409), str(dup.status_code))
+
+    obras = tec.get("/attendance/me").json().get("projects_today") or []
+    if obras:
+        pid = obras[0]["id"]
+        expect("En camino a la obra", tec.post("/attendance/events", json={
+            "event_type": "en_route", "project_id": pid, "latitude": 33.45, "longitude": -112.07, "location_status": "ok"}), 201)
+        llegue = expect("Llegué a la obra", tec.post("/attendance/events", json={
+            "event_type": "arrived", "project_id": pid, "latitude": 33.4255, "longitude": -111.94,
+            "location_status": "ok"}), 201)
+        km = sql(f"SELECT distance_km, distance_source FROM attendance_events WHERE id = '{(llegue or {}).get('event_id')}'")
+        check("La llegada guarda km estimados en línea recta", "straight_line" in km, km)
+    else:
+        check("El técnico tiene obras abiertas para marcar desplazamientos", False, "sin obras asignadas")
+    expect("Pausa", tec.post("/attendance/events", json={"event_type": "pause_start", "note": "QA almuerzo"}), 201)
+    expect("Segunda pausa sin cerrar la primera se rechaza", tec.post("/attendance/events", json={"event_type": "pause_start"}), 409)
+    expect("Reanuda", tec.post("/attendance/events", json={"event_type": "pause_end"}), 201)
+
+    # Cola sin señal: hora del teléfono de hace 40 min, dos veces la misma.
+    cola = [{"event_type": "connectivity_lost", "client_event_id": f"qa-{RUN}-off1",
+             "device_at": (datetime.now(timezone.utc) - timedelta(minutes=40)).isoformat()},
+            {"event_type": "connectivity_restored", "client_event_id": f"qa-{RUN}-off2",
+             "device_at": (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()}]
+    r1 = expect("Llega la cola sin señal", tec.post("/attendance/events/batch", json={"events": cola}), 200) or {}
+    r2 = tec.post("/attendance/events/batch", json={"events": cola}).json()
+    check("Reenviar la cola no duplica", [x["status"] for x in r2.get("results", [])] == ["duplicate", "duplicate"],
+          json.dumps(r2)[:200])
+    check("La primera vez entró bien", [x["status"] for x in r1.get("results", [])] == ["ok", "ok"], json.dumps(r1)[:200])
+    offline = sql(f"SELECT offline FROM attendance_events WHERE client_event_id = 'qa-{RUN}-off1'")
+    check("La marca sin señal queda señalada (hora del teléfono)", offline == "t", offline)
+
+    expect("Contabilidad ve el panel", conta.get("/attendance/dashboard", params={"date_from": dia, "date_to": dia}), 200)
+    vivo = expect("Gerencia ve el tablero de hoy", ger.get("/attendance/live"), 200) or []
+    fila = next((f for f in vivo if f["user_id"] == tec.me["id"]), {})
+    check("El tablero separa turno abierto y ubicación con su antigüedad",
+          fila.get("entry_status") == "open" and (fila.get("location") or {}).get("age_minutes") is not None, json.dumps(fila)[:200])
+    sin_ubic = next((f for f in conta.get("/attendance/live").json() if f["user_id"] == tec.me["id"]), {})
+    check("Contabilidad no ve la ubicación", sin_ubic.get("location") is None)
+    expect("El vendedor no ve el panel", v.get("/attendance/dashboard", params={"date_from": dia, "date_to": dia}), 403)
+    gente = expect("Gerencia ve el mapa del personal", ger.get("/operations-map/people"), 200) or []
+    check("El técnico aparece en el mapa", any(g["user_id"] == tec.me["id"] for g in gente))
+    mapa = expect("Administración ve las obras en el mapa", adm.get("/operations-map/projects"), 200) or {}
+    check("El mapa separa obras ubicadas y sin ubicar", {"projects", "unlocated"} <= set(mapa))
+    expect("Orden sugerido del día", adm.get("/operations-map/route", params={"on_date": dia, "user_id": tec.me["id"]}), 200)
+
+    resumen = expect("Resumen antes de finalizar", tec.get("/attendance/me/summary"), 200) or {}
+    check("El resumen trae horas efectivas y pausas", "effective_minutes" in resumen and resumen.get("pauses", 0) >= 1)
+    fin_r = expect("FINALIZAR TURNO", tec.post("/attendance/events", json={
+        "event_type": "clock_out", "note": f"QA {RUN}", "latitude": 33.4484, "longitude": -112.074, "location_status": "ok"}), 201) or {}
+    eid = (fin_r.get("entry") or {}).get("id")
+    nov = expect("El técnico pide corregir la salida", tec.post("/attendance/novelties", json={
+        "kind": "correction", "time_entry_id": eid, "description": f"QA {RUN}",
+        "requested_clock_out_at": datetime.now(timezone.utc).isoformat()}), 201) or {}
+    expect("Administración la aprueba", adm.post(f"/attendance/novelties/{nov.get('id')}/approve", json={"note": "QA"}), 200)
+    corr = sql(f"SELECT count(*) FROM time_entry_corrections WHERE time_entry_id = '{eid}'")
+    check("La corrección queda auditada con el valor original", corr == "1", corr)
+    ap = expect("Administración aprueba las horas", adm.post("/attendance/entries/approve", json={"entry_ids": [eid]}), 200) or {}
+    check("Quedan aprobadas", ap.get("approved") == [eid], json.dumps(ap)[:200])
+    x = conta.get("/attendance/payroll/report.xlsx", params={"date_from": dia, "date_to": dia})
+    check("Nómina en Excel", x.status_code == 200 and x.content[:2] == b"PK", str(x.status_code))
+    pdf = conta.get("/attendance/payroll/report.pdf", params={"date_from": dia, "date_to": dia})
+    check("Nómina en PDF", pdf.status_code == 200 and pdf.content[:4] == b"%PDF", str(pdf.status_code))
+    RECORDS["Turnos"] = f"turno de hoy del técnico ({inicio}–{fin}), marcación {eid} aprobada con una corrección"
+
+
 def reporte() -> Path:
     total, malos = len(RESULTS), [r for r in RESULTS if not r["ok"]]
     salida = Path(__file__).resolve().parents[2] / "docs" / "qa" / f"qa-e2e-{date.today().isoformat()}-{RUN}.md"
@@ -1233,9 +1358,10 @@ def main() -> int:
     seguro("Particular", flujo_particular, conta, admin)
     seguro("Permisos", flujo_permisos_por_rol, c)
     seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
-    seguro("Bodega", flujo_bodega, c, pid_az)
+    seguro("Bodega", flujo_bodega, c, obra_abierta_del_tecnico(adm, tec, pid_az))
     seguro("Costo del trabajo", flujo_costo_del_trabajo, c, pid)
     seguro("Rotación", flujo_rotacion, c)
+    seguro("Turnos", flujo_turnos, c)
     ruta = reporte()
     malos = [r for r in RESULTS if not r["ok"]]
     print(f"\n{len(RESULTS) - len(malos)}/{len(RESULTS)} OK · reporte: {ruta}")

@@ -45,6 +45,12 @@ import { WarehouseMovementsPage } from "@/features/warehouse/WarehouseMovementsP
 import { WarehouseKitsPage } from "@/features/warehouse/WarehouseKitsPage";
 import { WarehousePurchasingPage } from "@/features/warehouse/WarehousePurchasingPage";
 import { CostTemplatesPage } from "@/features/warehouse/CostTemplatesPage";
+import { MyShiftPage } from "@/features/attendance/MyShiftPage";
+import { ShiftPlannerPage } from "@/features/attendance/ShiftPlannerPage";
+import { AttendanceDashboardPage } from "@/features/attendance/AttendanceDashboardPage";
+import { AttendanceReviewPage } from "@/features/attendance/AttendanceReviewPage";
+import { PayrollPage } from "@/features/attendance/PayrollPage";
+import { OperationsMapPage } from "@/features/map/OperationsMapPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -364,6 +370,47 @@ export const router = createBrowserRouter([
         ),
       },
       // Cualquier dirección que no existe (o una entrada del menú aún sin pantalla) vuelve al inicio.
+      // Turnos, asistencia, nómina y mapa operativo (spec 2026-10-24-turnos-mapa).
+      {
+        path: "my-shift",
+        element: <RequireAccess permission={["attendance.clock"]} moduleLabel="Mi turno"><MyShiftPage /></RequireAccess>,
+      },
+      {
+        path: "shifts",
+        element: (
+          <RequireAccess permission={["shifts.manage", "attendance.review"]} moduleLabel="la malla de turnos">
+            <ShiftPlannerPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "attendance",
+        element: (
+          <RequireAccess permission={["attendance.dashboard"]} moduleLabel="el panel de asistencia">
+            <AttendanceDashboardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "attendance-review",
+        element: (
+          <RequireAccess permission={["attendance.review"]} moduleLabel="las novedades y horas">
+            <AttendanceReviewPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "payroll",
+        element: <RequireAccess permission={["attendance.dashboard"]} moduleLabel="la nómina"><PayrollPage /></RequireAccess>,
+      },
+      {
+        path: "operations-map",
+        element: (
+          <RequireAccess permission={["locations.view", "projects.read_all", "projects.read_assigned"]} moduleLabel="el mapa operativo">
+            <OperationsMapPage />
+          </RequireAccess>
+        ),
+      },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

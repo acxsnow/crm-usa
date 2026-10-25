@@ -8,13 +8,21 @@ anterior la sigue viendo en solo lectura, con lo que hizo él y lo que va
 haciendo el nuevo. Los ayudantes de una jornada también la ven, sin llenarla.
 """
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
 from app.core.security import hash_password
 from app.modules.users.models import User, UserRole, UserStatus
 from tests.field_helpers import approved_case_with_project, checklist_items, headers_for, jpeg_bytes
+
+
+def _hoy_utc() -> date:
+    """El «hoy» del servidor (la organización de prueba está en UTC). Con
+    `date.today()` local, después de las 7 p. m. en Bogotá ya es mañana en UTC
+    y estas pruebas fallaban por la hora del día."""
+    return datetime.now(timezone.utc).date()
+
 
 API = "/api/v1"
 
@@ -62,7 +70,7 @@ async def test_el_tecnico_anterior_ve_la_obra_en_solo_lectura(app_client, db, se
     luis_user = await _tecnico(db, seeded_org, "Luis Nuevo")
     luis = await login(luis_user.email)
     _, obra = await approved_case_with_project(db, seeded_org["org"].id)
-    hoy = date.today()
+    hoy = _hoy_utc()
 
     await _liberar(app_client, oficina, obra.id, active_technician_user.id, hoy)
     # Tom trabaja: registra su día y marca una línea del checklist.
@@ -120,19 +128,19 @@ async def test_los_ayudantes_ven_la_obra_y_no_la_llenan(app_client, db, seeded_o
     pedro_user = await _tecnico(db, seeded_org, "Pedro Ayudante")
     pedro = await login(pedro_user.email)
     _, obra = await approved_case_with_project(db, seeded_org["org"].id)
-    await _liberar(app_client, oficina, obra.id, active_technician_user.id, date.today())
+    await _liberar(app_client, oficina, obra.id, active_technician_user.id, _hoy_utc())
 
     # Antes de ir de ayudante, Pedro no sabe que la obra existe.
     assert (await app_client.get(f"{API}/projects/{obra.id}", headers=pedro)).status_code == 404
 
-    r = await _jornada(app_client, tom, obra.id, date.today(), helper_user_ids=[str(pedro_user.id)])
+    r = await _jornada(app_client, tom, obra.id, _hoy_utc(), helper_user_ids=[str(pedro_user.id)])
     assert r.status_code == 201, r.text
     assert [h["name"] for h in r.json()["helpers"]] == ["Pedro Ayudante"]
 
     assert (await app_client.get(f"{API}/projects/{obra.id}", headers=pedro)).json()["my_access"] == "read_only"
-    assert (await _jornada(app_client, pedro, obra.id, date.today() + timedelta(days=1))).status_code == 403
+    assert (await _jornada(app_client, pedro, obra.id, _hoy_utc() + timedelta(days=1))).status_code == 403
     # Un ayudante inventado o de otra organización no entra.
-    r = await _jornada(app_client, tom, obra.id, date.today() + timedelta(days=1), helper_user_ids=[str(uuid.uuid4())])
+    r = await _jornada(app_client, tom, obra.id, _hoy_utc() + timedelta(days=1), helper_user_ids=[str(uuid.uuid4())])
     assert (r.status_code, r.json()["code"]) == (400, "invalid_technician")
 
 
@@ -142,11 +150,11 @@ async def test_el_tecnico_registra_solo_su_propia_jornada(app_client, db, seeded
     tom = await login(active_technician_user.email)
     otro = await _tecnico(db, seeded_org, "Otro Técnico")
     _, obra = await approved_case_with_project(db, seeded_org["org"].id)
-    await _liberar(app_client, oficina, obra.id, active_technician_user.id, date.today())
+    await _liberar(app_client, oficina, obra.id, active_technician_user.id, _hoy_utc())
 
-    r = await _jornada(app_client, tom, obra.id, date.today(), technician_user_id=str(otro.id))
+    r = await _jornada(app_client, tom, obra.id, _hoy_utc(), technician_user_id=str(otro.id))
     assert (r.status_code, r.json()["code"]) == (403, "day_log_for_other")
-    r = await _jornada(app_client, tom, obra.id, date.today())
+    r = await _jornada(app_client, tom, obra.id, _hoy_utc())
     assert r.json()["technician_user_id"] == str(active_technician_user.id)  # sin elegir, queda a su nombre
 
 
@@ -157,7 +165,7 @@ async def test_el_calendario_muestra_turnos_y_jornadas(app_client, db, seeded_or
     luis_user = await _tecnico(db, seeded_org, "Luis Nuevo")
     luis = await login(luis_user.email)
     _, obra = await approved_case_with_project(db, seeded_org["org"].id)
-    hoy = date.today()
+    hoy = _hoy_utc()
     await _liberar(app_client, oficina, obra.id, active_technician_user.id, hoy)
     await _jornada(app_client, tom, obra.id, hoy - timedelta(days=1), progress_note="Base lista")
     await _liberar(app_client, oficina, obra.id, luis_user.id, hoy)

@@ -1,6 +1,6 @@
 """Gastos de campo, proveedores y pagos, conciliación, rentabilidad y reportes."""
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -8,7 +8,15 @@ import pytest
 from app.modules.finance import reconciliation
 from tests.field_helpers import approved_case_with_project, headers_for, jpeg_bytes
 
-HOY = date.today()
+
+def _hoy_utc() -> date:
+    """El «hoy» del servidor (la organización de prueba está en UTC). Con
+    `date.today()` local, después de las 7 p. m. en Bogotá ya es mañana en UTC
+    y estas pruebas fallaban por la hora del día."""
+    return datetime.now(timezone.utc).date()
+
+
+HOY = _hoy_utc()
 API = "/api/v1"
 
 

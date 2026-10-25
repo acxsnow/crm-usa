@@ -75,4 +75,9 @@ async def get_workable_project(
     """El proyecto, si la persona lo llena. El que solo lo ve recibe 403."""
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
     ensure_can_work(project, user)
+    # Marcación obligatoria (turnos, spec 2026-10-24): apagada por defecto en
+    # `attendance_settings`; encendida, quien tiene turno ahora y no marcó no llena.
+    from app.modules.attendance.service import ensure_clocked_in
+
+    await ensure_clocked_in(db, organization_id=organization_id, user=user)
     return project

@@ -19,6 +19,7 @@ from app.modules.notifications.campaigns_router import router as campaigns_route
 from app.modules.finance.router import router as finance_router
 from app.modules.warehouse.router import router as warehouse_router
 from app.modules.warehouse.jobcost_router import router as jobcost_router
+from app.modules.attendance.router import router as attendance_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
@@ -40,3 +41,4 @@ api_router.include_router(campaigns_router)
 api_router.include_router(finance_router)
 api_router.include_router(warehouse_router)
 api_router.include_router(jobcost_router)
+api_router.include_router(attendance_router)

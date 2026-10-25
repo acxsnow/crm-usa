@@ -28,3 +28,20 @@ def sweep_overdue_invoices_task() -> int:
     vencidas = asyncio.run(_count_overdue_invoices())
     logger.info("billing.overdue_sweep_completed", overdue_invoices=vencidas)
     return vencidas
+
+
+async def _purge_old_locations() -> int:
+    from app.modules.attendance.mapdata import purge_old_locations
+
+    async with worker_session() as db:
+        return await purge_old_locations(db)
+
+
+@celery_app.task(name="attendance.purge_old_locations")
+def purge_old_locations_task() -> int:
+    """Borra las coordenadas de los eventos de turno más viejos que la
+    retención de cada organización (90 días por defecto). Los eventos y las
+    horas se quedan."""
+    borradas = asyncio.run(_purge_old_locations())
+    logger.info("attendance.locations_purged", events=borradas)
+    return borradas

@@ -4,7 +4,7 @@
 Cada prueba reproduce un hallazgo crítico o alto encontrado contra la app real:
 si vuelve a fallar, el hallazgo volvió.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -14,8 +14,16 @@ from app.modules.field_ops.models import Project, ProjectStatus
 from app.modules.users.models import User, UserRole, UserStatus
 from tests.field_helpers import approved_case_with_project, headers_for
 
+
+def _hoy_utc() -> date:
+    """El «hoy» del servidor (la organización de prueba está en UTC). Con
+    `date.today()` local, después de las 7 p. m. en Bogotá ya es mañana en UTC
+    y estas pruebas fallaban por la hora del día."""
+    return datetime.now(timezone.utc).date()
+
+
 API = "/api/v1"
-HOY = date.today()
+HOY = _hoy_utc()
 
 
 @pytest.fixture
