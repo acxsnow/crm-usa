@@ -9,6 +9,11 @@ parque necesita saber si ya habló con alguien de esa casa, y eso ahora se
 responde con los expedientes del cliente, no con oportunidades."""
 import uuid
 
+from sqlalchemy import select
+
+from app.modules.crm import privacy
+from app.modules.crm.models import DataConsent
+
 
 async def _login(app_client, email, password="SuperSecret123"):
     resp = await app_client.post("/api/v1/auth/login", json={"email": email, "password": password})
@@ -18,7 +23,7 @@ async def _login(app_client, email, password="SuperSecret123"):
 
 async def _cliente(app_client, headers, nombre="Marge Simpson"):
     resp = await app_client.post(
-        "/api/v1/customers", json={"legal_name": nombre}, headers=headers
+        "/api/v1/customers", json={"legal_name": nombre, "data_consent_accepted": True}, headers=headers
     )
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -110,6 +115,86 @@ async def test_the_file_of_a_customer_that_does_not_exist_answers_404(
     headers = await _login(app_client, "admin@acme-demo.com")
     resp = await app_client.get(f"/api/v1/customers/{uuid.uuid4()}/timeline", headers=headers)
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Autorización de tratamiento de datos (California, Arizona y Nevada)
+# ---------------------------------------------------------------------------
+
+async def test_a_customer_is_not_saved_without_the_data_authorization(
+    app_client, active_admin_user
+):
+    """El nombre, el teléfono y el correo no se guardan sin autorización del
+    cliente: el momento de la captura es el que la ley exige cubrir."""
+    headers = await _login(app_client, "admin@acme-demo.com")
+    resp = await app_client.post(
+        "/api/v1/customers",
+        json={"legal_name": "Sin autorización", "main_phone": "555-0177"},
+        headers=headers,
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["code"] == "consent_required"
+    assert (await app_client.get("/api/v1/customers", headers=headers)).json() == []
+
+
+async def test_the_authorization_is_recorded_with_the_text_the_customer_saw(
+    app_client, active_admin_user, db
+):
+    headers = await _login(app_client, "admin@acme-demo.com")
+    cliente = await _cliente(app_client, headers)
+
+    constancias = (await db.execute(select(DataConsent))).scalars().all()
+    assert len(constancias) == 1
+    constancia = constancias[0]
+    assert constancia.customer_id == uuid.UUID(cliente["id"])
+    assert constancia.source == "customer_create"
+    # La constancia guarda el texto completo: el que vio el cliente, no el actual.
+    assert constancia.document_version == privacy.DOCUMENT_VERSION
+    assert constancia.document_text == privacy.DOCUMENT_BODY
+    assert constancia.contact_snapshot == {"name": "Marge Simpson"}
+    assert constancia.captured_by_user_id is not None
+    assert constancia.accepted_at is not None
+
+
+async def test_correcting_personal_data_asks_for_the_authorization_again(
+    app_client, active_admin_user, db
+):
+    headers = await _login(app_client, "admin@acme-demo.com")
+    cliente = await _cliente(app_client, headers)
+
+    # Las notas no son datos personales: se guardan sin volver a pedir nada.
+    resp = await app_client.patch(
+        f"/api/v1/customers/{cliente['id']}", json={"notes": "Volver el jueves"}, headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+
+    resp = await app_client.patch(
+        f"/api/v1/customers/{cliente['id']}", json={"main_phone": "555-0188"}, headers=headers
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["code"] == "consent_required"
+
+    resp = await app_client.patch(
+        f"/api/v1/customers/{cliente['id']}",
+        json={"main_phone": "555-0188", "data_consent_accepted": True},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    await db.rollback()  # la consulta anterior dejó una transacción abierta
+    fuentes = sorted((await db.execute(select(DataConsent.source))).scalars().all())
+    assert fuentes == ["customer_create", "customer_update"]
+
+
+async def test_the_consent_notice_is_public(app_client):
+    """La página de firma del cliente no tiene sesión y también muestra el aviso."""
+    resp = await app_client.get("/api/v1/privacy/consent-notice")
+    assert resp.status_code == 200, resp.text
+    aviso = resp.json()
+    assert aviso["version"] == privacy.DOCUMENT_VERSION
+    assert aviso["language"] == "es"
+    assert "tratamiento de datos" in aviso["title"].lower()
+    assert "California" in aviso["body"] and "Nevada" in aviso["body"]
 
 
 # ---------------------------------------------------------------------------

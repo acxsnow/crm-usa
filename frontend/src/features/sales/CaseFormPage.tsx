@@ -6,6 +6,7 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
+import { DataConsentNotice, type ConsentNotice } from "@/components/DataConsentNotice";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { SignaturePad } from "@/features/field-ops/SignaturePad";
 import { previewVersion } from "@/features/programs/api";
@@ -208,8 +209,8 @@ export function CaseFormPage() {
         ) : (
           <>
             {esAutorizacion && form.terms && (
-              <TermsAndSignature caseId={caseId!} terms={form.terms} acceptance={form.acceptance} editable={form.editable}
-                defaultName={(answers["customer.full_name"] as string) ?? ""} coords={geo.coords}
+              <TermsAndSignature caseId={caseId!} terms={form.terms} consent={form.consent} acceptance={form.acceptance}
+                editable={form.editable} defaultName={(answers["customer.full_name"] as string) ?? ""} coords={geo.coords}
                 onSigned={refrescar} onError={setError} registerPending={registrarFirma} />
             )}
             <FormRenderer evaluation={esAutorizacion && form.terms ? { ...evaluacion, steps: evaluacion.steps.map((st) =>
@@ -316,8 +317,9 @@ export function SignatureImage({ caseId, version }: { caseId: string; version: s
  * paso sin tocarlo dejaba el paso sin firma). `registerPending` le entrega al
  * formulario la acción de firmar mientras haya una firma dibujada sin guardar.
  */
-function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, coords, onSigned, onError, registerPending }: {
+function TermsAndSignature({ caseId, terms, consent, acceptance, editable, defaultName, coords, onSigned, onError, registerPending }: {
   caseId: string; terms: { title: string; body: string; version: string; language: string };
+  consent: ConsentNotice | null;
   acceptance: { customer_name: string; accepted_at: string } | null; editable: boolean; defaultName: string;
   coords: { latitude: number; longitude: number } | null; onSigned: () => void; onError: (m: string | null) => void;
   registerPending: (firmar: (() => Promise<unknown>) | null) => void;
@@ -342,6 +344,7 @@ function TermsAndSignature({ caseId, terms, acceptance, editable, defaultName, c
     <section className={`sales-terms${firmado ? " is-signed" : ""}`}>
       <h2>{terms.title}</h2>
       <div className="sales-terms-body"><p>{terms.body}</p><small>Versión {terms.version} · {terms.language === "es" ? "español" : "inglés"}</small></div>
+      {consent && <DataConsentNotice notice={consent} />}
       {firmado && acceptance ? (
         <div className="sales-signed">
           <SignatureImage caseId={caseId} version={acceptance.accepted_at} />

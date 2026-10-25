@@ -26,6 +26,7 @@ from app.modules.cases.models import (
     CaseTermsAcceptance,
     ProgramVersion,
 )
+from app.modules.crm import privacy
 from app.modules.programs import engine
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
@@ -268,6 +269,7 @@ async def form_state(db, *, user, case: Case) -> dict:
                    "mime_type": f.mime_type, "watermarked": f.watermarked, "review_status": f.review_status,
                    "review_notes": f.review_notes} for f in archivos],
         "terms": terminos,
+        "consent": privacy.notice(),
         "acceptance": {"id": str(aceptacion.id), "customer_name": aceptacion.customer_name,
                        "accepted_at": aceptacion.accepted_at.isoformat(),
                        "terms_version": aceptacion.terms_version} if aceptacion else None,
@@ -496,9 +498,28 @@ async def accept_terms(db, *, organization_id, user, case_id, customer_name: str
             answers={**{k: anteriores[k] for k in (c["key"] for c in paso["fields"]) if k in anteriores}, **valores},
             submitted_by_user_id=user.id, submitted_at=ahora, latitude=latitude, longitude=longitude,
         ))
+    # La firma de la autorización es también la autorización de tratamiento de
+    # datos: se guarda la constancia con los datos del cliente tal como quedaron.
+    from app.modules.crm.models import Customer
+
+    cliente = await db.get(Customer, case.customer_id) if case.customer_id else None
+    await privacy.record_consent(
+        db, organization_id=organization_id, source=privacy.SOURCE_CASE_INTAKE, case_id=case.id,
+        customer_id=case.customer_id, customer_name=(cliente.legal_name if cliente else None) or nombre,
+        snapshot=privacy.contact_snapshot(
+            name=(cliente.legal_name if cliente else None) or nombre,
+            phone=cliente.main_phone if cliente else None,
+            email=cliente.email if cliente else None,
+            address=(cliente.billing_address if cliente else None) or privacy.address_line(
+                case.address_street, case.address_unit, case.address_city, case.address_zip),
+        ),
+        captured_by_user_id=user.id, ip_address=ip_address, user_agent=user_agent,
+        latitude=latitude, longitude=longitude,
+    )
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="cases.terms_accepted", entity_type="case", entity_id=str(case.id),
-                             after_data={"terms_version": terminos.version, "language": terminos.language})
+                             after_data={"terms_version": terminos.version, "language": terminos.language,
+                                         "data_consent_version": privacy.DOCUMENT_VERSION})
     await db.commit()
     return await _get_case(db, organization_id, case.id)
 

@@ -17,12 +17,18 @@ export async function listCustomersPage(
   return fetchPage<Customer>("/customers", page, pageSize, extraParams);
 }
 
-export async function createCustomer(payload: { legal_name: string }): Promise<Customer> {
+/** El alta y la edición de datos de contacto exigen la autorización de
+ *  tratamiento de datos (`data_consent_accepted`); sin ella el servidor
+ *  responde 400 `consent_required`. */
+export async function createCustomer(payload: { legal_name: string; data_consent_accepted?: boolean }): Promise<Customer> {
   const res = await apiClient.post<Customer>("/customers", payload);
   return res.data;
 }
 
-export async function updateCustomer(customerId: string, payload: Partial<Customer>): Promise<Customer> {
+export async function updateCustomer(
+  customerId: string,
+  payload: Partial<Customer> & { data_consent_accepted?: boolean }
+): Promise<Customer> {
   const res = await apiClient.patch<Customer>(`/customers/${customerId}`, payload);
   return res.data;
 }

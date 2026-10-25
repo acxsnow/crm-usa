@@ -1,5 +1,6 @@
 /** API del módulo 2: el vendedor en la puerta. */
 import { apiClient } from "@/lib/apiClient";
+import type { ConsentNotice } from "@/components/DataConsentNotice";
 import type { Case } from "@/features/cases/api";
 import type { DefinitionStep, Evaluation } from "@/types/programs";
 
@@ -22,6 +23,8 @@ export interface CaseForm {
   files: { id: string; field_key: string; original_filename: string | null; mime_type: string | null; watermarked: boolean;
     review_status: "pending" | "accepted" | "rejected"; review_notes: string | null }[];
   terms: { id: string; version: string; language: string; title: string; body: string } | null;
+  /** Aviso de tratamiento de datos: se muestra con la firma y queda en la constancia. */
+  consent: ConsentNotice | null;
   acceptance: { id: string; customer_name: string; accepted_at: string; terms_version: string | null } | null;
   editable: boolean;
   approval_wait?: ApprovalWait | null;

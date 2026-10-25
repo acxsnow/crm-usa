@@ -533,7 +533,8 @@ async def get_public_signature_request(db: AsyncSession, *, raw_token: str) -> t
     return token, attestation, project
 
 
-async def public_customer_sign(db: AsyncSession, *, raw_token: str, customer_name: str, signature_base64: str) -> Attestation:
+async def public_customer_sign(db: AsyncSession, *, raw_token: str, customer_name: str, signature_base64: str,
+                                ip_address: str | None = None, user_agent: str | None = None) -> Attestation:
     token, attestation, project = await get_public_signature_request(db, raw_token=raw_token)
     signature_bytes = decode_signature_png(signature_base64)
     attestation.customer_name = customer_name.strip()
@@ -542,9 +543,28 @@ async def public_customer_sign(db: AsyncSession, *, raw_token: str, customer_nam
     attestation.customer_signed_at = now
     token.signed_at = now
     await _maybe_generate_pdf(db, organization_id=token.organization_id, project=project, attestation=attestation)
+    # Firmar el acta es también autorizar el tratamiento de los datos: el
+    # cliente que abre el enlace ve el aviso antes de firmar.
+    from app.modules.crm.models import Customer
+    from app.modules.crm import privacy
+
+    cliente = await db.get(Customer, project.customer_id) if project.customer_id else None
+    await privacy.record_consent(
+        db, organization_id=token.organization_id, source=privacy.SOURCE_PUBLIC_SIGNATURE,
+        customer_id=project.customer_id, customer_name=attestation.customer_name,
+        snapshot=privacy.contact_snapshot(
+            name=attestation.customer_name,
+            phone=cliente.main_phone if cliente else None,
+            email=cliente.email if cliente else None,
+            address=(cliente.billing_address if cliente else None) or privacy.address_line(
+                project.address_street, project.address_unit, project.address_city, project.address_zip),
+        ),
+        ip_address=ip_address, user_agent=user_agent,
+    )
     await record_audit_event(
         db, organization_id=token.organization_id, actor_user_id=None,
         action="attestation.customer_signed_public", entity_type="Attestation", entity_id=str(attestation.id),
+        after_data={"data_consent_version": privacy.DOCUMENT_VERSION},
     )
     await db.commit()
     await db.refresh(attestation)

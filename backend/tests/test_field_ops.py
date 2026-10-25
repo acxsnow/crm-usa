@@ -30,7 +30,7 @@ async def _admin_headers(app_client, active_admin_user):
 
 
 async def _create_customer_and_project(app_client, headers, *, technician_id=None):
-    customer_resp = await app_client.post("/api/v1/customers", json={"legal_name": "Field Ops Customer"}, headers=headers)
+    customer_resp = await app_client.post("/api/v1/customers", json={"legal_name": "Field Ops Customer", "data_consent_accepted": True}, headers=headers)
     customer_id = customer_resp.json()["id"]
 
     template_resp = await app_client.post("/api/v1/checklist-templates/seed-default", headers=headers)

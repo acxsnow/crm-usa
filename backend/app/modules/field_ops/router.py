@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -738,13 +738,16 @@ async def public_customer_signature_details(token: str, db: AsyncSession = Depen
 
 @router.post("/public/customer-signature", response_model=AttestationResponse)
 async def public_customer_signature(
-    payload: PublicCustomerSignatureCapture, token: str | None = None, db: AsyncSession = Depends(get_db)
+    request: Request, payload: PublicCustomerSignatureCapture, token: str | None = None,
+    db: AsyncSession = Depends(get_db),
 ):
     raw = payload.token or token
     if not raw:
         raise HTTPException(status_code=404, detail="El enlace no es válido o ya expiró.")
     return AttestationResponse.model_validate(await field_ops_service.public_customer_sign(
-        db, raw_token=raw, customer_name=payload.customer_name, signature_base64=payload.signature_base64
+        db, raw_token=raw, customer_name=payload.customer_name, signature_base64=payload.signature_base64,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     ))
 
 

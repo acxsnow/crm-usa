@@ -98,7 +98,7 @@ async def test_list_is_paginated_with_total_count_header(app_client, active_admi
 
     for i in range(5):
         resp = await app_client.post(
-            "/api/v1/customers", json={"legal_name": f"Cliente {i}"}, headers=_auth(token)
+            "/api/v1/customers", json={"legal_name": f"Cliente {i}", "data_consent_accepted": True}, headers=_auth(token)
         )
         assert resp.status_code == 201
 

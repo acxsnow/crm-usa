@@ -24,7 +24,7 @@ async def _admin_headers(app_client, active_admin_user):
 
 
 async def _create_project(app_client, headers):
-    customer_resp = await app_client.post("/api/v1/customers", json={"legal_name": "Billing Customer"}, headers=headers)
+    customer_resp = await app_client.post("/api/v1/customers", json={"legal_name": "Billing Customer", "data_consent_accepted": True}, headers=headers)
     customer_id = customer_resp.json()["id"]
     project_resp = await app_client.post(
         "/api/v1/projects", json={"customer_id": customer_id, "title": "Instalación facturable"}, headers=headers,

@@ -653,7 +653,8 @@ def flujo_campanas(admin: Client, v: Client) -> None:
 def flujo_particular(conta: Client, admin: Client) -> None:
     section("10. Trabajo particular: cotización → factura → pago")
     cli = expect("Cliente particular", admin.post("/customers", json={"legal_name": f"QA {RUN} Cliente particular",
-                                                                        "main_phone": "(602) 555-0999"}), 201) or {}
+                                                                        "main_phone": "(602) 555-0999",
+                                                                        "data_consent_accepted": True}), 201) or {}
     lineas = [{"kind": "labor", "description": "QA Reparación de ductos", "quantity": 2, "unit_price": 150},
               {"kind": "material", "description": "QA Ducto flexible 25 ft", "quantity": 1, "unit_price": "89.50"}]
     q = expect("Cotización", conta.post("/billing/quotes", json={"customer_id": cli.get("id"), "lines": lineas}), 201) or {}
@@ -670,6 +671,46 @@ def flujo_particular(conta: Client, admin: Client) -> None:
     pdf = conta.get(f"/invoices/{fac['id']}/pdf")
     check("PDF de la factura", pdf.status_code == 200 and pdf.content[:4] == b"%PDF", str(pdf.status_code))
     RECORDS["Factura particular"] = f2.get("invoice_number") or fac.get("id", "")
+
+
+def flujo_consentimiento(c: dict) -> None:
+    section("16. Autorización de tratamiento de datos (California, Arizona y Nevada)")
+    admin, v = c["admin"], c["vendedor"]
+
+    aviso = expect("El aviso se ve sin sesión", httpx.get(f"{API}/privacy/consent-notice", timeout=30), 200) or {}
+    check("El aviso viene versionado y en español",
+          aviso.get("version") == "2026.1" and aviso.get("language") == "es", str(aviso.get("version")))
+    cuerpo = aviso.get("body", "")
+    check("El aviso dice lo que exige la ley de esas zonas",
+          all(t in cuerpo for t in ("California", "Nevada", "siete (7) años", "no se venden")), cuerpo[:120])
+
+    sin = admin.post("/customers", json={"legal_name": f"QA {RUN} Sin autorizar", "main_phone": "(602) 555-0111"})
+    check("Sin autorización no se guarda el cliente",
+          sin.status_code == 400 and (sin.json() or {}).get("code") == "consent_required",
+          f"HTTP {sin.status_code}: {sin.text[:120]}")
+
+    cli = expect("Con autorización sí se guarda",
+                 v.post("/customers", json={"legal_name": f"QA {RUN} Autorizado", "main_phone": "(602) 555-0222",
+                                            "data_consent_accepted": True}), 201) or {}
+    RECORDS["Cliente con autorización"] = f"QA {RUN} Autorizado"
+
+    expect("Editar solo las notas no pide autorización",
+           v.patch(f"/customers/{cli.get('id')}", json={"notes": "QA nota"}), 200)
+    sin_edicion = v.patch(f"/customers/{cli.get('id')}", json={"main_phone": "(602) 555-0333"})
+    check("Corregir el teléfono sin autorización se rechaza",
+          sin_edicion.status_code == 400 and (sin_edicion.json() or {}).get("code") == "consent_required",
+          f"HTTP {sin_edicion.status_code}: {sin_edicion.text[:120]}")
+    expect("Corregir el teléfono con autorización",
+           v.patch(f"/customers/{cli.get('id')}", json={"main_phone": "(602) 555-0333",
+                                                        "data_consent_accepted": True}), 200)
+
+    constancias = sql(f"select count(*) from data_consents where customer_name like 'QA {RUN}%'")
+    check("Queda una constancia por cada autorización", constancias.isdigit() and int(constancias) >= 2, constancias)
+    ultima = sql("select document_version || '|' || length(document_text) || '|' || source "
+                 "from data_consents order by accepted_at desc limit 1")
+    partes = ultima.split("|")
+    check("La constancia guarda el texto completo con su versión y origen",
+          len(partes) == 3 and partes[0] == "2026.1" and partes[1].isdigit() and int(partes[1]) > 1000, ultima)
 
 
 def flujo_permisos_por_rol(clients: dict) -> None:
@@ -1385,6 +1426,7 @@ def main() -> int:
     seguro("Alertas", flujo_alertas, admin, adm, pend_id)
     seguro("Campañas", flujo_campanas, admin, v)
     seguro("Particular", flujo_particular, conta, admin)
+    seguro("Consentimiento", flujo_consentimiento, c)
     seguro("Permisos", flujo_permisos_por_rol, c)
     seguro("Finanzas", flujo_finanzas, c, pid, pid_az)
     seguro("Bodega", flujo_bodega, c, obra_abierta_del_tecnico(adm, tec, pid_az))

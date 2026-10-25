@@ -21,7 +21,7 @@ def correo(monkeypatch):
 
 
 async def _proyecto(app_client, headers, email="cliente@example.com"):
-    c = (await app_client.post("/api/v1/customers", json={"legal_name": "Cliente Firma", "email": email}, headers=headers)).json()
+    c = (await app_client.post("/api/v1/customers", json={"legal_name": "Cliente Firma", "email": email, "data_consent_accepted": True}, headers=headers)).json()
     p = await app_client.post("/api/v1/projects", json={"customer_id": c["id"], "title": "Firma a distancia"}, headers=headers)
     assert p.status_code == 201, p.text
     return p.json()["id"]

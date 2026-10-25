@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createCustomer, listCustomersPage } from "./api";
+import { ConsentCheckbox, DataConsentNotice, useConsentNotice } from "@/components/DataConsentNotice";
 import { PaginationControls } from "@/components/PaginationControls";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -28,19 +29,23 @@ export function CustomersPage() {
   const [name, setName] = useState("");
   // El alta rápida se abre con «+ Nuevo cliente» (antes estaba siempre a la vista).
   const [alta, setAlta] = useState(false);
+  // Sin la autorización de tratamiento de datos no se guarda el cliente.
+  const [autoriza, setAutoriza] = useState(false);
+  const aviso = useConsentNotice();
 
   const createMutation = useMutation({
     mutationFn: createCustomer,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       setName("");
+      setAutoriza(false);
     },
   });
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim()) return;
-    createMutation.mutate({ legal_name: name });
+    if (!name.trim() || !autoriza) return;
+    createMutation.mutate({ legal_name: name, data_consent_accepted: autoriza });
   }
 
   const filterFields: FilterFieldDef[] = [
@@ -94,10 +99,15 @@ export function CustomersPage() {
         <label htmlFor="new-customer">Nuevo cliente</label>
         <div className="ui-quick-create-row">
           <input id="new-customer" placeholder="Nombre del cliente" value={name} onChange={(e) => setName(e.target.value)} required />
-          <button className="primary-button" type="submit" disabled={createMutation.isPending}>
+          <button className="primary-button" type="submit" disabled={createMutation.isPending || !autoriza}>
             {createMutation.isPending ? "Guardando..." : "Agregar cliente"}
           </button>
         </div>
+        {aviso.data && <DataConsentNotice notice={aviso.data} />}
+        {aviso.data && <ConsentCheckbox notice={aviso.data} checked={autoriza} onChange={setAutoriza} />}
+        {createMutation.isError && (
+          <p className="form-error" role="alert">No se pudo crear el cliente. Revisa los datos y la autorización.</p>
+        )}
       </form>
       )}
 

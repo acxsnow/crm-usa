@@ -19,6 +19,20 @@ class AddressSchema(BaseModel):
     longitude: float | None = None
 
 
+# --- Aviso de tratamiento de datos personales -------------------------------
+
+class DataConsentNotice(BaseModel):
+    """El aviso que se muestra —y se guarda como constancia— al capturar datos
+    personales del cliente. Lo entrega el servidor para que las cuatro
+    pantallas que lo piden muestren el mismo texto y la misma versión."""
+
+    version: str
+    language: str
+    title: str
+    label: str
+    body: str
+
+
 # --- Customer ----------------------------------------------------------------
 
 class CustomerContactBase(BaseModel):
@@ -48,6 +62,9 @@ class CustomerCreate(BaseModel):
     billing_address: str | None = None
     tags: list[str] | None = None
     notes: str | None = None
+    # El cliente autorizó el tratamiento de sus datos (obligatorio: sin esto no
+    # se guarda nada personal). No es una columna del cliente.
+    data_consent_accepted: bool = False
 
 
 class CustomerUpdate(BaseModel):
@@ -60,6 +77,7 @@ class CustomerUpdate(BaseModel):
     status: CustomerStatus | None = None
     tags: list[str] | None = None
     notes: str | None = None
+    data_consent_accepted: bool = False
 
 
 class CustomerResponse(BaseModel):

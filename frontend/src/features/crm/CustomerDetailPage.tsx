@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { getCustomerTimeline, updateCustomer } from "./api";
+import { ConsentCheckbox, DataConsentNotice, useConsentNotice } from "@/components/DataConsentNotice";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { Avatar } from "@/components/ui/Avatar";
@@ -34,18 +35,29 @@ export function CustomerDetailPage() {
   // técnico, Contabilidad y Gerencia veían el botón y recibían un 403 (17 oct).
   const canEdit = useAuth().hasPermission("customers.update");
   const [form, setForm] = useState({ legal_name: "", main_phone: "", email: "", billing_address: "", notes: "" });
+  // La autorización de tratamiento de datos se pide al cambiar los datos
+  // personales (el servidor aplica el mismo criterio: `PERSONAL_FIELDS`).
+  const [autoriza, setAutoriza] = useState(false);
+  const aviso = useConsentNotice();
   const updateMutation = useMutation({
-    mutationFn: () => updateCustomer(customerId!, form),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] }); setEditing(false); },
+    mutationFn: () => updateCustomer(customerId!, { ...form, data_consent_accepted: autoriza }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-timeline", customerId] });
+      setEditing(false);
+      setAutoriza(false);
+    },
   });
 
   if (isLoading || !data) return <div className="customer-detail-page"><SkeletonRows rows={6} label="Cargando cliente…" /></div>;
 
   const { customer, cases, activities } = data;
+  const PERSONALES = ["legal_name", "main_phone", "email", "billing_address"] as const;
+  const cambianPersonales = PERSONALES.some((k) => (form[k] ?? "") !== (customer[k] ?? ""));
   const alternarEdicion = () => {
     if (!editing) {
       setForm({ legal_name: customer.legal_name, main_phone: customer.main_phone ?? "", email: customer.email ?? "",
         billing_address: customer.billing_address ?? "", notes: customer.notes ?? "" });
+      setAutoriza(false);
     }
     setEditing(!editing);
   };
@@ -70,7 +82,7 @@ export function CustomerDetailPage() {
         </div>
         {canEdit && <button className="primary-button ui-profile-action" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button>}
       </header>
-      {canEdit && editing && <form className="edit-card" onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }}><div className="edit-grid"><label>Nombre completo<input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} required /></label><label>Teléfono<input value={form.main_phone} onChange={(e) => setForm({ ...form, main_phone: e.target.value })} /></label><label>Correo<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Dirección de facturación<input value={form.billing_address} onChange={(e) => setForm({ ...form, billing_address: e.target.value })} /></label><label className="wide-field">Notas<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div><button className="primary-button" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</button>{updateMutation.isError && <p className="form-error">No se pudieron guardar los cambios.</p>}</form>}
+      {canEdit && editing && <form className="edit-card" onSubmit={(e) => { e.preventDefault(); if (cambianPersonales && !autoriza) return; updateMutation.mutate(); }}><div className="edit-grid"><label>Nombre completo<input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} required /></label><label>Teléfono<input value={form.main_phone} onChange={(e) => setForm({ ...form, main_phone: e.target.value })} /></label><label>Correo<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Dirección de facturación<input value={form.billing_address} onChange={(e) => setForm({ ...form, billing_address: e.target.value })} /></label><label className="wide-field">Notas<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div>{cambianPersonales && <div className="ui-consent-block">{aviso.data && <DataConsentNotice notice={aviso.data} />}{aviso.data && <ConsentCheckbox notice={aviso.data} checked={autoriza} onChange={setAutoriza} />}</div>}<button className="primary-button" disabled={updateMutation.isPending || (cambianPersonales && !autoriza)}>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</button>{cambianPersonales && !autoriza && <p className="form-help">Marca la autorización del cliente para guardar cambios en sus datos personales.</p>}{updateMutation.isError && <p className="form-error">No se pudieron guardar los cambios.</p>}</form>}
 
       <div className="ui-tabs" role="tablist" aria-label="Secciones del cliente">
         {pestanas.map((p) => (

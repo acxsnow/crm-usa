@@ -16,7 +16,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 
 **Servicios:** `docker compose up` (API en `localhost:8000`, app en `localhost:5173`).
 
-**Base al día:** desde el 13 de octubre (módulos de finanzas) hace falta la migración `0025`. Córrela una vez: `docker compose exec api alembic upgrade head`. Sin ella, las pantallas de Gastos, Proveedores, Conciliación y Reportes fallan y nadie tiene el permiso de aprobar facturas de proveedor (`payables.approve`). Si al hacer `git pull` desaparecieron `backend/.env` o `frontend/.env` (ya no se suben al repositorio), créalos de nuevo desde los `.env.example`.
+**Base al día:** desde el 13 de octubre (módulos de finanzas) hace falta la migración `0025`. Córrela una vez: `docker compose exec api alembic upgrade head`. Sin ella, las pantallas de Gastos, Proveedores, Conciliación y Reportes fallan y nadie tiene el permiso de aprobar facturas de proveedor (`payables.approve`). Desde el 24 de octubre hace falta además la `0038` (**autorización de tratamiento de datos**, tabla `data_consents`): el mismo `alembic upgrade head` la aplica. Si al hacer `git pull` desaparecieron `backend/.env` o `frontend/.env` (ya no se suben al repositorio), créalos de nuevo desde los `.env.example`.
 
 **Usuarios** (contraseña `ChangeMe123!`):
 
@@ -177,9 +177,9 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 ### 1.5 Términos y firma del cliente
 
 - **PDF:** §2.5, §2 funcionalidades («Módulo de firma digital»).
-- **Pantalla:** último paso del formulario: el cliente lee los términos, escribe su nombre y firma en pantalla.
-- **API:** `POST /cases/{id}/terms-acceptance`, ver la firma: `GET /cases/{id}/terms-acceptance/signature`.
-- **Qué debe pasar:** queda un registro inmutable con versión de términos, fecha, GPS e IP. **Repetir la firma** reemplaza la anterior antes de enviar.
+- **Pantalla:** último paso del formulario: el cliente lee los términos, **el aviso de tratamiento de datos** («Autorización de tratamiento de datos personales», versión 2026.1), escribe su nombre y firma en pantalla.
+- **API:** `POST /cases/{id}/terms-acceptance`, ver la firma: `GET /cases/{id}/terms-acceptance/signature`, el aviso: `GET /privacy/consent-notice` (público).
+- **Qué debe pasar:** quedan dos registros inmutables: el de términos (`case_terms_acceptances`) y el de **autorización de datos** (`data_consents`, origen `case_intake`), los dos con versión, fecha, GPS e IP. El paso de autorización es obligatorio, así que no se puede enviar un expediente sin la autorización. **Repetir la firma** reemplaza la anterior antes de enviar y deja una constancia nueva.
 
 ### 1.6 Enviar a revisión
 
@@ -368,6 +368,7 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 | Campañas por SMS y correo | Administración | **Campañas** (`/campaigns`) · `CampaignsPage.tsx` | `/campaigns/...` | — (agregado) |
 | Gerencia solo consulta | Gerencia | todo lo que ve | intenta guardar algo: ningún botón debe funcionar | §1 |
 | Auditoría | Administrador, Administración, Contabilidad, Gerencia | **Auditoría** (`/audit-log`) | `GET /audit-events` | — |
+| Autorización de tratamiento de datos | Vendedor, Administración (y el cliente en el enlace de firma) | **Clientes** (`/customers`) y `/customers/{id}` · `features/crm/CustomersPage.tsx`, `CustomerDetailPage.tsx`; paso de autorización del expediente; firma pública del acta | `POST /customers`, `PATCH /customers/{id}`, `POST /cases/{id}/terms-acceptance`, `POST /field-ops/public/customer-signature`, aviso: `GET /privacy/consent-notice` | — (CCPA/CPRA de California, SB 220 y SB 370 de Nevada, y A.R.S. § 18-552 de Arizona) |
 | Equipo, roles y permisos | Administrador | **Equipo** (`/users`), **Roles y permisos** (`/roles`) | `/users`, `/roles`, `/permissions` | — |
 | Avisos de finanzas | Contabilidad, quien registró el gasto | campana | alertas diarias | §4.1, §4.4 |
 

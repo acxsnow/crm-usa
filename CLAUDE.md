@@ -45,13 +45,15 @@ Etapa: desarrollo. Fecha de salida a producción: **Por definir**. Plan por mód
 - El historial `case_stage_events` es la única fuente de los reportes de tiempos y rechazos: nada escribe `stage_code` fuera de `transition()`.
 - Uso en celular en campo, con señal débil en los parques.
 - Subida de archivos: tipo, tamaño, marca de agua con GPS y fecha.
+- Protección de datos personales: la autorización de tratamiento es obligatoria en los cuatro puntos donde se capturan datos del cliente (alta de cliente, edición de cliente, T&C del expediente y firma pública del cliente). La constancia queda en `data_consents` (`app/modules/crm/privacy.py`, migración `0038`) con versión del texto, fecha, IP y GPS; el aviso es público en `GET /api/v1/privacy/consent-notice`. Norma aplicable (definida el 24 de octubre de 2026): CCPA/CPRA de California, SB 220 y SB 370 de Nevada y A.R.S. § 18-552 de Arizona.
 
 ## Plan y auditorías (artefacto compartido)
 
-- Enlace: https://claude.ai/code/artifact/e87bc170-086f-4777-ad5e-2ee15766cdfe
+- Enlace: https://claude.ai/artifact/Vi4rriEgvkZ3AeJ4dBR8NZ (enlace actualizado el 24 de octubre de 2026)
 - Dueño del artefacto (cuenta que lo publicó): José Javier Miranda. Mateo Mazo tiene permiso de edición.
 - Estándar de auditoría: `docs/auditoria/auditoria-integral.md`
 - Es el documento oficial de estado del proyecto. Lo consultan el equipo y la gerencia de desarrollo.
+- Pendiente de subir al artefacto (24 de octubre de 2026): consentimiento y autorización de tratamiento de datos personales. Deja cubierto el punto de protección de datos personales de la auditoría de seguridad (antes: «se guardan nombre, teléfono, correo y dirección; no se registra autorización») y define la norma aplicable a California, Arizona y Nevada, que estaba «por definir». Detalle y evidencia en `docs/superpowers/plans/2026-10-24-consentimiento-datos.md`.
 
 ## Reglas
 

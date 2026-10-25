@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     JSON,
@@ -80,6 +81,42 @@ class CustomerContact(UUIDPKMixin, TimestampMixin, Base):
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     customer: Mapped["Customer"] = relationship("Customer", back_populates="contacts")
+
+
+# ---------------------------------------------------------------------------
+# Autorización de tratamiento de datos personales
+# ---------------------------------------------------------------------------
+
+class DataConsent(UUIDPKMixin, OrgScopedMixin, Base):
+    """Constancia de que el cliente autorizó el tratamiento de sus datos
+    (nombre, teléfono, correo y dirección). Igual que
+    `CaseTermsAcceptance`, es **inmutable**: se agrega una fila por cada
+    autorización y no se reescribe, así el historial del cliente queda
+    completo. `source` dice dónde se capturó (`crm/privacy.py`) y
+    `document_text` guarda el aviso exacto que el cliente vio, aunque el
+    texto cambie después."""
+
+    __tablename__ = "data_consents"
+
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("customers.id", ondelete="SET NULL"), index=True
+    )
+    case_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="SET NULL"), index=True
+    )
+    customer_name: Mapped[str | None] = mapped_column(String(255))
+    # Lo que se estaba guardando cuando autorizó.
+    contact_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    document_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    document_language: Mapped[str] = mapped_column(String(5), default="es", nullable=False)
+    document_text: Mapped[str] = mapped_column(Text, nullable=False)
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    captured_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(500))
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
 
 
 # ---------------------------------------------------------------------------

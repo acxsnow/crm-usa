@@ -289,7 +289,7 @@ async def test_admin_staff_can_approve(app_client, active_admin_staff_user, acti
     del_vendedor = await _login(app_client, "vendedor@acme-demo.com")
     cliente = (
         await app_client.post(
-            "/api/v1/customers", json={"legal_name": "Marge Simpson"}, headers=del_vendedor
+            "/api/v1/customers", json={"legal_name": "Marge Simpson", "data_consent_accepted": True}, headers=del_vendedor
         )
     ).json()
     creado = (
