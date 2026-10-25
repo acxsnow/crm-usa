@@ -5,8 +5,8 @@
       "Correo con el que lo invitaron.",
       "Contraseña.",
       "El ojo muestra u oculta la contraseña mientras la escribe.",
-      "«Sign in» entra a la plataforma.",
-      "«Forgot password?» envía al correo un enlace para crear una contraseña nueva (vale 60 minutos)."
+      "«Entrar» abre la plataforma.",
+      "«¿Olvidaste tu contraseña?» envía al correo un enlace para crear una contraseña nueva (vale 60 minutos)."
     ]
   },
   "inicio": {
@@ -51,7 +51,6 @@
       "Los pasos del formulario: en verde los completos; se puede ir a cualquiera.",
       "Términos del programa que acepta el cliente.",
       "El cliente marca que acepta.",
-      "El cliente firma con el dedo dentro del recuadro.",
       "«Guardar y seguir» guarda el paso; lo que no se guarda no cuenta."
     ]
   },
@@ -59,7 +58,6 @@
     "titulo": "Expedientes: tablero por etapa",
     "leyenda": [
       "Buscar y filtrar por vendedor o programa.",
-      "Una columna por etapa del expediente, con cuántos tiene.",
       "Cada tarjeta es un expediente: tóquela para abrirlo.",
       "Días hábiles en «Pendiente de aprobación»: en rojo desde el límite."
     ]
@@ -166,9 +164,7 @@
   "confirmacion": {
     "titulo": "Confirmación de Administración",
     "leyenda": [
-      "Paso «Confirmación de Administración», abierto desde el aviso o la bandeja.",
-      "«Confirmar información técnica»: habilita el cobro.",
-      "«Devolver al técnico» con el motivo; el acta se reabre para corregir."
+      "Paso «Confirmación de Administración», abierto desde el aviso o la bandeja."
     ]
   },
   "cobro": {
@@ -212,7 +208,7 @@
     "leyenda": [
       "Filtrar por fecha de cierre y por programa.",
       "Totales: esperado, cobrado, costos y margen.",
-      "Los costos de cada instalación, por tipo: equipos, materiales, contratistas, gastos de campo…"
+      "Cada instalación con lo esperado, lo cobrado y sus costos (material menor y herramienta cuentan como materiales)."
     ]
   },
   "reportes": {
@@ -273,6 +269,8 @@
       "Número del fabricante, tal como aparece en AC Pro (MFG #).",
       "Marca. El buscador encuentra el artículo por nombre, código, fabricante o marca.",
       "Categoría: solo se ofrecen las activas.",
+      "Precio de venta: lo pone en el price book para cotizar.",
+      "Margen estimado: se calcula solo con el costo y el precio de venta.",
       "Mínimo: al llegar aquí la bodega recibe un aviso."
     ]
   },
@@ -375,6 +373,22 @@
     "leyenda": [
       "Período del reporte y exportar a Excel o PDF.",
       "Períodos: cerrarlos bloquea los cambios de esas fechas; reabrir pide motivo."
+    ]
+  },
+  "banca": {
+    "titulo": "Banca",
+    "leyenda": [
+      "Conectar una tarjeta o cuenta de la empresa (se entra al banco en su propia ventana).",
+      "Reglas: proponen categoría y obra según la descripción.",
+      "Por revisar, Categorizados y Excluidos, con el buscador."
+    ]
+  },
+  "cliente_autorizacion": {
+    "titulo": "Cliente nuevo con la autorización de datos",
+    "leyenda": [
+      "Nombre del cliente nuevo.",
+      "El aviso de tratamiento de datos, tal como queda guardado en la constancia.",
+      "Sin marcar la autorización no se puede agregar el cliente."
     ]
   }
 }

@@ -37,8 +37,8 @@ def login(pg):
         (pg.locator("input[type=email]"), "Correo con el que lo invitaron.", "left"),
         (pg.locator(".password-field input"), "Contraseña.", "left"),
         (pg.locator(".password-toggle"), "El ojo muestra u oculta la contraseña mientras la escribe.", "right"),
-        (pg.locator("button[type=submit]"), "«Sign in» entra a la plataforma.", "left"),
-        (pg.get_by_text("Forgot password?"), "«Forgot password?» envía al correo un enlace para crear una contraseña nueva (vale 60 minutos).", "bottom"),
+        (pg.locator("button[type=submit]"), "«Entrar» abre la plataforma.", "left"),
+        (pg.get_by_text("¿Olvidaste tu contraseña?"), "«¿Olvidaste tu contraseña?» envía al correo un enlace para crear una contraseña nueva (vale 60 minutos).", "bottom"),
     ], None
 
 
@@ -101,7 +101,7 @@ def formulario(pg):
 def tablero(pg):
     return [
         (pg.get_by_placeholder("Buscar por expediente, dirección, ciudad o cliente").locator(".."), "Buscar y filtrar por vendedor o programa.", "top"),
-        (pg.get_by_text("Pendiente de aprobación").first, "Una columna por etapa del expediente, con cuántos tiene.", "left"),
+        (pg.get_by_text("Nuevo prospecto").first, "Una columna por etapa del expediente, con cuántos tiene.", "right"),
         (pg.get_by_text("María González").first.locator("xpath=ancestor::a[1]"), "Cada tarjeta es un expediente: tóquela para abrirlo.", "inside"),
         (pg.get_by_text("días hábiles").first, "Días hábiles en «Pendiente de aprobación»: en rojo desde el límite.", "right"),
     ], None
@@ -293,7 +293,7 @@ def rentabilidad(pg):
     return [
         (pg.get_by_text("Instalación cerrada desde").first.locator(".."), "Filtrar por fecha de cierre y por programa.", "right"),
         (pg.get_by_text("Margen", exact=True).first.locator(".."), "Totales: esperado, cobrado, costos y margen.", "bottom"),
-        (pg.get_by_text("Equipos $").first, "Los costos de cada instalación, por tipo: equipos, materiales, contratistas, gastos de campo…", "bottom"),
+        (pg.locator("table").first, "Cada instalación con lo esperado, lo cobrado y sus costos (material menor y herramienta cuentan como materiales).", "top"),
     ], None
 
 
@@ -332,8 +332,48 @@ def bodega_articulo(pg):
         (pg.locator("#it-mfg"), "Número del fabricante, tal como aparece en AC Pro (MFG #).", "left"),
         (pg.locator("#it-brand"), "Marca. El buscador encuentra el artículo por nombre, código, fabricante o marca.", "right"),
         (pg.locator("#it-cat"), "Categoría: solo se ofrecen las activas.", "left"),
+        (pg.locator("#it-sale"), "Precio de venta: lo pone en el price book para cotizar.", "right"),
+        (pg.locator("#it-margin"), "Margen estimado: se calcula solo con el costo y el precio de venta.", "left"),
         (pg.locator("#it-min"), "Mínimo: al llegar aquí la bodega recibe un aviso.", "right"),
     ], pg.locator("#it-name")
+
+
+def cliente_autorizacion(pg):
+    pg.wait_for_timeout(1500)
+    pg.get_by_role("button", name="+ Nuevo cliente").click()
+    pg.locator("#new-customer").fill("Marta Ejemplo")
+    pg.wait_for_timeout(1500)
+    aviso = pg.locator(".ui-consent").first
+    return [
+        (pg.locator("#new-customer"), "Nombre del cliente nuevo.", "right"),
+        (aviso, "El aviso de tratamiento de datos, tal como queda guardado en la constancia.", "inside"),
+        (pg.locator(".ui-consent-check").first, "Sin marcar la autorización no se puede agregar el cliente.", "right"),
+    ], aviso
+
+
+def cobro_en_linea(pg):
+    pg.wait_for_timeout(2500)
+    fila = pg.locator(".invoice-row", has_text="Trabajo particular").first
+    fila.click()
+    pg.wait_for_timeout(1500)
+    pg.locator(".pay-cta").first.click()
+    pg.wait_for_timeout(800)
+    caja = pg.locator(".pay-box").first
+    return [
+        (caja.locator(".pay-amounts"), "¿Cuánto?: el saldo, un anticipo del 50 % u otro monto.", "left"),
+        (caja.locator(".pay-send"), "Por correo, SMS o los dos.", "left"),
+        (caja.get_by_text("Enviar enlace de pago"), "Le manda al cliente el enlace para pagar.", "bottom"),
+        (caja.get_by_text("Cobrar aquí con QR"), "En la obra: el cliente escanea el código desde el celular.", "bottom"),
+    ], caja
+
+
+def banca(pg):
+    pg.wait_for_timeout(2500)
+    return [
+        (pg.get_by_role("button", name="Conectar cuenta"), "Conectar una tarjeta o cuenta de la empresa (se entra al banco en su propia ventana).", "left"),
+        (pg.get_by_role("button", name="Reglas"), "Reglas: proponen categoría y obra según la descripción.", "bottom"),
+        (pg.locator(".bank-tabs"), "Por revisar, Categorizados y Excluidos, con el buscador.", "bottom"),
+    ], None
 
 
 def bodega_categorias(pg):
@@ -530,6 +570,8 @@ PANTALLAS = [
     ("confirmacion", "adm", ANCHO, f"/projects/{DEMO['acta']['project']}?paso=review", "Confirmación de Administración", confirmacion),
     ("cobro", "adm", ANCHO, f"/projects/{DEMO['cobro']['project']}?paso=billing", "Cobro al programa", cobro),
     ("facturacion", "conta", {"width": 1280, "height": 1600}, "/invoices", "Facturación y cobros", facturacion),
+    ("banca", "conta", {"width": 1280, "height": 900}, "/banking", "Banca", banca),
+    ("cliente_autorizacion", "adm", {"width": 1280, "height": 1300}, "/customers", "Cliente nuevo con la autorización de datos", cliente_autorizacion),
     ("gastos", "tecnico", alto(1300), "/expenses", "Gastos de campo", gastos),
     ("proveedores", "conta", ESCRITORIO, "/payables", "Proveedores y pagos", proveedores),
     ("rentabilidad", "gerencia", ESCRITORIO, "/finance-close", "Rentabilidad por instalación", rentabilidad),
