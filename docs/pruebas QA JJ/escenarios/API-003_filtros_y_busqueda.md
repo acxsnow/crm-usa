@@ -6,12 +6,12 @@
 - **Módulo:** API y paginación
 - **Prioridad:** P2
 - **Tipo de prueba:** API
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** 1 min (API)
+- **Versión o commit probado:** devjj deee0d8 (base QA de seed_qa)
 
 ## 2. Objetivo
 
@@ -36,23 +36,29 @@ Los filtros combinados devuelven lo correcto y el total coincide.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: q=cinta, active=false, sin coincidencias y low_only: el total del encabezado coincide con las filas; active=quizás → 422.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (5 de 5):
+  - ✔ items q=cinta: total = filas — `200 total=0 filas=0`
+  - ✔ items active=false: total = filas — `200 total=0 filas=0`
+  - ✔ items q sin coincidencias: total = filas — `200 total=0 filas=0`
+  - ✔ stock low_only: total = filas — `200 total=0 filas=0`
+  - ✔ active=quizás → 422 — `422`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote1` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
 
-- [ ] Filtros con valores inválidos (`active=quizás`) responden 422.
+- [x] Filtros con valores inválidos (`active=quizás`) responden 422.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -66,7 +72,7 @@ Los filtros combinados devuelven lo correcto y el total coincide.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: 1 min (API)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

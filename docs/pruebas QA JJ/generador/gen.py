@@ -438,7 +438,10 @@ En SEC-003 se prueba cada fila por la API con el token de cada rol y se anota en
 DEST.mkdir(parents=True, exist_ok=True)
 ESC.mkdir(exist_ok=True)
 n = escribir(ESC, TODOS)
-w("00_INDICE_GENERAL.md", indice())
+# El índice lleva los estados y tiempos reales: solo se crea la primera vez.
+# Después, el resumen y el avance se recalculan con `resumen.py`.
+if not (DEST / "00_INDICE_GENERAL.md").exists():
+    w("00_INDICE_GENERAL.md", indice())
 if not (DEST / "01_REGISTRO_DEFECTOS.md").exists():
     w("01_REGISTRO_DEFECTOS.md", DEFECTOS)
 w("02_PLAN_REGRESION.md", regresion())

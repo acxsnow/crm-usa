@@ -6,12 +6,12 @@
 - **Módulo:** API y paginación
 - **Prioridad:** P0
 - **Tipo de prueba:** API · rendimiento
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** 1 min (API)
+- **Versión o commit probado:** devjj deee0d8 (base QA de seed_qa)
 
 ## 2. Objetivo
 
@@ -19,7 +19,7 @@ Ningún listado devuelve todo de una vez: 100 por defecto, 500 como máximo y el
 
 ## 3. Precondiciones
 
-- Base QA (245 artículos).
+- Base QA (244 artículos de la demo).
 
 ## 4. Datos de prueba
 
@@ -34,24 +34,33 @@ Ningún listado devuelve todo de una vez: 100 por defecto, 500 como máximo y el
 
 ## 6. Resultado esperado
 
-- 100 filas y total 245; 501, 0 y -1 responden 422; offset 200 trae 45; offset 10000 trae lista vacía.
-- La pantalla muestra 245 en total y pasa de página sin repetir ni saltar.
+- 100 filas y total 244; 501, 0 y -1 responden 422; offset 200 trae 44; offset 10000 trae lista vacía.
+- La pantalla muestra 244 en total y pasa de página sin repetir ni saltar.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Sin parámetros trae 100 filas y `X-Total-Count: 244`; limit=500 → 200; 501, 0 y -1 → 422; offset=200 trae 44; offset=10000 trae lista vacía; las 3 páginas suman 244 ids sin repetir.
+- Diferencias con lo esperado: El escenario decía 245 y «offset 200 trae 45»: son 244 y 44 en la demo (corregido el texto). Falta el paso 4 en pantalla.
+- Comprobaciones por API (8 de 8):
+  - ✔ sin parámetros: 100 filas y X-Total-Count — `filas=100 total=244 · 56 ms`
+  - ✔ limit=500 → 200 — `200 filas=244`
+  - ✔ limit=501 → 422 — `422 filas=-`
+  - ✔ limit=0 → 422 — `422 filas=-`
+  - ✔ limit=-1 → 422 — `422 filas=-`
+  - ✔ offset=200 trae las 44 restantes — `44`
+  - ✔ offset=10000 trae lista vacía — `200`
+  - ✔ recorrer las páginas: 244 ids sin repetir — `244/244`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote1` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
 
-- [ ] `tests/test_pagination_everywhere.py` pasa (todas las listas paginan, salvo las 3 excepciones documentadas).
+- [x] `tests/test_pagination_everywhere.py` pasa (todas las listas paginan, salvo las 3 excepciones documentadas).
 
 ## 10. Resultado final
 
@@ -69,7 +78,7 @@ Ningún listado devuelve todo de una vez: 100 por defecto, 500 como máximo y el
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: 1 min (API)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -6,12 +6,12 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** 1 min (API)
+- **Versión o commit probado:** devjj deee0d8 (base QA de seed_qa)
 
 ## 2. Objetivo
 
@@ -38,14 +38,35 @@ Que esconder el menú no sea la única barrera: la pantalla y su API rechazan al
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Vendedor y técnico reciben 403 en las APIs de Banca, Proveedores, Equipo, Roles, Auditoría, saldos de Bodega, Facturas, Asistencia, Nómina y Conciliación (20 de 20).
+- Diferencias con lo esperado: Ninguna en la API. Falta escribir las rutas en la barra del navegador y ver que no alcanza a mostrar datos.
+- Comprobaciones por API (20 de 20):
+  - ✔ vendedor → Banca (/bank-feeds/transactions) responde 403 — `403 · 36 ms`
+  - ✔ vendedor → Proveedores (/payables/invoices) responde 403 — `403 · 32 ms`
+  - ✔ vendedor → Equipo (/users) responde 403 — `403 · 31 ms`
+  - ✔ vendedor → Roles (/roles) responde 403 — `403 · 22 ms`
+  - ✔ vendedor → Auditoría (/audit-events) responde 403 — `403 · 23 ms`
+  - ✔ vendedor → Bodega (saldos) (/warehouse/stock/summary) responde 403 — `403 · 21 ms`
+  - ✔ vendedor → Facturas (/invoices) responde 403 — `403 · 24 ms`
+  - ✔ vendedor → Asistencia (/attendance/dashboard) responde 403 — `403 · 23 ms`
+  - ✔ vendedor → Nómina (/attendance/payroll/periods) responde 403 — `403 · 22 ms`
+  - ✔ vendedor → Conciliación (/reconciliation/summary) responde 403 — `403 · 24 ms`
+  - ✔ tecnico → Banca (/bank-feeds/transactions) responde 403 — `403 · 24 ms`
+  - ✔ tecnico → Proveedores (/payables/invoices) responde 403 — `403 · 25 ms`
+  - ✔ tecnico → Equipo (/users) responde 403 — `403 · 24 ms`
+  - ✔ tecnico → Roles (/roles) responde 403 — `403 · 22 ms`
+  - ✔ tecnico → Auditoría (/audit-events) responde 403 — `403 · 24 ms`
+  - ✔ tecnico → Bodega (saldos) (/warehouse/stock/summary) responde 403 — `403 · 25 ms`
+  - ✔ tecnico → Facturas (/invoices) responde 403 — `403 · 32 ms`
+  - ✔ tecnico → Asistencia (/attendance/dashboard) responde 403 — `403 · 36 ms`
+  - ✔ tecnico → Nómina (/attendance/payroll/periods) responde 403 — `403 · 39 ms`
+  - ✔ tecnico → Conciliación (/reconciliation/summary) responde 403 — `403 · 40 ms`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote1` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -69,7 +90,7 @@ Que esconder el menú no sea la única barrera: la pantalla y su API rechazan al
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: 1 min (API)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -6,12 +6,12 @@
 - **Módulo:** Seguridad
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** 1 min (API)
+- **Versión o commit probado:** devjj deee0d8 (base QA de seed_qa)
 
 ## 2. Objetivo
 
@@ -38,19 +38,23 @@ Ninguna llave del servidor llega al navegador.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: CORS no autoriza un origen ajeno; `/auth/me` no devuelve hashes ni secretos. `/api/docs` está abierta en desarrollo y el código la apaga en producción (`main.py`, `docs_url=None` con ENVIRONMENT=production).
+- Diferencias con lo esperado: Falta buscar llaves en los JS del navegador (F12 › Sources).
+- Comprobaciones por API (3 de 3):
+  - ✔ documentación de la API (/api/docs) — anotar si está abierta — `200 (abierta=True)`
+  - ✔ CORS no permite un origen ajeno — `None`
+  - ✔ /auth/me no devuelve hash de clave ni secretos
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote1` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
 
-- [ ] CORS solo permite el origen del frontend.
+- [x] CORS solo permite el origen del frontend.
 
 ## 10. Resultado final
 
@@ -68,7 +72,7 @@ Ninguna llave del servidor llega al navegador.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: 1 min (API)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -6,12 +6,12 @@
 - **Módulo:** Seguridad
 - **Prioridad:** P0
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** FALLIDO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** 1 min (API)
+- **Versión o commit probado:** devjj deee0d8 (base QA de seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,31 @@ Lo que escribe el usuario nunca se ejecuta ni en la base ni en el navegador.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Ninguna entrada rara produce error ni altera la consulta (todo va parametrizado). Pero en los filtros de artículos, `%` y `_` traen los 244 artículos: el texto se usa como comodín.
+- Diferencias con lo esperado: Unos 10 filtros de texto no escapan `%` y `_` (expedientes, clientes, obras, proveedores, auditoría, usuarios, listas, salidas y artículos); el buscador y otros sí los escapan. Falta la parte de pantalla (ver los textos guardados y el PDF del acta).
+- Comprobaciones por API (14 de 16):
+  - ✘ filtro de artículos «%» sin 500 y sin traer todo — `200 total=244`
+  - ✔ filtro de clientes «%» sin 500 — `200`
+  - ✘ filtro de artículos «_» sin 500 y sin traer todo — `200 total=244`
+  - ✔ filtro de clientes «_» sin 500 — `200`
+  - ✔ filtro de artículos «' OR 1=1 --» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «' OR 1=1 --» sin 500 — `200`
+  - ✔ filtro de artículos «<script>alert(1)</script>» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «<script>alert(1)</script>» sin 500 — `200`
+  - ✔ filtro de artículos «xxxxxxxxxxxxxxxxxxxxxxxxx» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «xxxxxxxxxxxxxxxxxxxxxxxxx» sin 500 — `200`
+  - ✔ filtro de artículos «🔧🔥» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «🔧🔥» sin 500 — `200`
+  - ✔ filtro de artículos «Ñandú» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «Ñandú» sin 500 — `200`
+  - ✔ filtro de artículos «1; DROP TABLE cases; --» sin 500 y sin traer todo — `200 total=0`
+  - ✔ filtro de clientes «1; DROP TABLE cases; --» sin 500 — `200`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote1` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -54,7 +71,7 @@ Lo que escribe el usuario nunca se ejecuta ni en la base ni en el navegador.
 ## 10. Resultado final
 
 - [ ] APROBADO
-- [ ] FALLIDO
+- [x] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
 - [ ] PENDIENTE DE REEJECUCIÓN
@@ -63,11 +80,11 @@ Lo que escribe el usuario nunca se ejecuta ni en la base ni en el navegador.
 
 | ID defecto | Descripción | Prioridad | Registrado en |
 |---|---|---|---|
-| | | | `01_REGISTRO_DEFECTOS.md` |
+| D-004 | Filtros de texto no escapan % y _ (comodines) | P2 | `01_REGISTRO_DEFECTOS.md` |
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: 1 min (API)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

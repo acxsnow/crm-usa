@@ -20,39 +20,39 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 
 | Módulo | Escenarios | P0 | Bloqueados | Ejecución | Preparación | Aprobados | Fallidos | Defectos |
 |---|---|---|---|---|---|---|---|---|
-| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 0 | 0 | 0 |
+| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 0 | 1 | 2 |
 | Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
 | Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
 | Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 0 | 0 | 0 |
 | Técnicos | 5 | 2 | 0 | 1 h 20 min | 30 min | 0 | 0 | 0 |
-| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 0 | 0 | 0 |
+| Bodega | 17 | 5 | 0 | 4 h 30 min | 0 min | 1 | 0 | 0 |
 | Cobro al programa | 4 | 3 | 0 | 1 h 10 min | 0 min | 0 | 0 | 0 |
 | Trabajo particular y facturación | 4 | 1 | 1 | 1 h 20 min | 0 min | 0 | 0 | 0 |
 | Finanzas | 6 | 0 | 1 | 2 h 00 min | 0 min | 0 | 0 | 0 |
 | Turnos, asistencia y mapa | 10 | 2 | 0 | 2 h 25 min | 0 min | 0 | 0 | 0 |
 | Notificaciones y buscador | 4 | 0 | 0 | 50 min | 0 min | 0 | 0 | 0 |
-| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 0 | 0 | 0 |
-| API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 0 | 0 | 0 |
+| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 2 | 1 | 1 |
+| API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 2 | 1 | 1 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 0 | 0 | 0 |
 | Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 0 | 0 | 0 |
-| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | 0 | 0 | 0 |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **5** | **3** | **4** |
 
 ## Avance
 
-- Ejecutados: 0 de 109 (0 %).
-- Aprobados: 0 · Fallidos: 0 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
-- Defectos abiertos: ver `01_REGISTRO_DEFECTOS.md`.
+- Ejecutados completos: 8 de 109 (7 %). En ejecución (parte hecha): 6.
+- Aprobados: 5 · Fallidos: 3 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
+- Defectos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
 
 | ID | Módulo | Escenario | Prioridad | Tipo | Archivo | Estado | Tiempo estimado (min) | Tiempo real | Defectos | Reejecución | Observaciones |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| AUTH-001 | Acceso y sesión | Ingreso válido con cada uno de los 6 roles | P0 | Funcional · seguridad | [AUTH-001_ingreso_valido_por_rol.md](escenarios/AUTH-001_ingreso_valido_por_rol.md) | Pendiente | 15 | | | | |
-| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | Pendiente | 10 | | | | |
+| AUTH-001 | Acceso y sesión | Ingreso válido con cada uno de los 6 roles | P0 | Funcional · seguridad | [AUTH-001_ingreso_valido_por_rol.md](escenarios/AUTH-001_ingreso_valido_por_rol.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta pantalla |
+| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | FALLIDO | 10 | 1 min (API) | D-005, D-006 |  | Bloqueo funciona; mensajes y auditoría fallan |
 | AUTH-003 | Acceso y sesión | Olvidé mi contraseña: enlace de un solo uso, 60 minutos y 3 por hora | P1 | Funcional · seguridad | [AUTH-003_olvido_de_clave.md](escenarios/AUTH-003_olvido_de_clave.md) | Pendiente | 15 | | | | |
 | AUTH-004 | Acceso y sesión | Invitar un usuario, aceptar la invitación y entrar | P1 | Funcional | [AUTH-004_invitacion_de_usuario.md](escenarios/AUTH-004_invitacion_de_usuario.md) | Pendiente | 15 | | | | |
 | AUTH-005 | Acceso y sesión | Sesión vencida y pérdida de señal | P2 | Funcional · celular | [AUTH-005_sesion_vencida_y_sin_senal.md](escenarios/AUTH-005_sesion_vencida_y_sin_senal.md) | Pendiente | 25 | | | | |
-| AUTH-006 | Acceso y sesión | Escribir a mano la dirección de una pantalla sin permiso | P1 | Seguridad | [AUTH-006_rutas_sin_permiso_por_url.md](escenarios/AUTH-006_rutas_sin_permiso_por_url.md) | Pendiente | 15 | | | | |
+| AUTH-006 | Acceso y sesión | Escribir a mano la dirección de una pantalla sin permiso | P1 | Seguridad | [AUTH-006_rutas_sin_permiso_por_url.md](escenarios/AUTH-006_rutas_sin_permiso_por_url.md) | En ejecución | 15 | 1 min (API) |  |  | API 20/20; falta pantalla |
 | AUTH-007 | Acceso y sesión | Rol nuevo sin permisos marcados | P1 | Seguridad | [AUTH-007_rol_sin_permisos.md](escenarios/AUTH-007_rol_sin_permisos.md) | Pendiente | 15 | | | | |
 | AUTH-008 | Acceso y sesión | Quitar un permiso a un rol con usuarios conectados | P2 | Seguridad | [AUTH-008_cambiar_rol_en_caliente.md](escenarios/AUTH-008_cambiar_rol_en_caliente.md) | Pendiente | 15 | | | | |
 | VEN-001 | Venta puerta a puerta | La puerta no abrió (sin contacto) | P1 | Funcional | [VEN-001_puerta_no_abrio.md](escenarios/VEN-001_puerta_no_abrio.md) | Pendiente | 10 | | | | |
@@ -88,7 +88,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | TEC-003 | Técnicos | Agenda con los 15 técnicos cargados | P2 | Rendimiento · usabilidad | [TEC-003_quince_tecnicos_en_agenda.md](escenarios/TEC-003_quince_tecnicos_en_agenda.md) | Pendiente | 20 + 30 prep. | | | | |
 | TEC-004 | Técnicos | Desactivar un técnico que tiene obras y camioneta con material | P1 | Funcional · integridad | [TEC-004_tecnico_desactivado_con_obras.md](escenarios/TEC-004_tecnico_desactivado_con_obras.md) | Pendiente | 15 | | | | |
 | TEC-005 | Técnicos | Cobro en efectivo en campo y efectivo por entregar | P1 | Funcional · dinero | [TEC-005_efectivo_por_entregar.md](escenarios/TEC-005_efectivo_por_entregar.md) | Pendiente | 15 | | | | |
-| BOD-001 | Bodega | La carga inicial cuadra con los PDF de AC Pro | P0 | Datos · integridad | [BOD-001_carga_inicial_cuadra.md](escenarios/BOD-001_carga_inicial_cuadra.md) | Pendiente | 20 | | | | |
+| BOD-001 | Bodega | La carga inicial cuadra con los PDF de AC Pro | P0 | Datos · integridad | [BOD-001_carga_inicial_cuadra.md](escenarios/BOD-001_carga_inicial_cuadra.md) | APROBADO | 20 | 2 min (API + SQL) |  |  | 19/19 |
 | BOD-002 | Bodega | Crear y editar un artículo con validaciones | P1 | Funcional · validación | [BOD-002_crear_y_editar_articulo.md](escenarios/BOD-002_crear_y_editar_articulo.md) | Pendiente | 15 | | | | |
 | BOD-003 | Bodega | Entrada de mercancía de proveedor | P1 | Funcional | [BOD-003_entrada_de_mercancia.md](escenarios/BOD-003_entrada_de_mercancia.md) | Pendiente | 10 | | | | |
 | BOD-004 | Bodega | Entrega parcial y rechazo de una salida | P0 | Funcional · regla de negocio | [BOD-004_salida_parcial_y_rechazo.md](escenarios/BOD-004_salida_parcial_y_rechazo.md) | Pendiente | 20 | | | | |
@@ -132,22 +132,22 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | NOT-001 | Notificaciones y buscador | Campana de avisos en cada paso del flujo | P1 | Funcional | [NOT-001_campana_y_avisos.md](escenarios/NOT-001_campana_y_avisos.md) | Pendiente | 15 | | | | |
 | NOT-002 | Notificaciones y buscador | Correos y SMS en modo de prueba | P2 | Integración | [NOT-002_correo_y_sms_en_consola.md](escenarios/NOT-002_correo_y_sms_en_consola.md) | Pendiente | 10 | | | | |
 | BUS-001 | Notificaciones y buscador | Buscador global por nombre, número y dirección | P1 | Funcional | [BUS-001_buscador_global.md](escenarios/BUS-001_buscador_global.md) | Pendiente | 15 | | | | |
-| BUS-002 | Notificaciones y buscador | Buscador con entradas raras | P2 | Seguridad · validación | [BUS-002_buscador_entradas_raras.md](escenarios/BUS-002_buscador_entradas_raras.md) | Pendiente | 10 | | | | |
-| SEC-001 | Seguridad | Aislamiento entre organizaciones (IDOR) | P0 | Seguridad | [SEC-001_aislamiento_entre_organizaciones.md](escenarios/SEC-001_aislamiento_entre_organizaciones.md) | Pendiente | 30 | | | | |
-| SEC-002 | Seguridad | API sin token, con token vencido o alterado | P0 | Seguridad | [SEC-002_api_sin_token_y_token_alterado.md](escenarios/SEC-002_api_sin_token_y_token_alterado.md) | Pendiente | 15 | | | | |
+| BUS-002 | Notificaciones y buscador | Buscador con entradas raras | P2 | Seguridad · validación | [BUS-002_buscador_entradas_raras.md](escenarios/BUS-002_buscador_entradas_raras.md) | En ejecución | 10 | 1 min (API) |  |  | API 8/8; falta pantalla |
+| SEC-001 | Seguridad | Aislamiento entre organizaciones (IDOR) | P0 | Seguridad | [SEC-001_aislamiento_entre_organizaciones.md](escenarios/SEC-001_aislamiento_entre_organizaciones.md) | APROBADO | 30 | 1 min (API) |  |  | 16/16; repetir con expedientes y facturas |
+| SEC-002 | Seguridad | API sin token, con token vencido o alterado | P0 | Seguridad | [SEC-002_api_sin_token_y_token_alterado.md](escenarios/SEC-002_api_sin_token_y_token_alterado.md) | APROBADO | 15 | 1 min (API) |  |  | 25/25 |
 | SEC-003 | Seguridad | Cada rol contra cada grupo de rutas | P0 | Seguridad | [SEC-003_permiso_por_ruta_backend.md](escenarios/SEC-003_permiso_por_ruta_backend.md) | Pendiente | 45 | | | | |
-| SEC-004 | Seguridad | Inyección SQL y XSS en formularios y filtros | P0 | Seguridad | [SEC-004_inyeccion_sql_y_xss.md](escenarios/SEC-004_inyeccion_sql_y_xss.md) | Pendiente | 25 | | | | |
+| SEC-004 | Seguridad | Inyección SQL y XSS en formularios y filtros | P0 | Seguridad | [SEC-004_inyeccion_sql_y_xss.md](escenarios/SEC-004_inyeccion_sql_y_xss.md) | FALLIDO | 25 | 1 min (API) | D-004 |  | Sin inyección; comodines sin escapar |
 | SEC-005 | Seguridad | Subida de archivos: tipo, tamaño y nombre | P0 | Seguridad | [SEC-005_subida_de_archivos.md](escenarios/SEC-005_subida_de_archivos.md) | Pendiente | 20 | | | | |
 | SEC-006 | Seguridad | Enlaces directos a archivos de otros | P0 | Seguridad | [SEC-006_enlaces_de_archivos.md](escenarios/SEC-006_enlaces_de_archivos.md) | Pendiente | 15 | | | | |
 | SEC-007 | Seguridad | Campos que el cliente no debe poder fijar | P1 | Seguridad | [SEC-007_asignacion_masiva.md](escenarios/SEC-007_asignacion_masiva.md) | Pendiente | 20 | | | | |
 | SEC-008 | Seguridad | Autorización de datos en los cuatro puntos de captura | P0 | Privacidad · cumplimiento | [SEC-008_datos_personales_y_consentimiento.md](escenarios/SEC-008_datos_personales_y_consentimiento.md) | Pendiente | 25 | | | | |
-| SEC-009 | Seguridad | Secretos fuera del navegador y cabeceras de seguridad | P1 | Seguridad | [SEC-009_secretos_y_cabeceras.md](escenarios/SEC-009_secretos_y_cabeceras.md) | Pendiente | 15 | | | | |
+| SEC-009 | Seguridad | Secretos fuera del navegador y cabeceras de seguridad | P1 | Seguridad | [SEC-009_secretos_y_cabeceras.md](escenarios/SEC-009_secretos_y_cabeceras.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta navegador |
 | SEC-010 | Seguridad | Bitácora de auditoría de acciones sensibles | P1 | Auditoría | [SEC-010_auditoria_de_acciones.md](escenarios/SEC-010_auditoria_de_acciones.md) | Pendiente | 15 | | | | |
-| API-001 | API y paginación | Paginación: límite por defecto, máximo y total | P0 | API · rendimiento | [API-001_paginacion_limites.md](escenarios/API-001_paginacion_limites.md) | Pendiente | 20 | | | | |
-| API-002 | API y paginación | Orden estable entre páginas | P1 | API | [API-002_orden_estable.md](escenarios/API-002_orden_estable.md) | Pendiente | 15 | | | | |
-| API-003 | API y paginación | Filtros y búsqueda en listas | P2 | API | [API-003_filtros_y_busqueda.md](escenarios/API-003_filtros_y_busqueda.md) | Pendiente | 15 | | | | |
-| API-004 | API y paginación | Códigos HTTP y formato de error uniformes | P1 | API · contrato | [API-004_errores_y_codigos.md](escenarios/API-004_errores_y_codigos.md) | Pendiente | 15 | | | | |
-| API-005 | API y paginación | Límite de peticiones (rate limit) | P2 | Seguridad · disponibilidad | [API-005_limite_de_peticiones.md](escenarios/API-005_limite_de_peticiones.md) | Pendiente | 10 | | | | |
+| API-001 | API y paginación | Paginación: límite por defecto, máximo y total | P0 | API · rendimiento | [API-001_paginacion_limites.md](escenarios/API-001_paginacion_limites.md) | En ejecución | 20 | 1 min (API) |  |  | API 8/8; falta pantalla |
+| API-002 | API y paginación | Orden estable entre páginas | P1 | API | [API-002_orden_estable.md](escenarios/API-002_orden_estable.md) | FALLIDO | 15 | 1 min (API) | D-003 |  | 243 de 244 distintos |
+| API-003 | API y paginación | Filtros y búsqueda en listas | P2 | API | [API-003_filtros_y_busqueda.md](escenarios/API-003_filtros_y_busqueda.md) | APROBADO | 15 | 1 min (API) |  |  | 5/5 |
+| API-004 | API y paginación | Códigos HTTP y formato de error uniformes | P1 | API · contrato | [API-004_errores_y_codigos.md](escenarios/API-004_errores_y_codigos.md) | APROBADO | 15 | 1 min (API) |  |  | 15/15 |
+| API-005 | API y paginación | Límite de peticiones (rate limit) | P2 | Seguridad · disponibilidad | [API-005_limite_de_peticiones.md](escenarios/API-005_limite_de_peticiones.md) | En ejecución | 10 | 1 min (API) |  |  | Olvido de clave ok; falta firma pública |
 | API-006 | API y paginación | Las transiciones del expediente respetan su contrato | P1 | API · contrato | [API-006_contratos_del_expediente.md](escenarios/API-006_contratos_del_expediente.md) | Pendiente | 20 | | | | |
 | PER-001 | Rendimiento | Tiempos de respuesta de las pantallas principales | P1 | Rendimiento | [PER-001_tiempos_de_respuesta.md](escenarios/PER-001_tiempos_de_respuesta.md) | Pendiente | 30 | | | | |
 | PER-002 | Rendimiento | Listas con volumen alto | P2 | Rendimiento | [PER-002_volumen_de_datos.md](escenarios/PER-002_volumen_de_datos.md) | Pendiente | 30 + 20 prep. | | | | |
