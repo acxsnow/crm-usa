@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_effective_permissions
+from app.api.deps import get_current_user, get_effective_permissions, require_permission
 from app.core.config import get_settings
 from app.core.rate_limit import is_rate_limited
 from app.db.session import get_db
@@ -16,6 +16,7 @@ from app.modules.auth.schemas import (
     PasswordResetRequestSchema,
 )
 from app.modules.users.models import User
+from app.modules.users.schemas import UserUpdate
 from app.modules.users.selectors import modules_for_organization
 from app.shared.permissions import modules_for_permissions
 
@@ -176,3 +177,18 @@ async def get_me(
     current_user: User = Depends(get_current_user),
 ):
     return await _current_user_response(db, current_user)
+
+
+@router.patch("/me", response_model=CurrentUserResponse)
+async def update_me(
+    payload: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_permission("profile.manage")),
+):
+    """«Mi perfil»: cada uno corrige su propio nombre (D-014: `profile.manage`
+    existía y no hacía nada). El correo y el rol no se tocan aquí."""
+    from app.modules.users import service as users_service
+
+    user = await users_service.update_user(db, organization_id=current_user.organization_id, actor=current_user,
+                                           user_id=current_user.id, full_name=payload.full_name.strip())
+    return await _current_user_response(db, user)

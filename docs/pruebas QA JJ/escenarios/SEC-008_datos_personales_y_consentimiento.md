@@ -6,12 +6,12 @@
 - **Módulo:** Seguridad
 - **Prioridad:** P0
 - **Tipo de prueba:** Privacidad · cumplimiento
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API (≈2 min)
+- **Versión o commit probado:** devjj 67141f2 + D-013 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -40,14 +40,26 @@ La autorización es obligatoria al crear cliente, editarlo, en los T&C del exped
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 11 de 11 comprobaciones bien. Crear y editar cliente sin autorización se rechaza (`consent_required`); el aviso es público, versionado (2026.1) y cita California, Nevada y Arizona; cada autorización deja su constancia; la firma de los T&C deja la suya.
+- Diferencias con lo esperado: En los T&C y en la firma pública del acta la API no pide una casilla aparte: la firma misma queda como autorización y se guarda la constancia. Falta ver en pantalla que el aviso se muestra antes de firmar (VEN-004 e INS-004).
+- Comprobaciones por API (11 de 11):
+  - ✔ El aviso se ve sin sesión
+  - ✔ El aviso viene versionado y en español — `2026.1`
+  - ✔ El aviso dice lo que exige la ley de esas zonas — `Autorizo a la empresa que me presta este servicio a recolectar, usar, guardar y compartir mis datos personales para aten`
+  - ✔ Sin autorización no se guarda el cliente — `HTTP 400: {"detail":"Falta la autorización de tratamiento de datos personales del cliente: márcala antes de guardar.","code":"cons`
+  - ✔ Con autorización sí se guarda
+  - ✔ Editar solo las notas no pide autorización
+  - ✔ Corregir el teléfono sin autorización se rechaza — `HTTP 400: {"detail":"Falta la autorización de tratamiento de datos personales del cliente: márcala antes de guardar.","code":"cons`
+  - ✔ Corregir el teléfono con autorización
+  - ✔ Queda una constancia por cada autorización — `5`
+  - ✔ La constancia guarda el texto completo con su versión y origen — `2026.1|2061|customer_update`
+  - ✔ La firma de los T&C deja su constancia (fuente del expediente) — `case_intake|1; customer_create|3; customer_update|1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -70,7 +82,7 @@ La autorización es obligatoria al crear cliente, editarlo, en los T&C del exped
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API (≈2 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

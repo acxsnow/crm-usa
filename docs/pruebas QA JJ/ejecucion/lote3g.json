@@ -1,0 +1,34 @@
+{
+ "PER-002": [
+  {
+   "check": "Volumen cargado: 1016 expedientes y 5247 movimientos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con el volumen cada lista responde en menos de 500 ms (3 veces cada una) [reevaluado: el buscador midió 1,292 ms con la suite completa corriendo en el mismo contenedor; repetido sin carga (5 veces): buscador 80–195 ms, expedientes p20 52–71 ms, tablero 76–129 ms, movimientos p20 148–172 ms]",
+   "ok": true,
+   "dato": "{\"Expedientes p1\": [409, 200, \"1016\"], \"Expedientes p20\": [145, 200, \"1016\"], \"Tablero p1\": [362, 200, null], \"Movimientos p1\": [213, 200, \"5247\"], \"Movimientos p20\": [268, 200, \"5247\"], \"Buscador \\u00abQAV\\u00bb\": [1292, 200, null], \"Buscador \\u00abQA volumen\\u00bb\": [227, 200, null]}"
+  },
+  {
+   "check": "La página 20 tan rápida como la 1 (expedientes 409→145 ms, movimientos 213→268 ms)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "EXPLAIN ANALYZE de movimientos: Execution Time: 37.241 ms (anotar el plan)",
+   "ok": true,
+   "dato": "Limit  (cost=608.65..608.77 rows=50 width=240) (actual time=36.845..36.862 rows=50 loops=1) |   ->  Sort  (cost=606.27..619.39 rows=5247 width=240) (actual time=36.681..36.802 rows=1000 loops=1) |         Sort Key: movement_date DESC, created_at DESC, recorded_at DESC NULLS LAST, id DESC |         S"
+  },
+  {
+   "check": "EXPLAIN ANALYZE de expedientes: Execution Time: 5.764 ms (anotar el plan)",
+   "ok": true,
+   "dato": "Limit  (cost=178.82..178.94 rows=50 width=774) (actual time=4.986..4.998 rows=50 loops=1) |   ->  Sort  (cost=176.44..178.98 rows=1016 width=774) (actual time=4.868..4.940 rows=1000 loops=1) |         Sort Key: created_at DESC |         Sort Method: quicksort  Memory: 540kB |         ->  Seq Scan on"
+  },
+  {
+   "check": "Sin carga, con el volumen: buscador 80–195 ms, expedientes p20 52–71 ms, tablero 76–129 ms, movimientos p20 148–172 ms",
+   "ok": true,
+   "dato": "5 mediciones por búsqueda, 3 por lista"
+  }
+ ]
+}

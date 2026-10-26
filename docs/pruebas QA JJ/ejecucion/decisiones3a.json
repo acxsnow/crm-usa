@@ -1,0 +1,141 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj 67141f2 + D-013 (base QA reiniciada con seed_qa)",
+ "SEC-003": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 21 de 21 comprobaciones bien. Las sesiones de los 6 roles traen los permisos de la matriz. 406 rutas con permiso declarado: cada rol recibe 403 en todas las que no le tocan y abre sin 401/403/5xx las lecturas que sí. De las 19 rutas sin `require_permission`, 15 son públicas o de sesión (`/auth`, `/public`, `/privacy`, `/health`, `/webhooks`) y 4 se revisaron a mano: `/me/programs` y `/me/program-options` devuelven solo lo del usuario, y `unsubscribe/{token}` es la baja pública de campañas por enlace.",
+  "diferencias": "Ninguna.",
+  "indice": "406 rutas × 6 roles; 21/21",
+  "observaciones": "Las escrituras permitidas no se llamaron (crearían datos): se prueban en sus escenarios. La columna «Verificado en SEC-003» de `05_MATRIZ_PERMISOS.md` queda ✔ para los permisos que exige alguna ruta.",
+  "marca": "APROBADO"
+ },
+ "SEC-005": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 11 de 11 comprobaciones bien. Como evidencia de obra: .exe con nombre .jpg, .svg con script y JPG de 30 MB rechazados (tope 15 MB, «El archivo supera el límite de 15 MB.»); el nombre `../../etc/passwd.jpg` queda dentro de la carpeta de archivos. En documentos del expediente: PDF real aceptado, .exe con nombre .pdf y .svg rechazados.",
+  "diferencias": "El plan esperaba el PDF como evidencia de obra: las evidencias son fotos y videos por diseño; el PDF se sube en los documentos del expediente (corregido el texto).",
+  "indice": "API ok; tope 15 MB",
+  "corregir_doc": [
+   [
+    "- Rechaza los falsos y el de 30 MB (anotar el tope); acepta el PDF real.",
+    "- Rechaza los falsos y el de 30 MB (tope 15 MB); la evidencia de obra acepta fotos y videos, y el PDF real se acepta en los documentos del expediente."
+   ]
+  ],
+  "marca": "APROBADO"
+ },
+ "SEC-006": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 8 de 9 comprobaciones bien. Sin sesión 401 y admin ajeno 404. Luis (técnico de otra obra) abría la foto de Carlos (200): D-013. Corregido y reejecutado: Luis 404, Carlos y Administración 200.",
+  "diferencias": "Ninguna después de corregir D-013.",
+  "indice": "D-013 corregido; 5/5 reejecutado",
+  "defectos": [
+   {
+    "id": "D-013",
+    "texto": "Un técnico descarga la foto de una obra que no es suya con solo el id",
+    "prioridad": "P1"
+   }
+  ],
+  "marca": "APROBADO"
+ },
+ "SEC-007": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 10 de 10 comprobaciones bien. No hay PATCH del expediente (405) y la transición a «paid» del vendedor se rechaza; el técnico no se cambia el rol (403); la factura emitida con número a mano recibe el de la numeración; un rol creado con `is_system` queda normal; crear cliente con dueño y organización ajenos los ignora.",
+  "diferencias": "Ninguna.",
+  "indice": "10/10",
+  "marca": "APROBADO"
+ },
+ "SEC-008": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 11 de 11 comprobaciones bien. Crear y editar cliente sin autorización se rechaza (`consent_required`); el aviso es público, versionado (2026.1) y cita California, Nevada y Arizona; cada autorización deja su constancia; la firma de los T&C deja la suya.",
+  "diferencias": "En los T&C y en la firma pública del acta la API no pide una casilla aparte: la firma misma queda como autorización y se guarda la constancia. Falta ver en pantalla que el aviso se muestra antes de firmar (VEN-004 e INS-004).",
+  "indice": "API 11/11; falta pantalla"
+ },
+ "API-006": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 12 de 12 comprobaciones bien. new_prospect → paid / approved y una etapa inventada se rechazan con el motivo; el expediente no cambia ni suma eventos; cerrado no vuelve a ninguna etapa; gerencia no hace transiciones (403).",
+  "diferencias": "Responde 400 `invalid_transition` (el plan decía 409/422; corregido el texto).",
+  "indice": "12/12",
+  "corregir_doc": [
+   [
+    "- 409/422 con el motivo; la etapa no cambia.",
+    "- 400 `invalid_transition` con el motivo; la etapa no cambia."
+   ]
+  ],
+  "marca": "APROBADO"
+ },
+ "AUTH-005": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 5 de 5 comprobaciones bien. La cookie renueva la sesión sin pedir clave y la Agenda carga con el token nuevo; la cookie ya rotada no sirve otra vez; después de Salir, renovar responde 401.",
+  "diferencias": "Falta la parte de pantalla: 16 minutos sin tocar, sin red (Offline) y Atrás después de Salir.",
+  "indice": "API 5/5; falta pantalla"
+ },
+ "AUTH-008": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 6 de 6 comprobaciones bien. Con la sesión abierta de Contabilidad, quitar `suppliers.manage` y `payables.approve` al rol hace que crear un proveedor responda 403 en la siguiente acción; al devolverlos funciona sin volver a entrar.",
+  "diferencias": "El plan nombraba `payables.manage`, pero crear proveedores exige `suppliers.manage` o `payables.approve` (corregido el texto).",
+  "indice": "5/5",
+  "corregir_doc": [
+   [
+    "- Rol Contabilidad, permiso «Proveedores y pagos» (`payables.manage`).",
+    "- Rol Contabilidad, permisos «Gestionar proveedores» (`suppliers.manage`) y «Aprobar pagos» (`payables.approve`): cualquiera de los dos deja crear proveedores."
+   ],
+   [
+    "2. [ ] En otra ventana, como admin, quitar `payables.manage` al rol Contabilidad.",
+    "2. [ ] En otra ventana, como admin, quitar `suppliers.manage` y `payables.approve` al rol Contabilidad."
+   ]
+  ],
+  "marca": "APROBADO"
+ },
+ "AUTH-003": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 9 de 9 comprobaciones bien. El enlace cambia la clave (menos de 12 caracteres se rechaza), entra con la nueva y no con la anterior, la sesión abierta queda cerrada y el mismo enlace ya no sirve; 4 pedidos seguidos crean 3 enlaces. La clave volvió a ChangeMe123! con un enlace nuevo.",
+  "diferencias": "La clave del plan («Nueva12345!», 11 caracteres) no cumple el mínimo de 12: se usó «NuevaClave123!» (corregido el texto).",
+  "indice": "8/8",
+  "corregir_doc": [
+   [
+    "- `gerencia@demo-org.com`; clave nueva `Nueva12345!`.",
+    "- `gerencia@demo-org.com`; clave nueva `NuevaClave123!` (mínimo 12 caracteres)."
+   ],
+   [
+    "3. [ ] Abrir el enlace, poner `Nueva12345!` y confirmar.",
+    "3. [ ] Abrir el enlace, poner `NuevaClave123!` y confirmar."
+   ]
+  ],
+  "marca": "APROBADO"
+ },
+ "AUTH-004": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 8 de 8 comprobaciones bien. La invitación crea la cuenta con el rol Técnico, entra y no se usa dos veces; desactivado no entra y su sesión abierta deja de funcionar.",
+  "diferencias": "Ninguna.",
+  "indice": "7/7",
+  "observaciones": "La sesión abierta del desactivado responde 403 «Tu cuenta no está activa. Contacta al administrador.» en toda acción y 401 al renovar (como máximo 15 min después vuelve al ingreso).",
+  "marca": "APROBADO"
+ },
+ "AUTH-007": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API (≈2 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct, base QA reiniciada): 9 de 9 comprobaciones bien. El rol sin permisos no trae permisos ni módulos y recibe 403 en expedientes, obras, facturas, clientes, bodega y proveedores; con «Ver clientes» trae solo `customers.read`, el módulo de clientes, y solo Clientes abre.",
+  "diferencias": "Falta ver el menú en pantalla (Inicio vacío y luego solo Clientes).",
+  "indice": "API 9/9; falta pantalla"
+ }
+}

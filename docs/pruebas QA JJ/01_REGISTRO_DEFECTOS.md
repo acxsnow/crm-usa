@@ -20,6 +20,14 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Cerrado (2026-10-25) | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
 | D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Cerrado (2026-10-25) | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-013 | Un técnico descarga la foto de una obra que no es suya con solo el id | Seguridad / Instalación en campo | P1 | Cerrado (2026-10-25) | SEC-006 | José Javier Miranda (`field_ops`, paquete de Mateo: avisarle) | 2026-10-25 |
+| D-014 | Siete permisos del catálogo no controlan nada | Seguridad / Roles | P3 | Corregido (validado con pruebas; falta pantalla) | SEC-003 | José Javier Miranda y Mateo Mazo | 2026-10-25 |
+| D-015 | Una factura acepta pagos por encima del saldo | Trabajo particular y facturación | P1 | Cerrado (2026-10-25) | PAR-003 | José Javier Miranda (`billing`, paquete de Mateo: avisarle) | 2026-10-25 |
+| D-016 | Factura, pago y gasto con datos inválidos responden 500 | Finanzas | P2 | Cerrado (2026-10-25) | FIN-002 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
+| D-017 | Importar dos veces el mismo extracto duplica los movimientos | Finanzas | P2 | Cerrado (2026-10-25) | FIN-003 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
+| D-018 | La salida de bodega no guarda el costo: cambia el costo de obras cerradas | Bodega | P2 | Cerrado (2026-10-25) | BOD-007 | José Javier Miranda (`warehouse`, paquete de Mateo: avisarle) | 2026-10-25 |
+| D-019 | La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe | Turnos y nómina | P2 | Abierto (decisión pendiente) | TUR-005 | José Javier Miranda y Mateo Mazo (`attendance`) | 2026-10-25 |
+| D-020 | La auditoría no muestra el antes y el después | Seguridad / Auditoría | P2 | Corregido (validado por API; falta pantalla) | SEC-010 | José Javier Miranda (`organizations`) | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
@@ -226,6 +234,116 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Corrección propuesta:** `SELECT … FOR UPDATE` de la orden, o un `UPDATE … WHERE status = 'por_autorizar'` que verifique cuántas filas cambió. Revisar el mismo patrón en aprobar expediente, confirmar acta y radicar o pagar cobros.
 - **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `warehouse/releases.py`, `get_order(..., for_update=True)` bloquea la fila de la orden (`SELECT … FOR UPDATE` y relectura) al autorizar, rechazar y entregar: la segunda persona espera y ve el estado que dejó la primera. Las pruebas automáticas corren en SQLite, que no tiene este bloqueo: se valida con `carrera.py` contra Postgres. Queda por revisar el mismo patrón en aprobar expediente, confirmar acta y radicar o pagar cobros.
 - **Validación:** CON-001 reejecutado el 25 oct: 2 de 2, y `carrera.py` 3 veces: 0 de 30 con doble autorización (antes 6 de 10). La segunda recibe 400 `release_not_pending` (el mismo código que ya daba al autorizar dos veces seguidas), no 409, para no cambiar el contrato. Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. **Cerrado.**
+
+## D-013 · Descarga de evidencias de otra obra
+
+- **Módulo:** Instalación en campo (`field_ops/evidence_router.py`, `GET /evidence/{id}/file`).
+- **Prioridad:** P1. Fuga de datos dentro de la organización: fotos de casas de clientes de otra obra.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** SEC-006, lote 3 (25 oct).
+- **Pasos para reproducir:** Carlos sube una foto a su obra; Luis (otro técnico, sin esa obra) pide `GET /evidence/{id}/file` con su token.
+- **Resultado obtenido:** 200, Luis baja la foto.
+- **Resultado esperado:** 404, como en la lista de evidencias de la obra.
+- **Análisis / causa:** la descarga solo filtraba por organización; la lista (`GET /projects/{id}/evidence`) sí revisaba la obra con `get_visible_project`. Las demás descargas de archivos (documentos y firma del expediente, adjuntos de facturas, documentos de proveedores, PDF del acta) ya revisaban dueño u obra, o son de roles que ven todo.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** la descarga llama a `get_visible_project` con la obra de la evidencia. Prueba `test_a_technician_cannot_download_evidence_of_another_project` (`tests/test_field_ops.py`).
+- **Validación:** SEC-006 reejecutado el 25 oct: sin sesión 401, Luis 404, admin ajeno 404, Carlos y Administración 200.
+- **Regresión:** 782 pruebas del backend pasan y el frontend compila. **Cerrado.**
+
+## D-014 · Permisos del catálogo que no controlan nada
+
+- **Módulo:** Roles y permisos (`shared/permissions.py`).
+- **Prioridad:** P3. No abre ningún acceso, pero el Administrador marca o quita permisos en «Roles y permisos» que no cambian nada.
+- **Estado:** Abierto (decisión pendiente).
+- **Encontrado en:** SEC-003, lote 3 (25 oct): barrido de las 406 rutas con permiso.
+- **Resultado obtenido:** `customers.delete`, `dashboards.commercial`, `projects.assign`, `evidence.delete`, `reports.generate`, `organization.manage` y `profile.manage` no los exige ninguna ruta ni los usa ninguna pantalla (búsqueda en `backend/app` y `frontend/src`).
+- **Resultado esperado:** cada permiso del catálogo controla algo, o no se ofrece.
+- **Opciones:** quitarlos del catálogo (y de `DEFAULT_ROLE_PERMISSIONS`), o conectarlos a lo que dicen (por ejemplo, `customers.delete` si se llega a permitir borrar clientes). Decide José con Mateo.
+- **Decisión (25 oct, José Javier Miranda):** conectarlos a lo que dicen.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):**
+  - `customers.delete`: `DELETE /customers/{id}` y el botón **Borrar cliente**; solo sin expedientes, obras, facturas ni cotizaciones (409 `customer_in_use`); las constancias de autorización se conservan.
+  - `evidence.delete`: `DELETE /evidence/{id}` y **Quitar evidencia** en la vista de la foto; borrado lógico, solo con la instalación abierta; si era la única foto de un renglón del checklist que la exige, el renglón vuelve a pendiente.
+  - `projects.assign`: poner o cambiar el técnico (agendar y crear obra) lo exige; mover solo la fecha sigue con `dispatch.manage` (403 `assign_not_allowed`).
+  - `organization.manage`: los datos de la organización (nombre, logo, dirección, contacto); `settings.manage` queda para la zona horaria y la moneda; para leer basta cualquiera.
+  - `profile.manage`: `PATCH /auth/me` y la pantalla **Mi perfil** (el propio nombre).
+  - `dashboards.commercial` y `reports.generate`: el reporte comercial pide el primero y los de operación y finanzas el segundo; la página muestra solo las pestañas permitidas. **Cambio de acceso:** con los roles de fábrica, Administración deja de ver los reportes de operación y finanzas, y Contabilidad el comercial.
+  - Pruebas: `tests/test_permissions_connected.py` (7), incluida una que falla si algún permiso del catálogo vuelve a quedar sin usar. Manual actualizado.
+- **Validación:** pruebas automáticas; falta la parte de pantalla (botones de borrar cliente y quitar evidencia, Mi perfil y pestañas de Reportes).
+
+## D-015 · Pago de factura por encima del saldo
+
+- **Módulo:** Facturación (`billing/service.py`, `record_payment`).
+- **Prioridad:** P1. Dinero: el saldo queda negativo y la factura «pagada» con plata de sobra que nadie devuelve.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** PAR-003, lote 3 (25 oct).
+- **Pasos para reproducir:** factura de USD 500.00 pagada completa; `POST /invoices/{id}/payments` con 0.01.
+- **Resultado obtenido:** 201 y saldo -0.01.
+- **Resultado esperado:** rechazo con el saldo que queda.
+- **Análisis / causa:** solo se revisaba que el monto fuera mayor que cero. Las cuentas por pagar (`finance/payables.py`) sí topaban cada abono al saldo.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** un pago mayor que el saldo responde 400 `payment_exceeds_balance` («El pago supera el saldo de la factura (USD N).»). Prueba `test_a_payment_cannot_exceed_the_balance`.
+- **Validación:** PAR-003 reejecutado: 0.01 de más se rechaza y el saldo sigue en 0.
+- **Regresión:** 782 pruebas del backend pasan y el frontend compila. **Cerrado.**
+
+## D-016 · Error 500 con datos inválidos en formularios con archivo
+
+- **Módulo:** Finanzas (`finance/router.py`: gastos, facturas y pagos de proveedores).
+- **Prioridad:** P2. Rompe la regla «nunca 500 por una entrada del usuario» (API-004) y deja un error sin explicación en pantalla.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** FIN-002, lote 3 (25 oct).
+- **Pasos para reproducir:** `POST /payables/invoices` con `data={"supplier_id": null, ...}`.
+- **Resultado obtenido:** 500 `internal_error` (en el log, `ValidationError` de Pydantic sin manejar).
+- **Resultado esperado:** 422 con el campo marcado.
+- **Análisis / causa:** el JSON del campo `data` se validaba a mano con `model_validate_json`, fuera de la validación de FastAPI.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `_form_json` convierte el error en el 422 normal (`validation_error`, «Hay datos inválidos en: data.supplier_id.»). Prueba `test_invalid_form_json_is_a_422_not_a_500`.
+- **Validación:** FIN-002 reejecutado: el proveedor vacío responde 422.
+- **Regresión:** 782 pruebas del backend pasan y el frontend compila. **Cerrado.**
+
+## D-017 · Extracto bancario importado dos veces
+
+- **Módulo:** Finanzas › Conciliación (`finance/reconciliation.py`, `import_statement`).
+- **Prioridad:** P2. Duplica movimientos del banco y descuadra la conciliación.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** FIN-003, lote 3 (25 oct).
+- **Resultado obtenido:** el mismo CSV dos veces dejaba 8 movimientos en vez de 4.
+- **Resultado esperado:** la segunda importación no duplica.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** solo entran los movimientos que no estaban en otro extracto de la misma cuenta, contados por ocurrencias (dos compras iguales el mismo día siguen siendo dos; un extracto que se solapa solo agrega lo nuevo). Si todo estaba, responde 409 `statement_already_imported`. La respuesta trae `duplicated`. Prueba `test_the_same_statement_twice_does_not_duplicate`.
+- **Validación:** FIN-003 reejecutado: la segunda importación responde 409 y quedan 4 movimientos.
+- **Regresión:** 782 pruebas del backend pasan y el frontend compila. **Cerrado.**
+
+## D-018 · Salida de bodega sin costo guardado
+
+- **Módulo:** Bodega (`warehouse/releases.py`, `deliver_order`) y Costo del trabajo (`warehouse/costing.py`).
+- **Prioridad:** P2. Al editar el costo de un artículo cambiaba el costo y la rentabilidad de obras ya cerradas.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** BOD-007, lote 3 (25 oct): la salida de la obra mostraba valor 0 en el libro de movimientos.
+- **Análisis / causa:** la entrega registraba el movimiento sin `unit_cost` y el costo de la obra se calculaba con el costo vigente del catálogo. El material del diario sí guardaba su costo.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** la entrega guarda el costo del día; la migración `0044` completa las salidas anteriores con el costo actual del catálogo. Prueba `test_la_salida_guarda_el_costo_del_dia`.
+- **Validación:** BOD-007 reejecutado: la salida tiene su costo y coincidió al centavo con el costo de materiales de la obra.
+- **Regresión:** 782 pruebas del backend pasan y el frontend compila. **Cerrado.**
+
+## D-019 · Nómina sin las reglas de pago de Don Aldo
+
+- **Módulo:** Turnos, asistencia y nómina (`attendance`).
+- **Prioridad:** P2. Las horas que salen en la nómina no siguen dos respuestas confirmadas por Don Aldo (CLAUDE.md, «Turnos, asistencia y mapa»).
+- **Estado:** Abierto (decisión pendiente): es funcionalidad que falta, no una falla de lo construido.
+- **Encontrado en:** TUR-005, lote 3 (25 oct).
+- **Lo confirmado por Don Aldo:**
+  - Cuando pagan por día o por hora el almuerzo va incluido; cuando pagan por trabajo, no.
+  - Las horas extra se declaran en horas y el jefe define el valor.
+- **Lo que hay en el código:**
+  - Ningún dato dice si a un técnico se le paga por día/hora o por trabajo (el perfil del usuario no lo tiene).
+  - «Pausas pagadas» es una sola opción para toda la organización (`attendance_settings.paid_pauses`).
+  - Las extras se calculan solas desde 8 h al día y 40 a la semana (`calc.overtime`, regla de California); no se declaran ni llevan valor.
+- **Opciones:** agregar la forma de pago por técnico y aplicar con ella la regla del almuerzo; y permitir declarar extras en horas con el valor que pone el jefe (o confirmar con Don Aldo que el cálculo automático le sirve). Decide José con Mateo; es del módulo de Mateo.
+
+## D-020 · Auditoría sin el antes y el después
+
+- **Módulo:** Auditoría (`organizations/audit_router.py` y `features/audit/AuditLogPage.tsx`).
+- **Prioridad:** P2. Se sabía quién hizo qué y cuándo, pero no qué cambió: no servía para revisar un cambio de dinero, permisos o datos personales.
+- **Estado:** Corregido (validado por API; falta pantalla).
+- **Encontrado en:** SEC-010, lote 3 (25 oct).
+- **Análisis / causa:** `record_audit_event` guarda `before_data`, `after_data` e IP (sin secretos), pero `GET /audit-events` no los devolvía y la pantalla tampoco los mostraba.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** la API agrega `before_data`, `after_data` e `ip_address` a cada evento (sin quitar nada de lo que ya devolvía) y la pantalla de Auditoría muestra «Ver cambios»: cada campo con su valor anterior → el nuevo, y desde qué IP. Prueba `test_audit_shows_before_and_after`.
+- **Validación:** SEC-010 por API: 16 de 16 (12 acciones con su detalle y los permisos de quién ve la auditoría). Falta ver la columna en pantalla.
 
 ## Plantilla para defectos nuevos
 

@@ -147,6 +147,11 @@ async def import_statement(db: AsyncSession, *, organization_id, user, account_l
     filas, malas = parse_statement(text)
     if not filas:
         raise InvalidInputError("No encontré movimientos válidos en el archivo.", code="statement_empty")
+    filas, repetidas = await _sin_repetidas(db, organization_id, (account_label or "Cuenta principal").strip()[:120],
+                                            filas)
+    if not filas:
+        raise ConflictError("Ese extracto ya estaba importado: todos sus movimientos ya están en la cuenta.",
+                            code="statement_already_imported")
     st = BankStatement(organization_id=organization_id, account_label=(account_label or "Cuenta principal").strip()[:120],
                        original_filename=filename, period_start=min(f["date"] for f in filas),
                        period_end=max(f["date"] for f in filas), imported_by_user_id=user.id)
@@ -169,7 +174,37 @@ async def import_statement(db: AsyncSession, *, organization_id, user, account_l
                              action="reconciliation.statement_imported", entity_type="bank_statement",
                              entity_id=str(st.id), after_data={"lines": len(lineas), "auto_matched": auto})
     await db.commit()
-    return {"statement_id": str(st.id), "lines": len(lineas), "auto_matched": auto, "invalid": malas[:20]}
+    return {"statement_id": str(st.id), "lines": len(lineas), "auto_matched": auto, "invalid": malas[:20],
+            "duplicated": repetidas}
+
+
+async def _sin_repetidas(db: AsyncSession, organization_id, cuenta: str, filas: list[dict]) -> tuple[list[dict], int]:
+    """Quita los movimientos que ya entraron en otro extracto de la misma
+    cuenta (D-017: importar el mismo archivo dos veces duplicaba todo).
+
+    Se cuenta por ocurrencias y no por fila: dos compras iguales el mismo día
+    son dos movimientos, y un extracto que se solapa con el anterior solo
+    agrega lo que le falta."""
+    from collections import Counter
+
+    def clave(fecha, descripcion, referencia, monto):
+        return fecha, (descripcion or "").strip(), (referencia or "").strip(), to_money(monto)
+
+    ya = Counter(clave(*f) for f in (await db.execute(
+        select(BankStatementLine.line_date, BankStatementLine.description, BankStatementLine.reference,
+               BankStatementLine.amount)
+        .join(BankStatement, BankStatement.id == BankStatementLine.statement_id)
+        .where(BankStatementLine.organization_id == organization_id,
+               BankStatement.account_label == cuenta))).all())
+    nuevas, repetidas = [], 0
+    for f in filas:
+        k = clave(f["date"], f["description"], f["reference"], f["amount"])
+        if ya[k] > 0:
+            ya[k] -= 1
+            repetidas += 1
+        else:
+            nuevas.append(f)
+    return nuevas, repetidas
 
 
 async def get_line(db, organization_id, line_id) -> BankStatementLine:

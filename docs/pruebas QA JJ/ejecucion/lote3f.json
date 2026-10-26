@@ -1,0 +1,84 @@
+{
+ "SEC-010": [
+  {
+   "check": "Permisos de un rol (roles.updated): con usuario, fecha, antes y detalle",
+   "ok": true,
+   "dato": "2 eventos; antes={'name': 'Gerencia', 'permissions': ['attendance.clock', 'attendance.dashboard', 'audit.read', 'cases.read_all', 'custom después={'name': 'Gerencia', 'permissions': ['attendance.clock', 'attendance.dashboard', 'audit.read', 'cases.read_all', 'custom"
+  },
+  {
+   "check": "Desactivar a una persona (users.deactivated): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "2 eventos; antes={'status': 'active'} después={'status': 'inactive'}"
+  },
+  {
+   "check": "Activarla otra vez (users.activated): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "1 eventos; antes={'status': 'inactive'} después={'status': 'active'}"
+  },
+  {
+   "check": "Autorización de datos del cliente (customer.consent_recorded): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "4 eventos; antes=None después={'source': 'customer_create', 'version': '2026.1'}"
+  },
+  {
+   "check": "Corrección de un dato personal (customer.updated): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "1 eventos; antes=None después={'main_phone': '(602) 555-0202'}"
+  },
+  {
+   "check": "Borrado de un cliente (customer.deleted): con usuario, fecha, antes y detalle",
+   "ok": true,
+   "dato": "1 eventos; antes={'legal_name': 'QA 1026005936 Auditoría', 'email': None, 'main_phone': '(602) 555-0202'} después=None"
+  },
+  {
+   "check": "Anulación de factura (invoices.voided): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "1 eventos; antes=None después={'reason': 'Error en el valor'}"
+  },
+  {
+   "check": "Pago de factura (invoices.payment_recorded): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "5 eventos; antes=None después={'amount': '300.00', 'balance': '0.00'}"
+  },
+  {
+   "check": "Pago a proveedor (payables.payment_recorded): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "2 eventos; antes=None después={'supplier': 'QA HOME DEPOT C2 1025214209', 'amount': '350.00', 'invoices': 1}"
+  },
+  {
+   "check": "Autorización de salida de bodega (warehouse.release_authorized): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "1 eventos; antes=None después={'number': 'SAL-2026-0001'}"
+  },
+  {
+   "check": "Asignación y cambio de técnico (projects.installation_scheduled): con usuario, fecha, antes y detalle",
+   "ok": true,
+   "dato": "16 eventos; antes={'technician': None, 'scheduled_date': None} después={'technician': '917b4cfb-2bc8-45c1-bd64-c199948a5132', 'scheduled_date': '2026-10-30'}"
+  },
+  {
+   "check": "Ingreso fallido (auth.login.failed): con usuario, fecha y detalle",
+   "ok": true,
+   "dato": "2 eventos; antes=None después={'reason': 'invalid_credentials'}"
+  },
+  {
+   "check": "gerencia → 200",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "conta → 200",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "tecnico → 403",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "vendedor → 403",
+   "ok": true,
+   "dato": "403"
+  }
+ ]
+}

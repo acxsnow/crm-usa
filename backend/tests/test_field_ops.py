@@ -102,6 +102,32 @@ async def test_evidence_download_returns_watermarked_file(app_client, active_adm
     assert len(resp.content) > 0
 
 
+async def test_a_technician_cannot_download_evidence_of_another_project(
+    app_client, active_admin_user, active_technician_user, seeded_org
+):
+    """D-013: con el id de la foto, un técnico bajaba la evidencia de una obra
+    que no es suya. Ahora la descarga sigue la misma regla que la lista."""
+    admin_headers = await _admin_headers(app_client, active_admin_user)
+    _, ajena_id, _ = await _create_customer_and_project(app_client, admin_headers)
+    _, suya_id, _ = await _create_customer_and_project(
+        app_client, admin_headers, technician_id=str(active_technician_user.id))
+    ids = []
+    for project_id in (ajena_id, suya_id):
+        r = await app_client.post(f"/api/v1/projects/{project_id}/evidence", headers=admin_headers,
+                                  files={"file": ("photo.jpg", _png_bytes(), "image/jpeg")},
+                                  data={"category": "additional_photo"})
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+
+    tech_headers = {"Authorization": f"Bearer {await _login(app_client, 'tech@acme-demo.com')}"}
+    resp = await app_client.get(f"/api/v1/evidence/{ids[0]}/file", headers=tech_headers)
+    assert resp.status_code == 404
+    resp = await app_client.get(f"/api/v1/evidence/{ids[1]}/file", headers=tech_headers)
+    assert resp.status_code == 200
+    # Quien ve todas las obras sigue abriéndolas.
+    assert (await app_client.get(f"/api/v1/evidence/{ids[0]}/file", headers=admin_headers)).status_code == 200
+
+
 async def test_attestation_requires_both_signatures_before_pdf_generated(app_client, active_admin_user, seeded_org):
     headers = await _admin_headers(app_client, active_admin_user)
     _, project_id, _ = await _create_customer_and_project(app_client, headers)

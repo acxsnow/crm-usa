@@ -10,6 +10,31 @@ import type { AuditEvent } from "@/types/audit";
 
 const PAGE_SIZE = 50;
 
+const texto = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : typeof v === "object" ? JSON.stringify(v) : String(v));
+
+/** Antes → después de cada campo (D-020). Sin datos, nada. */
+function Cambios({ evento }: { evento: AuditEvent }) {
+  const antes = evento.before_data ?? {};
+  const despues = evento.after_data ?? {};
+  const campos = Array.from(new Set([...Object.keys(antes), ...Object.keys(despues)]));
+  if (campos.length === 0) return <span>—</span>;
+  return (
+    <details>
+      <summary>Ver cambios ({campos.length})</summary>
+      <ul className="audit-changes">
+        {campos.map((c) => (
+          <li key={c}>
+            <strong>{c}:</strong>{" "}
+            {c in antes ? <><span>{texto(antes[c])}</span> → </> : null}
+            <span>{texto(despues[c])}</span>
+          </li>
+        ))}
+      </ul>
+      {evento.ip_address && <small>Desde {evento.ip_address}</small>}
+    </details>
+  );
+}
+
 export function AuditLogPage() {
   const { filters, page, setFilters, clearFilters, setPage, extraParams } = useTableFilters();
   const { data, isLoading } = useQuery({
@@ -52,6 +77,7 @@ export function AuditLogPage() {
       header: "Entidad",
       render: (e) => `${e.entity_type ?? "—"}${e.entity_id ? ` (${e.entity_id.slice(0, 8)}…)` : ""}`,
     },
+    { key: "changes", header: "Cambios", render: (e) => <Cambios evento={e} /> },
   ];
 
   return (

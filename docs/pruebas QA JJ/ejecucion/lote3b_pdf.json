@@ -1,0 +1,24 @@
+{
+ "SEC-005": [
+  {
+   "check": "Visita «opened» en 434 QA 1025210932 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Un PDF real se acepta en los documentos del expediente",
+   "ok": true,
+   "dato": "201 {\"id\":\"5a077a91-707c-4e84-824e-b2614b5c74fe\",\"label\":\"QA recibo\",\"review_status\":\"pending\"}"
+  },
+  {
+   "check": "Un .exe con nombre .pdf se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El contenido del archivo no corresponde a su tipo. Sube una foto, video o PDF real.\",\"code\":\"file_content_mismatch\",\"request_id\":\"4001433e-"
+  },
+  {
+   "check": "Un .svg con script se rechaza en documentos",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Tipo de archivo no permitido para este campo.\",\"code\":\"invalid_file_type\",\"request_id\":\"0d37d127-17e3-4401-87d2-9c22b1d259d3\"}"
+  }
+ ]
+}

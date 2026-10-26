@@ -1,0 +1,114 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj 67141f2 + D-013, D-015 a D-018 (base QA del lote 3)",
+ "TUR-001": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 4 de 4 comprobaciones bien. Turno 7:00–16:00 de lunes a viernes para 5 técnicos: 25 turnos en la malla; un turno que se cruza con otro del mismo técnico se rechaza.",
+  "diferencias": "Falta ver la malla a 390 px.",
+  "indice": "API 4/4; falta pantalla"
+ },
+ "TUR-002": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 21 de 21 comprobaciones bien. Entrada con GPS; tres entradas simultáneas dejan una sola marcación abierta; repetir la marca no duplica; en camino y llegué con km; pausa; cola sin señal sin duplicar; salida con resumen.",
+  "diferencias": "Se hizo con Tito (técnico de la base QA), no con Carlos.",
+  "indice": "API ok",
+  "marca": "APROBADO"
+ },
+ "TUR-003": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 7 de 7 comprobaciones bien. Turnos que empezaron hace 5, 10 y 15 minutos: los de 5 y 10 llegaron a tiempo y el de 15 tarde (tolerancia de 10 min de Don Aldo).",
+  "diferencias": "Ninguna.",
+  "indice": "API ok",
+  "marca": "APROBADO"
+ },
+ "TUR-004": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 4 de 4 comprobaciones bien. Pedro, sin marcar y con el turno vencido, aparece «no marcó» (panel: 1 ausente). La novedad de ausencia «Cita médica, 3 horas» con el motivo «Cita médica o enfermedad» queda aprobada por Administración.",
+  "diferencias": "Ninguna.",
+  "indice": "API ok",
+  "observaciones": "Al aprobar la novedad el turno sigue «no marcó» en la malla: la justificación se ve en Novedades (motivo, descripción y quién la aprobó), no como un estado «justificado» del turno.",
+  "marca": "APROBADO"
+ },
+ "TUR-005": {
+  "estado": "FALLIDO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 1 de 3 comprobaciones bien. Las reglas de nómina son de toda la organización: pausas pagadas sí/no, y extras calculadas solas desde 8 h al día y 40 a la semana.",
+  "diferencias": "No hay dónde decir si a un técnico se le paga por día/hora o por trabajo, así que no se aplica la regla del almuerzo; y las extras no se declaran en horas con el valor que pone el jefe. Las dos son respuestas confirmadas por Don Aldo.",
+  "indice": "D-019",
+  "defectos": [
+   {
+    "id": "D-019",
+    "texto": "La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe",
+    "prioridad": "P2"
+   }
+  ],
+  "marca": "FALLIDO"
+ },
+ "TUR-006": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 6 de 6 comprobaciones bien. El técnico pide corregir la salida, Administración la aprueba, la corrección queda auditada con el valor original y las horas se aprueban; nómina en Excel y PDF.",
+  "diferencias": "Ninguna.",
+  "indice": "6/6",
+  "marca": "APROBADO"
+ },
+ "TUR-007": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 31 de 31 comprobaciones bien. Una obra sin coordenadas aparece «sin ubicar»; «Ubicar por dirección» no encuentra la dirección inventada y la sigue mostrando sin ubicar; más de 25 por intento se rechaza; se puede ubicar a mano. El mapa muestra al personal y las obras, y el orden sugerido del día.",
+  "diferencias": "La obra del plan con «dirección inventada» igual tenía coordenadas: las toma del GPS de la visita del vendedor. Para la prueba se le quitaron.",
+  "indice": "API ok",
+  "marca": "APROBADO"
+ },
+ "TUR-008": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 9 de 9 comprobaciones bien. La tarea de limpieza del worker quita la ubicación del punto de 91 días y deja la del de 89; el borrado manual quita todas las del usuario; un técnico no borra las de otro (403).",
+  "diferencias": "Ninguna.",
+  "indice": "API ok",
+  "marca": "APROBADO"
+ },
+ "TUR-009": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 8 de 8 comprobaciones bien. El monitor trae a los 14 técnicos activos y los casos asignados coinciden con las obras abiertas de cada uno; el técnico no lo abre.",
+  "diferencias": "Falta compararlo en pantalla con las agendas.",
+  "indice": "API ok; falta pantalla"
+ },
+ "TUR-010": {
+  "estado": "APROBADO",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 4 de 4 comprobaciones bien. Carlos recibe 403 en el panel, el tablero en vivo, las marcaciones, las personas y la nómina. En el mapa la API le responde, pero solo con él mismo y con sus propias obras, y el menú no le muestra «Mapa operativo».",
+  "diferencias": "El plan esperaba 403 también en `/operations-map/*`: la API le da al técnico su propio mapa, sin datos de otros (corregido el texto).",
+  "indice": "API ok",
+  "corregir_doc": [
+   [
+    "- Sin acceso en pantalla; 403 en la API.",
+    "- Sin acceso en pantalla; 403 en asistencia y nómina; en `/operations-map/*` solo sus propios datos."
+   ]
+  ],
+  "marca": "APROBADO"
+ },
+ "PER-001": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 1 de 1 comprobaciones bien. Inicio, expedientes, por revisar, proyectos, agenda, existencias, salidas, facturas, mapa, avisos y buscador: cada llamada responde en menos de 500 ms (3 veces cada una, en local, con la base QA).",
+  "diferencias": "Falta medir el total de cada pantalla en el navegador (F12 › Network).",
+  "indice": "API < 500 ms; falta pantalla"
+ }
+}

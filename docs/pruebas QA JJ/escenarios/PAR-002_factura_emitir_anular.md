@@ -6,12 +6,12 @@
 - **Módulo:** Trabajo particular y facturación
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · dinero
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -39,14 +39,23 @@ La factura toma su número consecutivo y anularla exige motivo y deja rastro.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 8 de 8 comprobaciones bien. Las tres facturas salen con números consecutivos sin saltos ni repetidos; anular sin motivo se rechaza y con «Error en el valor» queda anulada con su número y en la auditoría.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (8 de 8):
+  - ✔ Emitir la factura de la cotización
+  - ✔ Emitir una segunda factura
+  - ✔ Anular sin motivo se rechaza — `422`
+  - ✔ Anular con el motivo «Error en el valor»
+  - ✔ La anulada conserva su número — `void FAC-2026-0001`
+  - ✔ Emitir una tercera
+  - ✔ Números consecutivos sin saltos ni repetidos ['FAC-2026-0001', 'FAC-2026-0002', 'FAC-2026-0003'] — `['FAC-2026-0001', 'FAC-2026-0002', 'FAC-2026-0003']`
+  - ✔ La anulación deja rastro en la auditoría — `1`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -55,7 +64,7 @@ La factura toma su número consecutivo y anularla exige motivo y deja rastro.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -69,7 +78,7 @@ La factura toma su número consecutivo y anularla exige motivo y deja rastro.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

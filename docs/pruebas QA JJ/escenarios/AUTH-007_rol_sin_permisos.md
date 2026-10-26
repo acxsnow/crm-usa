@@ -6,12 +6,12 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API (≈2 min)
+- **Versión o commit probado:** devjj 67141f2 + D-013 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -40,14 +40,24 @@ Un rol recién creado no abre nada hasta que se le den permisos.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 9 de 9 comprobaciones bien. El rol sin permisos no trae permisos ni módulos y recibe 403 en expedientes, obras, facturas, clientes, bodega y proveedores; con «Ver clientes» trae solo `customers.read`, el módulo de clientes, y solo Clientes abre.
+- Diferencias con lo esperado: Falta ver el menú en pantalla (Inicio vacío y luego solo Clientes).
+- Comprobaciones por API (9 de 9):
+  - ✔ Crear el rol «QA sin permisos» sin marcar nada — `201 {"code":"qa_sin_permisos","name":"QA sin permisos","is_system":false,"is_locked":false,"permissions":[],"user_count":0}`
+  - ✔ Invitar a sinrol@demo-org.com con ese rol — `201 {"id":"f462a157-ee05-472b-a2b0-750212be8707","email":"sinrol@demo-org.com","full_name":"QA Sin Rol","status":"invited","roles":["qa_sin_permisos"],"la`
+  - ✔ Aceptar la invitación de sinrol — `200 {"id":"f462a157-ee05-472b-a2b0-750212be8707","email":"sinrol@demo-org.com","full_name":"QA Sin Rol","organization_id":"a86681e1-01d1-48b8-a9c0-47fec95`
+  - ✔ Sin permisos: la sesión no trae permisos ni módulos — `[] []`
+  - ✔ Expedientes, obras, facturas, clientes, bodega y proveedores → 403 — `{'/cases': 403, '/projects': 403, '/invoices': 403, '/customers': 403, '/warehouse/items': 403, '/payables/suppliers': 403}`
+  - ✔ Admin le da al rol solo «Ver clientes»
+  - ✔ Ahora la sesión trae solo customers.read — `['customers.read']`
+  - ✔ Y el menú solo el módulo de clientes — `['customers']`
+  - ✔ Clientes abre (200) y lo demás sigue en 403 — `{'/cases': 403, '/projects': 403, '/invoices': 403, '/customers': 200, '/warehouse/items': 403, '/payables/suppliers': 403}`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -71,7 +81,7 @@ Un rol recién creado no abre nada hasta que se le den permisos.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API (≈2 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

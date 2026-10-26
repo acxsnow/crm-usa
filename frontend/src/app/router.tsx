@@ -46,6 +46,7 @@ import { WarehouseKitsPage } from "@/features/warehouse/WarehouseKitsPage";
 import { WarehousePurchasingPage } from "@/features/warehouse/WarehousePurchasingPage";
 import { CostTemplatesPage } from "@/features/warehouse/CostTemplatesPage";
 import { WarehouseSerialsPage } from "@/features/warehouse/WarehouseSerialsPage";
+import { ProfilePage } from "@/features/auth/ProfilePage";
 import { MyShiftPage } from "@/features/attendance/MyShiftPage";
 import { ShiftPlannerPage } from "@/features/attendance/ShiftPlannerPage";
 import { AttendanceDashboardPage } from "@/features/attendance/AttendanceDashboardPage";
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardHome /> },
+      { path: "profile", element: <ProfilePage /> },
       {
         path: "customers",
         element: (

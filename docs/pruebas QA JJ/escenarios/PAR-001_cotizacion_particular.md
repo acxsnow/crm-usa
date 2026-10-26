@@ -6,12 +6,12 @@
 - **Módulo:** Trabajo particular y facturación
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -40,14 +40,24 @@ El trabajo particular se cotiza desde el price book sin tocar ningún expediente
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 9 de 9 comprobaciones bien. Cotización con 2 renglones del price book y 1 libre de USD 120.00: el total es la suma; no toca ningún expediente; enviada, aceptada (crea la factura en borrador) y otra marcada «No aceptada».
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (9 de 9):
+  - ✔ Armar la cotización con 2 renglones del price book y 1 libre
+  - ✔ Total = suma de los renglones (260.81) — `260.81 None`
+  - ✔ No toca ningún expediente
+  - ✔ Enviarla al cliente
+  - ✔ Marcarla aceptada
+  - ✔ Queda «Aceptada» y crea la factura en borrador — `accepted draft`
+  - ✔ Otra, marcada «No aceptada»
+  - ✔ Estado «No aceptada» — `rejected`
+  - ✔ El resumen cuenta aceptadas y no aceptadas — `{'rejected': {'count': 1, 'total': 120.0}, 'accepted': {'count': 1, 'total': 260.81}}`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -56,7 +66,7 @@ El trabajo particular se cotiza desde el price book sin tocar ningún expediente
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -70,8 +80,8 @@ El trabajo particular se cotiza desde el price book sin tocar ningún expediente
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: Las cotizaciones particulares no llevan impuesto (no existe ese concepto en la cotización): el total es la suma de los renglones.

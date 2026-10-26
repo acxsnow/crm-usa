@@ -4,8 +4,9 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +39,18 @@ from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
 router = APIRouter(tags=["finance"])
 
+
+def _form_json(modelo, data: str) -> dict:
+    """El JSON que viaja en el campo `data` de un formulario con archivo.
+    Validarlo a mano dejaba escapar el error de Pydantic como 500; ahora sale
+    como el 422 de siempre, con el campo marcado (D-016)."""
+    try:
+        return modelo.model_validate_json(data).model_dump()
+    except ValidationError as exc:
+        raise RequestValidationError(
+            [{**err, "loc": ("data", *err.get("loc", ()))} for err in exc.errors(include_url=False)]) from None
+
+
 _exp_any = require_any_permission("expenses.create_own", "expenses.read_all", "expenses.approve")
 _exp_own = require_permission("expenses.create_own")
 _exp_all = require_any_permission("expenses.read_all", "expenses.approve")
@@ -52,6 +65,20 @@ _recon = require_permission("reconciliation.manage")
 _profit = require_permission("profitability.read")
 _reports = require_permission("reports.view")
 _reports_export = require_permission("reports.export")
+# D-014: el permiso de cada reporte. `reports.view` abre la página; el comercial
+# es del tablero comercial y los de operación y finanzas, de `reports.generate`.
+REPORT_PERMISSION = {"commercial": "dashboards.commercial", "operations": "reports.generate",
+                     "finance": "reports.generate"}
+
+
+def _check_report(kind: str, user: User) -> None:
+    from app.api.deps import get_effective_permissions
+    from app.shared.errors import ForbiddenError
+
+    if kind not in reports.REPORTS:
+        raise NotFoundError("Ese reporte no existe.", code="report_not_found")
+    if REPORT_PERMISSION[kind] not in get_effective_permissions(user):
+        raise ForbiddenError("No tienes permiso para ver este reporte.", code="report_not_allowed")
 
 
 def _file(path: str | None, mime: str | None):
@@ -103,7 +130,7 @@ async def all_expenses(response: Response, status: str | None = None, user_id: u
 async def create_expense(data: str = Form(...), receipt: UploadFile = File(...), db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_exp_own)) -> dict:
-    datos = ExpenseIn.model_validate_json(data).model_dump()
+    datos = _form_json(ExpenseIn, data)
     contenido = await read_limited(receipt, exp.MAX_RECEIPT_BYTES)
     e = await exp.create(db, organization_id=organization_id, user=current_user, data=datos,
                          receipt=(contenido, receipt.filename, receipt.content_type))
@@ -327,7 +354,7 @@ async def list_invoices(response: Response, status: str | None = None, supplier_
 async def create_invoice(data: str = Form(...), file: UploadFile | None = File(None), db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_ap_manage)) -> dict:
-    datos = InvoiceIn.model_validate_json(data).model_dump()
+    datos = _form_json(InvoiceIn, data)
     adjunto = None
     if file is not None and file.filename:
         adjunto = (await read_limited(file, ap.MAX_FILE_BYTES), file.filename, file.content_type)
@@ -440,7 +467,7 @@ async def list_payments(response: Response, supplier_id: uuid.UUID | None = None
 async def record_payment(data: str = Form(...), file: UploadFile | None = File(None), db: AsyncSession = Depends(get_db),
                          organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_ap_manage)) -> dict:
-    datos = PaymentIn.model_validate_json(data).model_dump()
+    datos = _form_json(PaymentIn, data)
     adjunto = None
     if file is not None and file.filename:
         adjunto = (await read_limited(file, ap.MAX_FILE_BYTES), file.filename, file.content_type)
@@ -635,8 +662,7 @@ async def unmatch_line(line_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 async def get_report(kind: str, date_from: date | None = None, date_to: date | None = None,
                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                      current_user: User = Depends(_reports)) -> dict:
-    if kind not in reports.REPORTS:
-        raise NotFoundError("Ese reporte no existe.", code="report_not_found")
+    _check_report(kind, current_user)
     return await reports.REPORTS[kind](db, organization_id=organization_id, date_from=date_from, date_to=date_to)
 
 
@@ -644,8 +670,7 @@ async def get_report(kind: str, date_from: date | None = None, date_to: date | N
 async def export_report(kind: str, date_from: date | None = None, date_to: date | None = None,
                         db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_reports_export)):
-    if kind not in reports.REPORTS:
-        raise NotFoundError("Ese reporte no existe.", code="report_not_found")
+    _check_report(kind, current_user)
     rep = await reports.REPORTS[kind](db, organization_id=organization_id, date_from=date_from, date_to=date_to)
     return Response(content=reports.to_csv(rep), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="reporte-{kind}.csv"'})

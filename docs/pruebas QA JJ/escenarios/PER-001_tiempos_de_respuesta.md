@@ -6,12 +6,12 @@
 - **Módulo:** Rendimiento
 - **Prioridad:** P1
 - **Tipo de prueba:** Rendimiento
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 30 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA del lote 3)
 
 ## 2. Objetivo
 
@@ -37,14 +37,16 @@ Medir y dejar la línea base de las APIs más usadas.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct): 1 de 1 comprobaciones bien. Inicio, expedientes, por revisar, proyectos, agenda, existencias, salidas, facturas, mapa, avisos y buscador: cada llamada responde en menos de 500 ms (3 veces cada una, en local, con la base QA).
+- Diferencias con lo esperado: Falta medir el total de cada pantalla en el navegador (F12 › Network).
+- Comprobaciones por API (1 de 1):
+  - ✔ Cada llamada responde en menos de 500 ms (3 veces cada una, en local) — `{"Inicio": [131, 200], "Expedientes": [186, 200], "Por revisar": [127, 200], "Proyectos": [95, 200], "Agenda": [166, 200], "Existencias": [217, 200], "Salidas":`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -67,7 +69,7 @@ Medir y dejar la línea base de las APIs más usadas.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -6,12 +6,12 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API (≈2 min)
+- **Versión o commit probado:** devjj 67141f2 + D-013 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -41,14 +41,23 @@ El Administrador da de alta personal nuevo sin tocar la base.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 8 de 8 comprobaciones bien. La invitación crea la cuenta con el rol Técnico, entra y no se usa dos veces; desactivado no entra y su sesión abierta deja de funcionar.
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (8 de 8):
+  - ✔ Admin invita a «Técnico Dieciséis» como Técnico — `201 {"id":"d3b1dec2-a0f4-40e0-a395-673a76759b9a","email":"tecnico16@demo-org.com","full_name":"Técnico Dieciséis","status":"invited","roles":["field_techn`
+  - ✔ Abrir la invitación y crear la clave — `200 {"id":"d3b1dec2-a0f4-40e0-a395-673a76759b9a","email":"tecnico16@demo-org.com","full_name":"Técnico Dieciséis","organization_id":"a86681e1-01d1-48b8-a9`
+  - ✔ Entra como tecnico16 — `200`
+  - ✔ La cuenta quedó con el rol Técnico — `['field_technician']`
+  - ✔ La misma invitación no se usa dos veces — `400`
+  - ✔ Admin desactiva a «Técnico Dieciséis»
+  - ✔ Desactivado, no puede entrar
+  - ✔ Su sesión abierta deja de funcionar [reevaluado: responde 403 «Tu cuenta no está activa» en toda acción y 401 al renovar] — `403`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -58,7 +67,7 @@ El Administrador da de alta personal nuevo sin tocar la base.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -72,8 +81,8 @@ El Administrador da de alta personal nuevo sin tocar la base.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API (≈2 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: La sesión abierta del desactivado responde 403 «Tu cuenta no está activa. Contacta al administrador.» en toda acción y 401 al renovar (como máximo 15 min después vuelve al ingreso).

@@ -180,6 +180,11 @@ export async function uploadEvidence(
   return res.data;
 }
 
+/** Quita una evidencia subida por error (`evidence.delete`, solo con la instalación abierta). */
+export async function deleteEvidence(evidenceId: string): Promise<void> {
+  await apiClient.delete(`/evidence/${evidenceId}`);
+}
+
 export async function fetchEvidenceObjectUrl(evidenceId: string): Promise<string> {
   const res = await apiClient.get(`/evidence/${evidenceId}/file`, { responseType: "blob" });
   return URL.createObjectURL(res.data);

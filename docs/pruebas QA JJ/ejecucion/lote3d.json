@@ -1,0 +1,56 @@
+{
+ "INS-013": [
+  {
+   "check": "Se enviaron 2 enlaces de firma (el segundo es el reenvío)",
+   "ok": true,
+   "dato": "2"
+  },
+  {
+   "check": "Al reenviar, el enlace anterior deja de servir",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El enlace no es válido o ya expiró.\",\"code\":\"public_signature_not_found\",\"request_id\":\"404000dc-6268-4de7-8470-39e6d5991551\"}"
+  },
+  {
+   "check": "El enlace vigente abre el acta",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "Token alterado: «El enlace no es válido o ya expiró.»",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El enlace no es válido o ya expiró.\",\"code\":\"public_signature_not_found\",\"request_id\":\"68b03d41-49ed-4a1b-bce1-046802f5b42f\"}"
+  },
+  {
+   "check": "Sin token: se rechaza (la pantalla dice «Enlace incompleto»)",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El enlace no es válido o ya expiró.\",\"code\":\"public_signature_token_missing\",\"request_id\":\"e3602b59-e4e7-46c7-90d7-5cc4e5464668\"}"
+  },
+  {
+   "check": "El cliente firma con el enlace vigente",
+   "ok": true,
+   "dato": "200 {\"id\":\"f8c50ad7-0b47-42ec-9e61-42454c1da435\",\"project_id\":\"3bef2257-ecde-4305-99e3-25e6fd5b6e16\",\"technician_user_id\":null,\"technician_signed_at\":null"
+  },
+  {
+   "check": "El mismo enlace no sirve para firmar otra vez",
+   "ok": true,
+   "dato": "404 {\"detail\":\"El enlace no es válido o ya expiró.\",\"code\":\"public_signature_not_found\",\"request_id\":\"108fe8d5-5165-4963-86a4-b761a4baac74\"}"
+  }
+ ],
+ "NOT-002": [
+  {
+   "check": "Pedir el olvido de clave responde que se envió",
+   "ok": true,
+   "dato": "{\"message\":\"Si hay una cuenta activa con ese correo, te enviamos un enlace para recuperar la contraseña.\"}"
+  },
+  {
+   "check": "El olvido de clave salió a la consola (1 correos)",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "El enlace de firma salió a la consola (2 correos)",
+   "ok": true,
+   "dato": "2"
+  }
+ ]
+}

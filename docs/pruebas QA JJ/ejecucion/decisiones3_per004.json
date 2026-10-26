@@ -1,0 +1,13 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj 67141f2 + D-013, D-015 a D-018",
+ "PER-004": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 (revisión de logs)",
+  "lote": 3,
+  "que_paso": "Lote 3 (25 oct): 4 de 4 comprobaciones bien. Las 6 tareas programadas corren; los únicos errores son de los reinicios de la base de QA; la limpieza corre en el worker.",
+  "diferencias": "Falta navegar en pantalla mientras corren.",
+  "indice": "Logs ok; falta pantalla",
+  "observaciones": "Las tareas de avisos tardan varios segundos con carga: no frenan las pantallas porque corren en el worker."
+ }
+}

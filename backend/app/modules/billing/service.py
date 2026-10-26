@@ -193,6 +193,11 @@ async def record_payment(
     monto = to_money(data["amount"])
     if monto <= 0:
         raise InvalidInputError("El pago debe ser mayor que cero.", code="invalid_payment_amount")
+    # Sin tope, un pago de más dejaba el saldo negativo y la factura «pagada»
+    # con plata de sobra que nadie devolvía (D-015).
+    if monto > to_money(invoice.balance):
+        raise InvalidInputError(f"El pago supera el saldo de la factura (USD {to_money(invoice.balance)}).",
+                                code="payment_exceeds_balance")
 
     invoice.payments.append(InvoicePayment(
         amount=monto, paid_at=data["paid_at"], method=data.get("method"),

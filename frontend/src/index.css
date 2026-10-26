@@ -4420,3 +4420,6 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
 .serial-inputs small { color: var(--ink-soft); font-size: 0.75rem; }
 .serial-inputs input { font-family: var(--mono-font, ui-monospace, monospace); text-transform: uppercase; }
 .serial-from-stock { display: block; color: var(--ink-soft); font-size: 0.75rem; }
+
+/* Auditoría (D-020): antes → después de cada campo. */
+.audit-changes { margin: 4px 0; padding-left: 16px; font-size: 0.8125rem; overflow-wrap: anywhere; }

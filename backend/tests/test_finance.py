@@ -263,6 +263,41 @@ def test_statement_parser_accepts_common_bank_formats():
     assert [str(f["amount"]) for f in filas] == ["4000.00", "-1200.00", "-15.00"] and malas == ["fila 5"]
 
 
+async def test_the_same_statement_twice_does_not_duplicate(app_client, sesion):
+    """D-017: importar el mismo extracto otra vez duplicaba los movimientos.
+    Dos compras iguales el mismo día siguen siendo dos."""
+    conta = await sesion("conta")
+    extracto = (f"Date,Description,Amount\n{HOY.isoformat()},LOWES 123,-45.10\n{HOY.isoformat()},LOWES 123,-45.10\n"
+                f"{HOY.isoformat()},SHELL,-60.00\n")
+
+    async def importar(texto, cuenta="Chase operativa"):
+        return await app_client.post(f"{API}/reconciliation/statements", data={"account_label": cuenta},
+                                     files={"file": ("e.csv", texto.encode(), "text/csv")}, headers=conta)
+    r = await importar(extracto)
+    assert (r.json()["lines"], r.json()["duplicated"]) == (3, 0)
+    r = await importar(extracto)
+    assert (r.status_code, r.json()["code"]) == (409, "statement_already_imported")
+    # Un extracto que se solapa con el anterior solo agrega lo nuevo.
+    r = await importar(extracto + f"{HOY.isoformat()},LOWES 123,-45.10\n{HOY.isoformat()},COSTCO,-20.00\n")
+    assert (r.json()["lines"], r.json()["duplicated"]) == (2, 3)
+    # Otra cuenta es otro extracto.
+    assert (await importar(extracto, cuenta="Wells Fargo")).json()["lines"] == 3
+    lineas = (await app_client.get(f"{API}/reconciliation/lines?limit=100", headers=conta)).json()
+    assert len(lineas) == 8
+
+
+async def test_invalid_form_json_is_a_422_not_a_500(app_client, sesion):
+    """D-016: el JSON del formulario con archivo se validaba a mano y un campo
+    malo salía como 500."""
+    conta = await sesion("conta")
+    for ruta in ("/payables/invoices", "/payables/payments"):
+        r = await app_client.post(f"{API}{ruta}", data={"data": json.dumps({"supplier_id": None})}, headers=conta)
+        assert (r.status_code, r.json()["code"]) == (422, "validation_error"), ruta
+        assert "data.supplier_id" in r.json()["detail"]
+    r = await app_client.post(f"{API}/payables/invoices", data={"data": "{no es json"}, headers=conta)
+    assert r.status_code == 422
+
+
 async def test_reconciliation_auto_and_manual(app_client, db, seeded_org, sesion):
     s = await _proveedor(app_client, (await sesion("conta")))
     inv = (await _factura(app_client, (await sesion("conta")), s["id"], "R-1", total="1200.00")).json()

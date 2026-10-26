@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
-import { getCustomerTimeline, updateCustomer } from "./api";
+import { useNavigate, useParams } from "react-router-dom";
+import { deleteCustomer, getCustomerTimeline, updateCustomer } from "./api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
+import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { ConsentCheckbox, DataConsentNotice, useConsentNotice } from "@/components/DataConsentNotice";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -33,7 +35,18 @@ export function CustomerDetailPage() {
   const [pestana, setPestana] = useState<Pestana>("resumen");
   // Editar es de `customers.update` (Vendedor, Administración, Administrador);
   // técnico, Contabilidad y Gerencia veían el botón y recibían un 403 (17 oct).
-  const canEdit = useAuth().hasPermission("customers.update");
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission("customers.update");
+  // D-014: borrar es de `customers.delete` (Administrador).
+  const canDelete = hasPermission("customers.delete");
+  const navigate = useNavigate();
+  const [errorBorrar, setErrorBorrar] = useState<string | null>(null);
+  const borrar = useMutation({
+    mutationFn: () => deleteCustomer(customerId!),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["customers"] }); navigate("/customers"); },
+    onError: (err) => setErrorBorrar(apiErrorMessage(err)),
+    meta: { successMessage: "Cliente borrado." },
+  });
   const [form, setForm] = useState({ legal_name: "", main_phone: "", email: "", billing_address: "", notes: "" });
   // La autorización de tratamiento de datos se pide al cambiar los datos
   // personales (el servidor aplica el mismo criterio: `PERSONAL_FIELDS`).
@@ -81,7 +94,21 @@ export function CustomerDetailPage() {
           </div>
         </div>
         {canEdit && <button className="primary-button ui-profile-action" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button>}
+        {canDelete && (
+          <button type="button" className="secondary-button ui-profile-action" disabled={borrar.isPending}
+            onClick={async () => {
+              setErrorBorrar(null);
+              const ok = await confirmAction({
+                title: `¿Borrar a «${customer.legal_name}»?`,
+                message: "Solo se puede si no tiene expedientes, obras, facturas ni cotizaciones. No se puede deshacer; "
+                  + "las autorizaciones de datos que firmó se conservan.",
+                confirmLabel: "Borrar", cancelLabel: "Dejarlo",
+              });
+              if (ok) borrar.mutate();
+            }}>Borrar cliente</button>
+        )}
       </header>
+      {errorBorrar && <p className="form-error" role="alert">{errorBorrar}</p>}
       {canEdit && editing && <form className="edit-card" onSubmit={(e) => { e.preventDefault(); if (cambianPersonales && !autoriza) return; updateMutation.mutate(); }}><div className="edit-grid"><label>Nombre completo<input value={form.legal_name} onChange={(e) => setForm({ ...form, legal_name: e.target.value })} required /></label><label>Teléfono<input value={form.main_phone} onChange={(e) => setForm({ ...form, main_phone: e.target.value })} /></label><label>Correo<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label><label>Dirección de facturación<input value={form.billing_address} onChange={(e) => setForm({ ...form, billing_address: e.target.value })} /></label><label className="wide-field">Notas<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div>{cambianPersonales && <div className="ui-consent-block">{aviso.data && <DataConsentNotice notice={aviso.data} />}{aviso.data && <ConsentCheckbox notice={aviso.data} checked={autoriza} onChange={setAutoriza} />}</div>}<button className="primary-button" disabled={updateMutation.isPending || (cambianPersonales && !autoriza)}>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</button>{cambianPersonales && !autoriza && <p className="form-help">Marca la autorización del cliente para guardar cambios en sus datos personales.</p>}{updateMutation.isError && <p className="form-error">No se pudieron guardar los cambios.</p>}</form>}
 
       <div className="ui-tabs" role="tablist" aria-label="Secciones del cliente">

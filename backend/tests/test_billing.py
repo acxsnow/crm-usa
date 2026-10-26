@@ -106,6 +106,21 @@ async def test_partial_then_full_payment(app_client, active_admin_user, seeded_o
     assert body["paid_at"] is not None
 
 
+async def test_a_payment_cannot_exceed_the_balance(app_client, active_admin_user, seeded_org):
+    """D-015: un pago de más dejaba el saldo negativo."""
+    headers = await _admin_headers(app_client, active_admin_user)
+    project_id = await _create_project(app_client, headers)
+    invoice_id = (await app_client.post("/api/v1/invoices", json={"project_id": project_id, "amount": 500}, headers=headers)).json()["id"]
+    pagar = lambda monto: app_client.post(f"/api/v1/invoices/{invoice_id}/payments",  # noqa: E731
+                                          json={"amount": monto, "paid_at": str(date.today())}, headers=headers)
+    resp = await pagar(500.01)
+    assert (resp.status_code, resp.json()["code"]) == (400, "payment_exceeds_balance")
+    assert "500.00" in resp.json()["detail"]
+    assert (await pagar(500)).json()["balance"] == 0.0
+    resp = await pagar(0.01)
+    assert (resp.status_code, resp.json()["code"]) == (400, "payment_exceeds_balance")
+
+
 async def test_overdue_is_computed_on_read(app_client, active_admin_user, seeded_org):
     headers = await _admin_headers(app_client, active_admin_user)
     project_id = await _create_project(app_client, headers)

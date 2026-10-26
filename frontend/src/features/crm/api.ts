@@ -33,6 +33,11 @@ export async function updateCustomer(
   return res.data;
 }
 
+/** Borra un cliente creado por error: solo si no tiene expedientes, obras, facturas ni cotizaciones. */
+export async function deleteCustomer(customerId: string): Promise<void> {
+  await apiClient.delete(`/customers/${customerId}`);
+}
+
 export async function getCustomerTimeline(customerId: string): Promise<Customer360> {
   const res = await apiClient.get<Customer360>(`/customers/${customerId}/timeline`);
   return res.data;

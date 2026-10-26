@@ -1,0 +1,14 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj (base QA del lote 3 + volumen)",
+ "PER-002": {
+  "estado": "APROBADO",
+  "marca": "APROBADO",
+  "tiempo": "lote 3 por API (≈5 min)",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): con 1,016 expedientes y 5,247 movimientos (script `ejecucion/lote3g.py`, solo en la base local), las listas y el buscador responden por debajo de 200 ms sin carga y la página 20 es tan rápida como la 1. EXPLAIN ANALYZE: movimientos 37 ms, expedientes 6 ms.",
+  "diferencias": "Ninguna.",
+  "indice": "<200 ms con volumen",
+  "observaciones": "Los planes ordenan en memoria sobre un Seq Scan de la organización (5 mil filas, quicksort). Con decenas de miles de movimientos convendría un índice por (organization_id, movement_date, created_at): anotado para después de salir."
+ }
+}

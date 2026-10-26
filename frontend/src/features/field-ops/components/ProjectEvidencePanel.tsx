@@ -1,16 +1,29 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { fetchEvidenceObjectUrl, listProjectEvidencePage, uploadEvidence } from "../api";
-import { useFieldCatalogs } from "../module5Api";
+import { deleteEvidence, fetchEvidenceObjectUrl, listProjectEvidencePage, uploadEvidence } from "../api";
+import { apiErrorMessage, useFieldCatalogs } from "../module5Api";
+import { confirmAction } from "@/components/ui/ConfirmDialog";
+import { useAuth } from "@/features/auth/AuthContext";
 import { CameraIcon, ClockIcon, PinIcon, VideoIcon } from "./icons";
 import { PaginationControls } from "@/components/PaginationControls";
 import { type Evidence, type EvidenceCategory } from "@/types/fieldOps";
 
 const EVIDENCE_PAGE_SIZE = 12;
 
-function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: () => void }) {
+function EvidenceViewer({ evidence, onClose, onDeleted }: {
+  evidence: Evidence; onClose: () => void; onDeleted: () => void;
+}) {
   const { data: categoryLabels } = useFieldCatalogs();
+  // D-014: quitar una evidencia es de `evidence.delete` (Administrador).
+  const puedeQuitar = useAuth().hasPermission("evidence.delete");
+  const [errorQuitar, setErrorQuitar] = useState<string | null>(null);
+  const quitar = useMutation({
+    mutationFn: () => deleteEvidence(evidence.id),
+    onSuccess: onDeleted,
+    onError: (err) => setErrorQuitar(apiErrorMessage(err)),
+    meta: { successMessage: "Evidencia quitada." },
+  });
   const [url, setUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const isVideo = evidence.mime_type?.startsWith("video/");
@@ -64,6 +77,20 @@ function EvidenceViewer({ evidence, onClose }: { evidence: Evidence; onClose: ()
               <button type="button" onClick={() => setZoom(1)}>Restablecer</button>
             </div>
           )}
+          {puedeQuitar && (
+            <button type="button" className="acta-btn is-quiet" disabled={quitar.isPending}
+              onClick={async () => {
+                setErrorQuitar(null);
+                const ok = await confirmAction({
+                  title: "¿Quitar esta evidencia?",
+                  message: "Deja de verse en la obra y en el acta. Si era la única foto de un renglón del checklist que "
+                    + "la exige, el renglón vuelve a pendiente.",
+                  confirmLabel: "Quitar", cancelLabel: "Dejarla",
+                });
+                if (ok) quitar.mutate();
+              }}>Quitar evidencia</button>
+          )}
+          {errorQuitar && <p className="form-error" role="alert">{errorQuitar}</p>}
           <div className="evidence-watermark-detail">
             <strong>Marca de evidencia</strong>
             <span>{evidence.latitude != null && evidence.longitude != null ? `GPS: ${evidence.latitude.toFixed(6)}, ${evidence.longitude.toFixed(6)}` : "GPS: no disponible"}</span>
@@ -199,7 +226,14 @@ export function ProjectEvidencePanel({ projectId, canUpload, geoStatus, coords }
           : <p className="acta-empty">Todavía no hay evidencias.</p>}
       </div>
 
-      {selectedEvidence && <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)} />}
+      {selectedEvidence && (
+        <EvidenceViewer evidence={selectedEvidence} onClose={() => setSelectedEvidence(null)}
+          onDeleted={() => {
+            setSelectedEvidence(null);
+            queryClient.invalidateQueries({ queryKey: ["project-evidence", projectId], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["project-checklist", projectId], exact: false });
+          }} />
+      )}
       {evidenceData && evidenceData.total > EVIDENCE_PAGE_SIZE && (
         <PaginationControls page={evidencePage} pageSize={EVIDENCE_PAGE_SIZE} total={evidenceData.total} onPageChange={setEvidencePage} />
       )}

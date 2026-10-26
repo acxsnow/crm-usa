@@ -391,6 +391,9 @@ async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, no
         movimiento = await wh.record_movement(
             db, organization_id=organization_id, user=user, item_id=linea.item_id, location_id=ubicacion.id,
             movement_type=MovementType.SALIDA, quantity=entregada,
+            # El costo del día de la entrega: sin él, el costo de una obra ya
+            # cerrada cambiaba al editar el costo del catálogo (D-018).
+            unit_cost=articulos[linea.item_id].unit_cost if linea.item_id in articulos else None,
             reference=order.number or f"Orden {order.id}", note=linea.notes,
             project_id=order.project_id, movement_date=hoy,
             # La clave lleva la línea: reintentar la entrega devuelve el mismo

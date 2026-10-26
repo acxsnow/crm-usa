@@ -6,12 +6,12 @@
 - **Módulo:** Técnicos
 - **Prioridad:** P2
 - **Tipo de prueba:** Rendimiento · usabilidad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución + 30 min de preparación
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -37,14 +37,118 @@ La agenda y la asignación siguen usables con todo el equipo.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 103 de 103 comprobaciones bien. Con una obra para 10 técnicos distintos en la misma semana, la agenda trae las de los 10 y el selector de técnicos los 15 en orden alfabético.
+- Diferencias con lo esperado: Falta la parte de pantalla (vista Semana y Día, y a 390 px).
+- Comprobaciones por API (103 de 103):
+  - ✔ El selector «Elige un técnico» trae los 15 técnicos en orden — `['Andrés Morales', 'Carlos Ramírez', 'Demo Admin', 'Diego Jiménez', 'Fernando Ortiz', 'Jorge Rojas', 'José Castillo', 'Luis Herrera', 'Manuel Navarro', 'Miguel `
+  - ✔ Visita «opened» en 450 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 451 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 452 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 453 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 454 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 455 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 456 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 457 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 458 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Visita «opened» en 459 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Una obra programada para 10 técnicos distintos en la misma semana — `[200, 200, 200, 200, 200, 200, 200, 200, 200, 200]`
+  - ✔ La agenda de la semana muestra obras de 11 técnicos distintos — `14`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -67,7 +171,7 @@ La agenda y la asignación siguen usables con todo el equipo.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

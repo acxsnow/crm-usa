@@ -43,6 +43,11 @@ async def list_audit_events(
             "entity_type": e.entity_type,
             "entity_id": e.entity_id,
             "created_at": e.created_at.isoformat(),
+            # D-020: el antes y el después, y desde dónde; la base los guardaba
+            # pero la pantalla no los mostraba.
+            "before_data": e.before_data,
+            "after_data": e.after_data,
+            "ip_address": e.ip_address,
         }
         for e in events
     ]

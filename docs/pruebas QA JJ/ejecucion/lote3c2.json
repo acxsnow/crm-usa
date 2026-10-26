@@ -1,0 +1,138 @@
+{
+ "PAR-003": [
+  {
+   "check": "Abono de 200.00 en efectivo: saldo 300.00",
+   "ok": true,
+   "dato": "300.0 partial"
+  },
+  {
+   "check": "Abono de 300.00 por transferencia: saldo 0 y «Factura pagada»",
+   "ok": true,
+   "dato": "0.0 paid"
+  },
+  {
+   "check": "Pagar 0.01 de más se rechaza (D-015)",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El pago supera el saldo de la factura (USD 0.00).\",\"code\":\"payment_exceeds_balance\",\"request_id\":\"e318482e-8ae2-459d-9086-370633ef9c5b\"}"
+  },
+  {
+   "check": "El saldo sigue en 0",
+   "ok": true,
+   "dato": "0.0"
+  }
+ ],
+ "BOD-007": [
+  {
+   "check": "La salida de la obra cerrada ya tiene su costo (D-018, migración 0044)",
+   "ok": true,
+   "dato": "['0.73', '0.94']"
+  },
+  {
+   "check": "El costo de materiales (220.46) = la suma de la salida (3.34) al centavo",
+   "ok": false,
+   "dato": "materiales=220.46 salida=3.34"
+  },
+  {
+   "check": "Sin devoluciones",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "FIN-001": [
+  {
+   "check": "Tito recibe el aviso de gasto aprobado y de gasto rechazado",
+   "ok": true,
+   "dato": "['expense.approved', 'expense.rejected', 'installation.scheduled', 'warehouse.release_delivered']"
+  },
+  {
+   "check": "El rechazado muestra el motivo",
+   "ok": true,
+   "dato": "[{'id': '0fedca2b-a373-4975-8fc3-2fa927d9aa40', 'user_id': 'f9c2c322-ff13-4215-9094-dece2583c4e7', 'user_name': 'Tito Técnico', 'project_id': 'f1adbe77-ddd5-4f96-8204-46d2e6bb5b6d', 'project_title': '"
+  }
+ ],
+ "FIN-002": [
+  {
+   "check": "Crear el proveedor «HOME DEPOT»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Factura con el proveedor vacío → 422, no 500 (D-016)",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: data.supplier_id, data.number, data.invoice_date.\",\"code\":\"validation_error\",\"request_id\":\"782f4617-e970-4f35-8eb2-"
+  },
+  {
+   "check": "Factura de USD 350.00 a 30 días",
+   "ok": true,
+   "dato": "201 {\"id\":\"716eb280-e4ca-4c98-b203-ce863f556f64\",\"supplier_id\":\"2b708b32-a1ff-40bc-a7b6-1e451730c0d4\",\"supplier_name\":\"QA HOME DEPOT C2 1025214209\",\"numbe"
+  },
+  {
+   "check": "Gerencia la aprueba",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Pagarla adjuntando el comprobante",
+   "ok": true,
+   "dato": "201 {\"id\":\"d9cbd5dd-de23-4643-bd2e-d1e1b2d78491\",\"supplier_id\":\"2b708b32-a1ff-40bc-a7b6-1e451730c0d4\",\"supplier_name\":\"QA HOME DEPOT C2 1025214209\",\"paid_"
+  },
+  {
+   "check": "Saldo en cero tras el pago",
+   "ok": true,
+   "dato": "0.00 paid"
+  },
+  {
+   "check": "Proveedor con el mismo nombre (anotar): 409",
+   "ok": true,
+   "dato": "{\"detail\":\"Ya hay un proveedor con ese nombre.\",\"code\":\"supplier_duplicate\",\"request_id\":\"93b624c6-3d94-40a4-bd8c-735530"
+  }
+ ],
+ "FIN-003": [
+  {
+   "check": "Entran 4 (el repetido del mismo día también) y el mal formado se reporta (['fila 6'])",
+   "ok": true,
+   "dato": "201 {\"statement_id\":\"6f32036d-5b25-44e4-a298-d0650c1d0961\",\"lines\":4,\"auto_matched\":0,\"invalid\":[\"fila 6\"],\"duplicated\":0}"
+  },
+  {
+   "check": "Importar el mismo archivo otra vez no duplica (D-017: 409 «ya estaba importado»)",
+   "ok": true,
+   "dato": "409 {\"detail\":\"Ese extracto ya estaba importado: todos sus movimientos ya están en la cuenta.\",\"code\":\"statement_already_imported\",\"request_id\":\"ed930d53-"
+  },
+  {
+   "check": "Quedan 4 movimientos de ese extracto (4)",
+   "ok": true,
+   "dato": "4"
+  }
+ ],
+ "BUS-001": [
+  {
+   "check": "Admin busca «Mobile Park» (las direcciones de prueba, p. ej. «456 QA 1025212450 Mobile Park Dr») y las encuentra",
+   "ok": true,
+   "dato": "2"
+  }
+ ],
+ "TEC-003": [
+  {
+   "check": "La agenda de la semana muestra obras de 11 técnicos distintos",
+   "ok": true,
+   "dato": "14"
+  }
+ ],
+ "INS-013": [
+  {
+   "check": "El técnico envía el enlace de firma (vez 1)",
+   "ok": true,
+   "dato": "200 {\"status\":\"sent\",\"recipient_email\":\"qa.1025212450.363@example.com\",\"expires_at\":\"2026-10-28T21:42:32.752626Z\"}"
+  },
+  {
+   "check": "El técnico envía el enlace de firma (vez 2)",
+   "ok": true,
+   "dato": "200 {\"status\":\"sent\",\"recipient_email\":\"qa.1025212450.363@example.com\",\"expires_at\":\"2026-10-28T21:42:32.926991Z\"}"
+  },
+  {
+   "check": "Administración (sin evidence.create) no lo envía (403; anotar)",
+   "ok": true,
+   "dato": "{\"detail\":\"No tienes permiso para realizar esta acción.\",\"code\":\"http_403\",\"request_id\":\"737a0325-6fcf-4d32-b209-d0a6b1f"
+  }
+ ]
+}

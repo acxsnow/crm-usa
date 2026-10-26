@@ -64,6 +64,7 @@ export function DashboardLayout() {
         <div className="menu-account">
           <strong>{user?.full_name}</strong>
           {user?.role_names?.length ? <small>{user.role_names.join(", ")}</small> : null}
+          <NavLink to="/profile" onClick={() => setMenuOpen(false)}>Mi perfil</NavLink>
           <button type="button" onClick={() => requestLogout(logout)}>Salir</button>
         </div>
         {/* Sin la tarjeta «¿Necesitas ayuda? Visita el centro de soporte»: no

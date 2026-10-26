@@ -6,12 +6,12 @@
 - **Módulo:** Técnicos
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · integridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -38,14 +38,35 @@ Desactivar no deja obras huérfanas sin aviso ni pierde el material de la camion
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 20 de 20 comprobaciones bien. Al desactivar a Héctor: la obra sigue asignada a él y programada, sin aviso a Administración; el material de su camioneta no se pierde; ya no aparece para asignar; la obra se rota a otro técnico sin problema; Héctor no entra.
+- Diferencias con lo esperado: Ninguna (el escenario pedía anotar el comportamiento).
+- Comprobaciones por API (20 de 20):
+  - ✔ Visita «opened» en 461 QA 1025212450 Mobile Park Dr
+  - ✔ Enviar incompleto se rechaza
+  - ✔ Archivo disfrazado (exe como jpg) se rechaza
+  - ✔ Formulario lleno, salvo la firma (10 archivos con GPS) — `[]`
+  - ✔ El vendedor no puede aprobar su expediente
+  - ✔ Cliente acepta términos y firma
+  - ✔ Puede enviarse — `[]`
+  - ✔ Enviar a revisión
+  - ✔ Queda en Pendiente aprobación · en revisión — `('pending_approval', 'pending_review')`
+  - ✔ Editar después de enviar se bloquea
+  - ✔ Obra programada a Héctor
+  - ✔ Camioneta de Héctor
+  - ✔ Traslado de 2 unidades a su camioneta
+  - ✔ Admin desactiva a Héctor
+  - ✔ La obra queda (anotar): técnico=Héctor, estado=scheduled
+  - ✔ ¿Avisa a Administración que la obra quedó con un técnico inactivo? (anotar: ['case.submitted', 'claim.paid', 'installation.closed', 'warehouse.release_pending'])
+  - ✔ El material de su camioneta no se pierde (2.00) — `2.00`
+  - ✔ Héctor ya no aparece para asignar — `15`
+  - ✔ Rotar la obra a otro técnico — `200 {"address_street":"461 QA 1025212450 Mobile Park Dr","address_unit":"Spc 361","address_city":"San Fernando","address_sta`
+  - ✔ Héctor ya no entra
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -54,7 +75,7 @@ Desactivar no deja obras huérfanas sin aviso ni pierde el material de la camion
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -68,8 +89,8 @@ Desactivar no deja obras huérfanas sin aviso ni pierde el material de la camion
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: Comportamiento anotado: desactivar a un técnico no libera ni avisa de sus obras programadas; hay que rotarlas a mano. Si se quiere un aviso, es una mejora a decidir.

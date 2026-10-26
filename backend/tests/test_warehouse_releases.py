@@ -232,6 +232,30 @@ async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, lo
     assert (r.status_code, r.json()["code"]) == (409, "material_from_warehouse")
 
 
+async def test_la_salida_guarda_el_costo_del_dia(app_client, db, login, active_admin_user, active_admin_staff_user,
+                                                 seeded_org):
+    """D-018: la salida no guardaba el costo y la obra tomaba el del catálogo
+    vigente; editar el costo cambiaba el de obras ya entregadas."""
+    bodega = await login(active_admin_user.email)
+    autoriza = await login(active_admin_staff_user.email)
+    item = await _item(app_client, bodega)  # 3.25
+    await _entrada(app_client, bodega, item["id"], "50")
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    orden = await _enviar(app_client, bodega,
+                          (await _orden(app_client, bodega, item["id"], "4", project_id=str(project.id)))["id"])
+    await _autorizar(app_client, autoriza, orden["id"])
+    assert (await _entregar(app_client, bodega, orden["id"])).status_code == 200
+
+    r = await app_client.put(f"{API}/warehouse/items/{item['id']}", json={
+        "name": item["name"], "sku": item["sku"], "category": "pipe_copper", "unit": "ft", "unit_cost": "9.99"},
+        headers=bodega)
+    assert r.status_code == 200, r.text
+    movs = (await app_client.get(f"{API}/warehouse/movements", params={"project_id": str(project.id)},
+                                 headers=bodega)).json()
+    salida = next(m for m in movs if m["movement_type"] == "salida")
+    assert (salida["unit_cost"], salida["amount"]) == ("3.25", "13.00")
+
+
 # ---------------------------------------------------------------------------
 # Aislamiento por organización
 # ---------------------------------------------------------------------------

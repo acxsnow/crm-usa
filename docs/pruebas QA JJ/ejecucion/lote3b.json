@@ -1,0 +1,196 @@
+{
+ "SEC-006": [
+  {
+   "check": "Reejecución D-013: sin sesión → 401",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reejecución D-013: Luis (técnico de otra obra) → 404",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Reejecución D-013: admin ajeno → 404",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reejecución D-013: Carlos sí la abre",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reejecución D-013: Administración (ve todas las obras) sí la abre",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "SEC-005": [
+  {
+   "check": "Visita «opened» en 434 QA 1025210655 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Un PDF real se acepta en los documentos del expediente",
+   "ok": false,
+   "dato": "400 {\"detail\":\"Ese campo no recibe archivos.\",\"code\":\"field_not_media\",\"request_id\":\"c85de4d6-f8f3-4876-912b-4e9f38c98e9c\"}"
+  },
+  {
+   "check": "Un PDF falso (sin estructura) se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Ese campo no recibe archivos.\",\"code\":\"field_not_media\",\"request_id\":\"b9cd0c0d-0ac7-4277-b7f6-fbbc9776ba37\"}"
+  }
+ ],
+ "AUTH-005": [
+  {
+   "check": "Con el token renovado la Agenda carga",
+   "ok": true,
+   "dato": "200"
+  }
+ ],
+ "AUTH-008": [
+  {
+   "check": "Contabilidad crea proveedores con ['suppliers.manage']",
+   "ok": true,
+   "dato": "['accounting.export', 'attendance.clock', 'attendance.dashboard', 'audit.read', 'bankfeeds.manage', 'billing.configure', 'billing.submit', 'cases.read_all', 'customers.read', 'dashboards.finance', 'expenses.approve', 'expenses.read_all', 'invoices.create', 'invoices.export', 'invoices.read', 'invoic"
+  },
+  {
+   "check": "Admin quita esos permisos a Contabilidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con la misma sesión, crear un proveedor → 403 en la siguiente acción",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Admin devuelve los permisos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Vuelve a funcionar sin volver a entrar",
+   "ok": true,
+   "dato": "201 {\"id\":\"86e300a4-6594-434b-92b9-e31433064cb7\",\"name\":\"QA 1025210655 Con permiso\",\"legal_name\":null,\"tax_id\":null,\"kinds\":"
+  }
+ ],
+ "AUTH-003": [
+  {
+   "check": "Una clave de menos de 12 caracteres se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Abrir el enlace y poner la clave nueva",
+   "ok": true,
+   "dato": "200 {\"message\":\"Tu contraseña se cambió.\"}"
+  },
+  {
+   "check": "Entra con la clave nueva",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con la clave anterior ya no entra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La sesión que estaba abierta queda cerrada",
+   "ok": true,
+   "dato": "401"
+  },
+  {
+   "check": "El mismo enlace otra vez responde que ya no es válido",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El enlace para restablecer la contraseña no es válido o ya venció.\",\"code\":\"invalid_reset_token\",\"request_id\":\"d5a52c83-a645-4230-a16a-0a65"
+  },
+  {
+   "check": "4 pedidos seguidos: no se crean más de 3 enlaces en la hora",
+   "ok": false,
+   "dato": "respuestas=[200, 200, 200, 200] enlaces en la hora: 1 → 4"
+  },
+  {
+   "check": "Pedir un enlace nuevo para dejar la clave en ChangeMe123! (fase C)",
+   "ok": true,
+   "dato": "200"
+  }
+ ],
+ "AUTH-004": [
+  {
+   "check": "Abrir la invitación y crear la clave",
+   "ok": true,
+   "dato": "200 {\"id\":\"d3b1dec2-a0f4-40e0-a395-673a76759b9a\",\"email\":\"tecnico16@demo-org.com\",\"full_name\":\"Técnico Dieciséis\",\"organization_id\":\"a86681e1-01d1-48b8-a9"
+  },
+  {
+   "check": "Entra como tecnico16",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "La cuenta quedó con el rol Técnico",
+   "ok": true,
+   "dato": "['field_technician']"
+  },
+  {
+   "check": "La misma invitación no se usa dos veces",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Admin desactiva a «Técnico Dieciséis»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Desactivado, no puede entrar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Su sesión abierta deja de funcionar",
+   "ok": false,
+   "dato": "403"
+  }
+ ],
+ "AUTH-007": [
+  {
+   "check": "Aceptar la invitación de sinrol",
+   "ok": true,
+   "dato": "200 {\"id\":\"f462a157-ee05-472b-a2b0-750212be8707\",\"email\":\"sinrol@demo-org.com\",\"full_name\":\"QA Sin Rol\",\"organization_id\":\"a86681e1-01d1-48b8-a9c0-47fec95"
+  },
+  {
+   "check": "Sin permisos: la sesión no trae permisos ni módulos",
+   "ok": true,
+   "dato": "[] []"
+  },
+  {
+   "check": "Expedientes, obras, facturas, clientes, bodega y proveedores → 403",
+   "ok": true,
+   "dato": "{'/cases': 403, '/projects': 403, '/invoices': 403, '/customers': 403, '/warehouse/items': 403, '/payables/suppliers': 403}"
+  },
+  {
+   "check": "Admin le da al rol solo «Ver clientes»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Ahora la sesión trae solo customers.read",
+   "ok": true,
+   "dato": "['customers.read']"
+  },
+  {
+   "check": "Y el menú solo el módulo de clientes",
+   "ok": true,
+   "dato": "['customers']"
+  },
+  {
+   "check": "Clientes abre (200) y lo demás sigue en 403",
+   "ok": true,
+   "dato": "{'/cases': 403, '/projects': 403, '/invoices': 403, '/customers': 200, '/warehouse/items': 403, '/payables/suppliers': 403}"
+  }
+ ]
+}

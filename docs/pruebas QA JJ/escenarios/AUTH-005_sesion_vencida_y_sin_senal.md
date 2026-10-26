@@ -6,12 +6,12 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional · celular
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** En ejecución
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API (≈2 min)
+- **Versión o commit probado:** devjj 67141f2 + D-013 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -41,14 +41,20 @@ Con la sesión corta vencida la app se renueva sola; sin señal no saca al usuar
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 5 de 5 comprobaciones bien. La cookie renueva la sesión sin pedir clave y la Agenda carga con el token nuevo; la cookie ya rotada no sirve otra vez; después de Salir, renovar responde 401.
+- Diferencias con lo esperado: Falta la parte de pantalla: 16 minutos sin tocar, sin red (Offline) y Atrás después de Salir.
+- Comprobaciones por API (5 de 5):
+  - ✔ Ingreso del técnico con la cookie de sesión larga — `200`
+  - ✔ Renovar con la cookie da un token nuevo sin pedir clave — `200`
+  - ✔ La cookie anterior (ya rotada) no sirve otra vez — `401`
+  - ✔ Después de Salir, renovar responde 401 (lleva al ingreso) — `401`
+  - ✔ Con el token renovado la Agenda carga — `200`
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -71,7 +77,7 @@ Con la sesión corta vencida la app se renueva sola; sin señal no saca al usuar
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API (≈2 min)
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

@@ -1,0 +1,118 @@
+{
+ "TUR-007": [
+  {
+   "check": "Visita «opened» en 472 QA 1025215402 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (10 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La obra sin coordenadas aparece «sin ubicar»",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "«Ubicar por dirección» responde (200)",
+   "ok": true,
+   "dato": "{\"located\":[],\"not_found\":[{\"id\":\"7eb7ea5a-7994-465a-b655-aa149dd9fca2\",\"title\":\"Instalación · CASE-2026-0016\",\"address\":\"472 QA 1025215402 Mobile Park Dr, Spc 372, Phoenix, AZ, 85001\"}]}"
+  },
+  {
+   "check": "La dirección inventada sigue sin coordenadas y avisando",
+   "ok": true,
+   "dato": "{\"located\":[],\"not_found\":[{\"id\":\"7eb7ea5a-7994-465a-b655-aa149dd9fca2\",\"title\":\"Instalación · CASE-2026-0016\",\"address\":\"472 QA 1025215402 Mobile Par"
+  },
+  {
+   "check": "Más de 25 obras por intento se rechaza (422)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Se ubica a mano",
+   "ok": true,
+   "dato": "200 {\"id\":\"7eb7ea5a-7994-465a-b655-aa149dd9fca2\",\"latitude\":33.4484,\"longitude\":-112.074}"
+  }
+ ],
+ "TUR-008": [
+  {
+   "check": "Hay dos puntos con ubicación",
+   "ok": true,
+   "dato": "['e6e3a1f4-0927-4b36-9c20-46eead847f7a', 'f4cbcff0-681d-4e9c-8725-ed949234ac0e']"
+  },
+  {
+   "check": "La tarea de limpieza del worker corre (2026-10-25 21:54:27 [info     ] attendance.locations_purged    events=1\n1)",
+   "ok": false,
+   "dato": "2026-10-25 21:54:27 [info     ] attendance.locations_purged    events=1\n1"
+  },
+  {
+   "check": "El punto de 91 días pierde la ubicación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El de 89 días la conserva",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "TUR-010": [
+  {
+   "check": "En el mapa de personas Carlos solo se ve a sí mismo",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "En el mapa de obras Carlos solo ve las suyas (1)",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "El menú no le muestra «Mapa operativo» (exige locations.view o projects.read_all)",
+   "ok": true,
+   "dato": ""
+  }
+ ]
+}

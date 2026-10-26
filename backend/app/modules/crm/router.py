@@ -27,7 +27,7 @@ from app.modules.crm.schemas import (
 )
 from app.modules.users.models import User
 from app.shared.audit import record_audit_event
-from app.shared.errors import NotFoundError
+from app.shared.errors import ConflictError, NotFoundError
 from app.shared.pagination import paginate, pagination_params
 from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
@@ -158,6 +158,45 @@ async def update_customer(
     await db.commit()
     await db.refresh(customer)
     return customer
+
+
+@router.delete("/customers/{customer_id}", status_code=204)
+async def delete_customer(
+    customer_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("customers.delete")),
+):
+    """Borra un cliente creado por error (D-014: el permiso existía y no hacía
+    nada). Solo si no tiene expedientes, obras, facturas ni cotizaciones: esas
+    se borrarían con él en cascada. Sus contactos se van con él; las constancias
+    de autorización de datos se conservan (con el cliente en nulo), porque la
+    ley pide guardarlas."""
+    from sqlalchemy import func
+
+    from app.modules.billing.models import Invoice, Quote
+    from app.modules.field_ops.models import Project
+
+    customer = (await db.execute(select(Customer).where(
+        Customer.id == customer_id, Customer.organization_id == organization_id))).scalar_one_or_none()
+    if not customer:
+        raise NotFoundError("El cliente no existe.", code="customer_not_found")
+    usos = []
+    for modelo, nombre in ((Case, "expedientes"), (Project, "obras"), (Invoice, "facturas"), (Quote, "cotizaciones")):
+        n = (await db.execute(select(func.count()).select_from(modelo).where(
+            modelo.customer_id == customer.id))).scalar_one()
+        if n:
+            usos.append(f"{n} {nombre}")
+    if usos:
+        raise ConflictError(f"No se puede borrar: el cliente tiene {', '.join(usos)}. Márcalo como inactivo.",
+                            code="customer_in_use")
+    await record_audit_event(
+        db, organization_id=organization_id, actor_user_id=current_user.id,
+        action="customer.deleted", entity_type="Customer", entity_id=str(customer.id),
+        before_data={"legal_name": customer.legal_name, "email": customer.email, "main_phone": customer.main_phone},
+    )
+    await db.delete(customer)
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/customers/{customer_id}/contacts", response_model=CustomerContactResponse, status_code=201)

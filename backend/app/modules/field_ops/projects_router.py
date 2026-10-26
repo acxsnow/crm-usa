@@ -65,6 +65,10 @@ async def create_project(
     organization_id: uuid.UUID = Depends(get_organization_id),
     current_user: User = Depends(require_permission("projects.create")),
 ):
+    if payload.primary_technician_user_id is not None:
+        from app.modules.field_ops.installation import require_assign_permission
+
+        require_assign_permission(current_user)
     return await field_ops_service.create_project(
         db,
         organization_id=organization_id,

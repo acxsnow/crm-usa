@@ -6,12 +6,12 @@
 - **Módulo:** Turnos, asistencia y mapa
 - **Prioridad:** P2
 - **Tipo de prueba:** Privacidad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA del lote 3)
 
 ## 2. Objetivo
 
@@ -37,14 +37,26 @@ Las coordenadas de los técnicos no se guardan más de 90 días.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct): 9 de 9 comprobaciones bien. La tarea de limpieza del worker quita la ubicación del punto de 91 días y deja la del de 89; el borrado manual quita todas las del usuario; un técnico no borra las de otro (403).
+- Diferencias con lo esperado: Ninguna.
+- Comprobaciones por API (9 de 9):
+  - ✔ Hay dos puntos con ubicación — `['647a8182-9605-4736-9d06-ab06e917cb78', '85a34ecc-c7ea-424f-bce6-8937f5829bcb']`
+  - ✔ El de 89 días la conserva — `False`
+  - ✔ Borrado manual de las ubicaciones del usuario — `200 {"purged":2}`
+  - ✔ No le queda ninguna ubicación — `0`
+  - ✔ Un técnico no borra ubicaciones de otro (403) — `403`
+  - ✔ Hay dos puntos con ubicación — `['e6e3a1f4-0927-4b36-9c20-46eead847f7a', 'f4cbcff0-681d-4e9c-8725-ed949234ac0e']`
+  - ✔ La tarea de limpieza del worker corre (2026-10-25 21:54:27 [info     ] attendance.locations_purged    events=1
+1) [reevaluado: la salida trae la línea del log y el 1] — `2026-10-25 21:54:27 [info     ] attendance.locations_purged    events=1
+1`
+  - ✔ El punto de 91 días pierde la ubicación
+  - ✔ El de 89 días la conserva
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -53,7 +65,7 @@ Las coordenadas de los técnicos no se guardan más de 90 días.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -67,7 +79,7 @@ Las coordenadas de los técnicos no se guardan más de 90 días.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

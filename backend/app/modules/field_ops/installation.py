@@ -27,7 +27,7 @@ from app.modules.field_ops.reviews import was_reopened_for_correction
 from app.modules.users.models import User, UserRole, UserStatus
 from app.shared import events as domain_events
 from app.shared.audit import record_audit_event
-from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
+from app.shared.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
 
 # Una agenda más larga que dos meses no es una agenda: es un reporte, y sin
 # límite la consulta crece con la historia de la empresa.
@@ -231,6 +231,13 @@ async def assignments_of(db, *, organization_id, project_id) -> list[dict]:
              "current": a.ended_on is None} for a, nombre in filas]
 
 
+def require_assign_permission(user) -> None:
+    """Asignar o cambiar el técnico de una obra exige `projects.assign`
+    (D-014: el permiso existía y no hacía nada); mover solo la fecha, no."""
+    if "projects.assign" not in get_effective_permissions(user):
+        raise ForbiddenError("No tienes permiso para asignar técnicos a las obras.", code="assign_not_allowed")
+
+
 async def schedule_installation(
     db, *, organization_id, user, project_id, technician_id: uuid.UUID, scheduled_date: date
 ) -> Project:
@@ -243,6 +250,8 @@ async def schedule_installation(
     if scheduled_date < await org_today(db, organization_id):
         raise InvalidInputError("No se puede agendar una instalación en una fecha pasada.", code="schedule_in_past")
     await _require_installer(db, organization_id=organization_id, technician_id=technician_id)
+    if project.primary_technician_user_id != technician_id:
+        require_assign_permission(user)
 
     antes = {"technician": str(project.primary_technician_user_id) if project.primary_technician_user_id else None,
              "scheduled_date": project.scheduled_date.isoformat() if project.scheduled_date else None}

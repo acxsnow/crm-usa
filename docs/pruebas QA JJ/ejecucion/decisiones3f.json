@@ -1,0 +1,25 @@
+{
+ "_fecha": "2026-10-25",
+ "_version": "devjj + D-020 (base QA del lote 3)",
+ "SEC-010": {
+  "estado": "En ejecución",
+  "tiempo": "lote 3 por API",
+  "lote": 3,
+  "que_paso": "Lote 3 por API (25 oct): 16 de 16 comprobaciones bien. Permisos de un rol, desactivar y activar una persona, autorización, corrección y borrado de un cliente, anulación y pago de factura, pago a proveedor, autorización de salida, asignación de técnico e ingreso fallido: cada uno con quién, cuándo, el antes (cuando aplica) y el después. La auditoría no mostraba el antes y el después aunque la base los guardaba: D-020, corregido (API y columna «Cambios»).",
+  "diferencias": "El plan decía que solo el Administrador la ve: la ven quienes tienen `audit.read` (Administrador, Administración, Contabilidad y Gerencia, según la matriz); el técnico y el vendedor reciben 403 (corregido el texto). Falta ver la columna «Cambios» en pantalla.",
+  "indice": "API 16/16; D-020 corregido; falta pantalla",
+  "defectos": [
+   {
+    "id": "D-020",
+    "texto": "La auditoría no muestra el antes y el después",
+    "prioridad": "P2"
+   }
+  ],
+  "corregir_doc": [
+   [
+    "- Solo el Administrador la ve.",
+    "- La ven quienes tienen «Ver la auditoría» (Administrador, Administración, Contabilidad y Gerencia); el técnico y el vendedor no."
+   ]
+  ]
+ }
+}

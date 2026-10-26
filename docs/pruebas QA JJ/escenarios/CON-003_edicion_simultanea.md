@@ -6,12 +6,12 @@
 - **Módulo:** Concurrencia
 - **Prioridad:** P2
 - **Tipo de prueba:** Concurrencia
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -35,14 +35,16 @@ Saber qué pasa cuando dos editan la misma obra o expediente.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 1 de 1 comprobaciones bien. Dos sesiones de Administración guardan las notas de la misma obra una tras otra: último gana sin aviso.
+- Diferencias con lo esperado: Ninguna (el escenario pedía anotar el comportamiento).
+- Comprobaciones por API (1 de 1):
+  - ✔ Dos sesiones guardan las notas una tras otra (A 200, B 200): queda «QA nota de la ventana B»
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -51,7 +53,7 @@ Saber qué pasa cuando dos editan la misma obra o expediente.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -65,8 +67,8 @@ Saber qué pasa cuando dos editan la misma obra o expediente.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:
-- Observaciones:
+- Observaciones: Comportamiento anotado: el último que guarda gana y no hay aviso de conflicto. Si se quiere avisar, es una mejora a decidir.

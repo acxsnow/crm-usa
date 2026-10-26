@@ -6,12 +6,12 @@
 - **Módulo:** Finanzas
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** Pendiente
-- **Fecha de ejecución:**
+- **Estado:** APROBADO
+- **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
-- **Tiempo real:**
-- **Versión o commit probado:** main 23260ae (anotar el que se pruebe de verdad)
+- **Tiempo real:** lote 3 por API
+- **Versión o commit probado:** devjj 67141f2 + D-013, D-015 a D-018 (base QA reiniciada con seed_qa)
 
 ## 2. Objetivo
 
@@ -36,14 +36,21 @@ Contabilidad no cierra instalaciones y Gerencia solo consulta.
 
 ## 7. Resultado obtenido
 
-- Qué pasó:
-- Diferencias con lo esperado:
+- Qué pasó: Lote 3 por API (25 oct, base QA reiniciada): 6 de 6 comprobaciones bien. Contabilidad no registra jornadas ni autoriza salidas; Gerencia no emite, no paga ni anula facturas (403), pero sí las consulta.
+- Diferencias con lo esperado: Falta ver que las pantallas no muestran esos botones (se revisa con AUTH-001).
+- Comprobaciones por API (6 de 6):
+  - ✔ Contabilidad no registra jornadas (403) — `403`
+  - ✔ Contabilidad no autoriza salidas (403) — `403`
+  - ✔ Gerencia no emite facturas (403) — `403`
+  - ✔ Gerencia no registra pagos (403) — `403`
+  - ✔ Gerencia no anula facturas (403) — `403`
+  - ✔ Gerencia sí consulta las facturas
 
 ## 8. Evidencias
 
 - Capturas:
 - Identificadores (expediente, obra, salida, factura…):
-- Respuestas HTTP (F12 › Network, filtrar `api/v1`):
+- Respuestas HTTP (F12 › Network, filtrar `api/v1`): ver las comprobaciones de la sección 7 (script `lote3` por API).
 - Consultas de verificación:
 
 ## 9. Validaciones complementarias
@@ -52,7 +59,7 @@ Contabilidad no cierra instalaciones y Gerencia solo consulta.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
@@ -66,7 +73,7 @@ Contabilidad no cierra instalaciones y Gerencia solo consulta.
 
 ## 12. Tiempo y seguimiento
 
-- Tiempo de ejecución:
+- Tiempo de ejecución: lote 3 por API
 - Tiempo dedicado al análisis del defecto:
 - Tiempo de corrección:
 - Tiempo de reejecución:

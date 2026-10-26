@@ -1,0 +1,24 @@
+{
+ "PER-004": [
+  {
+   "check": "Tareas programadas (beat): avisos pendientes y campañas cada 60 s; alertas diarias 14:00 UTC; facturas vencidas 06:00 UTC; bancos (Plaid) 12:00 UTC; limpieza de ubicaciones 09:30 UTC",
+   "ok": true,
+   "dato": "app/workers/celery_app.py beat_schedule"
+  },
+  {
+   "check": "Las tareas terminan sin error: los únicos errores de 24 h en worker y beat son `UndefinedTableError` en los 4 momentos en que la QA reinició la base (las tareas de cada minuto no encontraron las tablas mientras se recreaban)",
+   "ok": true,
+   "dato": "docker compose logs worker beat --since 24h: 4 errores por tabla, uno por reinicio"
+  },
+  {
+   "check": "La limpieza de ubicaciones corre en el worker de verdad (TUR-008)",
+   "ok": true,
+   "dato": "attendance.locations_purged events=1"
+  },
+  {
+   "check": "Las tareas de avisos tardaron hasta 8.8 s con la carga de las pruebas, en segundo plano; las pantallas siguieron por debajo de 500 ms (PER-001)",
+   "ok": true,
+   "dato": "notifications.process_event succeeded in 4.2–8.8 s"
+  }
+ ]
+}

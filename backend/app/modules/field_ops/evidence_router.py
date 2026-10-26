@@ -81,7 +81,53 @@ async def download_evidence_file(
     evidence = result.scalar_one_or_none()
     if not evidence or evidence.deleted_at:
         raise NotFoundError("La evidencia no existe.", code="evidence_not_found")
+    # La misma regla que la lista: un técnico solo abre las fotos de sus obras.
+    # Antes bastaba con conocer el id para bajar la foto de otra obra (D-013).
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=evidence.project_id)
     return FileResponse(str(absolute_path(evidence.file_path)), media_type=evidence.mime_type or "application/octet-stream")
+
+
+@router.delete("/evidence/{evidence_id}", status_code=204)
+async def delete_evidence(
+    evidence_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("evidence.delete")),
+):
+    """Quita una foto o video subido por error (D-014: el permiso existía y no
+    hacía nada). Se marca como borrada, no se pierde el archivo, y solo con la
+    instalación abierta: cerrada, el acta queda como se firmó. Si era la única
+    evidencia de un renglón del checklist que la exige y ya estaba completo,
+    el renglón vuelve a pendiente."""
+    from datetime import timezone as tz
+
+    from app.modules.field_ops.checklist import _has_evidence, ensure_installation_open
+    from app.modules.field_ops.models import ProjectChecklistItem
+    from app.shared.audit import record_audit_event
+
+    evidence = (await db.execute(select(Evidence).where(
+        Evidence.id == evidence_id, Evidence.organization_id == organization_id))).scalar_one_or_none()
+    if not evidence or evidence.deleted_at:
+        raise NotFoundError("La evidencia no existe.", code="evidence_not_found")
+    project = await get_visible_project(db, organization_id=organization_id, user=current_user,
+                                        project_id=evidence.project_id)
+    ensure_installation_open(project)
+    evidence.deleted_at = datetime.now(tz.utc)
+    await db.flush()
+    reabierto = None
+    if evidence.checklist_item_id:
+        item = await db.get(ProjectChecklistItem, evidence.checklist_item_id)
+        if item and item.requires_evidence and item.is_complete and not await _has_evidence(db, item.id):
+            item.is_complete, item.completed_at, item.completed_by_user_id = False, None, None
+            reabierto = item.label
+    await record_audit_event(
+        db, organization_id=organization_id, actor_user_id=current_user.id,
+        action="evidence.deleted", entity_type="Evidence", entity_id=str(evidence.id),
+        before_data={"project_id": str(evidence.project_id), "category": evidence.category,
+                     "original_filename": evidence.original_filename},
+        after_data={"checklist_item_reopened": reabierto},
+    )
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/projects/{project_id}/attestation/technician-sign", response_model=AttestationResponse)

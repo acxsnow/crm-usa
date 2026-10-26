@@ -9,15 +9,26 @@ import { downloadFile, getReport } from "./api";
 import { Tabs, fecha } from "./common";
 
 type Kind = "commercial" | "operations" | "finance";
+/** El permiso de cada reporte (D-014): el comercial es del tablero comercial; los otros, de «Generar reportes». */
+const REPORTES: [Kind, string, string][] = [
+  ["commercial", "Comercial", "dashboards.commercial"],
+  ["operations", "Operación", "reports.generate"],
+  ["finance", "Finanzas", "reports.generate"],
+];
 const hace = (dias: number) => new Date(Date.now() - dias * 86400000).toLocaleDateString("en-CA");
 
 /** Reportes de gestión: comercial, operación y finanzas, con exportación a CSV. */
 export function ReportsPage() {
   const { hasPermission } = useAuth();
-  const [kind, setKind] = useState<Kind>("commercial");
+  const visibles = REPORTES.filter(([, , permiso]) => hasPermission(permiso));
+  const [elegido, setKind] = useState<Kind | null>(null);
+  const kind: Kind | null = elegido ?? visibles[0]?.[0] ?? null;
   const [desde, setDesde] = useState(hace(30));
   const [hasta, setHasta] = useState(new Date().toLocaleDateString("en-CA"));
-  const { data, isLoading } = useQuery({ queryKey: ["report", kind, desde, hasta], queryFn: () => getReport(kind, { date_from: desde, date_to: hasta }) });
+  const { data, isLoading } = useQuery({
+    queryKey: ["report", kind, desde, hasta], enabled: kind !== null,
+    queryFn: () => getReport(kind as Kind, { date_from: desde, date_to: hasta }),
+  });
   const rapido = (dias: number) => { setDesde(hace(dias)); setHasta(new Date().toLocaleDateString("en-CA")); };
   return (
     <div className="billing-page notices-page fin-page">
@@ -26,12 +37,17 @@ export function ReportsPage() {
           <h1>Reportes</h1>
           <p>Cómo va la venta, la operación de campo y el dinero, con los datos registrados.</p>
         </div>
-        {hasPermission("reports.export") && (
+        {hasPermission("reports.export") && kind && (
           <div className="acta-actions"><button type="button" className="acta-btn is-quiet"
             onClick={() => downloadFile(`/reports/${kind}/csv`, `reporte-${kind}-${desde}-${hasta}.csv`, { date_from: desde, date_to: hasta })}>Exportar CSV</button></div>
         )}
       </header>
-      <Tabs tabs={[["commercial", "Comercial"], ["operations", "Operación"], ["finance", "Finanzas"]]} value={kind} onChange={setKind} />
+      {kind === null ? (
+        <p className="acta-empty">Tu rol no tiene ningún reporte asignado. Pídele al Administrador que te dé el comercial o «Generar reportes».</p>
+      ) : (
+        <Tabs tabs={visibles.map(([k, l]) => [k, l] as [Kind, string])} value={kind} onChange={setKind} />
+      )}
+      {kind !== null && (
       <article className="acta">
         <div className="notices-toolbar fin-filters">
           <label className="notices-hint">Desde <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
@@ -62,6 +78,7 @@ export function ReportsPage() {
           </>
         )}
       </article>
+      )}
     </div>
   );
 }
