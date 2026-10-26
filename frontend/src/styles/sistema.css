@@ -323,7 +323,15 @@ body { font-family: var(--ui-font); font-size: 14px; line-height: 1.5; color: va
 @media (max-width: 767px) {
   #root .app-content h1, #root .ui-page-header h1, #root .page-heading h1, #root .app-content .billing-head h1 { font-size: 1.3rem; }
   #root .ui-page-header, #root .page-heading, #root .app-content .billing-head { margin-bottom: 16px; }
-  #root .ui-page-header > div:first-child, #root .page-heading > div:first-child, #root .app-content .billing-head > div:first-child { flex: 0 0 auto; }
+  /* D-021: con `0 0 auto` el bloque del título medía lo que su descripción en
+     una sola línea y las pantallas de oficina se desbordaban a 390 px
+     (Rentabilidad 452, Proveedores 620, Salidas 664). Ahora ocupa la fila y el
+     texto baja de línea. */
+  #root .ui-page-header > div:first-child, #root .page-heading > div:first-child, #root .app-content .billing-head > div:first-child { flex: 1 1 100%; max-width: 100%; }
+  /* En celular el encabezado de componente va en columna (index.css): con
+     `flex-start` el título medía su texto en una línea y los botones quedaban
+     afuera, a la derecha (Banca, 623 px). */
+  #root .ui-page-header { align-items: stretch; flex-wrap: nowrap; }
   #root .att-kpis, #root .ui-kpi-grid, #root .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   #root .metric-card, #root .fin-kpi { padding: 12px 14px; }
   #root .metric-card strong, #root .fin-kpi strong { font-size: 1.3rem; }

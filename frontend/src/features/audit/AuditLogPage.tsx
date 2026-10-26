@@ -16,7 +16,12 @@ const texto = (v: unknown) => (v === null || v === undefined || v === "" ? "—"
 function Cambios({ evento }: { evento: AuditEvent }) {
   const antes = evento.before_data ?? {};
   const despues = evento.after_data ?? {};
-  const campos = Array.from(new Set([...Object.keys(antes), ...Object.keys(despues)]));
+  // Los campos que cambiaron son los del «después»; el «antes» a veces guarda
+  // más de lo que cambió (nombre, zona y moneda de la organización) y mostrarlo
+  // como «valor → —» hacía creer que se había borrado. Sin «después» (un
+  // borrado), se muestra lo que había.
+  const conDespues = Object.keys(despues).length > 0;
+  const campos = conDespues ? Object.keys(despues) : Object.keys(antes);
   if (campos.length === 0) return <span>—</span>;
   return (
     <details>
@@ -25,8 +30,11 @@ function Cambios({ evento }: { evento: AuditEvent }) {
         {campos.map((c) => (
           <li key={c}>
             <strong>{c}:</strong>{" "}
-            {c in antes ? <><span>{texto(antes[c])}</span> → </> : null}
-            <span>{texto(despues[c])}</span>
+            {conDespues ? (
+              <>{c in antes ? <><span>{texto(antes[c])}</span> → </> : null}<span>{texto(despues[c])}</span></>
+            ) : (
+              <span>{texto(antes[c])} (antes)</span>
+            )}
           </li>
         ))}
       </ul>

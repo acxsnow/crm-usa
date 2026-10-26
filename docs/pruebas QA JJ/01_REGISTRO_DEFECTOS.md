@@ -12,7 +12,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Corregido (pendiente de validar en pantalla) | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 | D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Cerrado (2026-10-25) | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Cerrado (2026-10-25) | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
-| D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Corregido (validado por API; falta pantalla) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
+| D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Corregido (validado por API; falta pantalla) | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Cerrado (2026-10-25) | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
@@ -21,13 +21,13 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | D-011 | Rotar antes de la fecha agendada deja el historial de responsables incoherente | Instalación en campo | P2 | Cerrado (2026-10-25) | INS-008 | Mateo Mazo (`field_ops`) | 2026-10-25 |
 | D-012 | Dos autorizaciones simultáneas de la misma salida pasan las dos | Bodega | P2 | Cerrado (2026-10-25) | CON-001 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-013 | Un técnico descarga la foto de una obra que no es suya con solo el id | Seguridad / Instalación en campo | P1 | Cerrado (2026-10-25) | SEC-006 | José Javier Miranda (`field_ops`, paquete de Mateo: avisarle) | 2026-10-25 |
-| D-014 | Siete permisos del catálogo no controlan nada | Seguridad / Roles | P3 | Corregido (validado con pruebas; falta pantalla) | SEC-003 | José Javier Miranda y Mateo Mazo | 2026-10-25 |
+| D-014 | Siete permisos del catálogo no controlan nada | Seguridad / Roles | P3 | Cerrado (2026-10-25) | SEC-003 | José Javier Miranda y Mateo Mazo | 2026-10-25 |
 | D-015 | Una factura acepta pagos por encima del saldo | Trabajo particular y facturación | P1 | Cerrado (2026-10-25) | PAR-003 | José Javier Miranda (`billing`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-016 | Factura, pago y gasto con datos inválidos responden 500 | Finanzas | P2 | Cerrado (2026-10-25) | FIN-002 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-017 | Importar dos veces el mismo extracto duplica los movimientos | Finanzas | P2 | Cerrado (2026-10-25) | FIN-003 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-018 | La salida de bodega no guarda el costo: cambia el costo de obras cerradas | Bodega | P2 | Cerrado (2026-10-25) | BOD-007 | José Javier Miranda (`warehouse`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-019 | La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe | Turnos y nómina | P2 | Abierto (decisión pendiente) | TUR-005 | José Javier Miranda y Mateo Mazo (`attendance`) | 2026-10-25 |
-| D-020 | La auditoría no muestra el antes y el después | Seguridad / Auditoría | P2 | Corregido (validado por API; falta pantalla) | SEC-010 | José Javier Miranda (`organizations`) | 2026-10-25 |
+| D-020 | La auditoría no muestra el antes y el después | Seguridad / Auditoría | P2 | Cerrado (2026-10-25) | SEC-010 | José Javier Miranda (`organizations`) | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
@@ -142,6 +142,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - Con 429, la pantalla dice algo como «Demasiados intentos. Espera 15 minutos o usa ¿Olvidaste tu contraseña?».
 - **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `auth/router.py` responde en español: «El correo o la contraseña no son correctos.» (401) y «Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.» (429). También se tradujeron cerrar sesión y recuperar contraseña. `LoginPage.tsx` muestra el mensaje del bloqueo y uno propio cuando no hay conexión, en vez de decir siempre «clave errada». El código de error (`http_401`, `http_429`) no cambió. Pruebas en `test_auth.py`.
 - **Validación:** AUTH-002 reejecutado el 25 oct: 5 de 5 por API, con los mensajes en español. Falta ver en pantalla que el bloqueo muestra su propio mensaje.
+- **Validación en pantalla (2026-10-25, Claude con Playwright):** la pantalla de ingreso muestra el mensaje del bloqueo y el de clave errada por separado (captura `evidencias/pantalla/AUTH-002/bloqueo.jpg`). Capturas en `evidencias/pantalla/D-005/`.
 
 ## D-006 · Intentos fallidos y bloqueos fuera de la auditoría
 
@@ -268,6 +269,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - `dashboards.commercial` y `reports.generate`: el reporte comercial pide el primero y los de operación y finanzas el segundo; la página muestra solo las pestañas permitidas. **Cambio de acceso:** con los roles de fábrica, Administración deja de ver los reportes de operación y finanzas, y Contabilidad el comercial.
   - Pruebas: `tests/test_permissions_connected.py` (7), incluida una que falla si algún permiso del catálogo vuelve a quedar sin usar. Manual actualizado.
 - **Validación:** pruebas automáticas; falta la parte de pantalla (botones de borrar cliente y quitar evidencia, Mi perfil y pestañas de Reportes).
+- **Validación en pantalla (2026-10-25, Claude con Playwright):** «Borrar cliente» solo lo ve el Administrador y al confirmar vuelve a la lista; «Mi perfil» guarda el nombre y se ve en el encabezado (enlace en el menú, también a 390 px); Reportes muestra Comercial a Administración, Operación y Finanzas a Contabilidad, y las tres a Gerencia. Capturas en `evidencias/pantalla/D-014/`.
 
 ## D-015 · Pago de factura por encima del saldo
 
@@ -344,6 +346,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Análisis / causa:** `record_audit_event` guarda `before_data`, `after_data` e IP (sin secretos), pero `GET /audit-events` no los devolvía y la pantalla tampoco los mostraba.
 - **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** la API agrega `before_data`, `after_data` e `ip_address` a cada evento (sin quitar nada de lo que ya devolvía) y la pantalla de Auditoría muestra «Ver cambios»: cada campo con su valor anterior → el nuevo, y desde qué IP. Prueba `test_audit_shows_before_and_after`.
 - **Validación:** SEC-010 por API: 16 de 16 (12 acciones con su detalle y los permisos de quién ve la auditoría). Falta ver la columna en pantalla.
+- **Validación en pantalla (2026-10-25, Claude con Playwright):** la columna «Cambios» muestra «Ver cambios» con cada campo que cambió (antes → después) y la IP. Al revisar la captura se corrigió que mostraba como borrados campos que no cambiaron (nombre, zona y moneda de la organización). Capturas en `evidencias/pantalla/D-020/`.
 
 ## Plantilla para defectos nuevos
 

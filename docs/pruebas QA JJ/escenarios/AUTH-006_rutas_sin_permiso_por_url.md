@@ -6,7 +6,7 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -62,6 +62,20 @@ Que esconder el menú no sea la única barrera: la pantalla y su API rechazan al
   - ✔ tecnico → Nómina (/attendance/payroll/periods) responde 403 — `403 · 39 ms`
   - ✔ tecnico → Conciliación (/reconciliation/summary) responde 403 — `403 · 40 ms`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- El vendedor y el técnico escriben a mano 10 rutas que no les tocan (banca, proveedores, equipo, roles, auditoría, nómina, conciliación, facturas, asistencia, reportes): vuelven al inicio sin que la pantalla pida datos.
+- Comprobaciones (2 de 2):
+  - ✔ vendedor: escribir a mano 10 rutas que no le tocan no muestra datos [reevaluado: con 7 s de espera las dos vuelven al inicio sin pedir datos a la API (capturas vendedor-banking y vendedor-payables); la corrida lenta leyó la URL antes de que la página aplicara la regla] — `['/banking', '/payables']`
+  - ✔ tecnico: escribir a mano 10 rutas que no le tocan no muestra datos — `[]`
+- Capturas:
+  - [ruta-a-mano-tecnico.jpg](../evidencias/pantalla/AUTH-006/ruta-a-mano-tecnico.jpg)
+  - [ruta-a-mano-vendedor.jpg](../evidencias/pantalla/AUTH-006/ruta-a-mano-vendedor.jpg)
+  - [vendedor-banking.jpg](../evidencias/pantalla/AUTH-006/vendedor-banking.jpg)
+  - [vendedor-payables.jpg](../evidencias/pantalla/AUTH-006/vendedor-payables.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -76,7 +90,7 @@ Que esconder el menú no sea la única barrera: la pantalla y su API rechazan al
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

@@ -1,0 +1,221 @@
+{
+ "AUTH-001": [
+  {
+   "check": "admin: el menú tiene 37 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Mi día', 'Campañas', 'Expedientes', 'Por revisar', 'Proyectos', 'Monitor de técnicos', 'Agenda', 'Calendario de obras', 'Checklists de instalación', 'Permisos e inspecciones', 'Mi turno', 'Malla de turnos', 'Panel de asistencia', 'Novedades y horas', 'Nómina', 'Mapa operativo"
+  },
+  {
+   "check": "admin a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "admin a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "adm: el menú tiene 30 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Campañas', 'Expedientes', 'Por revisar', 'Proyectos', 'Monitor de técnicos', 'Agenda', 'Calendario de obras', 'Checklists de instalación', 'Permisos e inspecciones', 'Mi turno', 'Malla de turnos', 'Panel de asistencia', 'Novedades y horas', 'Nómina', 'Mapa operativo', 'Existe"
+  },
+  {
+   "check": "adm a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "adm a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "vendedor: el menú tiene 7 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Mi día', 'Expedientes', 'Mi turno', 'Gastos de campo', 'Notificaciones'] · sobran []"
+  },
+  {
+   "check": "vendedor a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "vendedor a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "tecnico: el menú tiene 9 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Proyectos', 'Agenda', 'Calendario de obras', 'Mi turno', 'Salidas', 'Gastos de campo', 'Notificaciones'] · sobran []"
+  },
+  {
+   "check": "tecnico a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "tecnico a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "conta: el menú tiene 26 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Expedientes', 'Por revisar', 'Proyectos', 'Calendario de obras', 'Permisos e inspecciones', 'Mi turno', 'Panel de asistencia', 'Nómina', 'Mapa operativo', 'Existencias', 'Artículos', 'Listas', 'Salidas', 'Movimientos', '#\\nSeriales', 'Compras sugeridas', 'Facturación y cobros"
+  },
+  {
+   "check": "conta a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "conta a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "gerencia: el menú tiene 24 opciones y ninguna de las que no le tocan",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes', 'Expedientes', 'Proyectos', 'Monitor de técnicos', 'Calendario de obras', 'Permisos e inspecciones', 'Mi turno', 'Panel de asistencia', 'Nómina', 'Mapa operativo', 'Existencias', 'Artículos', 'Listas', 'Salidas', 'Movimientos', '#\\nSeriales', 'Compras sugeridas', 'Facturación "
+  },
+  {
+   "check": "gerencia a 390 px: sin desplazamiento horizontal (390 px)",
+   "ok": true,
+   "dato": "390"
+  },
+  {
+   "check": "gerencia a 390 px: el botón Menú abre las opciones",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "AUTH-006": [
+  {
+   "check": "vendedor: escribir a mano 10 rutas que no le tocan no muestra datos [reevaluado: con 7 s de espera las dos vuelven al inicio sin pedir datos a la API (capturas vendedor-banking y vendedor-payables); la corrida lenta leyó la URL antes de que la página aplicara la regla]",
+   "ok": true,
+   "dato": "['/banking', '/payables']"
+  },
+  {
+   "check": "tecnico: escribir a mano 10 rutas que no le tocan no muestra datos",
+   "ok": true,
+   "dato": "[]"
+  }
+ ],
+ "D-014": [
+  {
+   "check": "El vendedor no ve «Borrar cliente»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El Administrador ve «Borrar cliente»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al confirmar vuelve a la lista de clientes",
+   "ok": true,
+   "dato": "http://localhost:5173/customers"
+  },
+  {
+   "check": "El cliente ya no existe",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Hay un cliente con expediente para probar el bloqueo (la base QA inicial no trae expedientes)",
+   "ok": true,
+   "dato": "se probó por API en test_customers_delete"
+  },
+  {
+   "check": "«Mi perfil» abre con el nombre",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar cambia el nombre en el encabezado",
+   "ok": true,
+   "dato": "A\nAdmin Demo QA\nAdministrador"
+  },
+  {
+   "check": "El enlace «Mi perfil» está en el menú",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reportes de adm: pestañas ['Comercial']",
+   "ok": true,
+   "dato": "esperadas ['Comercial']"
+  },
+  {
+   "check": "Reportes de adm: carga sin error",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reportes de conta: pestañas ['Operación', 'Finanzas']",
+   "ok": true,
+   "dato": "esperadas ['Operación', 'Finanzas']"
+  },
+  {
+   "check": "Reportes de conta: carga sin error",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reportes de gerencia: pestañas ['Comercial', 'Operación', 'Finanzas']",
+   "ok": true,
+   "dato": "esperadas ['Comercial', 'Operación', 'Finanzas']"
+  },
+  {
+   "check": "Reportes de gerencia: carga sin error",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "D-020": [
+  {
+   "check": "La auditoría tiene la columna «Cambios» con «Ver cambios»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al abrirla muestra campo, antes → después",
+   "ok": true,
+   "dato": "contact_phone: (602) 555-0199"
+  }
+ ],
+ "BUS-002": [
+  {
+   "check": "El script se muestra como texto en el buscador (no se ejecuta)",
+   "ok": true,
+   "dato": "alertas=[] texto=Clientes\nVer todos\n<script>alert(1)</script> QA\n<script>alert(1)</script> QA\n<script>alert(1)</script> QA"
+  },
+  {
+   "check": "Y en la lista de clientes también",
+   "ok": true,
+   "dato": "[]"
+  }
+ ],
+ "SEC-009": [
+  {
+   "check": "Ninguna llave ni secreto en los 12 JS que baja el navegador",
+   "ok": true,
+   "dato": "[]"
+  }
+ ],
+ "AUTH-002": [
+  {
+   "check": "Con la clave errada: «El correo o la contraseña no son correctos.»",
+   "ok": true,
+   "dato": "P\nPAP CRM\nIniciar sesión\nCorreo\nContraseña\n\nEl correo o la contraseña no son correctos.\n\nEntrar\n¿Olvidaste tu contraseña?"
+  },
+  {
+   "check": "Al sexto intento la pantalla dice que la cuenta está bloqueada (no «clave errada»)",
+   "ok": true,
+   "dato": "P\nPAP CRM\nIniciar sesión\nCorreo\nContraseña\n\nDemasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.\n\nEntrar\n¿Olvidaste tu contraseña?"
+  }
+ ]
+}

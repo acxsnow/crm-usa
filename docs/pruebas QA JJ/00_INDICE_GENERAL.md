@@ -20,7 +20,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 
 | Módulo | Escenarios | P0 | Bloqueados | Ejecución | Preparación | Aprobados | Fallidos | Defectos |
 |---|---|---|---|---|---|---|---|---|
-| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 4 | 0 | 2 |
+| Acceso y sesión | 8 | 1 | 0 | 2 h 05 min | 0 min | 6 | 0 | 2 |
 | Venta puerta a puerta | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
 | Revisión administrativa | 6 | 2 | 0 | 1 h 35 min | 0 min | 4 | 0 | 0 |
 | Instalación en campo | 16 | 8 | 0 | 5 h 40 min | 1 h 25 min | 11 | 0 | 1 |
@@ -30,29 +30,29 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | Trabajo particular y facturación | 4 | 1 | 1 | 1 h 20 min | 0 min | 3 | 0 | 1 |
 | Finanzas | 6 | 0 | 1 | 2 h 00 min | 0 min | 4 | 0 | 2 |
 | Turnos, asistencia y mapa | 10 | 2 | 0 | 2 h 25 min | 0 min | 7 | 1 | 1 |
-| Notificaciones y buscador | 4 | 0 | 0 | 50 min | 0 min | 3 | 0 | 0 |
-| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 6 | 0 | 4 |
+| Notificaciones y buscador | 4 | 0 | 0 | 50 min | 0 min | 4 | 0 | 0 |
+| Seguridad | 10 | 7 | 0 | 3 h 45 min | 0 min | 7 | 0 | 4 |
 | API y paginación | 6 | 1 | 0 | 1 h 35 min | 0 min | 4 | 0 | 1 |
 | Rendimiento | 4 | 0 | 0 | 1 h 30 min | 20 min | 1 | 0 | 0 |
 | Concurrencia | 3 | 1 | 0 | 50 min | 0 min | 3 | 0 | 1 |
-| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **79** | **1** | **18** |
+| **Total** | **109** | **35** | **2** | **32 h 10 min** | **2 h 15 min** | **83** | **1** | **18** |
 
 ## Avance
 
-- Ejecutados completos: 80 de 109 (73 %). En ejecución (parte hecha): 26.
-- Aprobados: 79 · Fallidos: 1 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
+- Ejecutados completos: 84 de 109 (77 %). En ejecución (parte hecha): 22.
+- Aprobados: 83 · Fallidos: 1 · Bloqueados: 2 (faltan las llaves de prueba de Stripe/Plaid).
 - Defectos: ver `01_REGISTRO_DEFECTOS.md`.
 
 ## Escenarios
 
 | ID | Módulo | Escenario | Prioridad | Tipo | Archivo | Estado | Tiempo estimado (min) | Tiempo real | Defectos | Reejecución | Observaciones |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| AUTH-001 | Acceso y sesión | Ingreso válido con cada uno de los 6 roles | P0 | Funcional · seguridad | [AUTH-001_ingreso_valido_por_rol.md](escenarios/AUTH-001_ingreso_valido_por_rol.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta pantalla |
-| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | APROBADO | 10 | 1 min (API) | D-005, D-006 |  | 5/5 (reejecutado); falta ver el bloqueo en pantalla |
+| AUTH-001 | Acceso y sesión | Ingreso válido con cada uno de los 6 roles | P0 | Funcional · seguridad | [AUTH-001_ingreso_valido_por_rol.md](escenarios/AUTH-001_ingreso_valido_por_rol.md) | APROBADO | 15 | 1 min (API) |  |  | Pantalla: probado por Claude (2026-10-25); API y pantalla ok |
+| AUTH-002 | Acceso y sesión | Credenciales inválidas y bloqueo tras 5 intentos | P1 | Seguridad | [AUTH-002_credenciales_invalidas_y_bloqueo.md](escenarios/AUTH-002_credenciales_invalidas_y_bloqueo.md) | APROBADO | 10 | 1 min (API) | D-005, D-006 |  | Pantalla: probado por Claude (2026-10-25); 5/5 API y pantalla ok |
 | AUTH-003 | Acceso y sesión | Olvidé mi contraseña: enlace de un solo uso, 60 minutos y 3 por hora | P1 | Funcional · seguridad | [AUTH-003_olvido_de_clave.md](escenarios/AUTH-003_olvido_de_clave.md) | APROBADO | 15 | lote 3 por API (≈2 min) |  |  | 8/8 |
 | AUTH-004 | Acceso y sesión | Invitar un usuario, aceptar la invitación y entrar | P1 | Funcional | [AUTH-004_invitacion_de_usuario.md](escenarios/AUTH-004_invitacion_de_usuario.md) | APROBADO | 15 | lote 3 por API (≈2 min) |  |  | 7/7 |
 | AUTH-005 | Acceso y sesión | Sesión vencida y pérdida de señal | P2 | Funcional · celular | [AUTH-005_sesion_vencida_y_sin_senal.md](escenarios/AUTH-005_sesion_vencida_y_sin_senal.md) | En ejecución | 25 | lote 3 por API (≈2 min) |  |  | API 5/5; falta pantalla |
-| AUTH-006 | Acceso y sesión | Escribir a mano la dirección de una pantalla sin permiso | P1 | Seguridad | [AUTH-006_rutas_sin_permiso_por_url.md](escenarios/AUTH-006_rutas_sin_permiso_por_url.md) | En ejecución | 15 | 1 min (API) |  |  | API 20/20; falta pantalla |
+| AUTH-006 | Acceso y sesión | Escribir a mano la dirección de una pantalla sin permiso | P1 | Seguridad | [AUTH-006_rutas_sin_permiso_por_url.md](escenarios/AUTH-006_rutas_sin_permiso_por_url.md) | APROBADO | 15 | 1 min (API) |  |  | Pantalla: probado por Claude (2026-10-25); API 20/20 y pantalla ok |
 | AUTH-007 | Acceso y sesión | Rol nuevo sin permisos marcados | P1 | Seguridad | [AUTH-007_rol_sin_permisos.md](escenarios/AUTH-007_rol_sin_permisos.md) | En ejecución | 15 | lote 3 por API (≈2 min) |  |  | API 9/9; falta pantalla |
 | AUTH-008 | Acceso y sesión | Quitar un permiso a un rol con usuarios conectados | P2 | Seguridad | [AUTH-008_cambiar_rol_en_caliente.md](escenarios/AUTH-008_cambiar_rol_en_caliente.md) | APROBADO | 15 | lote 3 por API (≈2 min) |  |  | 5/5 |
 | VEN-001 | Venta puerta a puerta | La puerta no abrió (sin contacto) | P1 | Funcional | [VEN-001_puerta_no_abrio.md](escenarios/VEN-001_puerta_no_abrio.md) | En ejecución | 10 | lote 2 por API (≈1 min) |  |  | API 4/4; falta pantalla |
@@ -132,7 +132,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | NOT-001 | Notificaciones y buscador | Campana de avisos en cada paso del flujo | P1 | Funcional | [NOT-001_campana_y_avisos.md](escenarios/NOT-001_campana_y_avisos.md) | APROBADO | 15 | lote 3 por API |  |  | 7/7 |
 | NOT-002 | Notificaciones y buscador | Correos y SMS en modo de prueba | P2 | Integración | [NOT-002_correo_y_sms_en_consola.md](escenarios/NOT-002_correo_y_sms_en_consola.md) | APROBADO | 10 | lote 3 por API |  |  | 3/3 |
 | BUS-001 | Notificaciones y buscador | Buscador global por nombre, número y dirección | P1 | Funcional | [BUS-001_buscador_global.md](escenarios/BUS-001_buscador_global.md) | APROBADO | 15 | lote 3 por API |  |  | API ok |
-| BUS-002 | Notificaciones y buscador | Buscador con entradas raras | P2 | Seguridad · validación | [BUS-002_buscador_entradas_raras.md](escenarios/BUS-002_buscador_entradas_raras.md) | En ejecución | 10 | 1 min (API) |  |  | API 8/8; falta pantalla |
+| BUS-002 | Notificaciones y buscador | Buscador con entradas raras | P2 | Seguridad · validación | [BUS-002_buscador_entradas_raras.md](escenarios/BUS-002_buscador_entradas_raras.md) | APROBADO | 10 | 1 min (API) |  |  | Pantalla: probado por Claude (2026-10-25); API 8/8 y pantalla ok |
 | SEC-001 | Seguridad | Aislamiento entre organizaciones (IDOR) | P0 | Seguridad | [SEC-001_aislamiento_entre_organizaciones.md](escenarios/SEC-001_aislamiento_entre_organizaciones.md) | APROBADO | 30 | 1 min (API) |  |  | 16/16; repetir con expedientes y facturas |
 | SEC-002 | Seguridad | API sin token, con token vencido o alterado | P0 | Seguridad | [SEC-002_api_sin_token_y_token_alterado.md](escenarios/SEC-002_api_sin_token_y_token_alterado.md) | APROBADO | 15 | 1 min (API) |  |  | 25/25 |
 | SEC-003 | Seguridad | Cada rol contra cada grupo de rutas | P0 | Seguridad | [SEC-003_permiso_por_ruta_backend.md](escenarios/SEC-003_permiso_por_ruta_backend.md) | APROBADO | 45 | lote 3 por API (≈2 min) | D-014 |  | 406 rutas × 6 roles; 21/21 |
@@ -141,7 +141,7 @@ Un escenario solo se marca APROBADO si se ejecutó completo y todo lo esperado s
 | SEC-006 | Seguridad | Enlaces directos a archivos de otros | P0 | Seguridad | [SEC-006_enlaces_de_archivos.md](escenarios/SEC-006_enlaces_de_archivos.md) | APROBADO | 15 | lote 3 por API (≈2 min) | D-013 |  | D-013 corregido; 5/5 reejecutado |
 | SEC-007 | Seguridad | Campos que el cliente no debe poder fijar | P1 | Seguridad | [SEC-007_asignacion_masiva.md](escenarios/SEC-007_asignacion_masiva.md) | APROBADO | 20 | lote 3 por API (≈2 min) |  |  | 10/10 |
 | SEC-008 | Seguridad | Autorización de datos en los cuatro puntos de captura | P0 | Privacidad · cumplimiento | [SEC-008_datos_personales_y_consentimiento.md](escenarios/SEC-008_datos_personales_y_consentimiento.md) | En ejecución | 25 | lote 3 por API (≈2 min) |  |  | API 11/11; falta pantalla |
-| SEC-009 | Seguridad | Secretos fuera del navegador y cabeceras de seguridad | P1 | Seguridad | [SEC-009_secretos_y_cabeceras.md](escenarios/SEC-009_secretos_y_cabeceras.md) | En ejecución | 15 | 1 min (API) |  |  | API ok; falta navegador |
+| SEC-009 | Seguridad | Secretos fuera del navegador y cabeceras de seguridad | P1 | Seguridad | [SEC-009_secretos_y_cabeceras.md](escenarios/SEC-009_secretos_y_cabeceras.md) | APROBADO | 15 | 1 min (API) |  |  | Pantalla: probado por Claude (2026-10-25); API y navegador ok |
 | SEC-010 | Seguridad | Bitácora de auditoría de acciones sensibles | P1 | Auditoría | [SEC-010_auditoria_de_acciones.md](escenarios/SEC-010_auditoria_de_acciones.md) | En ejecución | 15 | lote 3 por API | D-020 |  | API 16/16; D-020 corregido; falta pantalla |
 | API-001 | API y paginación | Paginación: límite por defecto, máximo y total | P0 | API · rendimiento | [API-001_paginacion_limites.md](escenarios/API-001_paginacion_limites.md) | En ejecución | 20 | 1 min (API) |  |  | API 8/8; falta pantalla |
 | API-002 | API y paginación | Orden estable entre páginas | P1 | API | [API-002_orden_estable.md](escenarios/API-002_orden_estable.md) | APROBADO | 15 | 1 min (API) | D-003 |  | 244/244 distintos (reejecutado) |

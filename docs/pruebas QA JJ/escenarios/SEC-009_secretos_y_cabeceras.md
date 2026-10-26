@@ -6,7 +6,7 @@
 - **Módulo:** Seguridad
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -45,6 +45,16 @@ Ninguna llave del servidor llega al navegador.
   - ✔ CORS no permite un origen ajeno — `None`
   - ✔ /auth/me no devuelve hash de clave ni secretos
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- En los 12 archivos JS que baja el navegador no hay llaves ni secretos (Stripe, AWS, claves privadas, SECRET_KEY, Plaid).
+- Comprobaciones (1 de 1):
+  - ✔ Ninguna llave ni secreto en los 12 JS que baja el navegador — `[]`
+- Capturas:
+  - (sin capturas)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -58,7 +68,7 @@ Ninguna llave del servidor llega al navegador.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

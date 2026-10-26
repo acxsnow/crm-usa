@@ -6,7 +6,7 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · seguridad
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -53,6 +53,50 @@ Cada rol entra y ve solo el menú de su rol. Si el ingreso falla para un rol, es
   - ✔ contabilidad: ingresa y /auth/me responde — `Clara Contable · roles=['accounting'] · permisos=32 · 131 ms`
   - ✔ gerencia: ingresa y /auth/me responde — `Gabriel Gerencia · roles=['management'] · permisos=21 · 149 ms`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Los 6 roles: cada menú tiene solo sus opciones (admin 37, Administración 30, vendedor 7, técnico 9, Contabilidad 26, Gerencia 24); a 390 px no hay desplazamiento horizontal y «Menú» abre las opciones.
+- Comprobaciones (18 de 18):
+  - ✔ admin: el menú tiene 37 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Mi día', 'Campañas', 'Expedientes', 'Por revisar', 'Proyectos', 'Monitor de técnicos', 'Agenda', 'Calendario de obra`
+  - ✔ admin a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ admin a 390 px: el botón Menú abre las opciones
+  - ✔ adm: el menú tiene 30 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Campañas', 'Expedientes', 'Por revisar', 'Proyectos', 'Monitor de técnicos', 'Agenda', 'Calendario de obras', 'Check`
+  - ✔ adm a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ adm a 390 px: el botón Menú abre las opciones
+  - ✔ vendedor: el menú tiene 7 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Mi día', 'Expedientes', 'Mi turno', 'Gastos de campo', 'Notificaciones'] · sobran []`
+  - ✔ vendedor a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ vendedor a 390 px: el botón Menú abre las opciones
+  - ✔ tecnico: el menú tiene 9 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Proyectos', 'Agenda', 'Calendario de obras', 'Mi turno', 'Salidas', 'Gastos de campo', 'Notificaciones'] · sobran []`
+  - ✔ tecnico a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ tecnico a 390 px: el botón Menú abre las opciones
+  - ✔ conta: el menú tiene 26 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Expedientes', 'Por revisar', 'Proyectos', 'Calendario de obras', 'Permisos e inspecciones', 'Mi turno', 'Panel de as`
+  - ✔ conta a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ conta a 390 px: el botón Menú abre las opciones
+  - ✔ gerencia: el menú tiene 24 opciones y ninguna de las que no le tocan — `['Inicio', 'Clientes', 'Expedientes', 'Proyectos', 'Monitor de técnicos', 'Calendario de obras', 'Permisos e inspecciones', 'Mi turno', 'Pan`
+  - ✔ gerencia a 390 px: sin desplazamiento horizontal (390 px) — `390`
+  - ✔ gerencia a 390 px: el botón Menú abre las opciones
+- Capturas:
+  - [celular-adm.jpg](../evidencias/pantalla/AUTH-001/celular-adm.jpg)
+  - [celular-admin.jpg](../evidencias/pantalla/AUTH-001/celular-admin.jpg)
+  - [celular-conta.jpg](../evidencias/pantalla/AUTH-001/celular-conta.jpg)
+  - [celular-gerencia.jpg](../evidencias/pantalla/AUTH-001/celular-gerencia.jpg)
+  - [celular-menu-adm.jpg](../evidencias/pantalla/AUTH-001/celular-menu-adm.jpg)
+  - [celular-menu-admin.jpg](../evidencias/pantalla/AUTH-001/celular-menu-admin.jpg)
+  - [celular-menu-conta.jpg](../evidencias/pantalla/AUTH-001/celular-menu-conta.jpg)
+  - [celular-menu-gerencia.jpg](../evidencias/pantalla/AUTH-001/celular-menu-gerencia.jpg)
+  - [celular-menu-tecnico.jpg](../evidencias/pantalla/AUTH-001/celular-menu-tecnico.jpg)
+  - [celular-menu-vendedor.jpg](../evidencias/pantalla/AUTH-001/celular-menu-vendedor.jpg)
+  - [celular-tecnico.jpg](../evidencias/pantalla/AUTH-001/celular-tecnico.jpg)
+  - [celular-vendedor.jpg](../evidencias/pantalla/AUTH-001/celular-vendedor.jpg)
+  - [menu-adm.jpg](../evidencias/pantalla/AUTH-001/menu-adm.jpg)
+  - [menu-admin.jpg](../evidencias/pantalla/AUTH-001/menu-admin.jpg)
+  - [menu-conta.jpg](../evidencias/pantalla/AUTH-001/menu-conta.jpg)
+  - [menu-gerencia.jpg](../evidencias/pantalla/AUTH-001/menu-gerencia.jpg)
+  - [menu-tecnico.jpg](../evidencias/pantalla/AUTH-001/menu-tecnico.jpg)
+  - [menu-vendedor.jpg](../evidencias/pantalla/AUTH-001/menu-vendedor.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -67,7 +111,7 @@ Cada rol entra y ve solo el menú de su rol. Si el ingreso falla para un rol, es
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

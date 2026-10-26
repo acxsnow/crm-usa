@@ -1,0 +1,182 @@
+{
+ "INS-010": [
+  {
+   "check": "El técnico ve «No se pudo hacer la visita» en la obra agendada",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El formulario pide el motivo (6 opciones) y la nota",
+   "ok": true,
+   "dato": "['Elige el motivo', 'El cliente no estaba', 'No dejaron entrar o el cliente no quiso', 'Condiciones inseguras en la casa', 'Faltó material o equipo', 'Clima', 'Otro']"
+  },
+  {
+   "check": "Queda la sección «Visitas fallidas» con el contador y lo que escribió",
+   "ok": true,
+   "dato": "2\nOrden liberada\nSin técnico ni fecha\nEn curso\n\nSolo Administración asigna el técnico y la fecha.\n\nVisitas fallidas\n\n1 de 2 permitidas.\n\nEl cliente no estabaVisita del 26 de oct · Tito Técnico · con GPS\n\nQA pantalla: toqué tres veces y no abrieron\n\nMateriales de la orden"
+  }
+ ],
+ "INS-011": [
+  {
+   "check": "Segunda visita fallida (por API) para llegar al límite",
+   "ok": true,
+   "dato": "{\"failed_visits\":2,\"limit\":2,\"limit_reached\":true,\"extra_visits_authorized\":0}"
+  },
+  {
+   "check": "Administración ve el aviso del límite alcanzado",
+   "ok": true,
+   "dato": "2\nOrden liberada\nSin técnico ni fecha\nEn curso\nTécnico\nElige un técnico\nAdmin Demo\nAndrés Morales\nCarlos Ramírez\nDiego Jiménez\nFernando Ortiz\nHéctor Ruiz\nJorge Rojas\nLuis Herrera\nManuel Navarro\nMiguel Torres\nPedro Vargas\nRaúl Mendoza\nRicardo Silva\nTito Técnico\nToño Segundo\nFecha de instalación\nLiber"
+  },
+  {
+   "check": "Y el botón «Autorizar otro intento»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Y el ajuste «Límite de visitas fallidas»",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "INS-012": [
+  {
+   "check": "Antes de cancelar muestra la salida por autorizar y el material afuera",
+   "ok": true,
+   "dato": "Orden liberada\nAgendada para el 26 de oct\nCompletado\nTécnico\nElige un técnico\nAdmin Demo\nAndrés Morales\nCarlos Ramírez\nDiego Jiménez\nFernando Ortiz\nHéctor Ruiz\nJorge Rojas\nLuis Herrera\nManuel Navarro\nMiguel Torres\nPedro Vargas\nRaúl Mendoza\nRicardo Silva\nTito Técnico\nToño Segundo\nFecha de instalación"
+  },
+  {
+   "check": "La obra queda con el aviso «Obra cancelada»",
+   "ok": false,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asistencia\nNovedades y horas\nNómin"
+  }
+ ],
+ "BOD-011": [
+  {
+   "check": "El bloque terminó sin error inesperado (TimeoutError)",
+   "ok": false,
+   "dato": "TimeoutError('Locator.click: Timeout 30000ms exceeded.\\nCall log:\\nwaiting for locator(\"tr\").filter(has=get_by_role(\"button\", name=\"Entregar\")).first.get_by_role(\"button\", name=\"Entregar\")\\n')"
+  }
+ ],
+ "FIN-005": [
+  {
+   "check": "Rentabilidad (escritorio): el margen negativo se lee completo «-$80,705.00»",
+   "ok": true,
+   "dato": "['\\t$0.00\\t$0.00\\t$80,705.00', 'Equipo $80,705.00', '\\t-$80,705.00\\t—']"
+  },
+  {
+   "check": "Rentabilidad (celular): el margen negativo se lee completo «-$80,705.00»",
+   "ok": true,
+   "dato": "['\\t$0.00\\t$0.00\\t$80,705.00', 'Equipo $80,705.00', '\\t-$80,705.00\\t—']"
+  },
+  {
+   "check": "A 390 px sin desplazamiento horizontal de la página",
+   "ok": false,
+   "dato": ""
+  }
+ ],
+ "VEN-001": [
+  {
+   "check": "Las puertas cerradas no salen en el tablero sin activar el filtro",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con «Mostrar puertas cerradas» aparecen",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nExpedientes\nTURNOS Y ASISTENCIA\nMi turno\nFINANZAS\nGastos de campo\nADMINISTRACIÓN\nNotificaciones\n/\n10\nV\nVicky Vendedora\nVendedor\nSalir\nExpedientes\n\nCada puerta con su etapa. Los tuyos.\n\nMostrar puertas cerradas\nTocar puerta\nTodos los programas\nEfic"
+  }
+ ],
+ "REV-001": [
+  {
+   "check": "Con documentos sin revisar «Aprobar» queda bloqueado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Y dice cuántos faltan («Faltan N documento(s) por revisar.»)",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "REV-002": [
+  {
+   "check": "El vendedor ve «Devueltos por Administración»",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nExpedientes\nTURNOS Y ASISTENCIA\nMi turno\nFINANZAS\nGastos de campo\nADMINISTRACIÓN\nNotificaciones\n/\n10\nV\nVicky Vendedora\nVendedor\nSalir\n\nHola, Vicky\n\nMi día\nTocar una puerta\nRegistra la visita, aunque no abran\nDevueltos por Administración\n\nCorrígelo"
+  },
+  {
+   "check": "Al abrirlo ve el motivo de la devolución",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nExpedientes\nTURNOS Y ASISTENCIA\nMi turno\nFINANZAS\nGastos de campo\nADMINISTRACIÓN\nNotificaciones\n/\n10\nV\nVicky Vendedora\nVendedor\nSalir\n‹\nMi día\nQA 1026023321 Cliente 408\nPendiente de aprobación\nExpediente\nCASE-2026-0008\nDirección\n508 QA 1026023321 "
+  }
+ ],
+ "API-001": [
+  {
+   "check": "Artículos muestra 244 en total",
+   "ok": true,
+   "dato": "['1–25 de 244']"
+  },
+  {
+   "check": "Pasar de página trae otras filas (sin repetir)",
+   "ok": true,
+   "dato": "['4-in-1 Condenser Fan Motor 1/6', 'AA Battery Sold Individually\\nR', 'AAA Battery Sold Individually\\n'] / ['Bit-Tip Screw Hex-Head 8-18 x ', 'Black Gold Vacuum Pump Oil 1 q', 'Black Iron Cap 1/2\"\\nRef. 1853 ']"
+  }
+ ],
+ "AUTH-007": [
+  {
+   "check": "Sin permisos el menú solo trae Inicio (['Inicio'])",
+   "ok": true,
+   "dato": "['Inicio']"
+  },
+  {
+   "check": "Escribir /cases, /projects, /invoices y /customers lo devuelve al inicio",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Con «Ver clientes» aparece solo Clientes (['Inicio', 'Clientes'])",
+   "ok": true,
+   "dato": "['Inicio', 'Clientes']"
+  }
+ ],
+ "TUR-001": [
+  {
+   "check": "La malla a 390 px no desborda la página",
+   "ok": true,
+   "dato": "390"
+  }
+ ],
+ "TEC-003": [
+  {
+   "check": "La agenda abre en ['su vista'] con las obras de la semana",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La agenda a 390 px no desborda la página",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "TUR-009": [
+  {
+   "check": "El monitor muestra a los técnicos (15 filas)",
+   "ok": true,
+   "dato": "15"
+  }
+ ],
+ "PER-001": [
+  {
+   "check": "Ninguna pantalla tarda más de 2 s hasta quedar quieta (servidor de desarrollo, sin caché de producción)",
+   "ok": false,
+   "dato": "{\"Inicio\": 3595, \"Expedientes\": 2528, \"Por revisar\": 2771, \"Proyectos\": 2184, \"Existencias\": 2163, \"Salidas\": 2413, \"Facturas\": 2238, \"Mapa\": 3762}"
+  }
+ ],
+ "PER-004": [
+  {
+   "check": "Se navegó por 8 pantallas con el worker y el beat corriendo sin que se frenaran (tiempos de PER-001)",
+   "ok": false,
+   "dato": "{\"Inicio\": 3595, \"Expedientes\": 2528, \"Por revisar\": 2771, \"Proyectos\": 2184, \"Existencias\": 2163, \"Salidas\": 2413, \"Facturas\": 2238, \"Mapa\": 3762}"
+  }
+ ]
+}

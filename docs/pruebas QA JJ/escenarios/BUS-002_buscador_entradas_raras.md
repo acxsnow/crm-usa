@@ -6,7 +6,7 @@
 - **Módulo:** Notificaciones y buscador
 - **Prioridad:** P2
 - **Tipo de prueba:** Seguridad · validación
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
@@ -47,6 +47,21 @@ El buscador no se rompe ni expone datos con caracteres especiales.
   - ✔ buscador «Ñandú» sin 500 — `200 resultados=0 · 137 ms`
   - ✔ buscador «1; DROP TABLE cases; --» sin 500 — `200 resultados=0 · 87 ms`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Un cliente llamado «<script>alert(1)</script> QA» se muestra como texto en el buscador y en la lista de clientes; no se ejecuta ningún script.
+- Comprobaciones (2 de 2):
+  - ✔ El script se muestra como texto en el buscador (no se ejecuta) — `alertas=[] texto=Clientes
+Ver todos
+<script>alert(1)</script> QA
+<script>alert(1)</script> QA
+<script>alert(1)</script> QA`
+  - ✔ Y en la lista de clientes también — `[]`
+- Capturas:
+  - [buscador-script.jpg](../evidencias/pantalla/BUS-002/buscador-script.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -60,7 +75,7 @@ El buscador no se rompe ni expone datos con caracteres especiales.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

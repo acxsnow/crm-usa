@@ -1,0 +1,40 @@
+{
+ "_fecha": "2026-10-25",
+ "AUTH-001": {
+  "estado": "APROBADO",
+  "que_paso": "Los 6 roles: cada menú tiene solo sus opciones (admin 37, Administración 30, vendedor 7, técnico 9, Contabilidad 26, Gerencia 24); a 390 px no hay desplazamiento horizontal y «Menú» abre las opciones.",
+  "indice": "API y pantalla ok"
+ },
+ "AUTH-006": {
+  "estado": "APROBADO",
+  "que_paso": "El vendedor y el técnico escriben a mano 10 rutas que no les tocan (banca, proveedores, equipo, roles, auditoría, nómina, conciliación, facturas, asistencia, reportes): vuelven al inicio sin que la pantalla pida datos.",
+  "indice": "API 20/20 y pantalla ok"
+ },
+ "AUTH-002": {
+  "estado": "APROBADO",
+  "que_paso": "Con la clave errada la pantalla dice «El correo o la contraseña no son correctos.»; al sexto intento, «Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.» (D-005).",
+  "indice": "5/5 API y pantalla ok"
+ },
+ "BUS-002": {
+  "estado": "APROBADO",
+  "que_paso": "Un cliente llamado «<script>alert(1)</script> QA» se muestra como texto en el buscador y en la lista de clientes; no se ejecuta ningún script.",
+  "indice": "API 8/8 y pantalla ok"
+ },
+ "SEC-009": {
+  "estado": "APROBADO",
+  "que_paso": "En los 12 archivos JS que baja el navegador no hay llaves ni secretos (Stripe, AWS, claves privadas, SECRET_KEY, Plaid).",
+  "indice": "API y navegador ok"
+ },
+ "D-005": {
+  "estado": "Cerrado (2026-10-25)",
+  "que_paso": "la pantalla de ingreso muestra el mensaje del bloqueo y el de clave errada por separado (captura `evidencias/pantalla/AUTH-002/bloqueo.jpg`)."
+ },
+ "D-014": {
+  "estado": "Cerrado (2026-10-25)",
+  "que_paso": "«Borrar cliente» solo lo ve el Administrador y al confirmar vuelve a la lista; «Mi perfil» guarda el nombre y se ve en el encabezado (enlace en el menú, también a 390 px); Reportes muestra Comercial a Administración, Operación y Finanzas a Contabilidad, y las tres a Gerencia."
+ },
+ "D-020": {
+  "estado": "Cerrado (2026-10-25)",
+  "que_paso": "la columna «Cambios» muestra «Ver cambios» con cada campo que cambió (antes → después) y la IP. Al revisar la captura se corrigió que mostraba como borrados campos que no cambiaron (nombre, zona y moneda de la organización)."
+ }
+}

@@ -51,6 +51,32 @@ El ingreso con clave errada no da pistas de qué está mal y se bloquea a los 5 
   - ✔ después de limpiar los contadores entra — `200`
   - ✘ auditoría registra los intentos fallidos o el bloqueo — `audit_events solo tiene auth.login.success (26); ningún fallido ni bloqueo`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Con la clave errada la pantalla dice «El correo o la contraseña no son correctos.»; al sexto intento, «Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña.» (D-005).
+- Comprobaciones (2 de 2):
+  - ✔ Con la clave errada: «El correo o la contraseña no son correctos.» — `P
+PAP CRM
+Iniciar sesión
+Correo
+Contraseña
+
+El correo o la contraseña no son correctos.
+
+Entrar
+¿Olvidaste tu contraseña?`
+  - ✔ Al sexto intento la pantalla dice que la cuenta está bloqueada (no «clave errada») — `P
+PAP CRM
+Iniciar sesión
+Correo
+Contraseña
+
+Demasiados intentos de ingreso. Espera 15 minutos e inténtalo de nuevo, o recupera tu contraseña`
+- Capturas:
+  - [bloqueo.jpg](../evidencias/pantalla/AUTH-002/bloqueo.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
