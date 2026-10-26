@@ -28,6 +28,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | D-018 | La salida de bodega no guarda el costo: cambia el costo de obras cerradas | Bodega | P2 | Cerrado (2026-10-25) | BOD-007 | José Javier Miranda (`warehouse`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-019 | La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe | Turnos y nómina | P2 | Abierto (decisión pendiente) | TUR-005 | José Javier Miranda y Mateo Mazo (`attendance`) | 2026-10-25 |
 | D-020 | La auditoría no muestra el antes y el después | Seguridad / Auditoría | P2 | Cerrado (2026-10-25) | SEC-010 | José Javier Miranda (`organizations`) | 2026-10-25 |
+| D-021 | Pantallas de oficina se desbordan a lo ancho en el celular (390 px) | Interfaz | P3 | Cerrado (2026-10-25) | FIN-005 (barrido a 390 px) | José Javier Miranda (`styles/sistema.css`) | 2026-10-25 |
 
 ## D-001 · Visita fallida, reagendamiento con límite y cancelación de la obra
 
@@ -347,6 +348,16 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** la API agrega `before_data`, `after_data` e `ip_address` a cada evento (sin quitar nada de lo que ya devolvía) y la pantalla de Auditoría muestra «Ver cambios»: cada campo con su valor anterior → el nuevo, y desde qué IP. Prueba `test_audit_shows_before_and_after`.
 - **Validación:** SEC-010 por API: 16 de 16 (12 acciones con su detalle y los permisos de quién ve la auditoría). Falta ver la columna en pantalla.
 - **Validación en pantalla (2026-10-25, Claude con Playwright):** la columna «Cambios» muestra «Ver cambios» con cada campo que cambió (antes → después) y la IP. Al revisar la captura se corrigió que mostraba como borrados campos que no cambiaron (nombre, zona y moneda de la organización). Capturas en `evidencias/pantalla/D-020/`.
+
+## D-021 · Desborde a lo ancho en el celular
+
+- **Módulo:** Interfaz (`frontend/src/styles/sistema.css`, bloque `@media (max-width: 767px)`).
+- **Prioridad:** P3. Las pantallas de oficina se podían mover de lado en el celular y cortaban columnas; las de campo estaban bien.
+- **Estado:** Cerrado (25 oct).
+- **Encontrado en:** FIN-005 en pantalla (Claude, Playwright, 25 oct): Rentabilidad medía 452 px a 390. El barrido de todas las pantallas encontró también Reportes (525), Proveedores (620), Salidas y Seriales (664) y Banca (623).
+- **Análisis / causa:** dos reglas para celular. El bloque del título de los encabezados tenía `flex: 0 0 auto` y medía lo que su descripción en una sola línea; y el encabezado de componente (`ui-page-header`), que en celular va en columna, tenía `align-items: flex-start`, con lo que el título hacía lo mismo y los botones quedaban afuera, a la derecha.
+- **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** el bloque del título ocupa la fila (`flex: 1 1 100%; max-width: 100%`) y el encabezado de componente estira sus hijos en el celular (`align-items: stretch; flex-wrap: nowrap`).
+- **Validación:** `ejecucion/barrido390.py` recorre a 390 px todas las pantallas del menú de los 6 roles: 133 pantallas, ninguna se desborda (`ejecucion/barrido390.json`).
 
 ## Plantilla para defectos nuevos
 

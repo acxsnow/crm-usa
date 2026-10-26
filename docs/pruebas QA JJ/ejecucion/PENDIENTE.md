@@ -7,7 +7,7 @@ Pruebas de pantalla con Playwright, «probado por Claude» (ver `ui_comun.py` pa
 - Lote 4b corrido (`lote4b.json`), **todavía sin registrar**. Pasó: INS-010, INS-011, FIN-005 (margen -$80,705.00 completo), VEN-001, REV-001, REV-002, API-001, AUTH-007, TUR-001, TEC-003, TUR-009.
 
 ## Pendiente, en orden
-1. **D-021 (nuevo, P3) — pantallas de oficina desbordan a 390 px.** Causa en `frontend/src/styles/sistema.css` (bloque `@media (max-width: 767px)`): el título del encabezado no se encogía (`flex: 0 0 auto`) y el encabezado de componente usaba `align-items: flex-start` en columna. Ya corregido en el archivo (sin commit al cerrar la sesión si no se alcanzó). Falta: correr `barrido390.py` (todas las pantallas de los 6 roles), confirmar 0 desbordes, registrar D-021 en `01_REGISTRO_DEFECTOS.md` y en FIN-005.
+1. ~~D-021~~ hecho: corregido en `sistema.css` y validado con `barrido390.py` (133 pantallas de los 6 roles, ninguna se desborda). Registrado y cerrado.
 2. Repetir en lote 4b lo que falló por el script:
    - INS-012: llenar «Qué pasó con ese material» y «Por qué se cancela» con `get_by_label` (no son `input[type=text]`).
    - BOD-011 / D-007: en Salidas la orden autorizada está en la pestaña «Todas», no en «Por autorizar»; luego entregar con serial, Equipos instalados y Bodega › Seriales.

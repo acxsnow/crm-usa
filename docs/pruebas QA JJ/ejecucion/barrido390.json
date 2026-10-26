@@ -1,0 +1,26 @@
+{
+ "admin": {
+  "pantallas": 37,
+  "desbordan": []
+ },
+ "adm": {
+  "pantallas": 30,
+  "desbordan": []
+ },
+ "vendedor": {
+  "pantallas": 7,
+  "desbordan": []
+ },
+ "tecnico": {
+  "pantallas": 9,
+  "desbordan": []
+ },
+ "conta": {
+  "pantallas": 26,
+  "desbordan": []
+ },
+ "gerencia": {
+  "pantallas": 24,
+  "desbordan": []
+ }
+}
