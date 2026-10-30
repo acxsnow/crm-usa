@@ -1,0 +1,7 @@
+{
+ "_fecha": "2026-10-29",
+ "INS-012": {"estado": "APROBADO", "que_paso": "Con la salida por autorizar ya rechazada y 2 tubos afuera, «Cancelar la obra…» pide «Qué pasó con ese material» y «Por qué se cancela»; al confirmar, la obra queda «Obra cancelada» (en la base, status cancelled). En el lote 4b ya se había visto que con la salida abierta no deja cancelar.", "indice": "API 13/13 y pantalla ok"},
+ "BOD-011": {"estado": "APROBADO", "que_paso": "En Salidas › «Todas las salidas» la orden autorizada tiene «Entregar»; el equipo con serial pide un campo por unidad y sin él no deja entregar; al entregar SN-UI-001 aparece en Bodega › Seriales como entregado con su orden, y el técnico lo elige en Equipos instalados y se llena el serial (D-007).", "indice": "API ok y pantalla ok"},
+ "D-001": {"estado": "Cerrado (2026-10-29)", "que_paso": "INS-010, INS-011 e INS-012 pasan en pantalla: visita fallida con motivo, límite con «Autorizar otro intento» y cancelación de la obra con el material afuera."},
+ "D-007": {"estado": "Cerrado (2026-10-29)", "que_paso": "BOD-011 pasa en pantalla: serial obligatorio al entregar, página Bodega › Seriales y selector en Equipos instalados."}
+}

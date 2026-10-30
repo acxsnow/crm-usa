@@ -1,0 +1,51 @@
+{
+ "INS-012": [
+  {
+   "check": "Con material afuera pide «Qué pasó con ese material»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La obra queda con el aviso «Obra cancelada»",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asistencia\nNovedades y horas\nNómin"
+  }
+ ],
+ "BOD-011": [
+  {
+   "check": "En «Todas las salidas» la orden autorizada tiene «Entregar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al entregar el equipo con serial aparece un campo por unidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sin el serial, «Entregar» queda deshabilitado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al entregar dice los seriales entregados",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asistencia\nNovedades y horas\nNómin"
+  },
+  {
+   "check": "Bodega › Seriales lo muestra «Entregado» con la orden",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nMi día\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asistencia\nNovedades y horas\nNómin"
+  },
+  {
+   "check": "En Equipos instalados el técnico ve «Equipo que salió de bodega»",
+   "ok": true,
+   "dato": "4\nEquipos instalados\nNinguno registrado\nPendiente\n\nSin equipos registrados.\n\nEquipo que salió de bodega\nOtro (no pasó por bodega)\nSN-UI-001 · B-Series Air Handler Multi Position 3 Ton 208/230V 19.63\" "
+  },
+  {
+   "check": "Al elegirlo se llena el serial",
+   "ok": true,
+   "dato": "SN-UI-001"
+  }
+ ]
+}

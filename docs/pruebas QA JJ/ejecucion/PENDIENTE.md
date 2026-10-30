@@ -12,7 +12,7 @@ Pruebas de pantalla con Playwright, «probado por Claude» (ver `ui_comun.py` pa
    - INS-012: llenar «Qué pasó con ese material» y «Por qué se cancela» con `get_by_label` (no son `input[type=text]`).
    - BOD-011 / D-007: en Salidas la orden autorizada está en la pestaña «Todas», no en «Por autorizar»; luego entregar con serial, Equipos instalados y Bodega › Seriales.
    - PER-001 / PER-004: medir con el build de producción (`npm run preview`), no con el servidor de desarrollo (dio 2.2–3.8 s por ser Vite sin empaquetar).
-3. ~~Registrar lote 4b~~ hecho (29 oct). Falta repetir INS-012, BOD-011 y PER-001/PER-004 (punto 2) y registrarlos.
+3. ~~Registrar lote 4b~~ hecho (29 oct). INS-012 y BOD-011 repetidos con `lote4b2.py` y aprobados (29 oct); D-001 y D-007 cerrados. Falta PER-001/PER-004 con el build de producción.
 4. Lote 4c: VEN-004 (formulario a 390 px, marca de agua, campana), INS-004 (fotos, firma con el dedo, PDF), SEC-004 (textos guardados y PDF del acta), SEC-008 (aviso antes de firmar en T&C y firma pública), INS-015 (Slow 3G, doble toque, Offline), PER-003 (build de producción con Slow 3G y CPU 4×), AUTH-005 (16 min sin tocar, Offline, Atrás tras Salir).
 5. Antes de cada lote: base QA limpia (`seed_qa --reiniciar --si-borrar-todo`) y, para 4b, `prep4b.py`.
 6. Al final: suite completa, commit en `devjj`, y recordar a José: avisar a Mateo, llaves de Stripe/Plaid, D-019 con Don Aldo, integrar a `main` solo cuando él diga y después actualizar el artefacto.

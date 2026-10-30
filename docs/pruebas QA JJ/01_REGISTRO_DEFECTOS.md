@@ -8,13 +8,13 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 
 | ID | Título | Módulo | Prioridad | Estado | Encontrado en | Responsable | Fecha |
 |---|---|---|---|---|---|---|---|
-| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Corregido (validado por API; falta pantalla) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
+| D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Cerrado (2026-10-29) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
 | D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Corregido (pendiente de validar en pantalla) | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 | D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Cerrado (2026-10-25) | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Cerrado (2026-10-25) | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
 | D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
 | D-006 | Los intentos fallidos y los bloqueos de ingreso no quedan en la auditoría | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
-| D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Corregido (validado por API; falta pantalla) | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
+| D-007 | «Con serial» no tiene efecto: la bodega no registra seriales al entregar | Bodega | P2 | Cerrado (2026-10-29) | BOD-011 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-008 | La devolución a bodega no tiene tope: se devuelve más de lo que salió para la obra | Bodega | P1 | Cerrado (2026-10-25) | BOD-006 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-009 | Un artículo acepta costo unitario negativo | Bodega | P2 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-010 | Crear un artículo con un SKU repetido responde 500 | Bodega | P1 | Cerrado (2026-10-25) | BOD-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
@@ -77,6 +77,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Commit:** ver el historial de `devjj` («feat(campo): visita fallida, límite de reagendamiento y cancelación de la obra»).
 - **Validación (escenarios reejecutados):** por API el 25 oct (lote 2): INS-010 16/16, INS-011 14/14, INS-012 13/13. Falta la parte de pantalla de los tres. BOD-006 encontró D-008 (devolución sin tope), que afecta el reintegro antes de cancelar.
 - **Tiempos:** análisis 1 h · corrección 3 h · reejecución pendiente.
+- **Validación en pantalla (2026-10-29, Claude con Playwright):** INS-010, INS-011 e INS-012 pasan en pantalla: visita fallida con motivo, límite con «Autorizar otro intento» y cancelación de la obra con el material afuera. Capturas en `evidencias/pantalla/D-001/`.
 
 ## D-002 · Margen negativo cortado en Rentabilidad
 
@@ -180,6 +181,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
   - Pantalla: campos de serial por unidad en **Entregar**, selector **Equipo que salió de bodega** en Equipos instalados, página **Bodega › Seriales**. Las entradas y devoluciones no tienen formulario en pantalla (tampoco antes): sus seriales van por API.
   - Pruebas: `tests/test_warehouse_serials.py` (5: el recorrido completo, no sale dos veces ni se instala en otra obra, equipo directo sin cruce, reglas de captura, aislamiento por organización y por obra). Manual actualizado (8.4 Equipos instalados, Bodega › Movimientos, Seriales y Entregar).
 - **Validación:** BOD-011 reejecutado el 25 oct: lote 2 18 de 18 (entrega de la lista de 3 ton con los seriales del 85980, consulta, técnico, instalación y vuelta a «Entregado») y paso 2 aparte 4 de 4 (mismo serial en otra salida 409, vacío 400). Regresión: lotes 1 y 2 completos sin otros cambios, 770 pruebas del backend y build del frontend. Falta la parte de pantalla: campos de serial al entregar, selector en Equipos instalados y Bodega › Seriales.
+- **Validación en pantalla (2026-10-29, Claude con Playwright):** BOD-011 pasa en pantalla: serial obligatorio al entregar, página Bodega › Seriales y selector en Equipos instalados. Capturas en `evidencias/pantalla/D-007/`.
 
 ## D-008 · Devolución a bodega sin tope
 

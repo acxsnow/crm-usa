@@ -6,7 +6,7 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 30 min de ejecución
@@ -61,6 +61,33 @@ Cancelar exige motivo, salidas de bodega resueltas y el material reintegrado o e
   - ✔ Auditoría projects.cancelled
   - ✔ El técnico recibe el aviso de obra cancelada
 
+
+### Pantalla (probado por Claude, 2026-10-29, Playwright)
+
+- Con la salida por autorizar ya rechazada y 2 tubos afuera, «Cancelar la obra…» pide «Qué pasó con ese material» y «Por qué se cancela»; al confirmar, la obra queda «Obra cancelada» (en la base, status cancelled). En el lote 4b ya se había visto que con la salida abierta no deja cancelar.
+- Comprobaciones (2 de 2):
+  - ✔ Con material afuera pide «Qué pasó con ese material»
+  - ✔ La obra queda con el aviso «Obra cancelada» — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Campañas
+Expedientes
+Por revisar
+OPERACIÓN DE CAMPO
+Proyectos
+Monitor de técnicos
+Agend`
+- Capturas:
+  - [cancelar-formulario-2.jpg](../evidencias/pantalla/INS-012/cancelar-formulario-2.jpg)
+  - [cancelar-formulario.jpg](../evidencias/pantalla/INS-012/cancelar-formulario.jpg)
+  - [cancelar-pendientes.jpg](../evidencias/pantalla/INS-012/cancelar-pendientes.jpg)
+  - [obra-cancelada-2.jpg](../evidencias/pantalla/INS-012/obra-cancelada-2.jpg)
+  - [obra-cancelada.jpg](../evidencias/pantalla/INS-012/obra-cancelada.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -76,7 +103,7 @@ Cancelar exige motivo, salidas de bodega resueltas y el material reintegrado o e
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

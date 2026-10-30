@@ -47,6 +47,58 @@ Cada condensadora o evaporadora entregada queda identificada por su serial.
 - Comprobaciones por API (0 de 1):
   - ✘ Al entregar el equipo con serial (85980) la bodega pide el serial — `DeliverIn solo recibe note y lines(line_id, quantity); `has_serial` no se usa fuera del catálogo`
 
+
+### Pantalla (probado por Claude, 2026-10-29, Playwright)
+
+- En Salidas › «Todas las salidas» la orden autorizada tiene «Entregar»; el equipo con serial pide un campo por unidad y sin él no deja entregar; al entregar SN-UI-001 aparece en Bodega › Seriales como entregado con su orden, y el técnico lo elige en Equipos instalados y se llena el serial (D-007).
+- Comprobaciones (7 de 7):
+  - ✔ En «Todas las salidas» la orden autorizada tiene «Entregar»
+  - ✔ Al entregar el equipo con serial aparece un campo por unidad
+  - ✔ Sin el serial, «Entregar» queda deshabilitado
+  - ✔ Al entregar dice los seriales entregados — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Campañas
+Expedientes
+Por revisar
+OPERACIÓN DE CAMPO
+Proyectos
+Monitor de técnicos
+Agend`
+  - ✔ Bodega › Seriales lo muestra «Entregado» con la orden — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Campañas
+Expedientes
+Por revisar
+OPERACIÓN DE CAMPO
+Proyectos
+Monitor de técnicos
+Agend`
+  - ✔ En Equipos instalados el técnico ve «Equipo que salió de bodega» — `4
+Equipos instalados
+Ninguno registrado
+Pendiente
+
+Sin equipos registrados.
+
+Equipo que salió de bodega
+Otro (no pasó por bodega)
+SN-UI-001 `
+  - ✔ Al elegirlo se llena el serial — `SN-UI-001`
+- Capturas:
+  - [entregado.jpg](../evidencias/pantalla/BOD-011/entregado.jpg)
+  - [entregar-sin-serial.jpg](../evidencias/pantalla/BOD-011/entregar-sin-serial.jpg)
+  - [equipos-instalados.jpg](../evidencias/pantalla/BOD-011/equipos-instalados.jpg)
+  - [seriales.jpg](../evidencias/pantalla/BOD-011/seriales.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
