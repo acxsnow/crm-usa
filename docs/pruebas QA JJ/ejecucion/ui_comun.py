@@ -15,7 +15,7 @@ from pathlib import Path
 
 import redis
 
-B = "http://localhost:5173"
+B = "https://localhost:5173"  # el frontend corre por HTTPS (DEV_HTTPS=1 en .env)
 CLAVE = "ChangeMe123!"
 USUARIOS = {"admin": "admin@demo-org.com", "adm": "administracion@demo-org.com", "vendedor": "vendedor@demo-org.com",
             "tecnico": "tecnico@demo-org.com", "conta": "contabilidad@demo-org.com", "gerencia": "gerencia@demo-org.com",
@@ -53,6 +53,7 @@ def foto(pg, nombre, completa=False):
 
 class Sesion:
     def __init__(self, navegador, rol=None, vista=ESCRITORIO, correo=None, clave=CLAVE, **ctx):
+        ctx.setdefault("ignore_https_errors", True)  # certificado de desarrollo autofirmado
         self.ctx = navegador.new_context(viewport=vista, locale="es-CO", timezone_id="America/Bogota",
                                          permissions=["geolocation"], geolocation={"latitude": 33.4484,
                                                                                     "longitude": -112.074}, **ctx)

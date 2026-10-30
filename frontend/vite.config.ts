@@ -17,14 +17,27 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Ícono de la «P» de la marca (public/): al agregarla a la pantalla de
+      // inicio se abre sola, sin la barra del navegador.
+      includeAssets: ["icon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "CRM Field Operations",
-        short_name: "CRM Field Ops",
-        theme_color: "#1e3a8a",
+        name: "PAP CRM",
+        short_name: "PAP CRM",
+        description: "CRM y operación en campo de Delta HVAC",
+        lang: "es",
+        theme_color: "#ffffff",
+        background_color: "#ffffff",
         display: "standalone",
+        orientation: "portrait",
         start_url: "/",
-        icons: [],
+        icons: [
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
+          { src: "maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
       },
+      // En desarrollo también, para poder instalarla desde el celular contra el servidor local.
+      devOptions: { enabled: true },
     }),
   ],
   resolve: {
