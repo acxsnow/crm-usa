@@ -6,7 +6,7 @@
 - **Módulo:** Turnos, asistencia y mapa
 - **Prioridad:** P2
 - **Tipo de prueba:** Funcional
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
@@ -48,6 +48,16 @@ El supervisor ve de un vistazo qué hace cada técnico hoy.
   - ✔ Los casos asignados coinciden con las obras abiertas de cada uno
   - ✔ Carlos (técnico) no abre el monitor — `403`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- El monitor de técnicos muestra a los técnicos (15 filas).
+- Comprobaciones (1 de 1):
+  - ✔ El monitor muestra a los técnicos (15 filas) — `15`
+- Capturas:
+  - [monitor.jpg](../evidencias/pantalla/TUR-009/monitor.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -61,7 +71,7 @@ El supervisor ve de un vistazo qué hace cada técnico hoy.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

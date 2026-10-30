@@ -6,7 +6,7 @@
 - **Módulo:** Venta puerta a puerta
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 10 min de ejecución
@@ -47,6 +47,29 @@ Registrar una visita sin contacto, sin pedir datos del cliente, para volver otro
   - ✔ No pide ni crea cliente — `None`
   - ✔ El historial de etapas tiene la entrada inicial — `1`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Las puertas cerradas no salen en el tablero del vendedor hasta activar «Mostrar puertas cerradas»; con el filtro aparecen.
+- Comprobaciones (2 de 2):
+  - ✔ Las puertas cerradas no salen en el tablero sin activar el filtro
+  - ✔ Con «Mostrar puertas cerradas» aparecen — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Expedientes
+TURNOS Y ASISTENCIA
+Mi turno
+FINANZAS
+Gastos de campo
+ADMINISTRACIÓN
+Notifi`
+- Capturas:
+  - [puertas-cerradas.jpg](../evidencias/pantalla/VEN-001/puertas-cerradas.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -61,7 +84,7 @@ Registrar una visita sin contacto, sin pedir datos del cliente, para volver otro
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

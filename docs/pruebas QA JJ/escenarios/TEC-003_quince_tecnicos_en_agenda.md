@@ -6,7 +6,7 @@
 - **Módulo:** Técnicos
 - **Prioridad:** P2
 - **Tipo de prueba:** Rendimiento · usabilidad
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución + 30 min de preparación
@@ -144,6 +144,18 @@ La agenda y la asignación siguen usables con todo el equipo.
   - ✔ Una obra programada para 10 técnicos distintos en la misma semana — `[200, 200, 200, 200, 200, 200, 200, 200, 200, 200]`
   - ✔ La agenda de la semana muestra obras de 11 técnicos distintos — `14`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- La agenda del técnico abre en su vista con las obras de la semana y a 390 px no desborda.
+- Comprobaciones (2 de 2):
+  - ✔ La agenda abre en ['su vista'] con las obras de la semana
+  - ✔ La agenda a 390 px no desborda la página
+- Capturas:
+  - [agenda-celular.jpg](../evidencias/pantalla/TEC-003/agenda-celular.jpg)
+  - [agenda.jpg](../evidencias/pantalla/TEC-003/agenda.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -157,7 +169,7 @@ La agenda y la asignación siguen usables con todo el equipo.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

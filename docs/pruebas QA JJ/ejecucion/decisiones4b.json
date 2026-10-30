@@ -1,0 +1,15 @@
+{
+ "_fecha": "2026-10-25",
+ "INS-010": {"estado": "APROBADO", "que_paso": "El técnico ve «No se pudo hacer la visita» en su obra agendada; el formulario pide el motivo (6 opciones) y la nota, y la obra queda con la sección «Visitas fallidas», el contador y lo escrito (D-001).", "indice": "API 16/16 y pantalla ok"},
+ "INS-011": {"estado": "APROBADO", "que_paso": "Con la segunda visita fallida se alcanza el límite: Administración ve el aviso, el botón «Autorizar otro intento» y el ajuste «Límite de visitas fallidas» (D-001).", "indice": "API 14/14 y pantalla ok"},
+ "FIN-005": {"estado": "APROBADO", "que_paso": "En Rentabilidad el margen negativo se lee completo «-$80,705.00» en escritorio y en celular (D-002). El desborde a 390 px que salió en esta corrida es D-021, corregido en sistema.css y validado con barrido390.py (133 pantallas sin desborde).", "indice": "API 4/4 y pantalla ok (390 px por D-021, cerrado)",
+  "extra": [{"check": "Tras corregir D-021, Rentabilidad a 390 px sin desplazamiento horizontal (barrido390.py)", "ok": true, "dato": ""}]},
+ "VEN-001": {"estado": "APROBADO", "que_paso": "Las puertas cerradas no salen en el tablero del vendedor hasta activar «Mostrar puertas cerradas»; con el filtro aparecen.", "indice": "API 4/4 y pantalla ok"},
+ "REV-001": {"estado": "APROBADO", "que_paso": "Con documentos sin revisar, «Aprobar» queda bloqueado y la pantalla dice cuántos faltan («Faltan N documento(s) por revisar.»).", "indice": "API 8/8 y pantalla ok"},
+ "REV-002": {"estado": "APROBADO", "que_paso": "El vendedor ve el expediente en «Devueltos por Administración» y al abrirlo ve el motivo de la devolución.", "indice": "API 8/8 y pantalla ok"},
+ "API-001": {"estado": "APROBADO", "que_paso": "Artículos muestra «1–25 de 244» y pasar de página trae otras filas, sin repetir.", "indice": "API 8/8 y pantalla ok"},
+ "AUTH-007": {"estado": "APROBADO", "que_paso": "Un rol sin permisos solo ve Inicio y escribir /cases, /projects, /invoices o /customers lo devuelve al inicio; al darle «Ver clientes» aparece solo Clientes.", "indice": "API 9/9 y pantalla ok"},
+ "TUR-001": {"estado": "APROBADO", "que_paso": "La malla de turnos a 390 px no desborda la página.", "indice": "API 4/4 y pantalla ok"},
+ "TEC-003": {"estado": "APROBADO", "que_paso": "La agenda del técnico abre en su vista con las obras de la semana y a 390 px no desborda.", "indice": "API y pantalla ok"},
+ "TUR-009": {"estado": "APROBADO", "que_paso": "El monitor de técnicos muestra a los técnicos (15 filas).", "indice": "API y pantalla ok"}
+}

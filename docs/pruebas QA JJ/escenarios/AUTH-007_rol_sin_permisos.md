@@ -6,7 +6,7 @@
 - **Módulo:** Acceso y sesión
 - **Prioridad:** P1
 - **Tipo de prueba:** Seguridad
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 15 min de ejecución
@@ -53,6 +53,19 @@ Un rol recién creado no abre nada hasta que se le den permisos.
   - ✔ Y el menú solo el módulo de clientes — `['customers']`
   - ✔ Clientes abre (200) y lo demás sigue en 403 — `{'/cases': 403, '/projects': 403, '/invoices': 403, '/customers': 200, '/warehouse/items': 403, '/payables/suppliers': 403}`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Un rol sin permisos solo ve Inicio y escribir /cases, /projects, /invoices o /customers lo devuelve al inicio; al darle «Ver clientes» aparece solo Clientes.
+- Comprobaciones (3 de 3):
+  - ✔ Sin permisos el menú solo trae Inicio (['Inicio']) — `['Inicio']`
+  - ✔ Escribir /cases, /projects, /invoices y /customers lo devuelve al inicio — `[]`
+  - ✔ Con «Ver clientes» aparece solo Clientes (['Inicio', 'Clientes']) — `['Inicio', 'Clientes']`
+- Capturas:
+  - [sin-permisos.jpg](../evidencias/pantalla/AUTH-007/sin-permisos.jpg)
+  - [solo-clientes.jpg](../evidencias/pantalla/AUTH-007/solo-clientes.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -67,7 +80,7 @@ Un rol recién creado no abre nada hasta que se le den permisos.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

@@ -6,7 +6,7 @@
 - **Módulo:** Revisión administrativa
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · integración
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -51,6 +51,42 @@ La devolución llega al vendedor, que corrige y reenvía sin reiniciar los días
   - ✔ Vuelve a «en revisión» — `pending_review`
   - ✔ El contador de días no se reinicia al reenviar (submitted_at igual) — `2026-10-25T16:49:16.679272Z → 2026-10-25T16:49:16.679272Z`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- El vendedor ve el expediente en «Devueltos por Administración» y al abrirlo ve el motivo de la devolución.
+- Comprobaciones (2 de 2):
+  - ✔ El vendedor ve «Devueltos por Administración» — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Expedientes
+TURNOS Y ASISTENCIA
+Mi turno
+FINANZAS
+Gastos de campo
+ADMINISTRACIÓN
+Notifi`
+  - ✔ Al abrirlo ve el motivo de la devolución — `P
+PAP.CRM
+Inicio
+OPERACIÓN COMERCIAL
+Clientes
+Mi día
+Expedientes
+TURNOS Y ASISTENCIA
+Mi turno
+FINANZAS
+Gastos de campo
+ADMINISTRACIÓN
+Notifi`
+- Capturas:
+  - [devueltos.jpg](../evidencias/pantalla/REV-002/devueltos.jpg)
+  - [motivo.jpg](../evidencias/pantalla/REV-002/motivo.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -64,7 +100,7 @@ La devolución llega al vendedor, que corrige y reenvía sin reiniciar los días
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

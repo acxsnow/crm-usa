@@ -6,7 +6,7 @@
 - **Módulo:** Revisión administrativa
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -52,6 +52,17 @@ Administración revisa cada documento y no puede aprobar con uno rechazado.
   - ✔ Aprobar con documento rechazado se bloquea
   - ✔ Todos los documentos aceptados — `11`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Con documentos sin revisar, «Aprobar» queda bloqueado y la pantalla dice cuántos faltan («Faltan N documento(s) por revisar.»).
+- Comprobaciones (2 de 2):
+  - ✔ Con documentos sin revisar «Aprobar» queda bloqueado
+  - ✔ Y dice cuántos faltan («Faltan N documento(s) por revisar.»)
+- Capturas:
+  - [aprobar-bloqueado.jpg](../evidencias/pantalla/REV-001/aprobar-bloqueado.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -65,7 +76,7 @@ Administración revisa cada documento y no puede aprobar con uno rechazado.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

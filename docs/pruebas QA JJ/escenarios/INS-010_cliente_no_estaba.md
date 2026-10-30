@@ -6,7 +6,7 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P0
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
@@ -66,6 +66,30 @@ El técnico registra la visita fallida con motivo, nota y GPS; la obra queda sin
   - ✔ Reagendar con «Liberar orden»
   - ✔ Vuelve a «Instalación agendada» — `install_scheduled`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- El técnico ve «No se pudo hacer la visita» en su obra agendada; el formulario pide el motivo (6 opciones) y la nota, y la obra queda con la sección «Visitas fallidas», el contador y lo escrito (D-001).
+- Comprobaciones (3 de 3):
+  - ✔ El técnico ve «No se pudo hacer la visita» en la obra agendada
+  - ✔ El formulario pide el motivo (6 opciones) y la nota — `['Elige el motivo', 'El cliente no estaba', 'No dejaron entrar o el cliente no quiso', 'Condiciones inseguras en la casa', 'Faltó material o`
+  - ✔ Queda la sección «Visitas fallidas» con el contador y lo que escribió — `2
+Orden liberada
+Sin técnico ni fecha
+En curso
+
+Solo Administración asigna el técnico y la fecha.
+
+Visitas fallidas
+
+1 de 2 permitidas.
+
+El `
+- Capturas:
+  - [formulario.jpg](../evidencias/pantalla/INS-010/formulario.jpg)
+  - [visitas-fallidas.jpg](../evidencias/pantalla/INS-010/visitas-fallidas.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -81,7 +105,7 @@ El técnico registra la visita fallida con motivo, nota y GPS; la obra queda sin
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

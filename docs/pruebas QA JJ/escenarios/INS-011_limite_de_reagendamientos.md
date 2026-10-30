@@ -6,7 +6,7 @@
 - **Módulo:** Instalación en campo
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · regla de negocio
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 30 min de ejecución
@@ -61,6 +61,29 @@ Al llegar al límite de la organización (2 por defecto) ya no se agenda: Admini
   - ✔ Volver el límite a 2
   - ✔ Auditoría de intento extra y de límite
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Con la segunda visita fallida se alcanza el límite: Administración ve el aviso, el botón «Autorizar otro intento» y el ajuste «Límite de visitas fallidas» (D-001).
+- Comprobaciones (4 de 4):
+  - ✔ Segunda visita fallida (por API) para llegar al límite — `{"failed_visits":2,"limit":2,"limit_reached":true,"extra_visits_authorized":0}`
+  - ✔ Administración ve el aviso del límite alcanzado — `2
+Orden liberada
+Sin técnico ni fecha
+En curso
+Técnico
+Elige un técnico
+Admin Demo
+Andrés Morales
+Carlos Ramírez
+Diego Jiménez
+Fernando Orti`
+  - ✔ Y el botón «Autorizar otro intento»
+  - ✔ Y el ajuste «Límite de visitas fallidas»
+- Capturas:
+  - [limite.jpg](../evidencias/pantalla/INS-011/limite.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -75,7 +98,7 @@ Al llegar al límite de la organización (2 por defecto) ya no se agenda: Admini
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

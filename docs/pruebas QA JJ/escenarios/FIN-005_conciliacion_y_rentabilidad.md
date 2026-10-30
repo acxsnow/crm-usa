@@ -6,7 +6,7 @@
 - **Módulo:** Finanzas
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional · dinero
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 25 min de ejecución
@@ -46,6 +46,20 @@ La ganancia de cada obra suma bien ingresos y costos (material, mano de obra, ga
   - ✔ Costos = suma de material, mano de obra, gastos, material menor y herramienta (3.34) — `{'materials': '3.34', 'equipment': '0.00', 'labor': '0.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'c`
   - ✔ Margen = cobrado − costos (6500.00 − 3.34 = 6496.66) — `{'project_id': 'f1adbe77-ddd5-4f96-8204-46d2e6bb5b6d', 'title': 'Instalación · CASE-2026-0001', 'status': 'completed', 'completed_date': '2026-10-25', 'case_num`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- En Rentabilidad el margen negativo se lee completo «-$80,705.00» en escritorio y en celular (D-002). El desborde a 390 px que salió en esta corrida es D-021, corregido en sistema.css y validado con barrido390.py (133 pantallas sin desborde).
+- Comprobaciones (3 de 4):
+  - ✔ Rentabilidad (escritorio): el margen negativo se lee completo «-$80,705.00» — `['\t$0.00\t$0.00\t$80,705.00', 'Equipo $80,705.00', '\t-$80,705.00\t—']`
+  - ✔ Rentabilidad (celular): el margen negativo se lee completo «-$80,705.00» — `['\t$0.00\t$0.00\t$80,705.00', 'Equipo $80,705.00', '\t-$80,705.00\t—']`
+  - ✘ A 390 px sin desplazamiento horizontal de la página
+  - ✔ Tras corregir D-021, Rentabilidad a 390 px sin desplazamiento horizontal (barrido390.py)
+- Capturas:
+  - [rentabilidad-celular.jpg](../evidencias/pantalla/FIN-005/rentabilidad-celular.jpg)
+  - [rentabilidad-escritorio.jpg](../evidencias/pantalla/FIN-005/rentabilidad-escritorio.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -59,7 +73,7 @@ La ganancia de cada obra suma bien ingresos y costos (material, mano de obra, ga
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

@@ -6,7 +6,7 @@
 - **Módulo:** API y paginación
 - **Prioridad:** P0
 - **Tipo de prueba:** API · rendimiento
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -51,6 +51,17 @@ Ningún listado devuelve todo de una vez: 100 por defecto, 500 como máximo y el
   - ✔ offset=10000 trae lista vacía — `200`
   - ✔ recorrer las páginas: 244 ids sin repetir — `244/244`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- Artículos muestra «1–25 de 244» y pasar de página trae otras filas, sin repetir.
+- Comprobaciones (2 de 2):
+  - ✔ Artículos muestra 244 en total — `['1–25 de 244']`
+  - ✔ Pasar de página trae otras filas (sin repetir) — `['4-in-1 Condenser Fan Motor 1/6', 'AA Battery Sold Individually\nR', 'AAA Battery Sold Individually\n'] / ['Bit-Tip Screw Hex-Head 8-18 x '`
+- Capturas:
+  - [pagina-2.jpg](../evidencias/pantalla/API-001/pagina-2.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -64,7 +75,7 @@ Ningún listado devuelve todo de una vez: 100 por defecto, 500 como máximo y el
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN

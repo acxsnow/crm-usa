@@ -6,7 +6,7 @@
 - **Módulo:** Turnos, asistencia y mapa
 - **Prioridad:** P1
 - **Tipo de prueba:** Funcional
-- **Estado:** En ejecución
+- **Estado:** APROBADO
 - **Fecha de ejecución:** 2026-10-25 (parte por API)
 - **Responsable:** José Javier Miranda
 - **Tiempo estimado:** 20 min de ejecución
@@ -45,6 +45,16 @@ Administración programa los turnos de los 15 técnicos.
   - ✔ La malla de la semana los muestra (25) — `25`
   - ✔ Un turno que se cruza con otro del mismo técnico se rechaza — `201 {"created":[],"skipped":[{"user_id":"917b4cfb-2bc8-45c1-bd64-c199948a5132","user_name":"Miguel Torres","shift_date":"2026-10-26"}]}`
 
+
+### Pantalla (probado por Claude, 2026-10-25, Playwright)
+
+- La malla de turnos a 390 px no desborda la página.
+- Comprobaciones (1 de 1):
+  - ✔ La malla a 390 px no desborda la página — `390`
+- Capturas:
+  - [malla-celular.jpg](../evidencias/pantalla/TUR-001/malla-celular.jpg)
+- Pendiente: revisión de José en su propio equipo.
+
 ## 8. Evidencias
 
 - Capturas:
@@ -58,7 +68,7 @@ Administración programa los turnos de los 15 técnicos.
 
 ## 10. Resultado final
 
-- [ ] APROBADO
+- [x] APROBADO
 - [ ] FALLIDO
 - [ ] BLOQUEADO
 - [ ] PENDIENTE DE CORRECCIÓN
