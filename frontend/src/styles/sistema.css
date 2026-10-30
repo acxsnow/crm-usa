@@ -487,7 +487,7 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
   #root, #root .app-shell, #root .app-main, #root .app-content { max-width: 100vw; overflow-x: clip; }
   /* Con letra de menos de 16 px el iPhone hace zoom al tocar un campo y deja
      la pantalla corrida hacia un lado. */
-  #root input, #root select, #root textarea { font-size: max(16px, 1em); }
+  #root input, #root select, #root textarea { font-size: 16px !important; }
 }
 /* Abierta desde el ícono (modo app): deja libre la barra de gestos del sistema. */
 @media (display-mode: standalone) {
