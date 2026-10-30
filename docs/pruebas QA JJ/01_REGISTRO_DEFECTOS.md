@@ -9,7 +9,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | ID | Título | Módulo | Prioridad | Estado | Encontrado en | Responsable | Fecha |
 |---|---|---|---|---|---|---|---|
 | D-001 | No existe la visita fallida de instalación, el reagendamiento con límite ni la cancelación de la obra | Instalación en campo / Bodega | P0 | Cerrado (2026-10-29) | Diagnóstico de código (INS-010 a INS-012) | José Javier Miranda (paquetes de Mateo: avisarle) | 2026-10-25 |
-| D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Corregido (pendiente de validar en pantalla) | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
+| D-002 | El margen negativo en Rentabilidad se corta y muestra «$-80,705.0…» con formato «$-» | Finanzas | P2 | Cerrado (2026-10-29) | Toma de capturas del manual (FIN-005) | Mateo Mazo | 2026-10-25 |
 | D-003 | Movimientos de bodega: el orden no tiene desempate y la paginación repite y omite filas | Bodega | P1 | Cerrado (2026-10-25) | API-002 | Mateo Mazo (`warehouse`) | 2026-10-25 |
 | D-004 | Filtros de texto no escapan `%` y `_` (funcionan como comodines) | Varios | P2 | Cerrado (2026-10-25) | SEC-004 | José Javier Miranda (compartido) | 2026-10-25 |
 | D-005 | Ingreso: mensajes de la API en inglés y la pantalla no distingue la cuenta bloqueada | Acceso | P2 | Cerrado (2026-10-25) | AUTH-002 | José Javier Miranda (`auth`) | 2026-10-25 |
@@ -92,6 +92,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 - **Responsable:** paquete de Mateo (`finance`): avisarle antes de tocarlo.
 - **Corrección (25 de octubre de 2026, José Javier Miranda, en `devjj`):** `finance/api.ts`, `money` usa el formato de moneda («-$80,705.00», con el signo antes del símbolo). En el indicador «Margen» de Rentabilidad el porcentaje pasa a una línea propia, y los montos de los indicadores de finanzas bajan de línea si no caben, en vez de cortarse con «…» (`finance.css`).
 - **Validación:** pendiente, reejecutar FIN-005 en pantalla (escritorio y 390 px).
+- **Validación en pantalla (2026-10-29, Claude con Playwright):** FIN-005 (lote 4b) muestra el margen negativo completo «-$80,705.00» en Rentabilidad, en escritorio y en celular (capturas en `evidencias/pantalla/FIN-005/`). Capturas en `evidencias/pantalla/D-002/`.
 
 ## D-003 · Movimientos de bodega: paginación inestable
 
