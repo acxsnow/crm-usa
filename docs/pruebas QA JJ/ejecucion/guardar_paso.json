@@ -1,0 +1,29 @@
+{
+ "VEN-005": [
+  {
+   "check": "Sin llenar nada no sale el aviso verde",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Muestra los obligatorios que faltan en el paso",
+   "ok": true,
+   "dato": "☰\nMenú\n10\nV\n‹\nMi día\n3973 QA Guardar Paso Rd\nNuevo prospecto\nExpediente\nCASE-2026-0017\nDirección\n3973 QA Guardar Paso Rd, Phoenix\nFormulario\nversión 1\nAvance\n0 de 7 pasos\n1\nCliente\n2\nVivienda y hogar\n3\nElegibilidad\n4\nAuditoría técnica\n5\nDocumentos y fotos\n6\nAutorización y firma\n7\nUso interno\n→\nEnvia"
+  },
+  {
+   "check": "Se queda en el paso Cliente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al escribir algo y guardar sale «Paso guardado»",
+   "ok": true,
+   "dato": "☰\nMenú\n10\nV\n‹\nMi día\nQA Paso Guardado\nNuevo prospecto\nExpediente\nCASE-2026-0017\nDirección\n3973 QA Guardar Paso Rd, Phoenix\nFormulario\nversión 1\nAvance\n0 de 7 pasos\n1\nCliente\n2\nVivienda y hogar\n3\nElegi"
+  },
+  {
+   "check": "«Seguir sin completarlos» pasa al siguiente paso",
+   "ok": true,
+   "dato": "☰\nMenú\n10\nV\n‹\nMi día\nQA Paso Guardado\nNuevo prospecto\nExpediente\nCASE-2026-0017\nDirección\n3973 QA Guardar Paso Rd, Phoenix\nFormulario\nversión 1\nAvance\n0 de 7 pasos\n1\nCliente\n2\nVivienda y hogar\n3\nElegi"
+  }
+ ]
+}

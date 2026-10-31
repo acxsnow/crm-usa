@@ -12,6 +12,7 @@ import { SignaturePad } from "@/features/field-ops/SignaturePad";
 import { previewVersion } from "@/features/programs/api";
 import { FormRenderer, type MediaSupport } from "@/features/programs/FormRenderer";
 import { apiClient } from "@/lib/apiClient";
+import { toast } from "@/lib/toast";
 import { useGeolocation } from "@/lib/useGeolocation";
 import type { Evaluation } from "@/types/programs";
 import {
@@ -99,28 +100,53 @@ export function CaseFormPage() {
   const firmaPendiente = useRef<(() => Promise<unknown>) | null>(null);
   const registrarFirma = useCallback((f: (() => Promise<unknown>) | null) => { firmaPendiente.current = f; }, []);
 
+  // Obligatorios que faltan en el paso abierto, según la evaluación en vivo. La
+  // firma y la casilla de términos se manejan aparte (TermsAndSignature).
+  const tipoDe = (key: string) => evaluacion?.steps.flatMap((s) => s.fields).find((f) => f.key === key)?.type;
+  const faltanAqui = (evaluacion?.missing ?? []).filter((m) => m.step === actual && !["signature", "terms_checkbox"].includes(tipoDe(m.key) ?? ""));
+  // «Guardar y seguir» con obligatorios vacíos no avanza: muestra cuáles faltan
+  // y deja seguir solo si el vendedor lo pide (p. ej. la foto, para después).
+  const [avisoFaltan, setAvisoFaltan] = useState<string | null>(null);
+
+  // El aviso verde solo sale si de verdad se guardó algo en el servidor: antes
+  // salía «Cambios guardados» aunque el paso estuviera vacío y no se enviara nada.
   const guardar = useMutation({
+    meta: { silent: true },
     mutationFn: async (siguiente: string | null) => {
+      let guardo = false;
       if (firmaPendiente.current) {
         await firmaPendiente.current();
         firmaPendiente.current = null;
+        guardo = true;
       }
       const def = pasos.find((s) => s.code === actual);
-      if (!def) return siguiente;
-      const delPaso = Object.fromEntries(def.fields.filter((f) => f.key in answers && !["signature", "system_datetime", "system_user", "terms_checkbox", "info"].includes(f.type))
+      if (!def) return { siguiente, guardo };
+      const delPaso = Object.fromEntries(def.fields.filter((f) => f.key in answers && sucio.has(f.key) && !["signature", "system_datetime", "system_user", "terms_checkbox", "info"].includes(f.type))
         .map((f) => [f.key, answers[f.key]]));
-      if (Object.keys(delPaso).length) await saveStep(caseId!, def.code, delPaso, geo.coords);
-      return siguiente;
+      if (Object.keys(delPaso).length) {
+        await saveStep(caseId!, def.code, delPaso, geo.coords);
+        guardo = true;
+      }
+      return { siguiente, guardo };
     },
-    onSuccess: async (siguiente) => {
+    onSuccess: async ({ siguiente, guardo }) => {
       setError(null);
       const def = pasos.find((st) => st.code === actual);
       if (def) setSucio((s) => { const n = new Set(s); def.fields.forEach((f) => n.delete(f.key)); return n; });
+      if (guardo) toast("Paso guardado.");
       await refrescar();
-      if (siguiente) { setPaso(siguiente); window.scrollTo({ top: 0 }); }
+      if (siguiente) { setAvisoFaltan(null); setPaso(siguiente); window.scrollTo({ top: 0 }); }
     },
     onError: (e) => setError(apiErrorMessage(e)),
   });
+  const guardarYSeguir = () => {
+    if (faltanAqui.length > 0) {
+      setAvisoFaltan(actual);
+      guardar.mutate(null);
+      return;
+    }
+    guardar.mutate(siguiente);
+  };
 
   if (isLoading) return <p>Cargando…</p>;
   if (errCarga) {
@@ -217,10 +243,20 @@ export function CaseFormPage() {
               st.code === actual ? { ...st, title: "Otros datos", fields: st.fields.filter((f) => !isAuthField(f)) } : st) } : evaluacion}
               answers={answers} stepCode={actual} media={media} disabled={!form.editable}
               onChange={cambiar} />
+            {form.editable && avisoFaltan === actual && faltanAqui.length > 0 && (
+              <div className="sales-missing" role="alert">
+                <strong>{faltanAqui.length === 1 ? "Falta 1 dato obligatorio" : `Faltan ${faltanAqui.length} datos obligatorios`} en este paso</strong>
+                <span>{faltanAqui.map((m) => m.label).join(", ")}.</span>
+                <span>Puedes completarlos ahora o seguir y completarlos antes de enviar.</span>
+                <button type="button" className="acta-btn is-quiet" disabled={guardar.isPending} onClick={() => guardar.mutate(siguiente)}>
+                  Seguir sin completarlos ›
+                </button>
+              </div>
+            )}
             {form.editable && (
               <div className="sales-nav">
                 <button type="button" className="acta-btn is-quiet" disabled={idx <= 0} onClick={() => guardar.mutate(pasos[idx - 1]?.code ?? null)}>‹ Anterior</button>
-                <button type="button" className="acta-btn is-primary" disabled={guardar.isPending} onClick={() => guardar.mutate(siguiente)}>
+                <button type="button" className="acta-btn is-primary" disabled={guardar.isPending} onClick={guardarYSeguir}>
                   {guardar.isPending ? "Guardando…" : siguiente === REVIEW ? "Guardar y revisar" : "Guardar y seguir"}
                 </button>
               </div>

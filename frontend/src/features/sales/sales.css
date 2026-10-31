@@ -170,3 +170,10 @@
   color: var(--ink-soft); white-space: nowrap; }
 .approval-days.is-overdue { color: var(--red); }
 .board-card .approval-days { margin-top: 0.15rem; }
+
+/* Obligatorios que faltan al tocar «Guardar y seguir»: no avanza hasta que el
+   vendedor los completa o elige seguir sin ellos. */
+.sales-missing { display: grid; gap: 0.35rem; margin-top: 1.2rem; padding: 0.9rem 1rem; border: 1px solid #f3c98b;
+  border-radius: 10px; background: #fff7eb; color: #7a4b00; font-size: 0.9rem; }
+.sales-missing strong { font-size: 0.95rem; }
+.sales-missing .acta-btn { justify-self: start; margin-top: 0.3rem; }
