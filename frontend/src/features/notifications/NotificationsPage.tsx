@@ -7,6 +7,7 @@ import "../programs/programs.css";
 import "./notifications.css";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
@@ -152,7 +153,6 @@ function Deliveries() {
   const [estado, setEstado] = useState("");
   const lista = usePaginatedQuery<Delivery>({ key: ["notice-deliveries"], path: "/notifications/deliveries", pageSize: 50,
     params: { status: estado || undefined } });
-  const { items: data, isLoading } = lista;
   const [error, setError] = useState<string | null>(null);
   const reenviar = useMutation({
     mutationFn: resendDelivery, onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: ["notice-deliveries"] }); },
@@ -169,28 +169,23 @@ function Deliveries() {
         </select>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {isLoading ? <p className="acta-empty">Cargando…</p> : data.length === 0 ? <p className="acta-empty">Sin envíos.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Aviso</th><th>Canal</th><th>Para</th><th>Estado</th><th>Cuándo</th><th /></tr></thead>
-          <tbody>
-            {data.map((d) => (
-              <tr key={d.id}>
-                <td><strong>{d.notice_label}</strong><small>{d.title}</small></td>
-                <td>{d.channel === "email" ? "Correo" : "SMS"}</td>
-                <td className="mono">{d.to}</td>
-                <td><span className={`billing-chip ${ESTADO[d.status][1]}`}>{ESTADO[d.status][0]}</span>
-                  {d.last_error && <small className="notices-error">{d.last_error}</small>}
-                  {d.attempts > 1 && <small>{d.attempts} intentos</small>}</td>
-                <td>{timeAgo(d.sent_at ?? d.created_at)}</td>
-                <td>{(d.status === "failed" || d.status === "skipped") && (
-                  <button type="button" className="acta-link" disabled={reenviar.isPending} onClick={() => reenviar.mutate(d.id)}>Reenviar</button>
-                )}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(d) => d.id} emptyMessage="Sin envíos."
+        columns={[
+          { key: "aviso", header: "Aviso", render: (d) => <><strong>{d.notice_label}</strong><small>{d.title}</small></> },
+          { key: "canal", header: "Canal", render: (d) => (d.channel === "email" ? "Correo" : "SMS") },
+          { key: "para", header: "Para", className: "mono", render: (d) => d.to },
+          { key: "estado", header: "Estado", render: (d) => (
+            <>
+              <span className={`billing-chip ${ESTADO[d.status][1]}`}>{ESTADO[d.status][0]}</span>
+              {d.last_error && <small className="notices-error">{d.last_error}</small>}
+              {d.attempts > 1 && <small>{d.attempts} intentos</small>}
+            </>
+          ) },
+          { key: "cuando", header: "Cuándo", render: (d) => timeAgo(d.sent_at ?? d.created_at) },
+          { key: "acciones", header: "", render: (d) => (d.status === "failed" || d.status === "skipped") && (
+            <RowActions><RowAction disabled={reenviar.isPending} onClick={() => reenviar.mutate(d.id)}>Reenviar</RowAction></RowActions>
+          ) },
+        ]} />
     </article>
   );
 }

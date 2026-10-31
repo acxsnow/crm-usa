@@ -6,9 +6,11 @@ import "../programs/programs.css";
 import "./notifications.css";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { listPrograms, programKeys } from "@/features/programs/api";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Icon } from "@/components/ui/Icon";
 import { SkeletonRows } from "@/components/ui/Skeleton";
+import { useClientPagination } from "@/lib/useClientPagination";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   addOptOut,
@@ -218,6 +220,8 @@ function AudiencePicker({ value, onChange, canal }: { value: Audience; onChange:
   const [confirmo, setConfirmo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const contactos = data?.contacts ?? [];
+  // La audiencia llega completa: se pagina aquí (antes se cortaba en los primeros 500).
+  const audiencia = useClientPagination(contactos, !data);
   const enPublico = manual ? contactos.filter((x) => elegidos.has(x.key)) : contactos;
   const conSms = canal !== "email";
   const conCorreo = canal !== "sms";
@@ -254,20 +258,22 @@ function AudiencePicker({ value, onChange, canal }: { value: Audience; onChange:
         {manual && <> <button type="button" className="acta-link" onClick={() => onChange({ ...value, selected: [] })}>Quitar selección</button></>}
         {" "}Los filtros de programa y estado dejan fuera a los contactos propios.
       </p>
-      <div className="tablewrap campaign-contacts"><table>
-        <thead><tr><th aria-label="Elegir" /><th>Nombre</th>{conSms && <th>Teléfono</th>}{conCorreo && <th>Correo</th>}</tr></thead>
-        <tbody>
-          {contactos.slice(0, 500).map((x) => (
-            <tr key={x.key}>
-              <td><input type="checkbox" aria-label={`Elegir a ${x.name}`} checked={elegidos.has(x.key)} onChange={() => alternar(x.key)} /></td>
-              <td><strong>{x.name}</strong><small>{x.kind === "contact" ? "Contacto propio" : [x.program ?? "Cliente", x.city, x.state].filter(Boolean).join(" · ")}</small></td>
-              {conSms && <td><span className="mono">{tel(x.phone)}</span>{x.phone && <span className={`billing-chip ${PERMISO[x.consent][1]}`}>{PERMISO[x.consent][0]}</span>}</td>}
-              {conCorreo && <td><span className="mono">{x.email ?? "—"}</span>{x.email && <span className={`billing-chip ${PERMISO[x.email_consent][1]}`}>{PERMISO[x.email_consent][0]}</span>}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
-      {contactos.length === 0 && <p className="acta-empty">Nadie con teléfono o correo cumple el filtro. Puedes cargar contactos propios en la pestaña «Contactos propios».</p>}
+      <PaginatedTable list={audiencia} getRowKey={(x) => x.key} className="campaign-contacts"
+        emptyMessage="Nadie con teléfono o correo cumple el filtro. Puedes cargar contactos propios en la pestaña «Contactos propios»."
+        columns={[
+          { key: "elegir", header: "Elegir", render: (x) => (
+            <input type="checkbox" aria-label={`Elegir a ${x.name}`} checked={elegidos.has(x.key)} onChange={() => alternar(x.key)} />
+          ) },
+          { key: "nombre", header: "Nombre", render: (x) => (
+            <><strong>{x.name}</strong><small>{x.kind === "contact" ? "Contacto propio" : [x.program ?? "Cliente", x.city, x.state].filter(Boolean).join(" · ")}</small></>
+          ) },
+          ...(conSms ? [{ key: "telefono", header: "Teléfono", render: (x: (typeof contactos)[number]) => (
+            <><span className="mono">{tel(x.phone)}</span>{x.phone && <span className={`billing-chip ${PERMISO[x.consent][1]}`}>{PERMISO[x.consent][0]}</span>}</>
+          ) }] : []),
+          ...(conCorreo ? [{ key: "correo", header: "Correo", render: (x: (typeof contactos)[number]) => (
+            <><span className="mono">{x.email ?? "—"}</span>{x.email && <span className={`billing-chip ${PERMISO[x.email_consent][1]}`}>{PERMISO[x.email_consent][0]}</span>}</>
+          ) }] : []),
+        ]} />
       {sinPermiso.length > 0 && (
         <div className="campaign-consent">
           <strong>{sinPermiso.length} sin permiso de mercadeo: no recibirán el mensaje.</strong>
@@ -358,21 +364,19 @@ function CampaignResult({ c, onChange }: { c: Campaign; onChange: () => void }) 
       {(c.status === "scheduled" || c.status === "sending") && (
         <div className="acta-actions"><button type="button" className="acta-btn is-quiet" onClick={async () => { if (await confirmAction({ title: "¿Cancelar lo que falta por enviar?", confirmLabel: "Cancelar campaña", cancelLabel: "Volver", danger: true })) cancelar.mutate(); }}>Cancelar campaña</button></div>
       )}
-      <div className="tablewrap"><table className="notices-table">
-        <thead><tr><th>Nombre</th><th>Canal</th><th>Para</th><th>Estado</th></tr></thead>
-        <tbody>
-          {lista.items.map((r) => (
-            <tr key={r.id}>
-              <td>{r.name}</td><td>{r.channel === "sms" ? "SMS" : "Correo"}</td>
-              <td className="mono">{r.channel === "sms" ? tel(r.address) : r.address}</td>
-              <td>{{ pending: "En cola", sent: "Enviado", failed: "Falló", skipped: "No enviado" }[r.status] ?? r.status}
-                {r.status === "pending" && r.next_attempt_at && <small>sale {new Date(r.next_attempt_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</small>}
-                {r.last_error && <small className="notices-error">{r.last_error}</small>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table></div>
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(r) => r.id} emptyMessage="Sin destinatarios."
+        columns={[
+          { key: "nombre", header: "Nombre", render: (r) => r.name },
+          { key: "canal", header: "Canal", render: (r) => (r.channel === "sms" ? "SMS" : "Correo") },
+          { key: "para", header: "Para", className: "mono", render: (r) => (r.channel === "sms" ? tel(r.address) : r.address) },
+          { key: "estado", header: "Estado", render: (r) => (
+            <>
+              {{ pending: "En cola", sent: "Enviado", failed: "Falló", skipped: "No enviado" }[r.status] ?? r.status}
+              {r.status === "pending" && r.next_attempt_at && <small>sale {new Date(r.next_attempt_at).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</small>}
+              {r.last_error && <small className="notices-error">{r.last_error}</small>}
+            </>
+          ) },
+        ]} />
     </div>
   );
 }
@@ -422,16 +426,17 @@ function OwnContacts() {
         </div>
       </form>
       <h3 className="acta-section-title">Tu lista ({lista.total})</h3>
-      {lista.items.length === 0 ? <p className="acta-empty">Todavía no hay contactos propios.</p> : (
-        <div className="tablewrap campaign-contacts"><table>
-          <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th aria-label="Acciones" /></tr></thead>
-          <tbody>{lista.items.map((k) => (
-            <tr key={k.id}><td>{k.name ?? "—"}</td><td className="mono">{tel(k.phone)}</td><td className="mono">{k.email ?? "—"}</td>
-              <td><button type="button" className="acta-link" onClick={async () => { if (await confirmAction({ title: "¿Quitar este contacto de la lista?", confirmLabel: "Quitar", danger: true })) borrar.mutate(k.id); }}>Quitar</button></td></tr>
-          ))}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(k) => k.id} className="campaign-contacts" emptyMessage="Todavía no hay contactos propios."
+        columns={[
+          { key: "nombre", header: "Nombre", render: (k) => k.name ?? "—" },
+          { key: "telefono", header: "Teléfono", className: "mono", render: (k) => tel(k.phone) },
+          { key: "correo", header: "Correo", className: "mono", render: (k) => k.email ?? "—" },
+          { key: "acciones", header: "", render: (k) => (
+            <RowActions>
+              <RowAction variant="danger" onClick={async () => { if (await confirmAction({ title: "¿Quitar este contacto de la lista?", confirmLabel: "Quitar", danger: true })) borrar.mutate(k.id); }}>Quitar</RowAction>
+            </RowActions>
+          ) },
+        ]} />
     </article>
   );
 }
@@ -498,14 +503,13 @@ function OptOuts() {
         <button type="submit" className="acta-btn is-line" disabled={valor.length < 5 || agregar.isPending}>Dar de baja</button>
       </form>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {lista.items.length === 0 ? <p className="acta-empty">Nadie se ha dado de baja.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Canal</th><th>Teléfono o correo</th><th>Motivo</th><th>Cuándo</th></tr></thead>
-          <tbody>{lista.items.map((o) => <tr key={`${o.channel}-${o.address}`}><td>{o.channel === "sms" ? "SMS" : "Correo"}</td>
-            <td className="mono">{o.channel === "sms" ? tel(o.address) : o.address}</td><td>{o.reason}</td><td>{o.at ? timeAgo(o.at) : "—"}</td></tr>)}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(o) => `${o.channel}-${o.address}`} emptyMessage="Nadie se ha dado de baja."
+        columns={[
+          { key: "canal", header: "Canal", render: (o) => (o.channel === "sms" ? "SMS" : "Correo") },
+          { key: "direccion", header: "Teléfono o correo", className: "mono", render: (o) => (o.channel === "sms" ? tel(o.address) : o.address) },
+          { key: "motivo", header: "Motivo", render: (o) => o.reason },
+          { key: "cuando", header: "Cuándo", render: (o) => (o.at ? timeAgo(o.at) : "—") },
+        ]} />
     </article>
   );
 }
