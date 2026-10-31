@@ -1,0 +1,19 @@
+{
+ "INS-012": [
+  {
+   "check": "Avisa que el técnico marcó «Llegué» y sugiere la visita fallida",
+   "ok": true,
+   "dato": "Orden liberada\nAgendada para el 31 de oct\nCompletado\nTécnico\nElige un técnico\nAdmin Demo\nAndrés Morales\nCarlos Ramírez\nDiego Jiménez\nFernando Ortiz\nHéctor Ruiz\nJorge Rojas\nJosé Castillo\nLuis Herrera\nManuel Navarro\nMiguel Torres\nPedro Vargas\nRaúl Mendoza\nRicardo Silva\nTito Técnico\nToño Segundo\nFecha "
+  },
+  {
+   "check": "Sin la casilla, «Cancelar la obra» queda deshabilitado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Con la casilla marcada se habilita",
+   "ok": true,
+   "dato": ""
+  }
+ ]
+}

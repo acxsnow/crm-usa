@@ -158,6 +158,7 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [notaMaterial, setNotaMaterial] = useState("");
+  const [hableConTecnico, setHableConTecnico] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: chequeo } = useQuery({
     queryKey: visitKeys.cancellation(project.id),
@@ -165,7 +166,7 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
     enabled: abierto,
   });
   const cancelar = useMutation({
-    mutationFn: () => cancelProject(project.id, motivo, notaMaterial),
+    mutationFn: () => cancelProject(project.id, motivo, notaMaterial, hableConTecnico),
     onSuccess: () => { setError(null); setAbierto(false); return refresh(); },
     onError: (err) => setError(apiErrorMessage(err)),
   });
@@ -182,6 +183,7 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
   if (!canCancel || project.status === "completed") return null;
   const material = chequeo?.material_in_field ?? [];
   const salidas = chequeo?.open_releases ?? [];
+  const presencia = chequeo?.technician_presence ?? null;
   return (
     <div className="visits-step">
       <h4 className="acta-section-title">Cancelar la obra</h4>
@@ -195,6 +197,20 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
           <p className="acta-lead">
             La obra queda en solo lectura y el expediente se cierra. No se puede deshacer.
           </p>
+          {presencia ? (
+            <div className="form-error" role="alert">
+              <strong>{presencia.technician_name} marcó «{presencia.label}» a las {presencia.at} en esta obra.</strong>
+              <span> Si el cliente no estaba o desistió en la puerta, usa «No se pudo hacer la visita».</span>
+              <label className="checkbox-row" style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "flex-start" }}>
+                <input type="checkbox" checked={hableConTecnico} onChange={(e) => setHableConTecnico(e.target.checked)} />
+                <span>Ya hablé con el técnico y sabe que no instala.</span>
+              </label>
+            </div>
+          ) : chequeo?.install_today && (
+            <p className="acta-note" role="status">
+              La instalación es hoy: confirma con el técnico antes de cancelar.
+            </p>
+          )}
           {salidas.length > 0 && (
             <p className="acta-note" role="status">
               Se anulan solas, porque no han salido de bodega: {salidas.map((s) => `${s.number ?? "sin número"} (${s.status_label})`).join(", ")}.
@@ -218,7 +234,7 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
           <input id="cancelar-motivo" required minLength={5} value={motivo} autoFocus
             onChange={(e) => setMotivo(e.target.value)} placeholder="El cliente desistió del programa" />
           <div className="acta-actions">
-            <button type="submit" className="acta-btn is-primary" disabled={cancelar.isPending}>
+            <button type="submit" className="acta-btn is-primary" disabled={cancelar.isPending || (Boolean(presencia) && !hableConTecnico)}>
               {cancelar.isPending ? "Cancelando…" : "Cancelar la obra"}
             </button>
             <button type="button" className="acta-btn is-quiet" onClick={() => setAbierto(false)}>Volver</button>

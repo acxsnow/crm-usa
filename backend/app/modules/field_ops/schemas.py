@@ -386,6 +386,8 @@ class CancelProjectRequest(BaseModel):
     reason: str = Field(max_length=2000)
     # Qué pasó con el material entregado que no volvió a bodega.
     material_note: str | None = Field(default=None, max_length=2000)
+    # «Ya hablé con el técnico»: obligatorio si marcó «En camino» o «Llegué» hoy.
+    technician_confirmed: bool = False
 
 
 class FieldOpsSettingsIn(BaseModel):

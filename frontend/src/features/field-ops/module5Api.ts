@@ -202,9 +202,10 @@ export async function getCancellationCheck(projectId: string): Promise<Cancellat
   return (await apiClient.get<CancellationCheck>(`/projects/${projectId}/cancellation-check`)).data;
 }
 
-export async function cancelProject(projectId: string, reason: string, materialNote?: string): Promise<Project> {
+export async function cancelProject(projectId: string, reason: string, materialNote?: string,
+  technicianConfirmed = false): Promise<Project> {
   return (await apiClient.post<Project>(`/projects/${projectId}/cancel`, {
-    reason, material_note: materialNote || undefined,
+    reason, material_note: materialNote || undefined, technician_confirmed: technicianConfirmed,
   })).data;
 }
 

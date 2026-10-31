@@ -26,7 +26,7 @@ from app.modules.field_ops.access import get_visible_project, get_workable_proje
 from app.modules.field_ops.case_flow import advance_case, mark_substatus
 from app.modules.field_ops.catalogs import VISIT_FAILURE_REASONS
 from app.modules.field_ops.checklist import ensure_installation_open
-from app.modules.field_ops.clock import org_today
+from app.modules.field_ops.clock import local_date, org_today, org_zone
 from app.modules.field_ops.models import (
     FieldOpsSettings,
     Project,
@@ -238,23 +238,61 @@ async def open_releases(db: AsyncSession, organization_id, project_id) -> list[d
             for o in ordenes]
 
 
+_PRESENCIA = {"en_route": "En camino", "arrived": "Llegué"}
+
+
+async def technician_presence(db: AsyncSession, organization_id, project: Project) -> dict | None:
+    """Si hoy alguien marcó «En camino» o «Llegué» en esta obra y todavía no
+    marcó «Salida de obra»: el técnico va para allá o ya está en la casa (QA de
+    José, 31 oct). Se mira la última marca de la obra en el día local."""
+    from app.modules.attendance.models import AttendanceEvent
+    from app.modules.users.models import User
+
+    fila = (await db.execute(
+        select(AttendanceEvent.event_type, AttendanceEvent.occurred_at, User.full_name)
+        .join(User, User.id == AttendanceEvent.user_id)
+        .where(AttendanceEvent.organization_id == organization_id, AttendanceEvent.project_id == project.id,
+               AttendanceEvent.event_type.in_(("en_route", "arrived", "left_site")))
+        .order_by(AttendanceEvent.occurred_at.desc()).limit(1))).first()
+    if fila is None or fila.event_type not in _PRESENCIA:
+        return None
+    zona = await org_zone(db, organization_id)
+    if local_date(fila.occurred_at, zona) != await org_today(db, organization_id):
+        return None
+    momento = fila.occurred_at if fila.occurred_at.tzinfo else fila.occurred_at.replace(tzinfo=timezone.utc)
+    return {"event": fila.event_type, "label": _PRESENCIA[fila.event_type],
+            "at": momento.astimezone(zona).strftime("%H:%M"), "technician_name": fila.full_name}
+
+
 async def cancellation_check(db: AsyncSession, *, organization_id, user, project_id) -> dict:
     """Lo que la pantalla muestra antes de cancelar: qué lo impide y qué falta resolver."""
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
+    hoy = await org_today(db, organization_id)
     return {"can_cancel": project.status not in (ProjectStatus.completed, ProjectStatus.cancelled),
             "open_releases": await open_releases(db, organization_id, project.id),
             "material_in_field": await material_in_field(db, organization_id, project.id),
+            # La instalación es hoy o ya pasó: hay que confirmar con el técnico.
+            "install_today": bool(project.scheduled_date and project.scheduled_date <= hoy),
+            "technician_presence": await technician_presence(db, organization_id, project),
             **await visit_status(db, project)}
 
 
 async def cancel_project(db: AsyncSession, *, organization_id, user, project_id, reason: str | None,
-                         material_note: str | None = None) -> Project:
+                         material_note: str | None = None, technician_confirmed: bool = False) -> Project:
     project = await get_visible_project(db, organization_id=organization_id, user=user, project_id=project_id)
     if project.status == ProjectStatus.completed:
         raise ConflictError("La instalación ya se cerró: la obra no se cancela.", code="installation_closed")
     if project.status == ProjectStatus.cancelled:
         raise ConflictError("La obra ya está cancelada.", code="project_cancelled")
     motivo = _texto(reason, campo="por qué se cancela la obra", code="cancel_reason_required")
+    # Con el técnico en camino o en la casa, lo natural es «No se pudo hacer la
+    # visita»; cancelar igual exige confirmar que ya se habló con él.
+    presencia = await technician_presence(db, organization_id, project)
+    if presencia and not technician_confirmed:
+        raise ConflictError(
+            f"{presencia['technician_name']} marcó «{presencia['label']}» a las {presencia['at']} en esta obra. "
+            "Si el cliente no estaba o desistió en la puerta, registra «No se pudo hacer la visita». Para "
+            "cancelar igual, confirma que ya hablaste con el técnico.", code="technician_on_site")
 
     afuera = await material_in_field(db, organization_id, project.id)
     nota_material = (material_note or "").strip()
@@ -290,7 +328,8 @@ async def cancel_project(db: AsyncSession, *, organization_id, user, project_id,
         action="projects.cancelled", entity_type="Project", entity_id=str(project.id),
         before_data=antes,
         after_data={"reason": motivo, "material_in_field": afuera, "material_note": nota_material or None,
-                    "releases_cancelled": anuladas})
+                    "releases_cancelled": anuladas, "technician_presence": presencia,
+                    "technician_confirmed": bool(presencia and technician_confirmed)})
     project_id_ = project.id
     await advance_case(db, project=project, to_stage="closed", user=user, reason=f"Obra cancelada: {motivo}")
     await db.commit()

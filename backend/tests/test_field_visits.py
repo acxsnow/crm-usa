@@ -5,7 +5,7 @@ cliente no está. Deja escrito qué pasó y la obra vuelve a agendarse; con un
 límite que fija cada organización, y al llegar a él decide Administración:
 otro intento o cancelar. Cancelar exige motivo y resolver el material.
 """
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -342,3 +342,63 @@ async def test_cancelar_la_obra_anula_sus_salidas_sin_entregar(app_client, db, l
     # No mueve existencias: el tubo sigue completo en bodega.
     item = (await app_client.get(f"{API}/warehouse/items/{m['item']['id']}", headers=admin)).json()
     assert item["total_quantity"].startswith("20")
+
+
+async def _marca(db, obra, tipo, *, hace=timedelta(minutes=5)):
+    """Una marca de «En camino», «Llegué» o «Salida de obra» del técnico en la obra."""
+    from datetime import datetime, timezone
+
+    from app.modules.attendance.models import AttendanceEvent
+
+    momento = datetime.now(timezone.utc) - hace
+    db.add(AttendanceEvent(organization_id=obra["project"].organization_id, user_id=obra["tecnico_id"],
+                           project_id=obra["project"].id, event_type=tipo, received_at=momento,
+                           occurred_at=momento))
+    await db.commit()
+
+
+async def test_con_el_tecnico_en_la_obra_cancelar_pide_confirmar(app_client, db, obra):
+    """QA de José (31 oct 2026): si el técnico ya marcó «Llegué» hoy, lo natural
+    es la visita fallida; cancelar igual exige «ya hablé con el técnico»."""
+    pid = obra["project"].id
+    chequeo = (await app_client.get(f"{API}/projects/{pid}/cancellation-check", headers=obra["oficina"])).json()
+    assert chequeo["install_today"] is True
+    assert chequeo["technician_presence"] is None
+
+    await _marca(db, obra, "arrived")
+    chequeo = (await app_client.get(f"{API}/projects/{pid}/cancellation-check", headers=obra["oficina"])).json()
+    assert chequeo["technician_presence"]["label"] == "Llegué"
+
+    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "El cliente desistió"},
+                              headers=obra["oficina"])
+    assert (r.status_code, r.json()["code"]) == (409, "technician_on_site")
+    assert "No se pudo hacer la visita" in r.json()["detail"]
+
+    r = await app_client.post(f"{API}/projects/{pid}/cancel",
+                              json={"reason": "El cliente desistió", "technician_confirmed": True},
+                              headers=obra["oficina"])
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "cancelled"
+
+
+async def test_en_camino_tambien_pide_confirmar_y_la_salida_de_obra_no(app_client, db, obra):
+    pid = obra["project"].id
+    await _marca(db, obra, "en_route", hace=timedelta(minutes=30))
+    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "El cliente desistió"},
+                              headers=obra["oficina"])
+    assert (r.status_code, r.json()["code"]) == (409, "technician_on_site")
+
+    # Ya salió de la obra: no está allá, se cancela sin confirmar.
+    await _marca(db, obra, "left_site", hace=timedelta(minutes=1))
+    chequeo = (await app_client.get(f"{API}/projects/{pid}/cancellation-check", headers=obra["oficina"])).json()
+    assert chequeo["technician_presence"] is None
+    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "El cliente desistió"},
+                              headers=obra["oficina"])
+    assert r.status_code == 200, r.text
+
+
+async def test_una_marca_de_otro_dia_no_cuenta(app_client, db, obra):
+    await _marca(db, obra, "arrived", hace=timedelta(days=2))
+    chequeo = (await app_client.get(f"{API}/projects/{obra['project'].id}/cancellation-check",
+                                    headers=obra["oficina"])).json()
+    assert chequeo["technician_presence"] is None

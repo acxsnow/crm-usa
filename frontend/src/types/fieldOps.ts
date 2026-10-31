@@ -69,6 +69,10 @@ export interface CancellationCheck extends VisitStatus {
   can_cancel: boolean;
   open_releases: { id: string; number: string | null; status: string; status_label: string }[];
   material_in_field: { item_id: string; item_name: string; sku: string | null; unit: string | null; quantity: string }[];
+  /** La instalación es hoy o ya pasó: confirmar con el técnico antes de cancelar. */
+  install_today?: boolean;
+  /** Hoy marcó «En camino» o «Llegué» en esta obra y no ha salido. */
+  technician_presence?: { event: string; label: string; at: string; technician_name: string } | null;
 }
 
 export interface ProjectReview {

@@ -340,7 +340,8 @@ async def cancel_project(
 ):
     return await visits_service.cancel_project(
         db, organization_id=organization_id, user=current_user, project_id=project_id,
-        reason=payload.reason, material_note=payload.material_note)
+        reason=payload.reason, material_note=payload.material_note,
+        technician_confirmed=payload.technician_confirmed)
 
 
 @router.get("/field-ops/settings")
