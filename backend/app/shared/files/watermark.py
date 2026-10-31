@@ -8,10 +8,10 @@ can't be silently stripped.
 import io
 import subprocess
 import tempfile
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 # Image and video formats we know how to watermark. Other formats (PDF, etc.)
 # are outside the evidence upload allow-list.
@@ -32,7 +32,10 @@ def apply_gps_watermark(
     the bottom of the image showing GPS coordinates and timestamp. If no GPS
     is available, only the timestamp is stamped (still visibly marked as
     field evidence, per the same requirement)."""
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    # El celular guarda la foto «acostada» y anota en el EXIF cómo girarla. Al
+    # volver a guardarla sin ese dato salía de lado (29 oct 2026): se gira
+    # primero según la orientación EXIF y la marca va abajo de la foto derecha.
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
     width, height = image.size
 
     bar_height = max(36, int(height * 0.06))
