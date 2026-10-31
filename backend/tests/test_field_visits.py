@@ -70,7 +70,9 @@ async def _etapa(db, case_id) -> tuple[str, str | None]:
 async def test_el_tecnico_registra_la_visita_fallida_y_la_obra_vuelve_a_por_agendar(app_client, db, obra):
     r = await _fallida(app_client, obra["tecnico"], obra["project"].id, latitude=33.45, longitude=-112.07)
     assert r.status_code == 201, r.text
-    assert r.json() == {"failed_visits": 1, "limit": 2, "limit_reached": False, "extra_visits_authorized": 0}
+    claves = ("failed_visits", "limit", "limit_reached", "extra_visits_authorized")
+    assert {k: r.json()[k] for k in claves} == {"failed_visits": 1, "limit": 2, "limit_reached": False,
+                                               "extra_visits_authorized": 0}
 
     p = (await app_client.get(f"{API}/projects/{obra['project'].id}", headers=obra["oficina"])).json()
     assert (p["scheduled_date"], p["status"], p["failed_visits_count"]) == (None, "planning", 1)
@@ -146,7 +148,8 @@ async def test_al_llegar_al_limite_no_se_agenda_hasta_que_administracion_decida(
     assert (r.status_code, r.json()["code"]) == (400, "extra_visit_reason_required")
     r = await app_client.post(f"{API}/projects/{pid}/extra-visit",
                               json={"reason": "El cliente llamó y confirmó que estará"}, headers=obra["oficina"])
-    assert r.json() == {"failed_visits": 2, "limit": 3, "limit_reached": False, "extra_visits_authorized": 1}
+    assert {k: r.json()[k] for k in ("failed_visits", "limit", "limit_reached", "extra_visits_authorized")} == {
+        "failed_visits": 2, "limit": 3, "limit_reached": False, "extra_visits_authorized": 1}
     await _liberar(app_client, obra["oficina"], pid, obra["tecnico_id"])
 
     # Otra fallida vuelve a bloquear.
@@ -174,7 +177,8 @@ async def test_el_limite_se_configura_por_organizacion(app_client, login, obra, 
     assert r.json()["max_failed_visits"] == 1
 
     pid = obra["project"].id
-    assert (await _fallida(app_client, obra["tecnico"], pid)).json() == {
+    estado = (await _fallida(app_client, obra["tecnico"], pid)).json()
+    assert {k: estado[k] for k in ("failed_visits", "limit", "limit_reached", "extra_visits_authorized")} == {
         "failed_visits": 1, "limit": 1, "limit_reached": True, "extra_visits_authorized": 0}
     await _liberar(app_client, obra["oficina"], pid, obra["tecnico_id"], esperado=409)
     # Subir el límite aplica de inmediato, sin tocar la obra.
@@ -402,3 +406,17 @@ async def test_una_marca_de_otro_dia_no_cuenta(app_client, db, obra):
     chequeo = (await app_client.get(f"{API}/projects/{obra['project'].id}/cancellation-check",
                                     headers=obra["oficina"])).json()
     assert chequeo["technician_presence"] is None
+
+
+async def test_el_estado_dice_cuando_se_libero_la_orden_y_si_fue_tras_una_visita_fallida(app_client, obra):
+    """QA de José (31 oct 2026): el paso «Orden liberada» dice quién la liberó,
+    cuándo y si se reagendó después de una visita fallida."""
+    pid = obra["project"].id
+    estado = (await app_client.get(f"{API}/projects/{pid}/visit-status", headers=obra["oficina"])).json()
+    assert estado["last_release"]["by_name"]
+    assert estado["last_release"]["after_failed_visit"] is False
+
+    assert (await _fallida(app_client, obra["tecnico"], pid)).status_code == 201
+    await _liberar(app_client, obra["oficina"], pid, obra["tecnico_id"])
+    estado = (await app_client.get(f"{API}/projects/{pid}/visit-status", headers=obra["oficina"])).json()
+    assert estado["last_release"]["after_failed_visit"] is True

@@ -247,6 +247,8 @@ export function useRefreshProject(projectId: string) {
         visitKeys.status(projectId),
         visitKeys.list(projectId),
         visitKeys.cancellation(projectId),
+        // Cancelar la obra anula sus salidas: el resumen y el panel de materiales se recargan.
+        ["warehouse-releases", "obra", projectId],
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
 }

@@ -551,3 +551,9 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .visit-box-actions > .visits-step > :is(.acta-lead, .form-error, .acta-empty) { order: 2; flex-basis: 100%; margin: 0; }
 #root .visit-box-actions > .visits-step > form { order: 3; flex-basis: 100%; }
 #root .visit-box-actions > .visits-step > .visit-history { order: 4; flex-basis: 100%; }
+/* Resumen del paso «Orden liberada» (InstallationPanel.tsx): quién, cuándo y material. */
+#root .release-summary { display: grid; gap: 3px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid #b7e1c8;
+  border-left: 3px solid var(--green, #15803d); border-radius: 8px; background: #f2fbf5; font-size: 0.8125rem; color: var(--ink-soft); }
+#root .release-summary strong { color: var(--ink); font-size: 0.875rem; font-weight: 600; }
+#root .release-summary .is-pending { color: #9a5b00; font-weight: 500; }
+#root .release-summary.is-warning { border-color: #f3c98b; border-left-color: #e0a23b; background: #fff7eb; }

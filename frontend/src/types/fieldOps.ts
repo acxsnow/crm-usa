@@ -49,6 +49,8 @@ export interface VisitStatus {
   limit: number;
   limit_reached: boolean;
   extra_visits_authorized: number;
+  /** La última vez que se liberó la orden (del historial de auditoría). */
+  last_release?: { at: string; by_name: string | null; after_failed_visit: boolean } | null;
 }
 
 export interface FailedVisit {

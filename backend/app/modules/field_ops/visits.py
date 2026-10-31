@@ -103,11 +103,36 @@ async def ensure_can_reschedule(db: AsyncSession, project: Project) -> None:
             code="visit_limit_reached")
 
 
+async def last_release(db: AsyncSession, project: Project) -> dict | None:
+    """Cuándo y quién liberó la orden la última vez, y si fue después de una
+    visita fallida: el paso «Orden liberada» lo dice en claro (QA del 31 oct).
+    Sale del historial de auditoría; la obra no guarda esa fecha aparte."""
+    from app.modules.users.models import User
+    from app.shared.audit_models import AuditEvent
+
+    ultima = (await db.execute(
+        select(AuditEvent.created_at, User.full_name)
+        .outerjoin(User, User.id == AuditEvent.actor_user_id)
+        .where(AuditEvent.organization_id == project.organization_id, AuditEvent.entity_id == str(project.id),
+               AuditEvent.action == "projects.installation_scheduled")
+        .order_by(AuditEvent.created_at.desc()).limit(1))).first()
+    if ultima is None:
+        return None
+    fallida = (await db.execute(
+        select(AuditEvent.created_at)
+        .where(AuditEvent.organization_id == project.organization_id, AuditEvent.entity_id == str(project.id),
+               AuditEvent.action == "projects.visit_failed", AuditEvent.created_at < ultima.created_at)
+        .limit(1))).first()
+    momento = ultima.created_at if ultima.created_at.tzinfo else ultima.created_at.replace(tzinfo=timezone.utc)
+    return {"at": momento.isoformat(), "by_name": ultima.full_name, "after_failed_visit": fallida is not None}
+
+
 async def visit_status(db: AsyncSession, project: Project) -> dict:
     limite = visit_limit(project, await get_settings(db, project.organization_id))
     return {"failed_visits": project.failed_visits_count, "limit": limite,
             "limit_reached": project.failed_visits_count >= limite,
-            "extra_visits_authorized": project.extra_visits_authorized}
+            "extra_visits_authorized": project.extra_visits_authorized,
+            "last_release": await last_release(db, project)}
 
 
 # ---------------------------------------------------------------------------

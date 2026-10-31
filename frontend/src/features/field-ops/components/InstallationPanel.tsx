@@ -6,11 +6,14 @@ import {
   closeInstallation,
   fieldKeys,
   getInstallationGaps,
+  getVisitStatus,
   localISODate,
   scheduleInstallation,
   useInstallers,
   useRefreshProject,
+  visitKeys,
 } from "@/features/field-ops/module5Api";
+import { listProjectReleases } from "@/features/warehouse/api";
 import type { Project } from "@/types/fieldOps";
 import type { Requirement } from "./InstallationRecord";
 
@@ -50,6 +53,8 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
     return <p className="acta-empty">Solo Administración asigna el técnico y la fecha.</p>;
   }
   return (
+    <>
+    <ReleaseSummary project={project} technicianName={(tecnicos ?? []).find((t) => t.id === actual)?.full_name} />
     <form className="panel-form" onSubmit={(e) => { e.preventDefault(); schedule.mutate(); }}>
       {error && <p className="form-error" role="alert" style={{ gridColumn: "1 / -1" }}>{error}</p>}
       <div className="field">
@@ -76,6 +81,59 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
         {cambiaTecnico ? "Cambiar técnico" : project.scheduled_date ? "Guardar cambio" : "Liberar orden"}
       </button>
     </form>
+    </>
+  );
+}
+
+const fechaLarga = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+const momento = (iso: string) =>
+  new Date(iso).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+/**
+ * En qué está la orden, en claro (QA de José, 31 oct): quién instala y cuándo,
+ * cuándo y quién la liberó, si fue tras una visita fallida y cómo va el
+ * material de bodega. Antes solo se veía el formulario y el chulo verde.
+ */
+function ReleaseSummary({ project, technicianName }: { project: Project; technicianName?: string }) {
+  const { data: estado } = useQuery({ queryKey: visitKeys.status(project.id), queryFn: () => getVisitStatus(project.id) });
+  const { data: salidas } = useQuery({
+    queryKey: ["warehouse-releases", "obra", project.id], queryFn: () => listProjectReleases(project.id), retry: false,
+  });
+  const vigentes = (salidas ?? []).filter((s) => s.status !== "anulada" && s.status !== "rechazada");
+  const entregadas = vigentes.filter((s) => s.status === "entregada");
+  const pendientes = vigentes.filter((s) => s.status !== "entregada");
+  const liberada = estado?.last_release;
+
+  if (!project.scheduled_date) {
+    if (!project.failed_visits_count) return null;
+    return (
+      <div className="release-summary is-warning" role="status">
+        <strong>Sin fecha: la última visita no se pudo hacer.</strong>
+        <span>Elige la fecha nueva abajo y toca «Liberar orden» para reagendarla.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="release-summary" role="status">
+      <strong>
+        {technicianName ?? "El técnico"} instala el {fechaLarga(project.scheduled_date)}
+        {liberada?.after_failed_visit ? " · reagendada después de una visita fallida" : ""}.
+      </strong>
+      {liberada && <span>Orden liberada el {momento(liberada.at)}{liberada.by_name ? ` por ${liberada.by_name}` : ""}.</span>}
+      {salidas && (
+        vigentes.length === 0 ? (
+          <span className="is-pending">Todavía no tiene material de bodega: pídelo abajo en «Materiales de la orden» para que el técnico lo lleve.</span>
+        ) : (
+          <span>
+            Material de bodega: {[
+              entregadas.length ? `${entregadas.length} entregada${entregadas.length > 1 ? "s" : ""}` : null,
+              pendientes.length ? `${pendientes.map((s) => s.number ?? "borrador").join(", ")} sin entregar` : null,
+            ].filter(Boolean).join(" · ")}.
+          </span>
+        )
+      )}
+    </div>
   );
 }
 
