@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchPicker } from "@/components/SearchPicker";
 import { confirmAction } from "@/components/ui/ConfirmDialog";
 import { apiClient } from "@/lib/apiClient";
 import { toast } from "@/lib/toast";
+import { useClientPagination } from "@/lib/useClientPagination";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   acceptTx, addTx, connectBank, deleteRule, disconnectBank, EXPENSE_CATEGORIES, excludeTx, getCandidates, getCounts,
   getLinkToken, getPaymentsStatus, listBankTx, listConnections, listRules, setAccountVisible, matchTx, saveRule, syncConnection, undoTx, usd,
@@ -45,15 +48,15 @@ export function BankingPage() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>("review");
   const [cuenta, setCuenta] = useState("");
   const [q, setQ] = useState("");
-  const [abierto, setAbierto] = useState<string | null>(null);
   const [marcados, setMarcados] = useState<string[]>([]);
   const [reglas, setReglas] = useState(false);
   const [elegir, setElegir] = useState(false);
   const { data: estado } = useQuery({ queryKey: ["payments-status"], queryFn: getPaymentsStatus });
   const { data: conexiones } = useQuery({ queryKey: ["bank-connections"], queryFn: listConnections });
   const { data: conteo } = useQuery({ queryKey: ["bank-counts"], queryFn: getCounts });
-  const { data: lista, isLoading } = useQuery({ queryKey: ["bank-tx", tab, cuenta, q],
-    queryFn: () => listBankTx(tab, { q, account_id: cuenta }) });
+  // Antes se pedía solo la primera página de 50: lo demás nunca se veía.
+  const lista = usePaginatedQuery<BankTx>({ key: ["bank-tx"], path: "/bank-feeds/transactions", pageSize: 50,
+    params: { status: tab, q: q || undefined, account_id: cuenta || undefined } });
   const refrescar = () => ["bank-tx", "bank-counts", "bank-connections"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
 
   const conectar = useMutation({
@@ -89,7 +92,7 @@ export function BankingPage() {
   const cuentas = (conexiones ?? []).flatMap((c) => c.accounts.map((a) => ({ ...a, banco: c.institution_name, conexion: c })));
   const visibles = cuentas.filter((a) => a.active);
   const ocultas = cuentas.length - visibles.length;
-  const filas = lista?.rows ?? [];
+  const filas = lista.items;
   const sugeridos = filas.filter((t) => t.suggested_category && !t.pending && t.spent);
 
   return (
@@ -166,7 +169,7 @@ export function BankingPage() {
           <div className="bank-tabs" role="tablist">
             {TABS.map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "is-on" : ""}
-                onClick={() => { setTab(k); setAbierto(null); setMarcados([]); }}>
+                onClick={() => { setTab(k); setMarcados([]); }}>
                 {l}{conteo?.[k] ? <span className={`bank-count${k === "review" ? "" : " is-quiet"}`}>{conteo[k]}</span> : null}
               </button>
             ))}
@@ -181,61 +184,54 @@ export function BankingPage() {
                 onClick={() => aceptar.mutate()}>Aceptar {marcados.length || ""}</button>
             </div>
           )}
-          <div className="table-wrap">
-            <table className="bank-table">
-              <thead><tr>
-                {tab === "review" && <th aria-label="Seleccionar" />}
-                <th>Fecha</th><th>Descripción</th><th>Cuenta</th><th className="num">Gastado</th><th className="num">Recibido</th>
-                <th>{tab === "review" ? "Categoría o coincidencia" : "Quedó como"}</th><th>Acción</th>
-              </tr></thead>
-              <tbody>
-                {isLoading && <tr><td colSpan={8}>Cargando…</td></tr>}
-                {!isLoading && !filas.length && <tr><td colSpan={8} className="pay-muted">
-                  {tab === "review" ? "Nada por revisar. Todo está al día." : "Sin movimientos."}</td></tr>}
-                {filas.map((t) => (
-                  <TxRow key={t.id} t={t} tab={tab} abierto={abierto === t.id} marcado={marcados.includes(t.id)}
-                    onToggle={() => setAbierto(abierto === t.id ? null : t.id)}
-                    onMark={(v) => setMarcados(v ? [...marcados, t.id] : marcados.filter((x) => x !== t.id))}
-                    onDone={() => { setAbierto(null); refrescar(); }} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PaginatedTable list={lista} getRowKey={(t) => t.id} className="bank-table"
+            emptyMessage={tab === "review" ? "Nada por revisar. Todo está al día." : "Sin movimientos."}
+            rowClassName={(t) => (t.pending ? "is-pending" : undefined)}
+            expandable={tab === "review" ? { render: (t) => <TxEditor t={t} onDone={refrescar} /> } : undefined}
+            columns={[
+              ...(tab === "review" ? [{ key: "elegir", header: "Elegir", render: (t: BankTx) => t.suggested_category && t.spent && !t.pending && (
+                <input type="checkbox" checked={marcados.includes(t.id)} aria-label={`Seleccionar ${t.description}`}
+                  onChange={(e) => setMarcados(e.target.checked ? [...marcados, t.id] : marcados.filter((x) => x !== t.id))} />
+              ) }] : []),
+              { key: "fecha", header: "Fecha", className: "bank-date", render: (t) => new Date(`${t.date}T12:00:00`).toLocaleDateString("es-US", { month: "short", day: "numeric" }) },
+              { key: "descripcion", header: "Descripción", render: (t) => (
+                <>
+                  <strong>{t.merchant_name ?? t.description}</strong>{t.merchant_name && <small className="pay-muted">{t.description}</small>}
+                  {t.pending && <small className="bank-pending">Pendiente en el banco</small>}
+                </>
+              ) },
+              { key: "cuenta", header: "Cuenta", className: "pay-muted", render: (t) => (t.account ? `${t.account.name} ····${t.account.mask}` : "—") },
+              { key: "gastado", header: "Gastado", className: "num", render: (t) => (t.spent ? usd(t.spent) : "") },
+              { key: "recibido", header: "Recibido", className: "num is-in", render: (t) => (t.received ? usd(t.received) : "") },
+              { key: "quedo", header: tab === "review" ? "Categoría o coincidencia" : "Quedó como", render: (t) => (tab === "review"
+                ? (t.suggested_category ? <span className="bank-suggest">{t.suggested_by_rule ? "Regla: " : ""}{EXPENSE_CATEGORIES[t.suggested_category]}{t.project_title ? ` · ${t.project_title}` : ""}</span>
+                  : <span className="pay-muted">Sin categoría</span>)
+                : quedoComo(t)) },
+              { key: "acciones", header: "", render: (t, fila) => (
+                <RowActions>
+                  {tab === "review"
+                    ? <RowAction variant={fila.expanded ? "link" : "primary"} onClick={fila.toggle} disabled={t.pending}>
+                        {fila.expanded ? "Cerrar" : t.spent ? "Agregar" : "Revisar"}</RowAction>
+                    : <UndoTx t={t} onDone={refrescar} />}
+                </RowActions>
+              ) },
+            ]} />
         </section>
       )}
     </div>
   );
 }
 
-function TxRow({ t, tab, abierto, marcado, onToggle, onMark, onDone }: {
-  t: BankTx; tab: string; abierto: boolean; marcado: boolean; onToggle: () => void; onMark: (v: boolean) => void; onDone: () => void;
-}) {
-  const quedo = t.matched_type ? `Coincide con ${t.matched_type === "expense" ? "un gasto" : t.matched_type === "invoice_payment" ? "un pago de factura" : "un pago a proveedor"}`
+/** Cómo quedó un movimiento ya revisado. */
+function quedoComo(t: BankTx): string {
+  return t.matched_type ? `Coincide con ${t.matched_type === "expense" ? "un gasto" : t.matched_type === "invoice_payment" ? "un pago de factura" : "un pago a proveedor"}`
     : t.category ? `${EXPENSE_CATEGORIES[t.category] ?? t.category}${t.project_title ? ` · ${t.project_title}` : ""}` : t.memo ?? "—";
+}
+
+/** «Deshacer» un movimiento ya revisado: vuelve a «Por revisar». */
+function UndoTx({ t, onDone }: { t: BankTx; onDone: () => void }) {
   const deshacer = useMutation({ mutationFn: () => undoTx(t.id), onSuccess: onDone, onError: (e) => toast(apiError(e)) });
-  return (
-    <>
-      <tr className={`${abierto ? "is-open" : ""}${t.pending ? " is-pending" : ""}`}>
-        {tab === "review" && <td>{t.suggested_category && t.spent && !t.pending &&
-          <input type="checkbox" checked={marcado} aria-label={`Seleccionar ${t.description}`} onChange={(e) => onMark(e.target.checked)} />}</td>}
-        <td className="bank-date">{new Date(`${t.date}T12:00:00`).toLocaleDateString("es-US", { month: "short", day: "numeric" })}</td>
-        <td><strong>{t.merchant_name ?? t.description}</strong>{t.merchant_name && <small className="pay-muted">{t.description}</small>}
-          {t.pending && <small className="bank-pending">Pendiente en el banco</small>}</td>
-        <td className="pay-muted">{t.account ? `${t.account.name} ····${t.account.mask}` : "—"}</td>
-        <td className="num">{t.spent ? usd(t.spent) : ""}</td>
-        <td className="num is-in">{t.received ? usd(t.received) : ""}</td>
-        <td>{tab === "review"
-          ? (t.suggested_category ? <span className="bank-suggest">{t.suggested_by_rule ? "Regla: " : ""}{EXPENSE_CATEGORIES[t.suggested_category]}{t.project_title ? ` · ${t.project_title}` : ""}</span>
-            : <span className="pay-muted">Sin categoría</span>)
-          : quedo}</td>
-        <td>{tab === "review"
-          ? <button type="button" className={abierto ? "acta-btn" : "primary-button bank-action"} onClick={onToggle} disabled={t.pending}>
-              {abierto ? "Cerrar" : t.spent ? "Agregar" : "Revisar"}</button>
-          : <button type="button" className="link-button" onClick={() => deshacer.mutate()}>Deshacer</button>}</td>
-      </tr>
-      {abierto && <tr className="bank-editor-row"><td colSpan={8}><TxEditor t={t} onDone={onDone} /></td></tr>}
-    </>
-  );
+  return <RowAction disabled={deshacer.isPending} onClick={() => deshacer.mutate()}>Deshacer</RowAction>;
 }
 
 function TxEditor({ t, onDone }: { t: BankTx; onDone: () => void }) {
@@ -302,7 +298,8 @@ function TxEditor({ t, onDone }: { t: BankTx; onDone: () => void }) {
 
 function RulesPanel() {
   const qc = useQueryClient();
-  const { data: reglas } = useQuery({ queryKey: ["bank-rules"], queryFn: listRules });
+  const { data: reglas, isLoading: cargandoReglas } = useQuery({ queryKey: ["bank-rules"], queryFn: listRules });
+  const listaReglas = useClientPagination(reglas, cargandoReglas);
   type Form = Partial<BankRule> & { name: string; contains: string; category: string; direction: BankRule["direction"]; auto_add: boolean };
   const vacia: Form = { name: "", contains: "", direction: "out", category: "small_materials", auto_add: false };
   const [form, setForm] = useState<Form>(vacia);
@@ -338,23 +335,19 @@ function RulesPanel() {
           </div>
         </form>
       </div>
-      <div className="table-wrap">
-        <table className="bank-table">
-          <thead><tr><th>Regla</th><th>Contiene</th><th>Categoría</th><th>Modo</th><th /></tr></thead>
-          <tbody>
-            {!(reglas ?? []).length && <tr><td colSpan={5} className="pay-muted">Sin reglas todavía.</td></tr>}
-            {(reglas ?? []).map((r) => (
-              <tr key={r.id}>
-                <td><strong>{r.name}</strong></td><td className="pay-muted">«{r.contains}»</td>
-                <td>{EXPENSE_CATEGORIES[r.category] ?? r.category}</td><td>{r.auto_add ? "Agrega sola" : "Propone"}</td>
-                <td><button type="button" className="link-button" onClick={() => { setEditando(r.id); setForm({ ...r }); }}>Editar</button>{" "}
-                  <button type="button" className="link-button" onClick={async () => {
-                    await deleteRule(r.id); qc.invalidateQueries({ queryKey: ["bank-rules"] }); }}>Borrar</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PaginatedTable list={listaReglas} getRowKey={(r) => r.id} className="bank-table" emptyMessage="Sin reglas todavía."
+        columns={[
+          { key: "regla", header: "Regla", render: (r) => <strong>{r.name}</strong> },
+          { key: "contiene", header: "Contiene", className: "pay-muted", render: (r) => `«${r.contains}»` },
+          { key: "categoria", header: "Categoría", render: (r) => EXPENSE_CATEGORIES[r.category] ?? r.category },
+          { key: "modo", header: "Modo", render: (r) => (r.auto_add ? "Agrega sola" : "Propone") },
+          { key: "acciones", header: "", render: (r) => (
+            <RowActions>
+              <RowAction onClick={() => { setEditando(r.id); setForm({ ...r }); }}>Editar</RowAction>
+              <RowAction variant="danger" onClick={async () => { await deleteRule(r.id); qc.invalidateQueries({ queryKey: ["bank-rules"] }); }}>Borrar</RowAction>
+            </RowActions>
+          ) },
+        ]} />
     </section>
   );
 }
