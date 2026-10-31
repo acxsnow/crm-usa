@@ -66,7 +66,6 @@ export function FailedVisitsStep({ project, canReport, canSchedule, coords }: {
   if (!abierta && intentos === 0) return null;
   return (
     <div className="visits-step">
-      <h4 className="acta-section-title">Visitas fallidas</h4>
       {error && <p className="form-error" role="alert">{error}</p>}
       {estado && intentos > 0 && (
         <p className={`acta-lead${estado.limit_reached ? " is-warning" : ""}`}>
@@ -92,7 +91,7 @@ export function FailedVisitsStep({ project, canReport, canSchedule, coords }: {
       {abierta && canReport && project.scheduled_date && (
         !abierto ? (
           <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
-            <button type="button" className="acta-btn" onClick={() => setAbierto(true)}>
+            <button type="button" className="acta-btn is-small" onClick={() => setAbierto(true)}>
               No se pudo hacer la visita
             </button>
           </div>
@@ -186,11 +185,10 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
   const presencia = chequeo?.technician_presence ?? null;
   return (
     <div className="visits-step">
-      <h4 className="acta-section-title">Cancelar la obra</h4>
       {error && <p className="form-error" role="alert">{error}</p>}
       {!abierto ? (
         <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
-          <button type="button" className="acta-btn is-quiet" onClick={() => setAbierto(true)}>Cancelar la obra…</button>
+          <button type="button" className="acta-btn is-small is-danger-quiet" onClick={() => setAbierto(true)}>Cancelar la obra…</button>
         </div>
       ) : (
         <form className="acta-reason" onSubmit={(e) => { e.preventDefault(); cancelar.mutate(); }}>
@@ -241,8 +239,41 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
           </div>
         </form>
       )}
-      <VisitLimitSetting />
     </div>
+  );
+}
+
+/**
+ * «Si la visita no se puede hacer»: una sola tarjeta con la visita fallida y la
+ * cancelación (QA de José, 31 oct). El técnico la marca desde su celular en la
+ * obra y la oficina también puede; el límite de la organización va en una línea
+ * discreta, no como un formulario más en cada obra.
+ */
+export function VisitOutcomeCard({ project, coords, canReport, canSchedule, canCancel }: {
+  project: Project;
+  coords: { latitude: number; longitude: number } | null;
+  canReport: boolean;
+  canSchedule: boolean;
+  canCancel: boolean;
+}) {
+  const cerrada = project.status === "completed" || project.status === "cancelled";
+  return (
+    <section className="visit-box" aria-label="Si la visita no se puede hacer">
+      <div className="visit-box-head">
+        <div>
+          <h4>Si la visita no se puede hacer</h4>
+          {!cerrada && (
+            <p>El técnico lo marca desde su celular en la obra (la oficina también puede). Si el cliente ya no
+              quiere el programa, se cancela la obra.</p>
+          )}
+        </div>
+        {canCancel && !cerrada && <VisitLimitSetting />}
+      </div>
+      <div className="visit-box-actions">
+        <FailedVisitsStep project={project} coords={coords} canReport={canReport} canSchedule={canSchedule} />
+        <CancelProjectStep project={project} canCancel={canCancel} />
+      </div>
+    </section>
   );
 }
 
@@ -253,27 +284,34 @@ function VisitLimitSetting() {
   const [valor, setValor] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
+  const [editando, setEditando] = useState(false);
   const guardar = useMutation({
     mutationFn: () => saveFieldOpsSettings(Number(valor)),
     onSuccess: (s) => {
-      setError(null); setGuardado(true); setValor("");
+      setError(null); setGuardado(true); setValor(""); setEditando(false);
       queryClient.setQueryData(visitKeys.settings, s);
       return queryClient.invalidateQueries({ queryKey: ["project-visit-status"] });
     },
     onError: (err) => { setGuardado(false); setError(apiErrorMessage(err)); },
   });
   if (!data) return null;
+  if (!editando) {
+    return (
+      <p className="visit-limit" title="Aplica a todas las obras">
+        Límite: {data.max_failed_visits} visitas fallidas{guardado ? " · guardado" : ""} ·{" "}
+        <button type="button" className="acta-link" onClick={() => setEditando(true)}>Cambiar</button>
+      </p>
+    );
+  }
   return (
-    <form className="acta-reason" onSubmit={(e) => { e.preventDefault(); guardar.mutate(); }}>
-      <label htmlFor="limite-visitas">Límite de visitas fallidas (todas las obras)</label>
+    <form className="visit-limit is-editing" onSubmit={(e) => { e.preventDefault(); guardar.mutate(); }}>
+      <label htmlFor="limite-visitas">Límite (todas las obras)</label>
       <input id="limite-visitas" type="number" inputMode="numeric" required min={data.min_failed_visits}
-        max={data.max_allowed} value={valor} placeholder={String(data.max_failed_visits)}
+        max={data.max_allowed} value={valor} placeholder={String(data.max_failed_visits)} autoFocus
         onChange={(e) => { setValor(e.target.value); setGuardado(false); }} />
+      <button type="submit" className="acta-btn is-small" disabled={guardar.isPending || !valor}>Guardar</button>
+      <button type="button" className="acta-link" onClick={() => { setEditando(false); setValor(""); }}>Cancelar</button>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {guardado && <p className="acta-lead" role="status">Límite guardado: {data.max_failed_visits}.</p>}
-      <div className="acta-actions">
-        <button type="submit" className="acta-btn" disabled={guardar.isPending || !valor}>Guardar límite</button>
-      </div>
     </form>
   );
 }

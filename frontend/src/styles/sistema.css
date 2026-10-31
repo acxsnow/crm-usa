@@ -516,3 +516,22 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 .file-viewer-body { flex: 1; min-height: 0; width: 100%; object-fit: contain; border: 0; border-radius: 8px; }
 .file-viewer iframe.file-viewer-body { background: #fff; }
 .file-viewer p.file-viewer-body { color: #fff; text-align: center; align-self: center; flex: 0; }
+
+/* «Si la visita no se puede hacer» (VisitsPanel.tsx): una tarjeta compacta con
+   la visita fallida y la cancelación lado a lado; los formularios se abren abajo. */
+#root .visit-box { margin: 20px 0 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--canvas); }
+#root .visit-box-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 16px; }
+#root .visit-box-head h4 { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+#root .visit-box-head p { margin: 2px 0 0; font-size: 0.8125rem; color: var(--ink-soft); max-width: 60ch; }
+#root .visit-box-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#root .visit-box-actions > .visits-step { flex: 0 0 auto; margin: 0; }
+#root .visit-box-actions > .visits-step:has(form, .acta-history, .acta-lead, .form-error, .acta-empty) { flex-basis: 100%; }
+#root .visit-box .acta-actions { margin: 0; }
+#root .visit-box .acta-btn.is-small, #root .visit-limit .acta-btn.is-small { min-height: 34px; padding: 0 12px; font-size: 0.8125rem; }
+#root .visit-box .acta-btn.is-danger-quiet { background: var(--surface); border: 1px solid var(--line); color: var(--red-dark); }
+#root .visit-box .acta-btn.is-danger-quiet:hover { background: var(--red-wash); }
+#root .visit-limit { margin: 0; font-size: 0.75rem; color: var(--ink-faint); }
+#root .visit-limit .acta-link { font-size: 0.75rem; }
+#root .visit-limit.is-editing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#root .visit-limit.is-editing input { width: 70px; min-height: 34px; }
