@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
-import { listOverdueTasksPage } from "@/features/field-ops/api";
+import { PaginatedTable, RowActions } from "@/components/DataTable";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import type { FieldTask } from "@/types/fieldOps";
 import { listCaseActivity, listCasesPage, type CaseActivityItem } from "@/features/cases/api";
 import { listCustomersPage } from "@/features/crm/api";
 import { listProjectsPage } from "@/features/field-ops/api";
@@ -94,13 +96,10 @@ export function DashboardHome() {
     enabled: canSeeFinance,
   });
 
-  // Las 10 más antiguas y el total; la lista completa vive en Proyectos.
-  const { data: vencidas } = useQuery({
-    queryKey: ["overdue-tasks", "inicio"],
-    queryFn: () => listOverdueTasksPage(1, 10),
-    enabled: canSeeTasks,
+  // Las más antiguas primero, de 10 en 10, con el total.
+  const vencidas = usePaginatedQuery<FieldTask & { project_title: string }>({
+    key: ["overdue-tasks", "inicio"], path: "/tasks/overdue", pageSize: 10, enabled: canSeeTasks,
   });
-  const overdueTasks = vencidas?.items;
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -164,35 +163,16 @@ export function DashboardHome() {
 
       {canSeeTasks && (
         <div className="overdue-section">
-          <div className="panel-heading"><div><h2>Tareas vencidas {vencidas && vencidas.total > 0 && <span className="status-pill status-inactive">{vencidas.total}</span>}</h2><p>Revisa estos pendientes para mantener el ritmo</p></div></div>
-          {!overdueTasks || overdueTasks.length === 0 ? (
-            <p className="page-subtitle">No hay tareas vencidas — al día.</p>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Tarea</th>
-                  <th>Proyecto</th>
-                  <th>Vencía</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {overdueTasks.map((task) => (
-                  <tr key={task.id}>
-                    <td>{task.title}</td>
-                    <td>{task.project_title}</td>
-                    <td>{task.due_date ? new Date(task.due_date).toLocaleDateString() : "—"}</td>
-                    <td>
-                      <Link className="link-button" to={`/projects/${task.project_id}`}>
-                        Ver proyecto
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <div className="panel-heading"><div><h2>Tareas vencidas {vencidas.total > 0 && <span className="status-pill status-inactive">{vencidas.total}</span>}</h2><p>Revisa estos pendientes para mantener el ritmo</p></div></div>
+          <PaginatedTable list={vencidas} getRowKey={(t) => t.id} emptyMessage="No hay tareas vencidas — al día."
+            columns={[
+              { key: "tarea", header: "Tarea", render: (t) => t.title },
+              { key: "proyecto", header: "Proyecto", render: (t) => t.project_title },
+              { key: "vencia", header: "Vencía", render: (t) => (t.due_date ? new Date(t.due_date).toLocaleDateString() : "—") },
+              { key: "acciones", header: "", render: (t) => (
+                <RowActions><Link className="acta-link" to={`/projects/${t.project_id}`}>Ver proyecto</Link></RowActions>
+              ) },
+            ]} />
         </div>
       )}
     </div>

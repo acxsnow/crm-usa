@@ -3,9 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { listProjectsPage } from "./api";
 import { listUsers } from "@/features/users/api";
 import { useAuth } from "@/features/auth/AuthContext";
-import { PaginationControls } from "@/components/PaginationControls";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PaginatedTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import { PROJECT_STATUS_LABELS, type Project } from "@/types/fieldOps";
 
@@ -79,8 +78,8 @@ export function ProjectsPage() {
       <p className="page-subtitle">Cada expediente aprobado crea su proyecto de instalación: permiso, instalación, acta y cobro.</p>
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
-      <DataTable columns={columns} rows={projects ?? []} isLoading={isLoading} getRowKey={(p) => p.id} emptyMessage="Sin proyectos para mostrar." />
-      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
+      <PaginatedTable columns={columns} getRowKey={(p) => p.id} emptyMessage="Sin proyectos para mostrar."
+        list={{ items: projects ?? [], isLoading, controls: { page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onPageChange: setPage } }} />
     </div>
   );
 }

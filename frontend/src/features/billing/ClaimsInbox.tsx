@@ -1,3 +1,4 @@
+import { DataTable } from "@/components/DataTable";
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -183,19 +184,13 @@ function ByProgram({ data }: { data: BillingDashboard }) {
         <p>Lo que se espera cobrar a cada programa y lo que ya pagó este mes.</p>
       </header>
       {data.by_program.length > 0 && (
-        <div className="billing-table-wrap">
-          <table className="billing-table">
-            <thead><tr><th>Programa</th><th className="num">Radicados</th><th className="num">Esperado</th><th className="num">Pagado este mes</th></tr></thead>
-            <tbody>
-              {data.by_program.map((r) => (
-                <tr key={r.program_id}>
-                  <td>{r.program_name}</td><td className="num">{r.submitted_count}</td>
-                  <td className="num">{money(r.expected)}</td><td className="num">{money(r.paid_this_month)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable rows={data.by_program} isLoading={false} getRowKey={(r) => r.program_id} className="billing-table"
+          columns={[
+            { key: "programa", header: "Programa", render: (r) => r.program_name },
+            { key: "radicados", header: "Radicados", className: "num", render: (r) => r.submitted_count },
+            { key: "esperado", header: "Esperado", className: "num", render: (r) => money(r.expected) },
+            { key: "pagado", header: "Pagado este mes", className: "num", render: (r) => money(r.paid_this_month) },
+          ]} />
       )}
       <p className="billing-row-note" style={{ marginTop: "0.9rem" }}>
         Trabajo particular: {p.overdue_count} {p.overdue_count === 1 ? "factura vencida" : "facturas vencidas"} ({money(p.overdue_total)}),

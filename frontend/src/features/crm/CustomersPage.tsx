@@ -3,9 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createCustomer, listCustomersPage } from "./api";
 import { ConsentCheckbox, DataConsentNotice, useConsentNotice } from "@/components/DataConsentNotice";
-import { PaginationControls } from "@/components/PaginationControls";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PaginatedTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import type { Customer } from "@/types/crm";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -112,8 +111,8 @@ export function CustomersPage() {
       )}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
-      <DataTable columns={columns} rows={customers ?? []} isLoading={isLoading} getRowKey={(c) => c.id} emptyMessage="Sin clientes para mostrar." />
-      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
+      <PaginatedTable columns={columns} getRowKey={(c) => c.id} emptyMessage="Sin clientes para mostrar."
+        list={{ items: customers ?? [], isLoading, controls: { page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onPageChange: setPage } }} />
       {canCreate && !alta && (
         <button type="button" className="ui-fab" aria-label="Nuevo cliente" onClick={() => { window.scrollTo({ top: 0 }); abrirAlta(); }}>
           <Icon name="plus" size={24} />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTable, RowAction, RowActions } from "@/components/DataTable";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -160,43 +161,26 @@ export function MaterialsPanel({ projectId, canManage, closed, hasTechnician = t
         </div>
       )}
 
-      {lista.length > 0 ? (
-        <table className="materials-table">
-          <thead>
-            <tr>
-              <th scope="col">Material</th>
-              <th scope="col" className="is-num">Cantidad</th>
-              {editable && <th scope="col"><span className="sr-only">Acciones</span></th>}
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  <strong>{m.description}</strong>
-                  {m.sku && <small>Ref. {m.sku}</small>}
-                  {/* Lo que entregó la bodega: se ve de qué orden de salida vino. */}
-                  {m.warehouse_release_line_id
-                    ? m.notes && <small>{m.notes}</small>
-                    : <small>No sale de bodega</small>}
-                </td>
-                <td className="is-num">{cantidadLegible(m.quantity)} {m.unit ?? ""}</td>
-                {editable && (
-                  <td className="is-action">
-                    {/* Lo que entregó bodega no se quita: es el rastro de la salida. */}
-                    {!m.warehouse_release_line_id && (
-                      <button type="button" className="acta-btn is-quiet" disabled={remove.isPending}
-                        aria-label={`Quitar ${m.description}`} onClick={() => remove.mutate(m.id)}>Quitar</button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="acta-empty">Todavía no hay materiales en esta orden.</p>
-      )}
+      <DataTable rows={lista} isLoading={false} getRowKey={(m) => m.id} className="materials-table"
+        emptyMessage="Todavía no hay materiales en esta orden."
+        columns={[
+          { key: "material", header: "Material", render: (m) => (
+            <>
+              <strong>{m.description}</strong>
+              {m.sku && <small>Ref. {m.sku}</small>}
+              {/* Lo que entregó la bodega: se ve de qué orden de salida vino. */}
+              {m.warehouse_release_line_id ? m.notes && <small>{m.notes}</small> : <small>No sale de bodega</small>}
+            </>
+          ) },
+          { key: "cantidad", header: "Cantidad", className: "is-num", render: (m) => `${cantidadLegible(m.quantity)} ${m.unit ?? ""}` },
+          ...(editable ? [{ key: "acciones", header: "", render: (m: (typeof lista)[number]) => !m.warehouse_release_line_id && (
+            // Lo que entregó bodega no se quita: es el rastro de la salida.
+            <RowActions>
+              <RowAction variant="danger" disabled={remove.isPending} aria-label={`Quitar ${m.description}`}
+                onClick={() => remove.mutate(m.id)}>Quitar</RowAction>
+            </RowActions>
+          ) }] : []),
+        ]} />
 
       {editable && (
         <form className="materials-form" onSubmit={(e) => { e.preventDefault(); add.mutate(); }}>

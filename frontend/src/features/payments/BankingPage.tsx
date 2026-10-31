@@ -10,7 +10,7 @@ import { useClientPagination } from "@/lib/useClientPagination";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   acceptTx, addTx, connectBank, deleteRule, disconnectBank, EXPENSE_CATEGORIES, excludeTx, getCandidates, getCounts,
-  getLinkToken, getPaymentsStatus, listBankTx, listConnections, listRules, setAccountVisible, matchTx, saveRule, syncConnection, undoTx, usd,
+  getLinkToken, getPaymentsStatus, listConnections, listRules, setAccountVisible, matchTx, saveRule, syncConnection, undoTx, usd,
   type BankRule, type BankTx,
 } from "./api";
 import "./payments.css";

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listTechnicianMonitor, updateTechnicianAvailability, type TechnicianMonitorRow } from "./api";
-import { DataTable, type Column } from "@/components/DataTable";
+import { PaginatedTable, type Column } from "@/components/DataTable";
+import { useClientPagination } from "@/lib/useClientPagination";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 
 const filterFields: FilterFieldDef[] = [
@@ -51,6 +52,8 @@ export function TechnicianMonitorPage() {
     if (filters.en_cola && String(r.en_cola) !== filters.en_cola) return false;
     return true;
   });
+  // Filtrada aquí, se pagina aquí también (con muchos técnicos la tabla no tenía fin).
+  const tecnicos = useClientPagination(rows, isLoading);
 
   const columns: Column<TechnicianMonitorRow>[] = [
     { key: "full_name", header: "Técnico" },
@@ -86,7 +89,7 @@ export function TechnicianMonitorPage() {
       <h1>Monitor de técnicos</h1>
       <p className="page-subtitle">Estado en vivo del equipo de campo — se actualiza automáticamente cada 30 segundos.</p>
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={() => setFilters({})} />
-      <DataTable columns={columns} rows={rows} isLoading={isLoading} getRowKey={(r) => r.user_id} emptyMessage="Sin técnicos para mostrar." />
+      <PaginatedTable columns={columns} list={tecnicos} getRowKey={(r) => r.user_id} emptyMessage="Sin técnicos para mostrar." />
     </div>
   );
 }

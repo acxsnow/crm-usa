@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTable, RowAction, RowActions } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { openActaStep } from "./InstallationRecord";
 import { listProjectSerials, serialKeys } from "@/features/warehouse/api";
@@ -90,37 +91,19 @@ export function EquipmentPanel({ projectId, canManage, closed, confirmedAt }: {
   return (
     <div className="acta-body">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {equipos && equipos.length > 0 ? (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr><th>Tipo</th><th>Marca y modelo</th><th>Serial</th><th>Cant.</th><th>Unidad</th>{editable && <th />}</tr>
-            </thead>
-            <tbody>
-              {equipos.map((e) => (
-                <tr key={e.id}>
-                  <td>{catalogs?.equipment_types[e.equipment_type] ?? e.equipment_type}</td>
-                  <td>{e.brand} {e.model}</td>
-                  <td>
-                    {e.serial_number ?? "—"}
-                    {e.warehouse_serial_id && <small className="serial-from-stock">De bodega</small>}
-                  </td>
-                  <td>{e.quantity}</td>
-                  <td>{e.unit_label ?? "—"}</td>
-                  {editable && (
-                    <td>
-                      <button type="button" className="link-button" disabled={remove.isPending}
-                        onClick={() => remove.mutate(e.id)}>Quitar</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="acta-empty">Sin equipos registrados.</p>
-      )}
+      <DataTable rows={equipos ?? []} isLoading={false} getRowKey={(e) => e.id} emptyMessage="Sin equipos registrados."
+        columns={[
+          { key: "tipo", header: "Tipo", render: (e) => catalogs?.equipment_types[e.equipment_type] ?? e.equipment_type },
+          { key: "modelo", header: "Marca y modelo", render: (e) => `${e.brand} ${e.model}` },
+          { key: "serial", header: "Serial", render: (e) => (
+            <>{e.serial_number ?? "—"}{e.warehouse_serial_id && <small className="serial-from-stock">De bodega</small>}</>
+          ) },
+          { key: "cantidad", header: "Cant.", render: (e) => e.quantity },
+          { key: "unidad", header: "Unidad", render: (e) => e.unit_label ?? "—" },
+          ...(editable ? [{ key: "acciones", header: "", render: (e: (typeof equipos & object)[number]) => (
+            <RowActions><RowAction variant="danger" disabled={remove.isPending} onClick={() => remove.mutate(e.id)}>Quitar</RowAction></RowActions>
+          ) }] : []),
+        ]} />
 
       {editable && hayEquipos && (
         confirmedAt ? (

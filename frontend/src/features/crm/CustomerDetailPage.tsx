@@ -1,3 +1,4 @@
+import { DataTable } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { deleteCustomer, getCustomerTimeline, updateCustomer } from "./api";
@@ -154,28 +155,13 @@ export function CustomerDetailPage() {
           {cases.length === 0 ? (
             <div className="panel"><EmptyState title="Sin expedientes" description="Este cliente todavía no tiene expedientes." /></div>
           ) : (
-            <div className="table-wrap">
-              <table className="data-table is-cards">
-                <thead>
-                  <tr>
-                    <th>Expediente</th>
-                    <th>Etapa</th>
-                    <th>Dirección</th>
-                    <th>Abierto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cases.map((c) => (
-                    <tr key={c.id}>
-                      <td data-label="Expediente" className="is-title">{c.case_number}</td>
-                      <td data-label="Etapa"><StatusBadge tone="info">{c.stage_label}</StatusBadge></td>
-                      <td data-label="Dirección">{[c.address_street, c.address_unit].filter(Boolean).join(", ")}</td>
-                      <td data-label="Abierto">{new Date(c.created_at).toLocaleDateString("es-CO")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable rows={cases} isLoading={false} getRowKey={(c) => c.id}
+              columns={[
+                { key: "expediente", header: "Expediente", render: (c) => c.case_number },
+                { key: "etapa", header: "Etapa", render: (c) => <StatusBadge tone="info">{c.stage_label}</StatusBadge> },
+                { key: "direccion", header: "Dirección", render: (c) => [c.address_street, c.address_unit].filter(Boolean).join(", ") },
+                { key: "abierto", header: "Abierto", render: (c) => new Date(c.created_at).toLocaleDateString("es-CO") },
+              ]} />
           )}
         </section>
       )}

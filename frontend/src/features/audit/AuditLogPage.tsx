@@ -3,8 +3,7 @@ import { listAuditEventsPage } from "./api";
 import { listUsers } from "@/features/users/api";
 import { useAuth } from "@/features/auth/AuthContext";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { DataTable, type Column } from "@/components/DataTable";
-import { PaginationControls } from "@/components/PaginationControls";
+import { PaginatedTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import type { AuditEvent } from "@/types/audit";
 
@@ -94,8 +93,8 @@ export function AuditLogPage() {
       <p className="page-subtitle">Historial de acciones relevantes: inicios de sesión, cambios de contraseña, invitaciones, activaciones y cambios de configuración.</p>
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
-      <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(e) => e.id} emptyMessage="Sin eventos para mostrar." />
-      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
+      <PaginatedTable columns={columns} getRowKey={(e) => e.id} emptyMessage="Sin eventos para mostrar."
+        list={{ items: data?.items ?? [], isLoading, controls: { page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onPageChange: setPage } }} />
     </div>
   );
 }

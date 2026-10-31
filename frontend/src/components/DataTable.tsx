@@ -66,6 +66,8 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   const [abiertas, setAbiertas] = useState<Record<string, boolean>>({});
   if (isLoading) return <SkeletonRows rows={5} />;
+  // Sin filas, solo el mensaje: una tabla vacía en el celular quedaba como una tarjeta hueca.
+  if (rows.length === 0) return <p className="acta-empty table-empty">{emptyMessage}</p>;
 
   function cellValue(row: T, key: string): ReactNode {
     const value = (row as Record<string, unknown>)[key];
@@ -119,15 +121,8 @@ export function DataTable<T>({
               </Fragment>
             );
           })}
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={columns.length} className="page-subtitle">
-                {emptyMessage}
-              </td>
-            </tr>
-          )}
         </tbody>
-        {footer && rows.length > 0 && (
+        {footer && (
           <tfoot>
             <tr className="is-total">
               {columns.map((col, i) => (

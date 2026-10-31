@@ -17,5 +17,8 @@ Pruebas de pantalla con Playwright, «probado por Claude» (ver `ui_comun.py` pa
 5. Antes de cada lote: base QA limpia (`seed_qa --reiniciar --si-borrar-todo`) y, para 4b, `prep4b.py`.
 6. Al final: suite completa, commit en `devjj`, y recordar a José: avisar a Mateo, llaves de Stripe/Plaid, D-019 con Don Aldo, integrar a `main` solo cuando él diga y después actualizar el artefacto.
 
-## Pendiente de interfaz (31 oct)
-- Pasar las tablas hechas a mano de bodega (Listas, Salidas, Diario de obra, Materiales) al componente común `DataTable`, con la fila desplegable de renglones como parte del componente. Hoy heredan las acciones separadas y las tarjetas del celular por la base común de `sistema.css` y `lib/tableLabels.ts`, pero no el componente.
+## Tablas (31 oct) — hecho
+- Todas las tablas del CRM usan el componente común (`components/DataTable.tsx`): `PaginatedTable` para los
+  listados (la paginación va incluida y no se puede omitir) y `DataTable` para renglones de un solo documento.
+  `useClientPagination` pagina los reportes que llegan calculados completos. Comprobación: `tablas_comunes.py`
+  (133 pantallas × computador y celular, sin tablas hechas a mano ni errores).

@@ -1,0 +1,2160 @@
+{
+ "admin": {
+  "pantallas": 37,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/sales",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/campaigns",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/checklists",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/shifts",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance-review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/cost-templates",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/banking",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/programs",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/users",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/roles",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/sales",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/campaigns",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/checklists",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/shifts",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance-review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/cost-templates",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/banking",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/programs",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/users",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/roles",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ },
+ "adm": {
+  "pantallas": 30,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/campaigns",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/checklists",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/shifts",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance-review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/cost-templates",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/programs",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/campaigns",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/checklists",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/shifts",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance-review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/cost-templates",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/programs",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ },
+ "vendedor": {
+  "pantallas": 7,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/sales",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/sales",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ },
+ "tecnico": {
+  "pantallas": 9,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-schedule",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ },
+ "conta": {
+  "pantallas": 26,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/banking",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/review",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/expenses",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/banking",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ },
+ "gerencia": {
+  "pantallas": 24,
+  "fallas": [
+   [
+    "pc",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "pc",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/customers",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/cases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/projects",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/technician-monitor",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/works-calendar",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/permits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/my-shift",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/attendance",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payroll",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/operations-map",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/items",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/kits",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/releases",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/movements",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/serials",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/warehouse/purchasing",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/invoices",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/payables",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/finance-close",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/reports",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/audit-log",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ],
+   [
+    "cel",
+    "/notifications",
+    "error JS",
+    [
+     "Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script."
+    ]
+   ]
+  ]
+ }
+}

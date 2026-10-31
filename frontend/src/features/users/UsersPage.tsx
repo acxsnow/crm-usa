@@ -2,8 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { activateUser, deactivateUser, inviteUser, listRoles, listUsersPage } from "./api";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { DataTable, type Column } from "@/components/DataTable";
-import { PaginationControls } from "@/components/PaginationControls";
+import { PaginatedTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
 import { UserEditPanel, rolesAsignables } from "./components/UserEditPanel";
 import { UserProfilePanel } from "./components/UserProfilePanel";
@@ -210,8 +209,8 @@ export function UsersPage() {
       {viendo && <UserProfilePanel key={viendo.id} user={viendo} onClose={() => setViendo(null)} />}
 
       <FilterBar fields={filterFields} values={filters} onApply={setFilters} onClear={clearFilters} />
-      <DataTable columns={columns} rows={data?.items ?? []} isLoading={isLoading} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar." />
-      {data && <PaginationControls page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />}
+      <PaginatedTable columns={columns} getRowKey={(u) => u.id} emptyMessage="Sin usuarios para mostrar."
+        list={{ items: data?.items ?? [], isLoading, controls: { page, pageSize: PAGE_SIZE, total: data?.total ?? 0, onPageChange: setPage } }} />
     </div>
   );
 }

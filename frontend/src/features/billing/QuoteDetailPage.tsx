@@ -1,3 +1,4 @@
+import { DataTable } from "@/components/DataTable";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -174,17 +175,14 @@ export function QuoteDetailPage() {
 
 function LinesTable({ lines }: { lines: QuoteDetail["lines"] }) {
   return (
-    <div className="billing-table-wrap">
-      <table className="billing-table">
-        <thead><tr><th>Tipo</th><th>Descripción</th><th className="num">Cant.</th><th className="num">Precio</th><th className="num">Importe</th></tr></thead>
-        <tbody>
-          {lines.map((l) => (
-            <tr key={l.id}><td>{LINE_KIND_LABELS[l.kind] ?? l.kind}</td><td>{l.description}</td>
-              <td className="num">{l.quantity}</td><td className="num">{money(l.unit_price)}</td><td className="num">{money(l.amount)}</td></tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable rows={lines} isLoading={false} getRowKey={(l) => l.id} className="billing-table"
+      columns={[
+        { key: "tipo", header: "Tipo", render: (l) => LINE_KIND_LABELS[l.kind] ?? l.kind },
+        { key: "descripcion", header: "Descripción", render: (l) => l.description },
+        { key: "cantidad", header: "Cant.", className: "num", render: (l) => l.quantity },
+        { key: "precio", header: "Precio", className: "num", render: (l) => money(l.unit_price) },
+        { key: "importe", header: "Importe", className: "num", render: (l) => money(l.amount) },
+      ]} />
   );
 }
 
