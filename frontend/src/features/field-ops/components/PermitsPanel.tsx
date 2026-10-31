@@ -28,11 +28,16 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<PermitInput>({ jurisdiction: "", status: "submitted", filed_on: hoy() });
+  // Con un permiso ya registrado, el formulario de otro queda cerrado detrás de
+  // «Registrar otro permiso»: si no, al guardar el primero parecía pedir otro.
+  const [otro, setOtro] = useState(false);
+  const hayPermisos = Boolean(permits?.length);
   const record = useMutation({
     mutationFn: () => recordPermit(projectId, limpiar(form)),
     onSuccess: () => {
       setError(null);
       setForm({ jurisdiction: "", status: "submitted", filed_on: hoy() });
+      setOtro(false);
       return refresh();
     },
     onError: (err) => setError(apiErrorMessage(err)),
@@ -50,8 +55,13 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
         </div>
       )}
 
-      {canManage && <h4 className="permit-new-title">{permits?.length ? "Registrar otro permiso" : "Registrar el permiso"}</h4>}
-      {canManage && (
+      {canManage && hayPermisos && !otro && (
+        <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
+          <button type="button" className="acta-btn is-quiet" onClick={() => setOtro(true)}>+ Registrar otro permiso</button>
+        </div>
+      )}
+      {canManage && (!hayPermisos || otro) && <h4 className="permit-new-title">{hayPermisos ? "Registrar otro permiso" : "Registrar el permiso"}</h4>}
+      {canManage && (!hayPermisos || otro) && (
         <form
           className="panel-form"
           onSubmit={(e) => {
@@ -109,9 +119,14 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
                 onChange={(e) => setForm({ ...form, not_required_reason: e.target.value })} />
             </div>
           )}
-          <button type="submit" className="acta-btn is-primary" disabled={record.isPending}>
-            {record.isPending ? "Guardando…" : "Registrar permiso"}
-          </button>
+          <div className="acta-actions" style={{ justifyContent: "flex-start" }}>
+            <button type="submit" className="acta-btn is-primary" disabled={record.isPending}>
+              {record.isPending ? "Guardando…" : "Registrar permiso"}
+            </button>
+            {hayPermisos && (
+              <button type="button" className="acta-btn is-quiet" onClick={() => setOtro(false)}>Cancelar</button>
+            )}
+          </div>
         </form>
       )}
     </div>
