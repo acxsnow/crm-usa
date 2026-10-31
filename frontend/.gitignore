@@ -1,1 +1,4 @@
 .certs/
+
+# Service worker que genera vite-plugin-pwa en desarrollo (devOptions)
+dev-dist/
