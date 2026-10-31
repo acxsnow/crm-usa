@@ -493,3 +493,14 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 @media (display-mode: standalone) {
   #root .app-content { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
+
+/* Fichas (acta) con título y datos: el encabezado va en columna. La regla
+   general de encabezados lo ponía en fila y los datos (Pasos, Campos, Fase…)
+   quedaban apilados en una columna estrecha a la derecha del título. */
+#root .acta-header:has(> .acta-title-row) { display: block; }
+#root .acta-header:has(> .acta-title-row) .acta-title-row { justify-content: flex-start; align-items: center; }
+/* Secciones de la ficha del programa: son tarjetas con borde, así que llevan
+   relleno a los lados (venían con `1.4rem 0` y el texto tocaba el borde). */
+#root .program-section { padding: 18px 20px; }
+#root .program-section + .program-section { margin-top: 12px; }
+@media (max-width: 767px) { #root .program-section { padding: 14px 14px; } }
