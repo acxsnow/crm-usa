@@ -35,8 +35,11 @@ CATALOG: list[tuple] = [
      {"binding": "case.address_zip", "validation": {"format": "zip"}}),
     ("customer.contact_preference", "Hora conveniente para contactarle", "single_select", "Cliente",
      {"options": _opts("morning=Mañana", "afternoon=Tarde", "anytime=Cualquier hora")}),
-    ("customer.id_photo", "Foto del documento de identidad", "photo", "Cliente",
+    ("customer.id_photo", "Foto del documento de identidad (frente)", "photo", "Cliente",
      {"help": "Verifica el ID en persona y tómale una foto legible.", "sensitive": True}),
+    # El reverso es opcional: hay documentos sin información atrás (pasaporte).
+    ("customer.id_photo_back", "Foto del documento de identidad (reverso)", "photo", "Cliente",
+     {"help": "Si el documento tiene datos atrás, tómale también una foto legible.", "sensitive": True}),
     # --- Vivienda (§3.2) -----------------------------------------------------
     ("home.is_homeowner", "¿Es propietario de la vivienda?", "single_select", "Vivienda", {"options": SI_NO}),
     ("home.residence_type", "Tipo de vivienda", "single_select", "Vivienda",
@@ -134,6 +137,7 @@ _COMMON_START = [
         ("customer.address_street", R, None), ("home.unit_number", O, None), ("customer.address_city", R, None),
         ("customer.address_state", R, None), ("customer.address_zip", R, None),
         ("customer.contact_preference", O, None), ("customer.id_photo", R, None),
+        ("customer.id_photo_back", O, None),
     ]),
 ]
 _TECH_AUDIT = ("technical", "Auditoría técnica", [

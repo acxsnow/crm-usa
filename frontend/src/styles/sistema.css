@@ -504,3 +504,15 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .program-section { padding: 18px 20px; }
 #root .program-section + .program-section { margin-top: 12px; }
 @media (max-width: 767px) { #root .program-section { padding: 14px 14px; } }
+
+/* Visor de archivos encima de la pantalla (lib/fileViewer.ts). */
+.file-viewer { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.97); display: flex;
+  flex-direction: column; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); gap: 10px; }
+.file-viewer-bar { display: flex; justify-content: flex-end; gap: 8px; }
+.file-viewer-btn { min-height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent; color: #fff; font: 600 0.9rem var(--ui-font, sans-serif); display: inline-flex; align-items: center;
+  text-decoration: none; cursor: pointer; }
+.file-viewer-btn.is-primary { background: #fff; color: #0f172a; border-color: #fff; }
+.file-viewer-body { flex: 1; min-height: 0; width: 100%; object-fit: contain; border: 0; border-radius: 8px; }
+.file-viewer iframe.file-viewer-body { background: #fff; }
+.file-viewer p.file-viewer-body { color: #fff; text-align: center; align-self: center; flex: 0; }

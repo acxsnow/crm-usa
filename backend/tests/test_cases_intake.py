@@ -406,3 +406,34 @@ async def test_board_filters_apply_in_the_database_including_totals(
     # El vendedor sigue viendo solo lo suyo aunque pida el de otro.
     r = await app_client.get(f"/api/v1/case-board?salesperson_id={otro.id}", headers=vendedor)
     assert total(r.json()) == 1 and r.json()[0]["cases"][0]["address"].startswith("55 Luna Roja")
+
+
+async def test_the_id_photo_has_front_and_an_optional_back(app_client, db, seeded_org, active_salesperson_user):
+    """El documento de identidad se fotografía por las dos caras (29 oct 2026):
+    el frente es obligatorio y el reverso opcional (hay documentos sin datos
+    atrás). Las dos fotos quedan en el paso Cliente como documentos aparte."""
+    await programs.install_defaults(db, organization_id=seeded_org["org"].id)
+    headers = await headers_for(app_client, "vendedor@acme-demo.com")
+    for codigo in ("TECH_CLEAN_CA", "AZ_EFFICIENCY"):
+        prog = next(p for p in await programs.list_programs(db, organization_id=seeded_org["org"].id)
+                    if p.code == codigo)
+        caso = (await _abrir(app_client, headers, prog.id,
+                             address_street=f"{len(codigo)}00 ID Photo St"))["case"]
+        form = (await app_client.get(f"/api/v1/cases/{caso['id']}/form", headers=headers)).json()
+        cliente = next(s for s in form["definition"]["steps"] if s["code"] == "customer")
+        campos = {f["key"]: f for f in cliente["fields"]}
+        assert campos["customer.id_photo"]["label"].endswith("(frente)")
+        assert campos["customer.id_photo"]["requirement"] == "required"
+        assert campos["customer.id_photo_back"]["requirement"] == "optional"
+        assert campos["customer.id_photo_back"]["type"] == "photo"
+
+        frente = await _subir(app_client, headers, caso["id"], "customer.id_photo")
+        reverso = await _subir(app_client, headers, caso["id"], "customer.id_photo_back")
+        r = await app_client.put(f"/api/v1/cases/{caso['id']}/steps/customer",
+                                 json={"answers": {"customer.id_photo": frente, "customer.id_photo_back": reverso}},
+                                 headers=headers)
+        assert r.status_code == 200, r.text
+        faltan = {m["key"] for m in r.json()["evaluation"]["missing"]} if "evaluation" in r.json() else set()
+        assert "customer.id_photo_back" not in faltan
+        docs = (await app_client.get(f"/api/v1/cases/{caso['id']}/documents", headers=headers)).json()
+        assert {"customer.id_photo", "customer.id_photo_back"} <= {d["field_key"] for d in docs}

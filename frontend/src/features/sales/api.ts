@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/apiClient";
 import type { ConsentNotice } from "@/components/DataConsentNotice";
 import type { Case } from "@/features/cases/api";
 import type { DefinitionStep, Evaluation } from "@/types/programs";
+import { showFile } from "@/lib/fileViewer";
 
 export interface MyProgram {
   program: { id: string; code: string; name: string };
@@ -81,11 +82,10 @@ export async function uploadCaseFile(caseId: string, fieldKey: string, file: Fil
   return r.data.id;
 }
 
-export async function openCaseFile(fileId: string) {
+/** Muestra el archivo encima de la pantalla (ver `lib/fileViewer`). */
+export async function openCaseFile(fileId: string, name?: string) {
   const r = await apiClient.get(`/case-files/${fileId}`, { responseType: "blob" });
-  const url = URL.createObjectURL(r.data);
-  window.open(url, "_blank", "noopener");
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  showFile(r.data, name);
 }
 
 export const acceptTerms = async (caseId: string, body: { customer_name: string; signature: string;

@@ -1,0 +1,29 @@
+{
+ "VEN-004": [
+  {
+   "check": "AZ_EFFICIENCY: versión 2 publicada con frente y reverso",
+   "ok": true,
+   "dato": "{\"id\":\"308b1c12-4fb5-4e31-98d3-429042b81554\",\"program_id\":\"2730f635-e638-45ec-9283-1765df489a14\",\"version\":\"2\",\"status\":\"published\",\"published_at\":\"2026-10-31T16:42:12.964735Z\",\"terms_id\":\"b4d7d560-68"
+  },
+  {
+   "check": "TECH_CLEAN_CA: versión 2 publicada con frente y reverso",
+   "ok": true,
+   "dato": "{\"id\":\"f59998fa-d20a-433d-8b4b-e22d0ae81720\",\"program_id\":\"ce54222e-120a-47b5-8ae3-d57938b96c3f\",\"version\":\"2\",\"status\":\"published\",\"published_at\":\"2026-10-31T16:42:13.650615Z\",\"terms_id\":\"7e07f00c-d8"
+  },
+  {
+   "check": "El paso Cliente pide el frente y el reverso del documento",
+   "ok": true,
+   "dato": "Enviar\nCliente\nNombre completo *\nTeléfono *\nCorreo electrónico *\nDirección *\nNúmero de unidad o espacio\nCiudad *\nEstado *\nCalifornia\nArizona\nNevada\nZIP *\nHora conveniente para contactarle\nMañana\nTarde\nCualquier hora\nFoto del documento de identidad (frente) *dato sensible\nTomar foto\nSe marca con GPS,"
+  },
+  {
+   "check": "«Ver» abre la foto encima de la pantalla",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "«Cerrar» vuelve al formulario",
+   "ok": true,
+   "dato": ""
+  }
+ ]
+}
