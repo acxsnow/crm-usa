@@ -5,6 +5,8 @@ import { askText, confirmAction } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
 import { toast } from "@/lib/toast";
 import { createPeriod, downloadPayroll, getPayroll, hm, listPeriods, setPeriodStatus } from "./api";
+import { PaginatedTable } from "@/components/DataTable";
+import { useClientPagination } from "@/lib/useClientPagination";
 import "./attendance.css";
 
 function iso(d: Date): string {
@@ -30,6 +32,8 @@ export function PayrollPage() {
   const [hasta, setHasta] = useState(iso(new Date(lunes.getTime() + 13 * 864e5)));
   const { data, isLoading } = useQuery({ queryKey: ["payroll", desde, hasta], queryFn: () => getPayroll(desde, hasta) });
   const { data: periodos } = useQuery({ queryKey: ["payroll-periods"], queryFn: listPeriods });
+  // La nómina del rango llega calculada completa: se pagina aquí y el total suma a todos.
+  const empleados = useClientPagination(data?.rows, isLoading);
   const refrescar = () => { qc.invalidateQueries({ queryKey: ["payroll"] }); qc.invalidateQueries({ queryKey: ["payroll-periods"] }); };
   const crear = useMutation({ mutationFn: () => createPeriod(desde, hasta), onSuccess: () => { toast("Período creado"); refrescar(); },
     onError: (e) => toast(apiError(e)) });
@@ -71,37 +75,27 @@ export function PayrollPage() {
       </div>
 
       <section className="att-card">
-        <div className="att-scroll">
-          <table className="att-table is-numbers">
-            <thead><tr>
-              <th>Empleado</th><th>Programadas</th><th>Registradas</th><th>Pausas</th><th>Extras día</th><th>Extras semana</th>
-              <th>Aprobadas</th><th>Ausencias</th><th>Tarde</th><th>Salió antes</th><th>Correcciones</th><th>Novedades</th>
-              <th>Sin salida</th><th>Sin aprobar</th>
-            </tr></thead>
-            <tbody>
-              {isLoading && <tr><td colSpan={14}>Cargando…</td></tr>}
-              {(data?.rows ?? []).map((r) => (
-                <tr key={r.user_id}>
-                  <th scope="row">{r.user_name}</th><td>{hm(r.scheduled_minutes)}</td><td>{hm(r.recorded_minutes)}</td>
-                  <td>{hm(r.pause_minutes)}</td><td>{hm(r.daily_overtime_minutes)}</td><td>{hm(r.weekly_overtime_minutes)}</td>
-                  <td><strong>{hm(r.approved_minutes)}</strong></td><td>{r.absences}</td><td>{r.late_arrivals}</td>
-                  <td>{r.early_departures}</td><td>{r.corrections}</td><td>{r.novelties}</td>
-                  <td className={r.open_entries ? "att-warn" : ""}>{r.open_entries}</td>
-                  <td className={r.unapproved_entries ? "att-warn" : ""}>{r.unapproved_entries}</td>
-                </tr>
-              ))}
-              {!!data?.rows.length && (
-                <tr className="att-total"><th scope="row">Total</th><td>{hm(total("scheduled_minutes"))}</td>
-                  <td>{hm(total("recorded_minutes"))}</td><td>{hm(total("pause_minutes"))}</td>
-                  <td>{hm(total("daily_overtime_minutes"))}</td><td>{hm(total("weekly_overtime_minutes"))}</td>
-                  <td>{hm(total("approved_minutes"))}</td><td>{total("absences")}</td><td>{total("late_arrivals")}</td>
-                  <td>{total("early_departures")}</td><td>{total("corrections")}</td><td>{total("novelties")}</td>
-                  <td>{total("open_entries")}</td><td>{total("unapproved_entries")}</td></tr>
-              )}
-              {data && !data.rows.length && <tr><td colSpan={14} className="att-muted">Sin datos en el rango.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <PaginatedTable list={empleados} getRowKey={(r) => r.user_id} className="att-table is-numbers" emptyMessage="Sin datos en el rango."
+          columns={[
+            { key: "empleado", header: "Empleado", render: (r) => <strong>{r.user_name}</strong> },
+            { key: "programadas", header: "Programadas", render: (r) => hm(r.scheduled_minutes) },
+            { key: "registradas", header: "Registradas", render: (r) => hm(r.recorded_minutes) },
+            { key: "pausas", header: "Pausas", render: (r) => hm(r.pause_minutes) },
+            { key: "extras_dia", header: "Extras día", render: (r) => hm(r.daily_overtime_minutes) },
+            { key: "extras_semana", header: "Extras semana", render: (r) => hm(r.weekly_overtime_minutes) },
+            { key: "aprobadas", header: "Aprobadas", render: (r) => <strong>{hm(r.approved_minutes)}</strong> },
+            { key: "ausencias", header: "Ausencias", render: (r) => r.absences },
+            { key: "tarde", header: "Tarde", render: (r) => r.late_arrivals },
+            { key: "antes", header: "Salió antes", render: (r) => r.early_departures },
+            { key: "correcciones", header: "Correcciones", render: (r) => r.corrections },
+            { key: "novedades", header: "Novedades", render: (r) => r.novelties },
+            { key: "sin_salida", header: "Sin salida", render: (r) => <span className={r.open_entries ? "att-warn" : ""}>{r.open_entries}</span> },
+            { key: "sin_aprobar", header: "Sin aprobar", render: (r) => <span className={r.unapproved_entries ? "att-warn" : ""}>{r.unapproved_entries}</span> },
+          ]}
+          footer={["Total", hm(total("scheduled_minutes")), hm(total("recorded_minutes")), hm(total("pause_minutes")),
+            hm(total("daily_overtime_minutes")), hm(total("weekly_overtime_minutes")), hm(total("approved_minutes")),
+            total("absences"), total("late_arrivals"), total("early_departures"), total("corrections"), total("novelties"),
+            total("open_entries"), total("unapproved_entries")]} />
         <p className="att-muted">«Ausencias» son turnos vencidos sin marcación: confírmalas con la persona antes de descontar.</p>
       </section>
 

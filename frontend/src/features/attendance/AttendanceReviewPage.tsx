@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
+import { PaginationControls } from "@/components/PaginationControls";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { askText } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
 import { toast } from "@/lib/toast";
-import { approveEntries, clockTime, correctEntry, getEntry, hm, listEntries, listNovelties, reviewNovelty,
-  type Entry } from "./api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { approveEntries, clockTime, correctEntry, getEntry, hm, reviewNovelty,
+  type Entry, type Novelty } from "./api";
 import { useMyAttendance } from "./useAttendance";
 import "./attendance.css";
 
@@ -47,7 +50,10 @@ function Novelties() {
   const { user } = useAuth();
   const zona = useMyAttendance().data?.timezone;
   const [estado, setEstado] = useState("pending");
-  const { data } = useQuery({ queryKey: ["novelties", estado], queryFn: () => listNovelties({ status: estado || undefined }) });
+  // Antes se pedían las primeras 200 sin pasar de página.
+  const lista = usePaginatedQuery<Novelty>({ key: ["novelties"], path: "/attendance/novelties", pageSize: 25,
+    params: { status: estado || undefined } });
+  const data = lista.items;
   const revisar = useMutation({
     mutationFn: ({ id, ok, nota }: { id: string; ok: boolean; nota?: string }) => reviewNovelty(id, ok, nota),
     onSuccess: (n) => { toast(n.status === "approved" ? "Novedad aprobada" : "Novedad rechazada");
@@ -90,6 +96,7 @@ function Novelties() {
           </li>
         ))}
       </ul>
+      <PaginationControls {...lista.controls} />
     </section>
   );
 }
@@ -103,9 +110,10 @@ function Entries() {
   const [hasta, setHasta] = useState(iso(hoy));
   const [estado, setEstado] = useState("closed");
   const [marcadas, setMarcadas] = useState<string[]>([]);
-  const [abierta, setAbierta] = useState<string | null>(null);
-  const { data } = useQuery({ queryKey: ["entries", desde, hasta, estado],
-    queryFn: () => listEntries({ date_from: desde, date_to: hasta, status: estado || undefined }) });
+  // Antes se pedían las primeras 500 sin pasar de página.
+  const lista = usePaginatedQuery<Entry>({ key: ["entries"], path: "/attendance/entries", pageSize: 25,
+    params: { date_from: desde, date_to: hasta, status: estado || undefined } });
+  const data = lista.items;
   const aprobar = useMutation({
     mutationFn: () => approveEntries(marcadas),
     onSuccess: (r) => {
@@ -131,50 +139,33 @@ function Entries() {
             onClick={() => aprobar.mutate()}>Aprobar {marcadas.length || ""}</button>
         )}
       </div>
-      <div className="att-scroll">
-        <table className="att-table">
-          <thead><tr>
-            {estado === "closed" && <th><input type="checkbox" aria-label="Marcar todas"
-              checked={!!ajenas.length && marcadas.length === ajenas.length}
-              onChange={(e) => setMarcadas(e.target.checked ? ajenas.map((x) => x.id) : [])} /></th>}
-            <th>Persona</th><th>Día</th><th>Entrada</th><th>Salida</th><th>Pausas</th><th>Efectivas</th><th>Estado</th><th />
-          </tr></thead>
-          <tbody>
-            {(data ?? []).map((e) => (
-              <EntryRow key={e.id} e={e} zona={zona} conCheck={estado === "closed"} propia={e.user_id === user?.id}
-                marcada={marcadas.includes(e.id)} abierta={abierta === e.id}
-                onCheck={(v) => setMarcadas(v ? [...marcadas, e.id] : marcadas.filter((x) => x !== e.id))}
-                onToggle={() => setAbierta(abierta === e.id ? null : e.id)} />
-            ))}
-            {!(data ?? []).length && <tr><td colSpan={9} className="att-muted">Sin marcaciones en el rango.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      <PaginatedTable list={lista} getRowKey={(e) => e.id} className="att-table" emptyMessage="Sin marcaciones en el rango."
+        expandable={{ render: (e) => <EntryDetailPanel id={e.id} zona={zona} propia={e.user_id === user?.id} /> }}
+        columns={[
+          ...(estado === "closed" ? [{ key: "marcar", header: "Marcar", render: (e: Entry) => e.user_id !== user?.id && (
+            <input type="checkbox" checked={marcadas.includes(e.id)} aria-label={`Marcar ${e.user_name}`}
+              onChange={(ev) => setMarcadas(ev.target.checked ? [...marcadas, e.id] : marcadas.filter((x) => x !== e.id))} />
+          ) }] : []),
+          { key: "persona", header: "Persona", render: (e) => <strong>{e.user_name}</strong> },
+          { key: "dia", header: "Día", render: (e) => e.work_date },
+          { key: "entrada", header: "Entrada", render: (e) => <>{clockTime(e.clock_in_at, zona)}{e.clock_in_offline && <small>sin señal</small>}</> },
+          { key: "salida", header: "Salida", render: (e) => <>{clockTime(e.clock_out_at, zona)}{e.closed_by === "admin" && <small>regularizada</small>}</> },
+          { key: "pausas", header: "Pausas", render: (e) => hm(e.pause_minutes) },
+          { key: "efectivas", header: "Efectivas", render: (e) => hm(e.status === "approved" ? e.approved_minutes : e.effective_minutes) },
+          { key: "estado", header: "Estado", render: (e) => (
+            <span className={`att-pill is-${e.status}`}>{e.status === "approved" ? "Aprobada" : e.status === "closed" ? "Por aprobar" : "Abierta"}</span>
+          ) },
+          { key: "acciones", header: "", render: (_e, fila) => (
+            <RowActions><RowAction onClick={fila.toggle}>{fila.expanded ? "Cerrar" : "Detalle"}</RowAction></RowActions>
+          ) },
+        ]} />
+      {estado === "closed" && ajenas.length > 0 && (
+        <label className="att-field att-check-all">
+          <input type="checkbox" checked={marcadas.length === ajenas.length}
+            onChange={(e) => setMarcadas(e.target.checked ? ajenas.map((x) => x.id) : [])} /> Marcar todas las de esta página
+        </label>
+      )}
     </section>
-  );
-}
-
-function EntryRow({ e, zona, conCheck, propia, marcada, abierta, onCheck, onToggle }: {
-  e: Entry; zona?: string; conCheck: boolean; propia: boolean; marcada: boolean; abierta: boolean;
-  onCheck: (v: boolean) => void; onToggle: () => void;
-}) {
-  return (
-    <>
-      <tr>
-        {conCheck && <td>{!propia && <input type="checkbox" checked={marcada} aria-label={`Marcar ${e.user_name}`}
-          onChange={(ev) => onCheck(ev.target.checked)} />}</td>}
-        <th scope="row">{e.user_name}</th>
-        <td>{e.work_date}</td>
-        <td>{clockTime(e.clock_in_at, zona)}{e.clock_in_offline && <small> · sin señal</small>}</td>
-        <td>{clockTime(e.clock_out_at, zona)}{e.closed_by === "admin" && <small> · regularizada</small>}</td>
-        <td>{hm(e.pause_minutes)}</td>
-        <td>{hm(e.status === "approved" ? e.approved_minutes : e.effective_minutes)}</td>
-        <td><span className={`att-pill is-${e.status}`}>{e.status === "approved" ? "Aprobada"
-          : e.status === "closed" ? "Por aprobar" : "Abierta"}</span></td>
-        <td><button type="button" className="att-btn is-link" onClick={onToggle}>{abierta ? "Cerrar" : "Detalle"}</button></td>
-      </tr>
-      {abierta && <tr><td colSpan={9}><EntryDetailPanel id={e.id} zona={zona} propia={propia} /></td></tr>}
-    </>
   );
 }
 

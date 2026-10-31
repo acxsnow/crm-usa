@@ -8,6 +8,8 @@ import { cancelShift, clockTime, copyWeek, createReason, createShifts, getSettin
   listShifts, purgeUserLocations, putSettings, updateReason, type Reason,
   SHIFT_STATUS_LABELS, type AttendanceSettings, type Shift } from "./api";
 import { useMyAttendance } from "./useAttendance";
+import { PaginatedTable } from "@/components/DataTable";
+import { useClientPagination } from "@/lib/useClientPagination";
 import "./attendance.css";
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -76,6 +78,8 @@ export function ShiftPlannerPage() {
     }
     return [...m.entries()].sort((a, b) => a[1].nombre.localeCompare(b[1].nombre));
   }, [turnos, lunes]);
+  // Una fila por persona: con mucho personal se pagina.
+  const personas = useClientPagination(porPersona, isLoading);
 
   const cancelar = async (t: Shift) => {
     const motivo = await askText({ title: `Cancelar el turno de ${t.user_name} del ${t.shift_date}`,
@@ -107,39 +111,25 @@ export function ShiftPlannerPage() {
         <button type="button" className="att-btn" onClick={() => setLunes(mas(lunes, 7))}>Semana siguiente →</button>
       </div>
 
-      <div className="att-scroll">
-        <table className="att-week">
-          <thead>
-            <tr><th scope="col">Persona</th>{DIAS.map((d, i) => (
-              <th key={d} scope="col">{d} {mas(lunes, i).getDate()}</th>))}</tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={8}>Cargando…</td></tr>}
-            {!isLoading && !porPersona.length && <tr><td colSpan={8} className="att-muted">
-              No hay turnos esta semana. Prográmalos abajo.</td></tr>}
-            {porPersona.map(([uid, fila]) => (
-              <tr key={uid}>
-                <th scope="row">{fila.nombre}</th>
-                {fila.dias.map((ts, i) => (
-                  <td key={i}>
-                    {ts.map((t) => (
-                      <div key={t.id} className={`att-shift is-${t.compliance}`}>
-                        <span>{clockTime(t.starts_at, zona)}–{clockTime(t.ends_at, zona)}</span>
-                        {t.project_title && <small>{t.project_title}</small>}
-                        <small>{SHIFT_STATUS_LABELS[t.compliance ?? ""] ?? ""}</small>
-                        {puedeEditar && !t.entry_id && (
-                          <button type="button" className="att-x" aria-label={`Cancelar turno del ${t.shift_date}`}
-                            onClick={() => void cancelar(t)}>×</button>
-                        )}
-                      </div>
-                    ))}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PaginatedTable list={personas} getRowKey={([uid]) => uid} className="att-week"
+        emptyMessage="No hay turnos esta semana. Prográmalos abajo."
+        columns={[
+          { key: "persona", header: "Persona", render: ([, fila]) => <strong>{fila.nombre}</strong> },
+          ...DIAS.map((d, i) => ({
+            key: d, header: `${d} ${mas(lunes, i).getDate()}`,
+            render: ([, fila]: (typeof porPersona)[number]) => fila.dias[i].map((t) => (
+              <div key={t.id} className={`att-shift is-${t.compliance}`}>
+                <span>{clockTime(t.starts_at, zona)}–{clockTime(t.ends_at, zona)}</span>
+                {t.project_title && <small>{t.project_title}</small>}
+                <small>{SHIFT_STATUS_LABELS[t.compliance ?? ""] ?? ""}</small>
+                {puedeEditar && !t.entry_id && (
+                  <button type="button" className="att-x" aria-label={`Cancelar turno del ${t.shift_date}`}
+                    onClick={() => void cancelar(t)}>×</button>
+                )}
+              </div>
+            )),
+          })),
+        ]} />
 
       {puedeEditar && (
         <section className="att-card" aria-labelledby="att-programar">

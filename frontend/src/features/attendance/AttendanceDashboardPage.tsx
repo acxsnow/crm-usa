@@ -6,6 +6,8 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { ageLabel, clockTime, getDashboard, getLive, hm, hmCorto, listPeople, SHIFT_STATUS_LABELS,
   type Dashboard } from "./api";
 import { useMyAttendance } from "./useAttendance";
+import { PaginatedTable } from "@/components/DataTable";
+import { useClientPagination } from "@/lib/useClientPagination";
 import "./attendance.css";
 
 function iso(d: Date): string {
@@ -112,6 +114,9 @@ export function AttendanceDashboardPage() {
   const { data, isLoading } = useQuery({ queryKey: ["attendance-dashboard", desde, hasta, persona],
     queryFn: () => getDashboard(desde, hasta, persona || undefined), refetchInterval: 30_000 });
   const { data: vivo } = useQuery({ queryKey: ["attendance-live"], queryFn: getLive, refetchInterval: 30_000 });
+  // Listas por persona que llegan completas: se paginan aquí.
+  const enVivo = useClientPagination(vivo, !vivo);
+  const puntualidad = useClientPagination(data?.by_person, isLoading);
   const k = data?.kpis ?? {};
   const n = (key: string) => (k[key] ?? 0) as number;
 
@@ -160,27 +165,26 @@ export function AttendanceDashboardPage() {
           <h2 id="att-vivo">Hoy, en vivo</h2>
           <Link to="/operations-map" className="att-btn">Ver en el mapa</Link>
         </div>
-        <div className="att-scroll">
-          <table className="att-table">
-            <thead><tr><th>Persona</th><th>Turno</th><th>Estado del turno</th><th>Ubicación</th><th>Verificado</th></tr></thead>
-            <tbody>
-              {(vivo ?? []).map((f) => (
-                <tr key={f.user_id}>
-                  <th scope="row">{f.user_name}</th>
-                  <td>{f.shift ? `${clockTime(f.shift.starts_at, zona)}–${clockTime(f.shift.ends_at, zona)}` : "Sin turno"}
-                    {f.clock_in_at && <small> · entró {clockTime(f.clock_in_at, zona)}</small>}</td>
-                  <td><span className={`att-pill is-${f.shift_status}`}>{SHIFT_STATUS_LABELS[f.shift_status] ?? f.shift_status}</span>
-                    {f.paused && <small> · en pausa</small>}{f.offline && <small> · marcó sin señal</small>}</td>
-                  <td>{f.location ? <span className={f.location.fresh ? "att-fresh" : "att-stale"}>
-                    {f.location.fresh ? "Reciente" : "Última conocida"} · {ageLabel(f.location.age_minutes)}</span>
-                    : <span className="att-muted">Sin ubicación</span>}</td>
-                  <td>{f.verified ? "Aprobado" : f.entry_status === "closed" ? "Por aprobar" : "—"}</td>
-                </tr>
-              ))}
-              {!vivo?.length && <tr><td colSpan={5} className="att-muted">Nadie tiene turno hoy.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <PaginatedTable list={enVivo} getRowKey={(f) => f.user_id} className="att-table" emptyMessage="Nadie tiene turno hoy."
+          columns={[
+            { key: "persona", header: "Persona", render: (f) => <strong>{f.user_name}</strong> },
+            { key: "turno", header: "Turno", render: (f) => (
+              <>
+                {f.shift ? `${clockTime(f.shift.starts_at, zona)}–${clockTime(f.shift.ends_at, zona)}` : "Sin turno"}
+                {f.clock_in_at && <small>entró {clockTime(f.clock_in_at, zona)}</small>}
+              </>
+            ) },
+            { key: "estado", header: "Estado del turno", render: (f) => (
+              <>
+                <span className={`att-pill is-${f.shift_status}`}>{SHIFT_STATUS_LABELS[f.shift_status] ?? f.shift_status}</span>
+                {f.paused && <small>en pausa</small>}{f.offline && <small>marcó sin señal</small>}
+              </>
+            ) },
+            { key: "ubicacion", header: "Ubicación", render: (f) => (f.location
+              ? <span className={f.location.fresh ? "att-fresh" : "att-stale"}>{f.location.fresh ? "Reciente" : "Última conocida"} · {ageLabel(f.location.age_minutes)}</span>
+              : <span className="att-muted">Sin ubicación</span>) },
+            { key: "verificado", header: "Verificado", render: (f) => (f.verified ? "Aprobado" : f.entry_status === "closed" ? "Por aprobar" : "—") },
+          ]} />
       </section>
 
       <div className="att-two">
@@ -192,15 +196,13 @@ export function AttendanceDashboardPage() {
           <h2 id="att-puntualidad">Puntualidad por día</h2>
           {data && <PunctualityLine points={data.punctuality} />}
           {data && (
-            <div className="att-scroll">
-              <table className="att-table">
-                <thead><tr><th>Persona</th><th>Turnos</th><th>Tarde</th><th>Cumplimiento</th></tr></thead>
-                <tbody>{data.by_person.map((r) => (
-                  <tr key={r.user_id}><th scope="row">{r.user_name}</th><td>{r.shifts}</td><td>{r.late}</td>
-                    <td>{r.compliance_pct == null ? "—" : `${r.compliance_pct}%`}</td></tr>
-                ))}</tbody>
-              </table>
-            </div>
+            <PaginatedTable list={puntualidad} getRowKey={(r) => r.user_id} className="att-table" emptyMessage="Sin turnos en el rango."
+              columns={[
+                { key: "persona", header: "Persona", render: (r) => <strong>{r.user_name}</strong> },
+                { key: "turnos", header: "Turnos", render: (r) => r.shifts },
+                { key: "tarde", header: "Tarde", render: (r) => r.late },
+                { key: "cumplimiento", header: "Cumplimiento", render: (r) => (r.compliance_pct == null ? "—" : `${r.compliance_pct}%`) },
+              ]} />
           )}
         </section>
       </div>
