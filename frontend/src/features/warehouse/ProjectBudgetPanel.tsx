@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTable, RowAction, RowActions } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/AuthContext";
@@ -142,33 +143,18 @@ export function ProjectBudgetPanel({ projectId, embedded = false }: { projectId:
             )}
           </div>
 
-          <table className="materials-table">
-            <thead>
-              <tr><th scope="col">Categoría</th><th scope="col">Descripción</th><th scope="col">Cantidad</th>
-                <th scope="col">Costo unitario</th><th scope="col">Monto</th></tr>
-            </thead>
-            <tbody>
-              {presupuesto.lines.map((r) => (
-                <tr key={r.id}>
-                  <td>{cat?.budget_categories?.[r.category] ?? r.category}</td>
-                  <td>{r.item_name ?? r.description}{r.notes ? <small>{r.notes}</small> : null}</td>
-                  <td>{r.quantity} {r.unit_label ?? ""}</td>
-                  <td>{dinero(r.unit_cost)}</td>
-                  <td>{dinero(r.amount)}</td>
-                </tr>
-              ))}
-              <tr>
-                <td colSpan={4}><strong>Total estimado</strong></td>
-                <td><strong>{dinero(presupuesto.total)}</strong></td>
-              </tr>
-              {presupuesto.expected_revenue && (
-                <tr>
-                  <td colSpan={4}>Precio esperado · ganancia esperada</td>
-                  <td>{dinero(presupuesto.expected_revenue)} · {dinero(presupuesto.expected_profit)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <DataTable rows={presupuesto.lines} isLoading={false} getRowKey={(r) => r.id}
+            columns={[
+              { key: "categoria", header: "Categoría", render: (r) => cat?.budget_categories?.[r.category] ?? r.category },
+              { key: "descripcion", header: "Descripción", render: (r) => <>{r.item_name ?? r.description}{r.notes ? <small>{r.notes}</small> : null}</> },
+              { key: "cantidad", header: "Cantidad", render: (r) => `${r.quantity} ${r.unit_label ?? ""}` },
+              { key: "unitario", header: "Costo unitario", className: "mono", render: (r) => dinero(r.unit_cost) },
+              { key: "monto", header: "Monto", className: "mono", render: (r) => dinero(r.amount) },
+            ]}
+            footer={["Total estimado", null, null, null, dinero(presupuesto.total)]} />
+          {presupuesto.expected_revenue && (
+            <p className="acta-lead">Precio esperado {dinero(presupuesto.expected_revenue)} · ganancia esperada {dinero(presupuesto.expected_profit)}</p>
+          )}
         </>
       )}
 
@@ -182,29 +168,18 @@ function ComparisonTable({ comparacion }: { comparacion: BudgetVsActual }) {
   return (
     <>
       <h4 className="acta-section-title">Estimado contra real</h4>
-      <div className="tablewrap"><table className="notices-table">
-        <thead>
-          <tr><th>Categoría</th><th>Estimado</th><th>Real</th><th>Desviación</th><th>%</th></tr>
-        </thead>
-        <tbody>
-          {comparacion.rows.map((f) => (
-            <tr key={f.category}>
-              <td>{f.label}</td>
-              <td>{dinero(f.estimated)}</td>
-              <td>{dinero(f.actual)}</td>
-              <td className={Number(f.deviation) > 0 ? "is-negative" : undefined}>{dinero(f.deviation)}</td>
-              <td>{porcentaje(f.deviation_pct)}</td>
-            </tr>
-          ))}
-          <tr>
-            <td><strong>Total</strong></td>
-            <td><strong>{dinero(comparacion.totals.estimated)}</strong></td>
-            <td><strong>{dinero(comparacion.totals.actual)}</strong></td>
-            <td><strong>{dinero(comparacion.totals.deviation)}</strong></td>
-            <td><strong>{porcentaje(comparacion.totals.deviation_pct)}</strong></td>
-          </tr>
-        </tbody>
-      </table></div>
+      <DataTable rows={comparacion.rows} isLoading={false} getRowKey={(f) => f.category}
+        columns={[
+          { key: "categoria", header: "Categoría", render: (f) => f.label },
+          { key: "estimado", header: "Estimado", className: "mono", render: (f) => dinero(f.estimated) },
+          { key: "real", header: "Real", className: "mono", render: (f) => dinero(f.actual) },
+          { key: "desviacion", header: "Desviación", className: "mono", render: (f) => (
+            <span className={Number(f.deviation) > 0 ? "is-negative" : undefined}>{dinero(f.deviation)}</span>
+          ) },
+          { key: "pct", header: "%", render: (f) => porcentaje(f.deviation_pct) },
+        ]}
+        footer={["Total", dinero(comparacion.totals.estimated), dinero(comparacion.totals.actual),
+          dinero(comparacion.totals.deviation), porcentaje(comparacion.totals.deviation_pct)]} />
       <p className="acta-lead">
         Una desviación positiva quiere decir que se gastó más de lo presupuestado. Los gastos de campo se
         gastan pero no se presupuestan, así que su estimado sale en cero.
@@ -338,63 +313,42 @@ function BudgetForm({ projectId, initial, catalogs, onClose, onSaved }: {
 
       {aviso && <p className="acta-lead" role="status">{aviso}</p>}
 
-      <table className="materials-table">
-        <thead>
-          <tr>
-            <th scope="col">Categoría</th><th scope="col">Artículo</th><th scope="col">Descripción</th>
-            <th scope="col">Cantidad</th><th scope="col">Unidad</th><th scope="col">Costo unitario</th>
-            <th scope="col">Monto</th><th />
-          </tr>
-        </thead>
-        <tbody>
-          {renglones.map((r, i) => (
-            <tr key={i}>
-              <td>
-                <select aria-label={`Categoría del renglón ${i + 1}`} value={r.category}
-                  onChange={(e) => cambiar(i, { category: e.target.value })}>
-                  {Object.entries(categorias).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </td>
-              <td>
-                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={r.item_id ?? ""}
-                  clearLabel={`Dejar libre el renglón ${i + 1}`} onChange={(a) => elegirArticulo(i, a)} />
-              </td>
-              <td>
-                <input aria-label={`Descripción del renglón ${i + 1}`} value={r.description ?? ""}
-                  onChange={(e) => cambiar(i, { description: e.target.value })} maxLength={255}
-                  placeholder="Cuadrilla, permiso…" />
-              </td>
-              <td>
-                <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={r.quantity}
-                  onChange={(e) => cambiar(i, { quantity: e.target.value })} />
-              </td>
-              <td>
-                <select aria-label={`Unidad del renglón ${i + 1}`} value={r.unit ?? ""}
-                  onChange={(e) => cambiar(i, { unit: e.target.value })}>
-                  <option value="">—</option>
-                  {Object.entries(unidades).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </td>
-              <td>
-                <input aria-label={`Costo unitario del renglón ${i + 1}`} inputMode="decimal" value={r.unit_cost ?? ""}
-                  onChange={(e) => cambiar(i, { unit_cost: e.target.value })} />
-              </td>
-              <td>{dinero(String((Number(r.quantity || 0) * Number(r.unit_cost || 0)).toFixed(2)))}</td>
-              <td>
-                {renglones.length > 1 && (
-                  <button type="button" className="acta-btn is-quiet"
-                    onClick={() => setRenglones((a) => a.filter((_, j) => j !== i))}>Quitar</button>
-                )}
-              </td>
-            </tr>
-          ))}
-          <tr>
-            <td colSpan={6}><strong>Total estimado</strong></td>
-            <td><strong>{dinero(total.toFixed(2))}</strong></td>
-            <td />
-          </tr>
-        </tbody>
-      </table>
+      <DataTable rows={renglones.map((r, i) => ({ ...r, i }))} isLoading={false} getRowKey={(r) => String(r.i)}
+        columns={[
+          { key: "categoria", header: "Categoría", render: (r) => (
+            <select aria-label={`Categoría del renglón ${r.i + 1}`} value={r.category}
+              onChange={(e) => cambiar(r.i, { category: e.target.value })}>
+              {Object.entries(categorias).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          ) },
+          { key: "articulo", header: "Artículo", render: (r) => (
+            <ItemPicker label={`Artículo del renglón ${r.i + 1}`} itemId={r.item_id ?? ""}
+              clearLabel={`Dejar libre el renglón ${r.i + 1}`} onChange={(a) => elegirArticulo(r.i, a)} />
+          ) },
+          { key: "descripcion", header: "Descripción", render: (r) => (
+            <input aria-label={`Descripción del renglón ${r.i + 1}`} value={r.description ?? ""}
+              onChange={(e) => cambiar(r.i, { description: e.target.value })} maxLength={255} placeholder="Cuadrilla, permiso…" />
+          ) },
+          { key: "cantidad", header: "Cantidad", render: (r) => (
+            <input aria-label={`Cantidad del renglón ${r.i + 1}`} inputMode="decimal" value={r.quantity}
+              onChange={(e) => cambiar(r.i, { quantity: e.target.value })} />
+          ) },
+          { key: "unidad", header: "Unidad", render: (r) => (
+            <select aria-label={`Unidad del renglón ${r.i + 1}`} value={r.unit ?? ""} onChange={(e) => cambiar(r.i, { unit: e.target.value })}>
+              <option value="">—</option>
+              {Object.entries(unidades).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          ) },
+          { key: "unitario", header: "Costo unitario", render: (r) => (
+            <input aria-label={`Costo unitario del renglón ${r.i + 1}`} inputMode="decimal" value={r.unit_cost ?? ""}
+              onChange={(e) => cambiar(r.i, { unit_cost: e.target.value })} />
+          ) },
+          { key: "monto", header: "Monto", className: "mono", render: (r) => dinero(String((Number(r.quantity || 0) * Number(r.unit_cost || 0)).toFixed(2))) },
+          { key: "acciones", header: "", render: (r) => renglones.length > 1 && (
+            <RowActions><RowAction variant="danger" onClick={() => setRenglones((a) => a.filter((_, j) => j !== r.i))}>Quitar</RowAction></RowActions>
+          ) },
+        ]}
+        footer={["Total estimado", null, null, null, null, null, dinero(total.toFixed(2)), null]} />
 
       <div className="acta-actions">
         <button type="button" className="acta-btn is-quiet"

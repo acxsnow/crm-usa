@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTable } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
@@ -188,43 +189,31 @@ function Resumen({ r }: { r: JobCosting }) {
         </div>
       </div>
 
-      <div className="tablewrap">
-        <table className="notices-table jobcost-table">
-          <thead>
-            <tr><th scope="col">Concepto</th><th scope="col">Estimado</th><th scope="col">% del precio</th>
-              <th scope="col">Real</th><th scope="col">Diferencia</th><th scope="col">De dónde sale lo real</th></tr>
-          </thead>
-          <tbody>
-            {conceptos.map(([key, c]) => {
-              const precio = Number(r.revenue.expected ?? 0);
-              const sube = Number(c.deviation) > 0;
-              return (
-                <tr key={key}>
-                  <td data-label="Concepto">{c.label}</td>
-                  <td data-label="Estimado">{dinero(c.estimated)}</td>
-                  <td data-label="% del precio">{precio > 0 ? pct((Number(c.estimated) / precio) * 100) : "—"}</td>
-                  <td data-label="Real" className={sube ? "fin-danger" : undefined}>{dinero(c.actual)}</td>
-                  <td data-label="Diferencia" className={sube ? "fin-danger" : undefined}>
-                    {Number(c.deviation) === 0 ? "—" : `${sube ? "+" : ""}${dinero(c.deviation)}`}
-                  </td>
-                  <td data-label="Fuente"><small>{c.source}</small></td>
-                </tr>
-              );
-            })}
-            <tr className="jobcost-total">
-              <td data-label="Concepto"><strong>Ganancia neta</strong></td>
-              <td data-label="Estimado"><strong>{dinero(r.profit.estimated)}</strong></td>
-              <td data-label="% del precio">{pct(r.profit.estimated_margin_pct)}</td>
-              <td data-label="Real"><strong>{dinero(r.profit.actual)}</strong></td>
-              <td data-label="Diferencia">
-                {r.profit.actual !== null && r.profit.estimated !== null
-                  ? dinero(String(Number(r.profit.actual) - Number(r.profit.estimated))) : "—"}
-              </td>
-              <td />
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <DataTable rows={conceptos.map(([key, c]) => ({ key, ...c }))} isLoading={false} getRowKey={(c) => c.key}
+        className="jobcost-table"
+        columns={[
+          { key: "concepto", header: "Concepto", render: (c) => c.label },
+          { key: "estimado", header: "Estimado", render: (c) => dinero(c.estimated) },
+          { key: "pct", header: "% del precio", render: (c) => {
+            const precio = Number(r.revenue.expected ?? 0);
+            return precio > 0 ? pct((Number(c.estimated) / precio) * 100) : "—";
+          } },
+          { key: "real", header: "Real", render: (c) => (
+            <span className={Number(c.deviation) > 0 ? "fin-danger" : undefined}>{dinero(c.actual)}</span>
+          ) },
+          { key: "diferencia", header: "Diferencia", render: (c) => {
+            const sube = Number(c.deviation) > 0;
+            return <span className={sube ? "fin-danger" : undefined}>
+              {Number(c.deviation) === 0 ? "—" : `${sube ? "+" : ""}${dinero(c.deviation)}`}</span>;
+          } },
+          { key: "fuente", header: "De dónde sale lo real", render: (c) => <small>{c.source}</small> },
+        ]}
+        footer={[
+          "Ganancia neta", dinero(r.profit.estimated), pct(r.profit.estimated_margin_pct), dinero(r.profit.actual),
+          r.profit.actual !== null && r.profit.estimated !== null
+            ? dinero(String(Number(r.profit.actual) - Number(r.profit.estimated))) : "—",
+          null,
+        ]} />
     </>
   );
 }

@@ -5,8 +5,8 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
+import { PaginatedTable } from "@/components/DataTable";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { money } from "@/features/finance/api";
@@ -82,37 +82,30 @@ export function WarehouseStockPage() {
 
       <article className="acta">
         <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">Ningún artículo con este filtro. Carga el catálogo del Excel para empezar.</p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead><tr><th>Artículo</th><th>Categoría</th><th>Existencia</th><th>Mínimo</th><th>Dónde</th><th>Valor</th></tr></thead>
-            <tbody>
-              {lista.items.map((i) => (
-                <tr key={i.id} className={i.below_minimum ? "fin-overdue" : ""}>
-                  <td>
-                    <strong>{i.name}</strong>
-                    <small>{[i.sku ? `Ref. ${i.sku}` : null, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
-                    {i.has_serial && <small>Con serial: se rastrea por equipo</small>}
-                  </td>
-                  <td>{i.category_label}</td>
-                  <td className="mono">
-                    {i.total_quantity} <small>{i.unit_label}</small>
-                    {i.below_minimum && <span className="billing-chip is-rejected">Bajo mínimo</span>}
-                  </td>
-                  <td className="mono">{i.min_quantity ?? "—"}</td>
-                  <td>
-                    {i.by_location.length === 0 ? "—" : i.by_location.map((l) => (
-                      <small key={l.location_id}>{l.name}: {l.quantity}</small>
-                    ))}
-                  </td>
-                  <td className="mono">{money(i.value)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(i) => i.id}
+          emptyMessage="Ningún artículo con este filtro. Carga el catálogo del Excel para empezar."
+          rowClassName={(i) => (i.below_minimum ? "fin-overdue" : undefined)}
+          columns={[
+            { key: "articulo", header: "Artículo", render: (i) => (
+              <>
+                <strong>{i.name}</strong>
+                <small>{[i.sku ? `Ref. ${i.sku}` : null, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
+                {i.has_serial && <small>Con serial: se rastrea por equipo</small>}
+              </>
+            ) },
+            { key: "categoria", header: "Categoría", render: (i) => i.category_label },
+            { key: "existencia", header: "Existencia", className: "mono", render: (i) => (
+              <>
+                {i.total_quantity} <small>{i.unit_label}</small>
+                {i.below_minimum && <span className="billing-chip is-rejected">Bajo mínimo</span>}
+              </>
+            ) },
+            { key: "minimo", header: "Mínimo", className: "mono", render: (i) => i.min_quantity ?? "—" },
+            { key: "donde", header: "Dónde", render: (i) => (i.by_location.length === 0 ? "—" : i.by_location.map((l) => (
+              <small key={l.location_id}>{l.name}: {l.quantity}</small>
+            ))) },
+            { key: "valor", header: "Valor", className: "mono", render: (i) => money(i.value) },
+          ]} />
       </article>
     </div>
   );

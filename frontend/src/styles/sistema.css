@@ -569,16 +569,16 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .release-toggle:hover { background: var(--sidebar-hover); }
 #root .release-orders tr.is-expanded > td { border-bottom: 0; }
 #root .release-detail-row > td { padding: 4px 20px 18px; background: var(--canvas); }
-#root .release-detail-row .release-lines > ul { columns: 2 320px; column-gap: 32px; margin: 0; }
-#root .release-detail-row .release-lines li { break-inside: avoid; font-size: 0.8125rem; padding: 5px 0; }
-#root .release-detail-row .release-lines .release-lines-section { break-after: avoid; padding-top: 12px; text-transform: uppercase;
+#root tr.is-detail .release-lines > ul { columns: 2 320px; column-gap: 32px; margin: 0; }
+#root tr.is-detail .release-lines li { break-inside: avoid; font-size: 0.8125rem; padding: 5px 0; }
+#root tr.is-detail .release-lines .release-lines-section { break-after: avoid; padding-top: 12px; text-transform: uppercase;
   letter-spacing: 0.04em; font-size: 0.6875rem; color: var(--ink-faint); }
-#root .release-detail-row .release-lines .billing-chip.is-required { font-size: 0.6875rem; padding: 1px 6px; }
+#root tr.is-detail .release-lines .billing-chip.is-required { font-size: 0.6875rem; padding: 1px 6px; }
 @media (max-width: 767px) {
   #root .release-actions { justify-content: flex-start; margin-top: 6px; }
   #root .release-detail-row > td { padding: 4px 0 12px; background: transparent; }
 }
-#root .release-detail-row .release-qty { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px;
+#root tr.is-detail .release-qty { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px;
   background: var(--sidebar-hover); color: var(--ink); font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 @media (min-width: 768px) {
   #root .release-orders .release-actions { flex-wrap: nowrap; }
@@ -635,4 +635,40 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
   /* En tarjeta, la marca roja de «pendiente» va en el borde de la tarjeta, no pegada al texto. */
   #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.fin-overdue { border-left: 3px solid var(--red); }
   #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.fin-overdue > td:first-child { box-shadow: none; }
+}
+
+/* Componentes comunes de tabla (components/DataTable.tsx). */
+#root .row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 14px; }
+#root .row-actions .acta-btn.is-small { min-height: 32px; padding: 0 12px; font-size: 0.8125rem; }
+#root .row-actions .acta-link.is-danger { color: var(--red-dark); }
+#root .row-expand { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--surface); color: var(--ink); font: 500 0.8125rem var(--ui-font); cursor: pointer;
+  white-space: nowrap; }
+#root .row-expand:hover { background: var(--sidebar-hover); }
+#root .data-table tr.is-expanded > td { border-bottom: 0; }
+#root .data-table tr.is-detail > td { padding: 4px 16px 16px; background: var(--canvas); }
+#root .data-table td small { display: block; margin-top: 2px; color: var(--ink-faint); font-size: 0.75rem; font-weight: 400; }
+@media (min-width: 768px) {
+  #root .data-table td.is-actions { width: 1%; white-space: nowrap; text-align: right; }
+  #root .data-table td.is-actions .row-actions { flex-wrap: nowrap; }
+}
+@media (max-width: 767px) {
+  #root .row-actions { justify-content: flex-start; }
+  #root .data-table.is-cards tr.is-detail > td { padding: 4px 12px 12px; background: transparent; }
+  #root .data-table.is-cards tr.fin-overdue { border-left: 3px solid var(--red); }
+}
+#root .data-table tr.is-group > th { padding: 12px 16px 4px; background: transparent; text-align: left; font-size: 0.6875rem;
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-faint); border-bottom: 0; }
+@media (max-width: 767px) {
+  #root .data-table.is-cards tr.is-group { display: block; border: 0; background: transparent; padding: 8px 2px 0; margin: 0; box-shadow: none; }
+  #root .data-table.is-cards tr.is-group > th { display: block; padding: 0; }
+}
+#root .data-table tfoot tr.is-total > td { padding: 12px 16px; border-top: 1px solid var(--line); font-weight: 600; background: var(--canvas); }
+@media (max-width: 767px) {
+  #root .data-table.is-cards tfoot, #root .data-table.is-cards tfoot tr.is-total { display: block; width: 100%; }
+  #root .data-table.is-cards tfoot tr.is-total { border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 14px; }
+  #root .data-table.is-cards tfoot tr.is-total > td { display: flex; justify-content: space-between; padding: 4px 0; border: 0; background: transparent; }
+  #root .data-table.is-cards tfoot tr.is-total > td::before { content: attr(data-label); color: var(--ink-faint); font-size: 0.75rem; font-weight: 400; }
+  #root .data-table.is-cards tfoot tr.is-total > td.is-title::before { content: none; }
+  #root .data-table.is-cards tfoot tr.is-total > td:empty { display: none; }
 }

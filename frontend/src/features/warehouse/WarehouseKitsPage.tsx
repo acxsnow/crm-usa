@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import "../billing/billing.css";
@@ -6,7 +6,7 @@ import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
+import { DataTable, ExpandToggle, PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
@@ -88,57 +88,31 @@ export function WarehouseKitsPage() {
 
       <article className="acta">
         <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">
-            Todavía no hay listas. El cliente envía su listado por tipo de trabajo; mientras tanto se pueden armar aquí.
-          </p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead>
-              <tr><th>Lista</th><th>Tipo de trabajo</th><th>Material</th><th>Estado</th><th /></tr>
-            </thead>
-            <tbody>
-              {lista.items.map((k) => (
-                <tr key={k.id}>
-                  <td>
-                    <strong>{k.name}</strong>
-                    {k.description && <small>{k.description}</small>}
-                  </td>
-                  <td>{k.project_type ?? "—"}</td>
-                  <td>
-                    <details>
-                      <summary>{k.items.length} renglones</summary>
-                      <ul>
-                        {k.items.map((r) => (
-                          <li key={r.id}>
-                            {r.section ? `${r.section} · ` : ""}
-                            {r.item_name ?? "Artículo"}: {r.quantity} {r.unit_label ?? ""}
-                            {r.spec_label ? ` (${r.spec_label})` : ""}
-                            {r.is_required ? "" : " — opcional"}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </td>
-                  <td>{k.active ? "Activa" : "Inactiva"}</td>
-                  <td className="is-action">
-                    {puede && (
-                      <>
-                        <button type="button" className="acta-link" onClick={() => setEditando(k)}>Editar</button>
-                        <button type="button" className="acta-link" disabled={borrar.isPending}
-                          onClick={() => {
-                            void confirmAction({ title: `¿Borrar «${k.name}»?`, message: "Las órdenes que ya la usaron no cambian.", confirmLabel: "Borrar", danger: true })
-                              .then((ok) => { if (ok) borrar.mutate(k.id); });
-                          }}>Borrar</button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(k) => k.id}
+          emptyMessage="Todavía no hay listas. El cliente envía su listado por tipo de trabajo; mientras tanto se pueden armar aquí."
+          expandable={{ render: (k) => <KitLines kit={k} /> }}
+          columns={[
+            { key: "lista", header: "Lista", render: (k) => (
+              <>
+                <strong>{k.name}</strong>
+                {k.description && <small>{k.description}</small>}
+              </>
+            ) },
+            { key: "tipo", header: "Tipo de trabajo", render: (k) => k.project_type ?? "—" },
+            { key: "material", header: "Material", render: (k, fila) => (
+              <ExpandToggle expanded={fila.expanded} onToggle={fila.toggle}>{k.items.length} renglones</ExpandToggle>
+            ) },
+            { key: "estado", header: "Estado", render: (k) => (k.active ? "Activa" : "Inactiva") },
+            { key: "acciones", header: "", render: (k) => puede && (
+              <RowActions>
+                <RowAction onClick={() => setEditando(k)}>Editar</RowAction>
+                <RowAction variant="danger" disabled={borrar.isPending} onClick={() => {
+                  void confirmAction({ title: `¿Borrar «${k.name}»?`, message: "Las órdenes que ya la usaron no cambian.", confirmLabel: "Borrar", danger: true })
+                    .then((ok) => { if (ok) borrar.mutate(k.id); });
+                }}>Borrar</RowAction>
+              </RowActions>
+            ) },
+          ]} />
       </article>
     </div>
   );
@@ -213,46 +187,34 @@ function KitForm({ initial, onClose }: { initial: WarehouseKit | null; onClose: 
         <input id="kit-desc" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} maxLength={500} />
       </div>
 
-      <table className="materials-table">
-        <thead>
-          <tr>
-            <th scope="col">Artículo</th><th scope="col">Cantidad</th><th scope="col">Medida / calibre</th>
-            <th scope="col">Sección</th><th scope="col">Notas</th><th />
-          </tr>
-        </thead>
-        <tbody>
-          {renglones.map((r, i) => (
-            <tr key={i}>
-              <td>
-                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={r.item_id}
-                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "" })} />
-              </td>
-              <td>
-                <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={r.quantity}
-                  onChange={(e) => cambiar(i, { quantity: e.target.value })} />
-              </td>
-              <td>
-                <input aria-label={`Medida del renglón ${i + 1}`} placeholder="1/4, 3/8, 12.000 BTU…"
-                  value={r.spec_label ?? ""} onChange={(e) => cambiar(i, { spec_label: e.target.value })} />
-              </td>
-              <td>
-                <input aria-label={`Sección del renglón ${i + 1}`} placeholder="Líneas, unidad exterior…"
-                  value={r.section ?? ""} onChange={(e) => cambiar(i, { section: e.target.value })} />
-              </td>
-              <td>
-                <input aria-label={`Notas del renglón ${i + 1}`} value={r.notes ?? ""}
-                  onChange={(e) => cambiar(i, { notes: e.target.value })} />
-              </td>
-              <td>
-                {renglones.length > 1 && (
-                  <button type="button" className="acta-btn is-quiet"
-                    onClick={() => setRenglones((a) => a.filter((_, j) => j !== i))}>Quitar</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable rows={renglones.map((r, i) => ({ ...r, i }))} isLoading={false} getRowKey={(r) => String(r.i)}
+        columns={[
+          { key: "articulo", header: "Artículo", render: (r) => (
+            <ItemPicker label={`Artículo del renglón ${r.i + 1}`} itemId={r.item_id}
+              onChange={(a) => cambiar(r.i, { item_id: a?.id ?? "" })} />
+          ) },
+          { key: "cantidad", header: "Cantidad", render: (r) => (
+            <input aria-label={`Cantidad del renglón ${r.i + 1}`} inputMode="decimal" value={r.quantity}
+              onChange={(e) => cambiar(r.i, { quantity: e.target.value })} />
+          ) },
+          { key: "medida", header: "Medida / calibre", render: (r) => (
+            <input aria-label={`Medida del renglón ${r.i + 1}`} placeholder="1/4, 3/8, 12.000 BTU…"
+              value={r.spec_label ?? ""} onChange={(e) => cambiar(r.i, { spec_label: e.target.value })} />
+          ) },
+          { key: "seccion", header: "Sección", render: (r) => (
+            <input aria-label={`Sección del renglón ${r.i + 1}`} placeholder="Líneas, unidad exterior…"
+              value={r.section ?? ""} onChange={(e) => cambiar(r.i, { section: e.target.value })} />
+          ) },
+          { key: "notas", header: "Notas", render: (r) => (
+            <input aria-label={`Notas del renglón ${r.i + 1}`} value={r.notes ?? ""}
+              onChange={(e) => cambiar(r.i, { notes: e.target.value })} />
+          ) },
+          { key: "acciones", header: "", render: (r) => renglones.length > 1 && (
+            <RowActions>
+              <RowAction variant="danger" onClick={() => setRenglones((a) => a.filter((_, j) => j !== r.i))}>Quitar</RowAction>
+            </RowActions>
+          ) },
+        ]} />
 
       <div className="acta-actions">
         <button type="button" className="acta-btn is-quiet"
@@ -272,5 +234,33 @@ function KitForm({ initial, onClose }: { initial: WarehouseKit | null; onClose: 
         <button type="button" className="acta-btn is-quiet" onClick={onClose}>Cancelar</button>
       </div>
     </form>
+  );
+}
+
+/** Los renglones de una lista, por sección (mismo formato que los de una salida). */
+function KitLines({ kit }: { kit: WarehouseKit }) {
+  return (
+    <div className="release-lines">
+      <ul>
+        {kit.items.map((r, i) => (
+          <Fragment key={r.id}>
+            {r.section && r.section !== (i > 0 ? kit.items[i - 1].section : null) && (
+              <li className="release-lines-section">{r.section}</li>
+            )}
+            <li>
+              <span className="release-line-text">
+                <strong>{r.item_name ?? "Artículo"}</strong>{r.spec_label ? ` (${r.spec_label})` : ""}
+                <span className="release-qty">
+                  {Number(r.quantity).toLocaleString("es-CO", { maximumFractionDigits: 2 })} {r.unit_label ?? ""}
+                </span>
+                {r.is_required
+                  ? <span className="billing-chip is-required">Obligatorio</span>
+                  : <span className="billing-chip">Opcional</span>}
+              </span>
+            </li>
+          </Fragment>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
+import { DataTable, ExpandToggle, PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { SearchPicker } from "@/components/SearchPicker";
 import { askText } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -75,8 +75,6 @@ export function WarehouseReleasesPage() {
   const [motivo, setMotivo] = useState("");
   const [entrega, setEntrega] = useState<DeliverResult | null>(null);
   const [entregando, setEntregando] = useState<WarehouseRelease | null>(null);
-  // Qué órdenes tienen los renglones abiertos (debajo de la fila, a lo ancho).
-  const [abiertas, setAbiertas] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
@@ -218,106 +216,81 @@ export function WarehouseReleasesPage() {
         {tab === "todas" && (
           <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
         )}
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">
-            {tab === "pendientes" ? "Nada por autorizar: la bodega está al día." : "Todavía no hay órdenes de salida."}
-          </p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table release-orders">
-            <thead>
-              <tr>
-                <th>Orden</th><th>Estado</th><th>Renglones</th><th>Necesaria</th><th>Pedida</th><th />
-              </tr>
-            </thead>
-            <tbody>
-              {lista.items.map((o) => {
-                // La orden del técnico ya entregada, con cosas por cargar, se abre sola («Lo llevo»).
-                const porCargar = o.status === "entregada" && esMia(o) && (o.loading?.loaded ?? 0) < (o.loading?.loadable ?? 0);
-                const abierta = abiertas[o.id] ?? porCargar;
-                return (
-                <Fragment key={o.id}>
-                <tr className={`${o.status === "por_autorizar" ? "fin-overdue" : ""}${abierta ? " is-expanded" : ""}`}>
-                  <td>
-                    <strong>{o.number ?? "Borrador sin número"}</strong>
-                    {o.project_title && <small>{o.project_title}</small>}
-                    <small>
-                      {o.technician_name ? `Para ${o.technician_name}` : (o.location_name ?? "Bodega")}
-                      {o.requested_by_name && o.requested_by_name !== o.technician_name ? ` · pidió ${o.requested_by_name}` : ""}
-                    </small>
-                    {o.note && <small>{o.note}</small>}
-                  </td>
-                  <td>
-                    {cat?.release_statuses[o.status] ?? o.status}
-                    {o.reject_reason && <small>Motivo: {o.reject_reason}</small>}
-                    {o.cancel_reason && <small>Anulada: {o.cancel_reason}</small>}
-                    {o.shortage_note && <small>Al entregar: {o.shortage_note}</small>}
-                    {o.loading && o.loading.loadable > 0 && (
-                      <small className={o.loading.required_pending > 0 ? "release-load is-pending" : "release-load"}>
-                        Cargado {o.loading.loaded} de {o.loading.loadable}
-                        {o.loading.required_pending === 1 && " · falta 1 obligatorio"}
-                        {o.loading.required_pending > 1 && ` · faltan ${o.loading.required_pending} obligatorios`}
-                      </small>
-                    )}
-                  </td>
-                  <td>
-                    <button type="button" className="release-toggle" aria-expanded={abierta}
-                      onClick={() => setAbiertas((a) => ({ ...a, [o.id]: !abierta }))}>
-                      {abierta ? "Ocultar" : "Ver"} {o.lines.length} {o.lines.length === 1 ? "renglón" : "renglones"}
-                      <span aria-hidden="true">{abierta ? "▴" : "▾"}</span>
-                    </button>
-                    {o.omissions.length > 0 && (
-                      <small>{o.omissions.length === 1 ? "1 obligatorio quitado" : `${o.omissions.length} obligatorios quitados`}</small>
-                    )}
-                  </td>
-                  <td>{o.needed_on ?? "—"}</td>
-                  <td>{o.created_at ? o.created_at.slice(0, 10) : "—"}</td>
-                  <td className="is-action">
-                    <div className="release-actions">
-                      {o.status === "borrador" && puedePedir && (
-                        <button type="button" className="acta-btn is-small is-primary" disabled={enviar.isPending}
-                          onClick={() => enviar.mutate(o.id)}>Enviar a autorizar</button>
-                      )}
-                      {o.status === "por_autorizar" && puedeAutorizar && (
-                        <>
-                          <button type="button" className="acta-btn is-small is-primary" disabled={autorizar.isPending}
-                            onClick={() => autorizar.mutate(o.id)}>Autorizar</button>
-                          <button type="button" className="acta-btn is-small"
-                            onClick={() => { setRechazando({ id: o.id, numero: o.number ?? "la salida" }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                            Rechazar</button>
-                        </>
-                      )}
-                      {o.status === "autorizada" && puedeEntregar && (
-                        <button type="button" className="acta-btn is-small is-primary" disabled={entregar.isPending}
-                          onClick={() => setEntregando(o)}>Entregar</button>
-                      )}
-                      {["borrador", "por_autorizar", "autorizada"].includes(o.status)
-                        && (o.requested_by_user_id === user?.id || hasPermission("warehouse.manage")) && (
-                        <button type="button" className="acta-btn is-small is-danger-quiet"
-                          onClick={() => {
-                            setMotivo(""); setRechazando({ id: o.id, numero: o.number ?? "el borrador", anular: true });
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}>
-                          Anular</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                {abierta && (
-                  <tr className="release-detail-row">
-                    <td colSpan={6}>
-                      <OrderLines orden={o}
-                        marcable={o.status === "entregada" && esMia(o)}
-                        onMarcar={(l, loaded) => cargar.mutateAsync({ id: o.id, lineId: l.id, loaded })} />
-                    </td>
-                  </tr>
+        <PaginatedTable list={lista} getRowKey={(o) => o.id} className="release-orders"
+          emptyMessage={tab === "pendientes" ? "Nada por autorizar: la bodega está al día." : "Todavía no hay órdenes de salida."}
+          rowClassName={(o) => (o.status === "por_autorizar" ? "fin-overdue" : undefined)}
+          expandable={{
+            // La orden del técnico ya entregada, con cosas por cargar, se abre sola («Lo llevo»).
+            defaultExpanded: (o) => o.status === "entregada" && esMia(o) && (o.loading?.loaded ?? 0) < (o.loading?.loadable ?? 0),
+            render: (o) => (
+              <OrderLines orden={o} marcable={o.status === "entregada" && esMia(o)}
+                onMarcar={(l, loaded) => cargar.mutateAsync({ id: o.id, lineId: l.id, loaded })} />
+            ),
+          }}
+          columns={[
+            { key: "orden", header: "Orden", render: (o) => (
+              <>
+                <strong>{o.number ?? "Borrador sin número"}</strong>
+                {o.project_title && <small>{o.project_title}</small>}
+                <small>
+                  {o.technician_name ? `Para ${o.technician_name}` : (o.location_name ?? "Bodega")}
+                  {o.requested_by_name && o.requested_by_name !== o.technician_name ? ` · pidió ${o.requested_by_name}` : ""}
+                </small>
+                {o.note && <small>{o.note}</small>}
+              </>
+            ) },
+            { key: "estado", header: "Estado", render: (o) => (
+              <>
+                {cat?.release_statuses[o.status] ?? o.status}
+                {o.reject_reason && <small>Motivo: {o.reject_reason}</small>}
+                {o.cancel_reason && <small>Anulada: {o.cancel_reason}</small>}
+                {o.shortage_note && <small>Al entregar: {o.shortage_note}</small>}
+                {o.loading && o.loading.loadable > 0 && (
+                  <small className={o.loading.required_pending > 0 ? "release-load is-pending" : "release-load"}>
+                    Cargado {o.loading.loaded} de {o.loading.loadable}
+                    {o.loading.required_pending === 1 && " · falta 1 obligatorio"}
+                    {o.loading.required_pending > 1 && ` · faltan ${o.loading.required_pending} obligatorios`}
+                  </small>
                 )}
-                </Fragment>
-                );
-              })}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+              </>
+            ) },
+            { key: "renglones", header: "Renglones", render: (o, fila) => (
+              <>
+                <ExpandToggle expanded={fila.expanded} onToggle={fila.toggle}>
+                  {o.lines.length} {o.lines.length === 1 ? "renglón" : "renglones"}
+                </ExpandToggle>
+                {o.omissions.length > 0 && (
+                  <small>{o.omissions.length === 1 ? "1 obligatorio quitado" : `${o.omissions.length} obligatorios quitados`}</small>
+                )}
+              </>
+            ) },
+            { key: "necesaria", header: "Necesaria", render: (o) => o.needed_on ?? "—" },
+            { key: "pedida", header: "Pedida", render: (o) => (o.created_at ? o.created_at.slice(0, 10) : "—") },
+            { key: "acciones", header: "", render: (o) => (
+              <RowActions>
+                {o.status === "borrador" && puedePedir && (
+                  <RowAction variant="primary" disabled={enviar.isPending} onClick={() => enviar.mutate(o.id)}>Enviar a autorizar</RowAction>
+                )}
+                {o.status === "por_autorizar" && puedeAutorizar && (
+                  <>
+                    <RowAction variant="primary" disabled={autorizar.isPending} onClick={() => autorizar.mutate(o.id)}>Autorizar</RowAction>
+                    <RowAction onClick={() => { setRechazando({ id: o.id, numero: o.number ?? "la salida" }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                      Rechazar</RowAction>
+                  </>
+                )}
+                {o.status === "autorizada" && puedeEntregar && (
+                  <RowAction variant="primary" disabled={entregar.isPending} onClick={() => setEntregando(o)}>Entregar</RowAction>
+                )}
+                {["borrador", "por_autorizar", "autorizada"].includes(o.status)
+                  && (o.requested_by_user_id === user?.id || hasPermission("warehouse.manage")) && (
+                  <RowAction variant="danger" onClick={() => {
+                    setMotivo(""); setRechazando({ id: o.id, numero: o.number ?? "el borrador", anular: true });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}>Anular</RowAction>
+                )}
+              </RowActions>
+            ) },
+          ]} />
       </article>
     </div>
   );
@@ -446,35 +419,33 @@ function DeliveryForm({ orden, enviando, onCancel, onSubmit }: {
         Confirma cuánto sale de cada renglón. Si en bodega hay menos, se entrega lo que hay y la diferencia queda
         como faltante.
       </p>
-      <table className="materials-table">
-        <thead><tr><th scope="col">Artículo</th><th scope="col" className="is-num">Pedido</th><th scope="col">Sale</th></tr></thead>
-        <tbody>
-          {orden.lines.map((l) => (
-            <tr key={l.id}>
-              <td>
-                <strong>{l.item_name ?? "Artículo"}</strong>
-                <small>{[l.spec_label, l.section].filter(Boolean).join(" · ")}</small>
-                {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
-              </td>
-              <td className="is-num">{l.quantity_requested} {l.unit_label ?? ""}</td>
-              <td>
-                <input aria-label={`Cantidad que sale de ${l.item_name ?? "el renglón"}`} inputMode="decimal"
-                  value={cantidades[l.id]} onChange={(e) => setCantidades({ ...cantidades, [l.id]: e.target.value })} />
-                {l.has_serial && unidadesConSerial(cantidades[l.id]) > 0 && (
-                  <div className="serial-inputs">
-                    <small>Serial de cada unidad</small>
-                    {serialesDe(l.id, unidadesConSerial(cantidades[l.id])).map((s, i) => (
-                      <input key={i} aria-label={`Serial ${i + 1} de ${l.item_name ?? "el equipo"}`}
-                        autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder={`Serial ${i + 1}`}
-                        value={s} onChange={(e) => cambiarSerial(l.id, i, e.target.value)} />
-                    ))}
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable rows={orden.lines} isLoading={false} getRowKey={(l) => l.id}
+        columns={[
+          { key: "articulo", header: "Artículo", render: (l) => (
+            <>
+              <strong>{l.item_name ?? "Artículo"}</strong>
+              <small>{[l.spec_label, l.section].filter(Boolean).join(" · ")}</small>
+              {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
+            </>
+          ) },
+          { key: "pedido", header: "Pedido", className: "is-num", render: (l) => `${l.quantity_requested} ${l.unit_label ?? ""}` },
+          { key: "sale", header: "Sale", render: (l) => (
+            <>
+              <input aria-label={`Cantidad que sale de ${l.item_name ?? "el renglón"}`} inputMode="decimal"
+                value={cantidades[l.id]} onChange={(e) => setCantidades({ ...cantidades, [l.id]: e.target.value })} />
+              {l.has_serial && unidadesConSerial(cantidades[l.id]) > 0 && (
+                <div className="serial-inputs">
+                  <small>Serial de cada unidad</small>
+                  {serialesDe(l.id, unidadesConSerial(cantidades[l.id])).map((serial, n) => (
+                    <input key={n} aria-label={`Serial ${n + 1} de ${l.item_name ?? "el equipo"}`}
+                      autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder={`Serial ${n + 1}`}
+                      value={serial} onChange={(e) => cambiarSerial(l.id, n, e.target.value)} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) },
+        ]} />
       {cantidadMala && (
         <p className="form-error" role="alert">
           Cada cantidad va de 0 a lo pedido; un equipo con serial sale por unidades enteras.
@@ -685,44 +656,32 @@ function ReleaseForm({ obraInicial, onClose, onCreated }: {
         </div>
       </div>
 
-      <table className="materials-table">
-        <thead>
-          <tr><th scope="col">Artículo</th><th scope="col">Cantidad</th><th scope="col">Medida / calibre</th><th scope="col">Notas</th><th /></tr>
-        </thead>
-        <tbody>
-          {lineas.map((l, i) => (
-            <Fragment key={l.clave}>
-            {(l.section || "") !== (i > 0 ? lineas[i - 1].section || "" : "") && l.section && (
-              <tr className="release-section-row"><th colSpan={5} scope="colgroup">{l.section}</th></tr>
-            )}
-            <tr>
-              <td>
-                <ItemPicker label={`Artículo del renglón ${i + 1}`} itemId={l.item_id}
-                  onChange={(a) => cambiar(i, { item_id: a?.id ?? "", nombre: a?.name })} />
-                {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
-              </td>
-              <td>
-                <input aria-label={`Cantidad del renglón ${i + 1}`} inputMode="decimal" value={l.quantity}
-                  onChange={(e) => cambiar(i, { quantity: e.target.value })} />
-              </td>
-              <td>
-                <input aria-label={`Medida del renglón ${i + 1}`} placeholder="1/4, 3/8, 12.000 BTU…"
-                  value={l.spec_label ?? ""} onChange={(e) => cambiar(i, { spec_label: e.target.value })} />
-              </td>
-              <td>
-                <input aria-label={`Notas del renglón ${i + 1}`} value={l.notes ?? ""}
-                  onChange={(e) => cambiar(i, { notes: e.target.value })} />
-              </td>
-              <td>
-                {(lineas.length > 1 || l.item_id) && (
-                  <button type="button" className="acta-btn is-quiet" onClick={() => quitar(i)}>Quitar</button>
-                )}
-              </td>
-            </tr>
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+      <DataTable rows={lineas.map((l, i) => ({ ...l, i }))} isLoading={false} getRowKey={(l) => l.clave}
+        groupBy={(l) => l.section}
+        columns={[
+          { key: "articulo", header: "Artículo", render: (l) => (
+            <>
+              <ItemPicker label={`Artículo del renglón ${l.i + 1}`} itemId={l.item_id}
+                onChange={(a) => cambiar(l.i, { item_id: a?.id ?? "", nombre: a?.name })} />
+              {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
+            </>
+          ) },
+          { key: "cantidad", header: "Cantidad", render: (l) => (
+            <input aria-label={`Cantidad del renglón ${l.i + 1}`} inputMode="decimal" value={l.quantity}
+              onChange={(e) => cambiar(l.i, { quantity: e.target.value })} />
+          ) },
+          { key: "medida", header: "Medida / calibre", render: (l) => (
+            <input aria-label={`Medida del renglón ${l.i + 1}`} placeholder="1/4, 3/8, 12.000 BTU…"
+              value={l.spec_label ?? ""} onChange={(e) => cambiar(l.i, { spec_label: e.target.value })} />
+          ) },
+          { key: "notas", header: "Notas", render: (l) => (
+            <input aria-label={`Notas del renglón ${l.i + 1}`} value={l.notes ?? ""}
+              onChange={(e) => cambiar(l.i, { notes: e.target.value })} />
+          ) },
+          { key: "acciones", header: "", render: (l) => (lineas.length > 1 || l.item_id) && (
+            <RowActions><RowAction variant="danger" onClick={() => quitar(l.i)}>Quitar</RowAction></RowActions>
+          ) },
+        ]} />
       <div className="acta-actions">
         <button type="button" className="acta-btn is-quiet"
           onClick={() => setLineas((a) => [...a, { ...FILA_VACIA, clave: nuevaClave() }])}>

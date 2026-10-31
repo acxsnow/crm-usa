@@ -5,8 +5,8 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
+import { PaginatedTable } from "@/components/DataTable";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
 import { money } from "@/features/finance/api";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { warehouseCatalogs, warehouseKeys, type WarehouseMovement } from "./api";
@@ -53,35 +53,21 @@ export function WarehouseMovementsPage() {
 
       <article className="acta">
         <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">Ningún movimiento con este filtro.</p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead>
-              <tr><th>Fecha</th><th>Artículo</th><th>Tipo</th><th>Cantidad</th><th>Dónde</th><th>Referencia</th><th>Valor</th></tr>
-            </thead>
-            <tbody>
-              {lista.items.map((m) => (
-                <tr key={m.id} className={m.movement_type === "salida" ? "fin-overdue" : ""}>
-                  <td>{m.movement_date ?? "—"}</td>
-                  <td>
-                    <strong>{m.item_name ?? "Artículo"}</strong>
-                    {m.note && <small>{m.note}</small>}
-                  </td>
-                  <td>{m.movement_type_label}</td>
-                  <td className="mono">{m.quantity} <small>{m.unit_label ?? ""}</small></td>
-                  <td>
-                    {m.location_name ?? "—"}
-                    {m.vendor_location_id && <small>Entra a la camioneta</small>}
-                  </td>
-                  <td>{m.reference ?? (m.project_id ? "Obra" : "—")}</td>
-                  <td className="mono">{m.amount ? money(m.amount) : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(m) => m.id} emptyMessage="Ningún movimiento con este filtro."
+          rowClassName={(m) => (m.movement_type === "salida" ? "fin-overdue" : undefined)}
+          columns={[
+            { key: "fecha", header: "Fecha", render: (m) => m.movement_date ?? "—" },
+            { key: "articulo", header: "Artículo", render: (m) => (
+              <><strong>{m.item_name ?? "Artículo"}</strong>{m.note && <small>{m.note}</small>}</>
+            ) },
+            { key: "tipo", header: "Tipo", render: (m) => m.movement_type_label },
+            { key: "cantidad", header: "Cantidad", className: "mono", render: (m) => <>{m.quantity} <small>{m.unit_label ?? ""}</small></> },
+            { key: "donde", header: "Dónde", render: (m) => (
+              <>{m.location_name ?? "—"}{m.vendor_location_id && <small>Entra a la camioneta</small>}</>
+            ) },
+            { key: "referencia", header: "Referencia", render: (m) => m.reference ?? (m.project_id ? "Obra" : "—") },
+            { key: "valor", header: "Valor", className: "mono", render: (m) => (m.amount ? money(m.amount) : "—") },
+          ]} />
       </article>
     </div>
   );

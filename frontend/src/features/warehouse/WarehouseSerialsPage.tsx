@@ -5,8 +5,8 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
+import { PaginatedTable } from "@/components/DataTable";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { serialKeys, warehouseCatalogs, warehouseKeys, type WarehouseSerial } from "./api";
 
@@ -52,36 +52,23 @@ export function WarehouseSerialsPage() {
 
       <article className="acta">
         <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">
-            {filtros.q || filtros.status ? "Ningún serial con este filtro." : "Todavía no hay seriales registrados."}
-          </p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead>
-              <tr><th>Serial</th><th>Artículo</th><th>Estado</th><th>Obra</th><th>Orden de salida</th></tr>
-            </thead>
-            <tbody>
-              {lista.items.map((s) => (
-                <tr key={s.id}>
-                  <td className="mono"><strong>{s.serial}</strong></td>
-                  <td>
-                    {s.item_name ?? "Artículo"}
-                    <small>{[s.brand, s.manufacturer_part, s.sku].filter(Boolean).join(" · ")}</small>
-                  </td>
-                  <td>
-                    {s.status_label}
-                    {s.status === "installed" && s.installed_at && <small>{dia(s.installed_at)}</small>}
-                    {s.status === "delivered" && s.delivered_at && <small>{dia(s.delivered_at)}</small>}
-                  </td>
-                  <td>{s.project_title ?? "—"}</td>
-                  <td>{s.release_number ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(s) => s.id}
+          emptyMessage={filtros.q || filtros.status ? "Ningún serial con este filtro." : "Todavía no hay seriales registrados."}
+          columns={[
+            { key: "serial", header: "Serial", className: "mono", render: (s) => <strong>{s.serial}</strong> },
+            { key: "articulo", header: "Artículo", render: (s) => (
+              <>{s.item_name ?? "Artículo"}<small>{[s.brand, s.manufacturer_part, s.sku].filter(Boolean).join(" · ")}</small></>
+            ) },
+            { key: "estado", header: "Estado", render: (s) => (
+              <>
+                {s.status_label}
+                {s.status === "installed" && s.installed_at && <small>{dia(s.installed_at)}</small>}
+                {s.status === "delivered" && s.delivered_at && <small>{dia(s.delivered_at)}</small>}
+              </>
+            ) },
+            { key: "obra", header: "Obra", render: (s) => s.project_title ?? "—" },
+            { key: "orden", header: "Orden de salida", render: (s) => s.release_number ?? "—" },
+          ]} />
       </article>
     </div>
   );

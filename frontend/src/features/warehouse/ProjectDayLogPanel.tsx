@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTable, RowAction, RowActions } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
@@ -158,33 +159,17 @@ function Jornada({ jornada, onCorregir }: { jornada: DayLog; onCorregir?: () => 
       {jornada.materials.length === 0 ? (
         <p className="acta-empty">Ese día no se registró material.</p>
       ) : (
-        <table className="materials-table">
-          <thead>
-            <tr>
-              <th scope="col">Material del día</th>
-              <th scope="col" className="is-num">Cantidad</th>
-              <th scope="col">De dónde salió</th>
-              <th scope="col">Bodega</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jornada.materials.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  <strong>{m.description}</strong>
-                  {m.sku && <small>Ref. {m.sku}</small>}
-                </td>
-                <td className="is-num">{m.quantity} {m.unit_label ?? ""}</td>
-                <td>{m.location_name ?? "Comprado en la obra"}</td>
-                <td>
-                  <span className={`status-pill ${m.descontada ? "status-completed" : "status-pending"}`}>
-                    {m.descontada ? "Descontado" : "Solo anotado"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable rows={jornada.materials} isLoading={false} getRowKey={(m) => m.id}
+          columns={[
+            { key: "material", header: "Material del día", render: (m) => <><strong>{m.description}</strong>{m.sku && <small>Ref. {m.sku}</small>}</> },
+            { key: "cantidad", header: "Cantidad", className: "is-num", render: (m) => `${m.quantity} ${m.unit_label ?? ""}` },
+            { key: "origen", header: "De dónde salió", render: (m) => m.location_name ?? "Comprado en la obra" },
+            { key: "bodega", header: "Bodega", render: (m) => (
+              <span className={`status-pill ${m.descontada ? "status-completed" : "status-pending"}`}>
+                {m.descontada ? "Descontado" : "Solo anotado"}
+              </span>
+            ) },
+          ]} />
       )}
     </li>
   );
@@ -400,57 +385,34 @@ function DayLogForm({ projectId, initial, puedeElegirTecnico, usuarioId, usuario
           bodega. Para deshacerlo se registra la devolución a bodega.
         </p>
       )}
-      <table className="materials-table">
-        <thead>
-          <tr>
-            <th scope="col">Artículo</th>
-            <th scope="col">Cantidad</th>
-            <th scope="col">De dónde sale</th>
-            <th scope="col">Descripción</th>
-            <th aria-hidden="true" />
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((f, i) => f.bloqueada ? (
-            <tr key={i}>
-              <td><strong>{f.description}</strong><small>Ya descontó la camioneta</small></td>
-              <td>{f.quantity} {f.unit_label ?? ""}</td>
-              <td>{f.location_name ?? "—"}</td>
-              <td>—</td>
-              <td />
-            </tr>
-          ) : (
-            <tr key={i}>
-              <td>
-                <ItemPicker label={`Artículo del material ${i + 1}`} itemId={f.item_id}
-                  clearLabel={`Dejar sin artículo el material ${i + 1}`} onChange={(a) => elegirArticulo(i, a)} />
-              </td>
-              <td>
-                <input aria-label={`Cantidad del material ${i + 1}`} inputMode="decimal" value={f.quantity}
-                  onChange={(e) => cambiar(i, { quantity: e.target.value })} />
-              </td>
-              <td>
-                <select aria-label={`De dónde sale el material ${i + 1}`} value={f.location_id}
-                  disabled={!f.item_id} onChange={(e) => cambiar(i, { location_id: e.target.value })}>
-                  <option value="">— Solo anotar —</option>
-                  {existencias(f).map((l) => (
-                    <option key={l.location_id} value={l.location_id}>{l.name}: {l.quantity}</option>
-                  ))}
-                </select>
-              </td>
-              <td>
-                <input aria-label={`Descripción del material ${i + 1}`} value={f.description} maxLength={255}
-                  placeholder={f.item_id ? "Del catálogo" : "Ej.: cinta de aluminio"}
-                  onChange={(e) => cambiar(i, { description: e.target.value })} />
-              </td>
-              <td className="is-action">
-                <button type="button" className="acta-btn is-quiet"
-                  onClick={() => setFilas((a) => a.filter((_, j) => j !== i))}>Quitar</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable rows={filas.map((f, i) => ({ ...f, i }))} isLoading={false} getRowKey={(f) => String(f.i)}
+        columns={[
+          { key: "articulo", header: "Artículo", render: (f) => f.bloqueada
+            ? <><strong>{f.description}</strong><small>Ya descontó la camioneta</small></>
+            : <ItemPicker label={`Artículo del material ${f.i + 1}`} itemId={f.item_id}
+                clearLabel={`Dejar sin artículo el material ${f.i + 1}`} onChange={(a) => elegirArticulo(f.i, a)} /> },
+          { key: "cantidad", header: "Cantidad", render: (f) => f.bloqueada
+            ? `${f.quantity} ${f.unit_label ?? ""}`
+            : <input aria-label={`Cantidad del material ${f.i + 1}`} inputMode="decimal" value={f.quantity}
+                onChange={(e) => cambiar(f.i, { quantity: e.target.value })} /> },
+          { key: "origen", header: "De dónde sale", render: (f) => f.bloqueada ? (f.location_name ?? "—") : (
+            <select aria-label={`De dónde sale el material ${f.i + 1}`} value={f.location_id}
+              disabled={!f.item_id} onChange={(e) => cambiar(f.i, { location_id: e.target.value })}>
+              <option value="">— Solo anotar —</option>
+              {existencias(f).map((l) => (
+                <option key={l.location_id} value={l.location_id}>{l.name}: {l.quantity}</option>
+              ))}
+            </select>
+          ) },
+          { key: "descripcion", header: "Descripción", render: (f) => f.bloqueada ? "—" : (
+            <input aria-label={`Descripción del material ${f.i + 1}`} value={f.description} maxLength={255}
+              placeholder={f.item_id ? "Del catálogo" : "Ej.: cinta de aluminio"}
+              onChange={(e) => cambiar(f.i, { description: e.target.value })} />
+          ) },
+          { key: "acciones", header: "", render: (f) => !f.bloqueada && (
+            <RowActions><RowAction variant="danger" onClick={() => setFilas((a) => a.filter((_, j) => j !== f.i))}>Quitar</RowAction></RowActions>
+          ) },
+        ]} />
 
       <div className="acta-actions">
         <button type="button" className="acta-btn is-quiet"

@@ -5,8 +5,8 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
-import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { money } from "@/features/finance/api";
@@ -89,35 +89,30 @@ export function WarehouseItemsPage() {
 
       <article className="acta">
         <FilterBar fields={campos} values={filtros} onApply={setFiltros} onClear={() => setFiltros({})} />
-        {lista.isLoading ? <p className="acta-empty">Cargando…</p> : lista.items.length === 0 ? (
-          <p className="acta-empty">Ningún artículo con este filtro.</p>
-        ) : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead><tr><th>Artículo</th><th>Categoría</th><th>Unidad</th><th>Costo</th><th>Venta</th><th>Margen</th><th>Mínimo</th><th>Existencia</th><th /></tr></thead>
-            <tbody>
-              {lista.items.map((i) => (
-                <tr key={i.id} className={i.active ? "" : "fin-inactive"}>
-                  <td>
-                    <strong>{i.name}</strong>
-                    <small>{[i.sku ? `Ref. ${i.sku}` : null, i.manufacturer_part ? `Fab. ${i.manufacturer_part}` : null,
-                      i.brand, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
-                    {i.has_serial && <small>Con serial</small>}
-                  </td>
-                  <td>{i.category_label}</td>
-                  <td>{i.unit_label}</td>
-                  <td className="mono">{money(i.unit_cost)}</td>
-                  <td className="mono">{i.sale_price ? money(i.sale_price) : "—"}</td>
-                  <td className="mono">{i.margin_pct == null ? "—" : `${i.margin_pct.toFixed(1)}%`}</td>
-                  <td className="mono">{i.min_quantity ?? "—"}</td>
-                  <td className="mono">{i.total_quantity}
-                    {i.below_minimum && <span className="billing-chip is-rejected">Bajo mínimo</span>}</td>
-                  <td>{puede && <button type="button" className="acta-link" onClick={() => setEditando(i)}>Editar</button>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(i) => i.id} emptyMessage="Ningún artículo con este filtro."
+          rowClassName={(i) => (i.active ? undefined : "fin-inactive")}
+          columns={[
+            { key: "articulo", header: "Artículo", render: (i) => (
+              <>
+                <strong>{i.name}</strong>
+                <small>{[i.sku ? `Ref. ${i.sku}` : null, i.manufacturer_part ? `Fab. ${i.manufacturer_part}` : null,
+                  i.brand, i.supplier_name].filter(Boolean).join(" · ") || "—"}</small>
+                {i.has_serial && <small>Con serial</small>}
+              </>
+            ) },
+            { key: "categoria", header: "Categoría", render: (i) => i.category_label },
+            { key: "unidad", header: "Unidad", render: (i) => i.unit_label },
+            { key: "costo", header: "Costo", className: "mono", render: (i) => money(i.unit_cost) },
+            { key: "venta", header: "Venta", className: "mono", render: (i) => (i.sale_price ? money(i.sale_price) : "—") },
+            { key: "margen", header: "Margen", className: "mono", render: (i) => (i.margin_pct == null ? "—" : `${i.margin_pct.toFixed(1)}%`) },
+            { key: "minimo", header: "Mínimo", className: "mono", render: (i) => i.min_quantity ?? "—" },
+            { key: "existencia", header: "Existencia", className: "mono", render: (i) => (
+              <>{i.total_quantity}{i.below_minimum && <span className="billing-chip is-rejected">Bajo mínimo</span>}</>
+            ) },
+            { key: "acciones", header: "", render: (i) => puede && (
+              <RowActions><RowAction onClick={() => setEditando(i)}>Editar</RowAction></RowActions>
+            ) },
+          ]} />
       </article>
     </div>
   );
