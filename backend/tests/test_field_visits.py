@@ -212,11 +212,9 @@ async def test_cancelar_exige_resolver_salidas_y_material(app_client, db, login,
     r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "  "}, headers=obra["oficina"])
     assert (r.status_code, r.json()["code"]) == (400, "cancel_reason_required")
 
-    # Con una salida por autorizar no se cancela.
-    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "Cliente desistió"},
-                              headers=obra["oficina"])
-    assert (r.status_code, r.json()["code"]) == (409, "open_releases")
-    assert "Por autorizar" in r.json()["detail"]
+    # La salida por autorizar se muestra antes de cancelar (se anularía con la obra).
+    chequeo = (await app_client.get(f"{API}/projects/{pid}/cancellation-check", headers=obra["oficina"])).json()
+    assert [x["status_label"] for x in chequeo["open_releases"]] == ["Por autorizar"]
 
     # Bodega la entrega: ahora hay material afuera sin reintegrar.
     oid = m["orden"]["id"]
@@ -323,3 +321,24 @@ async def test_la_visita_fallida_avisa_a_la_agenda_y_la_cancelacion_al_tecnico(
         Notification.user_id == active_technician_user.id))).scalars().one()
     assert (aviso.event, aviso.link) == ("project.cancelled", f"/projects/{project.id}")
     assert "Cliente desistió" in aviso.body
+
+
+async def test_cancelar_la_obra_anula_sus_salidas_sin_entregar(app_client, db, login, obra, active_admin_user):
+    """QA de José (31 oct 2026): una salida recién pedida, que nadie autorizó,
+    impedía cancelar la obra. Como no salió nada de bodega, se anula con la obra;
+    lo que sí se entregó sigue exigiendo devolución o explicación."""
+    admin = await login(active_admin_user.email)
+    pid = obra["project"].id
+    m = await _material_entregado(app_client, admin, obra["oficina"], obra["tecnico"], pid)
+    oid = m["orden"]["id"]
+
+    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "El cliente desistió"},
+                              headers=obra["oficina"])
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "cancelled"
+    salida = (await app_client.get(f"{API}/warehouse/releases/{oid}", headers=admin)).json()
+    assert salida["status"] == "anulada"
+    assert salida["cancel_reason"] == "Obra cancelada: El cliente desistió"
+    # No mueve existencias: el tubo sigue completo en bodega.
+    item = (await app_client.get(f"{API}/warehouse/items/{m['item']['id']}", headers=admin)).json()
+    assert item["total_quantity"].startswith("20")

@@ -224,8 +224,8 @@ async def material_in_field(db: AsyncSession, organization_id, project_id) -> li
 
 
 async def open_releases(db: AsyncSession, organization_id, project_id) -> list[dict]:
-    """Salidas que todavía pueden mover material hacia la obra. Los borradores
-    no cuentan: con la obra cancelada ya no se pueden enviar (`_check_project`)."""
+    """Salidas por autorizar o autorizadas de la obra: al cancelarla se anulan
+    solas (no salió nada de bodega); la pantalla las muestra para avisarlo."""
     from app.modules.warehouse.catalogs import RELEASE_STATUSES, ReleaseStatus
     from app.modules.warehouse.models import WarehouseReleaseOrder
 
@@ -256,11 +256,6 @@ async def cancel_project(db: AsyncSession, *, organization_id, user, project_id,
         raise ConflictError("La obra ya está cancelada.", code="project_cancelled")
     motivo = _texto(reason, campo="por qué se cancela la obra", code="cancel_reason_required")
 
-    abiertas = await open_releases(db, organization_id, project.id)
-    if abiertas:
-        lista = ", ".join(f"{o['number'] or 'sin número'} ({o['status_label']})" for o in abiertas)
-        raise ConflictError(f"Primero resuelve las salidas de bodega abiertas de la obra: {lista}. "
-                            "Recházalas o entrégalas antes de cancelar.", code="open_releases")
     afuera = await material_in_field(db, organization_id, project.id)
     nota_material = (material_note or "").strip()
     if afuera and len(nota_material) < MIN_TEXT:
@@ -276,6 +271,12 @@ async def cancel_project(db: AsyncSession, *, organization_id, user, project_id,
     project.cancelled_at = datetime.now(timezone.utc)
     project.cancelled_by_user_id = user.id
     project.cancel_reason = motivo
+    # Las salidas que no se han entregado se anulan con la obra (QA del 31 oct):
+    # antes bloqueaban la cancelación aunque nadie las hubiera tocado.
+    from app.modules.warehouse.releases import cancel_open_for_project
+
+    anuladas = await cancel_open_for_project(db, organization_id=organization_id, user=user, project_id=project.id,
+                                             reason=f"Obra cancelada: {motivo}")
     tecnico_id = project.primary_technician_user_id
     # El técnico de hoy deja de ser responsable: la ve en solo lectura, como el
     # anterior de una rotación.
@@ -288,7 +289,8 @@ async def cancel_project(db: AsyncSession, *, organization_id, user, project_id,
         db, organization_id=organization_id, actor_user_id=user.id,
         action="projects.cancelled", entity_type="Project", entity_id=str(project.id),
         before_data=antes,
-        after_data={"reason": motivo, "material_in_field": afuera, "material_note": nota_material or None})
+        after_data={"reason": motivo, "material_in_field": afuera, "material_note": nota_material or None,
+                    "releases_cancelled": anuladas})
     project_id_ = project.id
     await advance_case(db, project=project, to_stage="closed", user=user, reason=f"Obra cancelada: {motivo}")
     await db.commit()

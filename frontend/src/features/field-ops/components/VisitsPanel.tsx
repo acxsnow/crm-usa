@@ -150,7 +150,7 @@ export function FailedVisitsStep({ project, canReport, canSchedule, coords }: {
 }
 
 /**
- * Cancelar la obra (D-001): con motivo, sin salidas de bodega abiertas y con el
+ * Cancelar la obra (D-001): con motivo; las salidas sin entregar se anulan con la obra y el
  * material entregado reintegrado o explicado. Solo `projects.close`.
  */
 export function CancelProjectStep({ project, canCancel }: { project: Project; canCancel: boolean }) {
@@ -196,8 +196,8 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
             La obra queda en solo lectura y el expediente se cierra. No se puede deshacer.
           </p>
           {salidas.length > 0 && (
-            <p className="form-error" role="status">
-              Primero resuelve en Bodega › Salidas: {salidas.map((s) => `${s.number ?? "sin número"} (${s.status_label})`).join(", ")}.
+            <p className="acta-note" role="status">
+              Se anulan solas, porque no han salido de bodega: {salidas.map((s) => `${s.number ?? "sin número"} (${s.status_label})`).join(", ")}.
             </p>
           )}
           {material.length > 0 && (
@@ -218,7 +218,7 @@ export function CancelProjectStep({ project, canCancel }: { project: Project; ca
           <input id="cancelar-motivo" required minLength={5} value={motivo} autoFocus
             onChange={(e) => setMotivo(e.target.value)} placeholder="El cliente desistió del programa" />
           <div className="acta-actions">
-            <button type="submit" className="acta-btn is-primary" disabled={cancelar.isPending || salidas.length > 0}>
+            <button type="submit" className="acta-btn is-primary" disabled={cancelar.isPending}>
               {cancelar.isPending ? "Cancelando…" : "Cancelar la obra"}
             </button>
             <button type="button" className="acta-btn is-quiet" onClick={() => setAbierto(false)}>Volver</button>

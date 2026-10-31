@@ -372,6 +372,29 @@ async def cancel_order(db: AsyncSession, *, organization_id, user, order_id, rea
     return order
 
 
+async def cancel_open_for_project(db: AsyncSession, *, organization_id, user, project_id, reason: str) -> list[str]:
+    """Al cancelar una obra, sus salidas que no se han entregado se anulan con el
+    motivo de la cancelación: nada salió de bodega (QA del 31 oct). Antes había
+    que ir a Salidas a rechazarlas una por una. No hace commit: va en la misma
+    transacción de la cancelación. Devuelve los números anulados."""
+    ordenes = (await db.execute(select(WarehouseReleaseOrder).where(
+        WarehouseReleaseOrder.organization_id == organization_id,
+        WarehouseReleaseOrder.project_id == project_id,
+        WarehouseReleaseOrder.status.in_(OPEN_STATUSES)).with_for_update())).scalars().all()
+    for order in ordenes:
+        antes = order.status
+        order.status = ReleaseStatus.ANULADA
+        order.cancelled_by_user_id = user.id
+        order.cancelled_at = _now()
+        order.cancel_reason = reason
+        await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                                 action="warehouse.release_cancelled", entity_type="warehouse_release_order",
+                                 entity_id=str(order.id), before_data={"status": antes},
+                                 after_data={"number": order.number, "motivo": reason})
+    await db.flush()
+    return [o.number or "borrador" for o in ordenes]
+
+
 async def follow_project_technician(db: AsyncSession, *, organization_id, user, project_id, technician_id) -> int:
     """Al cambiar el técnico de una obra, sus salidas que no se han entregado
     pasan al técnico nuevo: es quien va a llevar el material (QA del 31 oct).
