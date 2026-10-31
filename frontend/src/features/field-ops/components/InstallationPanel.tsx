@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -23,6 +23,9 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
   const actual = project.primary_technician_user_id ?? "";
   const [tecnico, setTecnico] = useState(actual);
   const [fecha, setFecha] = useState(project.scheduled_date ?? "");
+  // Una visita fallida deja la obra sin fecha: el formulario se vacía para que
+  // se elija una nueva, en vez de seguir mostrando la vieja (QA del 31 oct).
+  useEffect(() => { setFecha(project.scheduled_date ?? ""); }, [project.scheduled_date]);
   // Cambiar el responsable de una obra ya iniciada (el personal rota): el nuevo
   // sigue desde hoy, y la fecha programada original ya pasó y no se acepta.
   const cambiaTecnico = Boolean(actual) && tecnico !== actual;

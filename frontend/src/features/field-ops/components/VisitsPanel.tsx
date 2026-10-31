@@ -67,7 +67,7 @@ export function FailedVisitsStep({ project, canReport, canSchedule, coords }: {
   return (
     <div className="visits-step">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {estado && intentos > 0 && (
+      {estado && intentos > 0 && (estado.limit_reached || !(historial ?? []).length) && (
         <p className={`acta-lead${estado.limit_reached ? " is-warning" : ""}`}>
           {intentos} de {estado.limit} permitidas
           {estado.extra_visits_authorized > 0 && ` (incluye ${estado.extra_visits_authorized} autorizada${estado.extra_visits_authorized > 1 ? "s" : ""} de más)`}.
@@ -130,19 +130,24 @@ export function FailedVisitsStep({ project, canReport, canSchedule, coords }: {
       )}
 
       {(historial ?? []).length > 0 && (
-        <ul className="acta-history">
-          {(historial ?? []).map((v) => (
-            <li key={v.id} className="is-returned">
-              <strong>{v.reason_label}</strong>
-              <span>
-                {v.scheduled_date ? `Visita del ${fechaCorta(v.scheduled_date)}` : "Visita"}
-                {v.recorded_by_name ? ` · ${v.recorded_by_name}` : ""}
-                {v.latitude != null && v.longitude != null ? " · con GPS" : " · sin GPS"}
-              </span>
-              <p>{v.notes}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="visit-history">
+          <h5>Visitas fallidas{estado ? ` · ${intentos} de ${estado.limit}` : ""}</h5>
+          <ul>
+            {(historial ?? []).map((v) => (
+              <li key={v.id}>
+                <div className="visit-history-head">
+                  <strong>{v.reason_label}</strong>
+                  <span>
+                    {v.scheduled_date ? fechaCorta(v.scheduled_date) : "Sin fecha"}
+                    {v.recorded_by_name ? ` · ${v.recorded_by_name}` : ""}
+                    {v.latitude != null && v.longitude != null ? " · con GPS" : " · sin GPS"}
+                  </span>
+                </div>
+                <p>{v.notes}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

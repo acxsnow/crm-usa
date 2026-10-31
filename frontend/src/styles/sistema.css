@@ -525,8 +525,7 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .visit-box-head h4 { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
 #root .visit-box-head p { margin: 2px 0 0; font-size: 0.8125rem; color: var(--ink-soft); max-width: 60ch; }
 #root .visit-box-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-#root .visit-box-actions > .visits-step { flex: 0 0 auto; margin: 0; }
-#root .visit-box-actions > .visits-step:has(form, .acta-history, .acta-lead, .form-error, .acta-empty) { flex-basis: 100%; }
+#root .visit-box-actions > .visits-step { display: contents; }
 #root .visit-box .acta-actions { margin: 0; }
 #root .visit-box .acta-btn.is-small, #root .visit-limit .acta-btn.is-small { min-height: 34px; padding: 0 12px; font-size: 0.8125rem; }
 #root .visit-box .acta-btn.is-danger-quiet { background: var(--surface); border: 1px solid var(--line); color: var(--red-dark); }
@@ -535,3 +534,20 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .visit-limit .acta-link { font-size: 0.75rem; }
 #root .visit-limit.is-editing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 #root .visit-limit.is-editing input { width: 70px; min-height: 34px; }
+/* Las visitas fallidas registradas, dentro de la misma tarjeta. */
+#root .visit-history { margin-top: 10px; }
+#root .visit-history h5 { margin: 0 0 6px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-faint); }
+#root .visit-history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#root .visit-history li { padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid #e0a23b; border-radius: 8px;
+  background: var(--surface); }
+#root .visit-history-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+#root .visit-history-head strong { font-size: 0.875rem; color: var(--ink); }
+#root .visit-history-head span { font-size: 0.75rem; color: var(--ink-faint); }
+#root .visit-history li p { margin: 3px 0 0; font-size: 0.8125rem; color: var(--ink-soft); }
+/* Los botones de las dos acciones quedan juntos arriba; lo que se abre (avisos,
+   formularios) va debajo y la lista de visitas al final. */
+#root .visit-box-actions > .visits-step > .acta-actions { order: 1; }
+#root .visit-box-actions > .visits-step > :is(.acta-lead, .form-error, .acta-empty) { order: 2; flex-basis: 100%; margin: 0; }
+#root .visit-box-actions > .visits-step > form { order: 3; flex-basis: 100%; }
+#root .visit-box-actions > .visits-step > .visit-history { order: 4; flex-basis: 100%; }
