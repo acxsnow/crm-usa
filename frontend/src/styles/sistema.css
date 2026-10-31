@@ -557,3 +557,82 @@ html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
 #root .release-summary strong { color: var(--ink); font-size: 0.875rem; font-weight: 600; }
 #root .release-summary .is-pending { color: #9a5b00; font-weight: 500; }
 #root .release-summary.is-warning { border-color: #f3c98b; border-left-color: #e0a23b; background: #fff7eb; }
+
+/* Salidas de bodega (WarehouseReleasesPage.tsx): acciones como botones separados y
+   los renglones abiertos a lo ancho, debajo de la fila, en dos columnas. */
+#root .release-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+#root .release-actions .acta-btn.is-small { min-height: 32px; padding: 0 12px; font-size: 0.8125rem; }
+#root .release-actions .acta-btn.is-danger-quiet { background: var(--surface); border: 1px solid var(--line); color: var(--red-dark); }
+#root .release-actions .acta-btn.is-danger-quiet:hover { background: var(--red-wash); }
+#root .release-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--surface); color: var(--ink); font: 500 0.8125rem var(--ui-font); cursor: pointer; }
+#root .release-toggle:hover { background: var(--sidebar-hover); }
+#root .release-orders tr.is-expanded > td { border-bottom: 0; }
+#root .release-detail-row > td { padding: 4px 20px 18px; background: var(--canvas); }
+#root .release-detail-row .release-lines > ul { columns: 2 320px; column-gap: 32px; margin: 0; }
+#root .release-detail-row .release-lines li { break-inside: avoid; font-size: 0.8125rem; padding: 5px 0; }
+#root .release-detail-row .release-lines .release-lines-section { break-after: avoid; padding-top: 12px; text-transform: uppercase;
+  letter-spacing: 0.04em; font-size: 0.6875rem; color: var(--ink-faint); }
+#root .release-detail-row .release-lines .billing-chip.is-required { font-size: 0.6875rem; padding: 1px 6px; }
+@media (max-width: 767px) {
+  #root .release-actions { justify-content: flex-start; margin-top: 6px; }
+  #root .release-detail-row > td { padding: 4px 0 12px; background: transparent; }
+}
+#root .release-detail-row .release-qty { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px;
+  background: var(--sidebar-hover); color: var(--ink); font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+@media (min-width: 768px) {
+  #root .release-orders .release-actions { flex-wrap: nowrap; }
+  #root .release-orders td.is-action { width: 1%; white-space: nowrap; }
+}
+
+/* Base común de tablas: dos acciones seguidas en una celda nunca quedan pegadas
+   («EditarBorrar», «AutorizarRechazar»). Aplica a todas las tablas del CRM,
+   también a las que no usan DataTable (QA de José, 31 oct). */
+#root td .acta-link + .acta-link, #root td .acta-link + a, #root td a + .acta-link { margin-left: 14px; }
+#root td.is-action, #root td.is-actions { white-space: nowrap; }
+
+/* Base común: en el celular TODA tabla del CRM es una tarjeta por fila, también
+   las hechas a mano que no usan DataTable (QA de José, 31 oct). Cada dato lleva
+   el título de su columna (`data-label`, lo pone lib/tableLabels.ts); la primera
+   celda es el título de la tarjeta y las acciones van al final. Una tabla que de
+   verdad deba desplazarse de lado se excluye con la clase `no-cards`. */
+@media (max-width: 767px) {
+  #root .app-content .tablewrap:has(> table:not(.data-table):not(.no-cards)) { overflow: visible; border: 0; background: transparent; }
+  #root .app-content table:not(.data-table):not(.no-cards) { display: block; width: 100%; min-width: 0 !important;
+    border: 0; background: transparent; box-shadow: none; }
+  #root .app-content table:not(.data-table):not(.no-cards) > thead { display: none; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td { display: block; width: 100%; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr {
+    margin: 0 0 10px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; border: 0;
+    text-align: right; white-space: normal; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td::before {
+    content: attr(data-label); flex: none; max-width: 45%; text-align: left; font-size: 0.75rem; color: var(--ink-faint); }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td:first-child,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td[data-label=""],
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td:not([data-label]),
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-action,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-actions { display: block; text-align: left; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td:first-child::before,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td[data-label=""]::before,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-action::before,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-actions::before { content: none; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td:empty { display: none; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-action,
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr > td.is-actions {
+    margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); white-space: normal; }
+  #root .app-content table:not(.data-table):not(.no-cards) small { display: block; }
+  /* La fila de detalle (renglones de una salida) va pegada a su tarjeta. */
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.is-expanded { margin-bottom: 0;
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.release-detail-row { margin-top: -1px;
+    border-top-left-radius: 0; border-top-right-radius: 0; }
+}
+@media (max-width: 767px) {
+  /* En tarjeta, la marca roja de «pendiente» va en el borde de la tarjeta, no pegada al texto. */
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.fin-overdue { border-left: 3px solid var(--red); }
+  #root .app-content table:not(.data-table):not(.no-cards) > tbody > tr.fin-overdue > td:first-child { box-shadow: none; }
+}

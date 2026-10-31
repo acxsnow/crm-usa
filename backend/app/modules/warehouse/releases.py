@@ -601,8 +601,25 @@ async def orders_out(db: AsyncSession, organization_id, orders: list[WarehouseRe
     from app.modules.warehouse import serials as serial_svc
 
     seriales = await serial_svc.of_lines(db, organization_id, [l.id for ls in agrupadas.values() for l in ls])
-    return [order_out(o, agrupadas.get(o.id, []), items=items, location_name=ubicaciones.get(o.location_id),
-                      serials=seriales) for o in orders]
+    # Para qué obra y para quién: la lista de Salidas lo muestra en la columna de la orden.
+    from app.modules.field_ops.models import Project
+    from app.modules.users.models import User
+
+    obra_ids = {o.project_id for o in orders if o.project_id}
+    obras = dict((await db.execute(select(Project.id, Project.title).where(
+        Project.organization_id == organization_id, Project.id.in_(obra_ids)))).all()) if obra_ids else {}
+    persona_ids = {u for o in orders for u in (o.technician_user_id, o.requested_by_user_id) if u}
+    personas = dict((await db.execute(select(User.id, User.full_name).where(
+        User.organization_id == organization_id, User.id.in_(persona_ids)))).all()) if persona_ids else {}
+    salida = []
+    for o in orders:
+        fila = order_out(o, agrupadas.get(o.id, []), items=items, location_name=ubicaciones.get(o.location_id),
+                         serials=seriales)
+        fila["project_title"] = obras.get(o.project_id)
+        fila["technician_name"] = personas.get(o.technician_user_id)
+        fila["requested_by_name"] = personas.get(o.requested_by_user_id)
+        salida.append(fila)
+    return salida
 
 
 def line_out(linea: WarehouseReleaseLine, *, item: WarehouseItem | None = None,

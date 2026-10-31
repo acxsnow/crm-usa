@@ -75,6 +75,8 @@ export function WarehouseReleasesPage() {
   const [motivo, setMotivo] = useState("");
   const [entrega, setEntrega] = useState<DeliverResult | null>(null);
   const [entregando, setEntregando] = useState<WarehouseRelease | null>(null);
+  // Qué órdenes tienen los renglones abiertos (debajo de la fila, a lo ancho).
+  const [abiertas, setAbiertas] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
@@ -228,11 +230,21 @@ export function WarehouseReleasesPage() {
               </tr>
             </thead>
             <tbody>
-              {lista.items.map((o) => (
-                <tr key={o.id} className={o.status === "por_autorizar" ? "fin-overdue" : ""}>
+              {lista.items.map((o) => {
+                // La orden del técnico ya entregada, con cosas por cargar, se abre sola («Lo llevo»).
+                const porCargar = o.status === "entregada" && esMia(o) && (o.loading?.loaded ?? 0) < (o.loading?.loadable ?? 0);
+                const abierta = abiertas[o.id] ?? porCargar;
+                return (
+                <Fragment key={o.id}>
+                <tr className={`${o.status === "por_autorizar" ? "fin-overdue" : ""}${abierta ? " is-expanded" : ""}`}>
                   <td>
                     <strong>{o.number ?? "Borrador sin número"}</strong>
-                    <small>{o.location_name ?? "Bodega"}{o.note ? ` · ${o.note}` : ""}</small>
+                    {o.project_title && <small>{o.project_title}</small>}
+                    <small>
+                      {o.technician_name ? `Para ${o.technician_name}` : (o.location_name ?? "Bodega")}
+                      {o.requested_by_name && o.requested_by_name !== o.technician_name ? ` · pidió ${o.requested_by_name}` : ""}
+                    </small>
+                    {o.note && <small>{o.note}</small>}
                   </td>
                   <td>
                     {cat?.release_statuses[o.status] ?? o.status}
@@ -248,45 +260,60 @@ export function WarehouseReleasesPage() {
                     )}
                   </td>
                   <td>
-                    <details open={o.status === "entregada" && esMia(o) && (o.loading?.loaded ?? 0) < (o.loading?.loadable ?? 0)}>
-                      <summary>
-                        {o.lines.length} {o.lines.length === 1 ? "renglón" : "renglones"}
-                        {o.omissions.length === 1 && " · 1 obligatorio quitado"}
-                        {o.omissions.length > 1 && ` · ${o.omissions.length} obligatorios quitados`}
-                      </summary>
-                      <OrderLines orden={o}
-                        marcable={o.status === "entregada" && esMia(o)}
-                        onMarcar={(l, loaded) => cargar.mutateAsync({ id: o.id, lineId: l.id, loaded })} />
-                    </details>
+                    <button type="button" className="release-toggle" aria-expanded={abierta}
+                      onClick={() => setAbiertas((a) => ({ ...a, [o.id]: !abierta }))}>
+                      {abierta ? "Ocultar" : "Ver"} {o.lines.length} {o.lines.length === 1 ? "renglón" : "renglones"}
+                      <span aria-hidden="true">{abierta ? "▴" : "▾"}</span>
+                    </button>
+                    {o.omissions.length > 0 && (
+                      <small>{o.omissions.length === 1 ? "1 obligatorio quitado" : `${o.omissions.length} obligatorios quitados`}</small>
+                    )}
                   </td>
                   <td>{o.needed_on ?? "—"}</td>
                   <td>{o.created_at ? o.created_at.slice(0, 10) : "—"}</td>
                   <td className="is-action">
-                    {o.status === "borrador" && puedePedir && (
-                      <button type="button" className="acta-link" disabled={enviar.isPending}
-                        onClick={() => enviar.mutate(o.id)}>Enviar a autorizar</button>
-                    )}
-                    {o.status === "por_autorizar" && puedeAutorizar && (
-                      <>
-                        <button type="button" className="acta-link" disabled={autorizar.isPending}
-                          onClick={() => autorizar.mutate(o.id)}>Autorizar</button>
-                        <button type="button" className="acta-link"
-                          onClick={() => setRechazando({ id: o.id, numero: o.number ?? "la salida" })}>Rechazar</button>
-                      </>
-                    )}
-                    {o.status === "autorizada" && puedeEntregar && (
-                      <button type="button" className="acta-link" disabled={entregar.isPending}
-                        onClick={() => setEntregando(o)}>Entregar</button>
-                    )}
-                    {["borrador", "por_autorizar", "autorizada"].includes(o.status)
-                      && (o.requested_by_user_id === user?.id || hasPermission("warehouse.manage")) && (
-                      <button type="button" className="acta-link is-danger"
-                        onClick={() => { setMotivo(""); setRechazando({ id: o.id, numero: o.number ?? "el borrador", anular: true }); }}>
-                        Anular</button>
-                    )}
+                    <div className="release-actions">
+                      {o.status === "borrador" && puedePedir && (
+                        <button type="button" className="acta-btn is-small is-primary" disabled={enviar.isPending}
+                          onClick={() => enviar.mutate(o.id)}>Enviar a autorizar</button>
+                      )}
+                      {o.status === "por_autorizar" && puedeAutorizar && (
+                        <>
+                          <button type="button" className="acta-btn is-small is-primary" disabled={autorizar.isPending}
+                            onClick={() => autorizar.mutate(o.id)}>Autorizar</button>
+                          <button type="button" className="acta-btn is-small"
+                            onClick={() => { setRechazando({ id: o.id, numero: o.number ?? "la salida" }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                            Rechazar</button>
+                        </>
+                      )}
+                      {o.status === "autorizada" && puedeEntregar && (
+                        <button type="button" className="acta-btn is-small is-primary" disabled={entregar.isPending}
+                          onClick={() => setEntregando(o)}>Entregar</button>
+                      )}
+                      {["borrador", "por_autorizar", "autorizada"].includes(o.status)
+                        && (o.requested_by_user_id === user?.id || hasPermission("warehouse.manage")) && (
+                        <button type="button" className="acta-btn is-small is-danger-quiet"
+                          onClick={() => {
+                            setMotivo(""); setRechazando({ id: o.id, numero: o.number ?? "el borrador", anular: true });
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}>
+                          Anular</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+                {abierta && (
+                  <tr className="release-detail-row">
+                    <td colSpan={6}>
+                      <OrderLines orden={o}
+                        marcable={o.status === "entregada" && esMia(o)}
+                        onMarcar={(l, loaded) => cargar.mutateAsync({ id: o.id, lineId: l.id, loaded })} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
+                );
+              })}
             </tbody>
           </table></div>
         )}
@@ -295,6 +322,9 @@ export function WarehouseReleasesPage() {
     </div>
   );
 }
+
+/** «1.00» → «1», «2.50» → «2.5»: en la lista de renglones no hacen falta los ceros. */
+const cantidad = (valor: string | number) => Number(valor).toLocaleString("es-CO", { maximumFractionDigits: 2 });
 
 /**
  * Los renglones de una orden, por sección, con lo obligatorio marcado. En una
@@ -335,9 +365,11 @@ function OrderLines({ orden, marcable, onMarcar }: {
                   </label>
                 ) : null}
                 <span className="release-line-text">
-                  <strong>{l.item_name ?? "Artículo"}</strong>{l.spec_label ? ` (${l.spec_label})` : ""}:{" "}
-                  {l.quantity_requested} {l.unit_label ?? ""}
-                  {l.quantity_delivered !== null && ` — entregado ${l.quantity_delivered}`}
+                  <strong>{l.item_name ?? "Artículo"}</strong>{l.spec_label ? ` (${l.spec_label})` : ""}
+                  <span className="release-qty">
+                    {cantidad(l.quantity_requested)} {l.unit_label ?? ""}
+                    {l.quantity_delivered !== null && ` · entregado ${cantidad(l.quantity_delivered)}`}
+                  </span>
                   {l.is_required && <span className="billing-chip is-required">Obligatorio</span>}
                 </span>
               </li>

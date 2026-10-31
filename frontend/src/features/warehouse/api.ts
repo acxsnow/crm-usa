@@ -137,6 +137,10 @@ export interface WarehouseRelease {
   cancelled_by_user_id?: string | null;
   cancelled_at?: string | null;
   cancel_reason?: string | null;
+  /** Para qué obra y para quién (los nombres los pone el backend). */
+  project_title?: string | null;
+  technician_name?: string | null;
+  requested_by_name?: string | null;
   delivered_by_user_id: string | null;
   delivered_at: string | null;
   shortage_note: string | null;
