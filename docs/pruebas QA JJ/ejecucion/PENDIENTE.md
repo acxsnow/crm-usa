@@ -16,3 +16,6 @@ Pruebas de pantalla con Playwright, «probado por Claude» (ver `ui_comun.py` pa
 4. Lote 4c: VEN-004 (formulario a 390 px, marca de agua, campana), INS-004 (fotos, firma con el dedo, PDF), SEC-004 (textos guardados y PDF del acta), SEC-008 (aviso antes de firmar en T&C y firma pública), INS-015 (Slow 3G, doble toque, Offline), PER-003 (build de producción con Slow 3G y CPU 4×), AUTH-005 (16 min sin tocar, Offline, Atrás tras Salir).
 5. Antes de cada lote: base QA limpia (`seed_qa --reiniciar --si-borrar-todo`) y, para 4b, `prep4b.py`.
 6. Al final: suite completa, commit en `devjj`, y recordar a José: avisar a Mateo, llaves de Stripe/Plaid, D-019 con Don Aldo, integrar a `main` solo cuando él diga y después actualizar el artefacto.
+
+## Pendiente de interfaz (31 oct)
+- Pasar las tablas hechas a mano de bodega (Listas, Salidas, Diario de obra, Materiales) al componente común `DataTable`, con la fila desplegable de renglones como parte del componente. Hoy heredan las acciones separadas y las tarjetas del celular por la base común de `sistema.css` y `lib/tableLabels.ts`, pero no el componente.
