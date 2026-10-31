@@ -29,6 +29,14 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
   // Una visita fallida deja la obra sin fecha: el formulario se vacía para que
   // se elija una nueva, en vez de seguir mostrando la vieja (QA del 31 oct).
   useEffect(() => { setFecha(project.scheduled_date ?? ""); }, [project.scheduled_date]);
+  useEffect(() => { setTecnico(actual); }, [actual]);
+  // Con la orden ya liberada solo se ve el resumen: el formulario se abre con
+  // «Cambiar técnico o fecha» (QA del 31 oct: parecía que faltaba liberarla).
+  const [editando, setEditando] = useState(false);
+  const liberada = Boolean(actual && project.scheduled_date);
+  function cancelarCambio() {
+    setEditando(false); setTecnico(actual); setFecha(project.scheduled_date ?? ""); setError(null);
+  }
   // Cambiar el responsable de una obra ya iniciada (el personal rota): el nuevo
   // sigue desde hoy, y la fecha programada original ya pasó y no se acepta.
   const cambiaTecnico = Boolean(actual) && tecnico !== actual;
@@ -41,6 +49,7 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
     mutationFn: () => scheduleInstallation(project.id, { technician_user_id: tecnico, scheduled_date: fecha }),
     onSuccess: () => {
       setError(null);
+      setEditando(false);
       // El historial de responsables cambia cuando cambia el técnico.
       queryClient.invalidateQueries({ queryKey: ["project-assignments", project.id] });
       return refresh();
@@ -55,7 +64,18 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
   return (
     <>
     <ReleaseSummary project={project} technicianName={(tecnicos ?? []).find((t) => t.id === actual)?.full_name} />
+    {liberada && !editando ? (
+      <div className="acta-actions" style={{ justifyContent: "flex-start", marginBottom: 4 }}>
+        <button type="button" className="acta-btn is-small" onClick={() => setEditando(true)}>Cambiar técnico o fecha</button>
+      </div>
+    ) : (
     <form className="panel-form" onSubmit={(e) => { e.preventDefault(); schedule.mutate(); }}>
+      {liberada && (
+        <p className="acta-lead" style={{ gridColumn: "1 / -1", margin: 0 }}>
+          Cambiar la fecha reagenda la instalación y el técnico la ve en su agenda. Si cambias el técnico, las
+          salidas de bodega sin entregar pasan a su nombre.
+        </p>
+      )}
       {error && <p className="form-error" role="alert" style={{ gridColumn: "1 / -1" }}>{error}</p>}
       <div className="field">
         <label htmlFor="orden-tecnico">Técnico</label>
@@ -77,10 +97,14 @@ export function ReleaseOrderStep({ project, canSchedule }: { project: Project; c
           hizo y lo que se va haciendo, pero ya no la llena.
         </p>
       )}
-      <button type="submit" className="acta-btn is-primary" disabled={schedule.isPending}>
-        {cambiaTecnico ? "Cambiar técnico" : project.scheduled_date ? "Guardar cambio" : "Liberar orden"}
-      </button>
+      <div className="acta-actions" style={{ gridColumn: "1 / -1", justifyContent: "flex-start" }}>
+        <button type="submit" className="acta-btn is-primary" disabled={schedule.isPending}>
+          {schedule.isPending ? "Guardando…" : cambiaTecnico ? "Cambiar técnico" : liberada ? "Guardar cambios" : "Liberar orden"}
+        </button>
+        {liberada && <button type="button" className="acta-btn is-quiet" onClick={cancelarCambio}>Cancelar</button>}
+      </div>
     </form>
+    )}
     </>
   );
 }
