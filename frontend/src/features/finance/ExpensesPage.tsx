@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import "../billing/billing.css";
@@ -158,42 +159,44 @@ function ExpenseList({ status: fijo, review = false }: { status?: string; review
         </div>
       )}
       {error && <p className="form-error" role="alert">{error}</p>}
-      {lista.items.length === 0 ? <p className="acta-empty">{review ? "No hay gastos por revisar." : "Sin gastos."}</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Fecha</th><th>Persona</th><th>Gasto</th><th>Monto</th><th>Estado</th><th /></tr></thead>
-          <tbody>
-            {lista.items.map((g) => (
-              <tr key={g.id}>
-                <td>{fecha(g.expense_date)}</td>
-                <td>{g.user_name}</td>
-                <td><strong>{g.category_label}</strong><small>{g.description}{g.project_title ? ` · ${g.project_title}` : ""}</small>
-                  <small>{g.payment_label}</small></td>
-                <td className="mono">{money(g.amount)}</td>
-                <td><span className={`billing-chip ${CHIP[g.status]}`}>{cat?.statuses[g.status] ?? g.status}</span>
-                  {g.review_notes && <small>{g.review_notes}</small>}{g.reviewed_by && <small>por {g.reviewed_by}</small>}</td>
-                <td className="fin-actions">
-                  <button type="button" className="acta-link" onClick={() => openFile(`/expenses/${g.id}/receipt`)}>Recibo</button>
-                  {g.status === "submitted" && hasPermission("expenses.approve") && g.user_id !== user?.id && (
-                    rechazo?.id === g.id ? (
-                      <form className="fin-inline" onSubmit={(e) => { e.preventDefault(); revisar.mutate({ id: g.id, ok: false, nota: rechazo.nota }); }}>
-                        <input aria-label="Motivo del rechazo" placeholder="Motivo" value={rechazo.nota} onChange={(e) => setRechazo({ id: g.id, nota: e.target.value })} autoFocus />
-                        <button type="submit" className="acta-link fin-danger" disabled={!rechazo.nota.trim()}>Rechazar</button>
-                      </form>
-                    ) : (<>
-                      <button type="button" className="acta-btn is-line" onClick={() => revisar.mutate({ id: g.id, ok: true })}>Aprobar</button>
-                      <button type="button" className="acta-link fin-danger" onClick={() => setRechazo({ id: g.id, nota: "" })}>Rechazar</button>
-                    </>)
-                  )}
-                  {g.status === "approved" && g.payment_method === "own_money" && (hasPermission("payables.manage") || hasPermission("expenses.approve")) && (
-                    <button type="button" className="acta-link" onClick={() => reembolsar.mutate(g.id)}>Marcar reembolsado</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(g) => g.id} emptyMessage={review ? "No hay gastos por revisar." : "Sin gastos."}
+        columns={[
+          { key: "fecha", header: "Fecha", render: (g) => fecha(g.expense_date) },
+          { key: "persona", header: "Persona", render: (g) => g.user_name },
+          { key: "gasto", header: "Gasto", render: (g) => (
+            <>
+              <strong>{g.category_label}</strong>
+              <small>{g.description}{g.project_title ? ` · ${g.project_title}` : ""}</small>
+              <small>{g.payment_label}</small>
+            </>
+          ) },
+          { key: "monto", header: "Monto", className: "mono", render: (g) => money(g.amount) },
+          { key: "estado", header: "Estado", render: (g) => (
+            <>
+              <span className={`billing-chip ${CHIP[g.status]}`}>{cat?.statuses[g.status] ?? g.status}</span>
+              {g.review_notes && <small>{g.review_notes}</small>}{g.reviewed_by && <small>por {g.reviewed_by}</small>}
+            </>
+          ) },
+          { key: "acciones", header: "", render: (g) => (
+            <RowActions>
+              {g.status === "submitted" && hasPermission("expenses.approve") && g.user_id !== user?.id && (
+                rechazo?.id === g.id ? (
+                  <form className="fin-inline" onSubmit={(e) => { e.preventDefault(); revisar.mutate({ id: g.id, ok: false, nota: rechazo.nota }); }}>
+                    <input aria-label="Motivo del rechazo" placeholder="Motivo" value={rechazo.nota} onChange={(e) => setRechazo({ id: g.id, nota: e.target.value })} autoFocus />
+                    <RowAction type="submit" variant="danger" disabled={!rechazo.nota.trim()}>Rechazar</RowAction>
+                  </form>
+                ) : (<>
+                  <RowAction variant="primary" onClick={() => revisar.mutate({ id: g.id, ok: true })}>Aprobar</RowAction>
+                  <RowAction variant="danger" onClick={() => setRechazo({ id: g.id, nota: "" })}>Rechazar</RowAction>
+                </>)
+              )}
+              {g.status === "approved" && g.payment_method === "own_money" && (hasPermission("payables.manage") || hasPermission("expenses.approve")) && (
+                <RowAction variant="primary" onClick={() => reembolsar.mutate(g.id)}>Marcar reembolsado</RowAction>
+              )}
+              <RowAction onClick={() => openFile(`/expenses/${g.id}/receipt`)}>Recibo</RowAction>
+            </RowActions>
+          ) },
+        ]} />
     </article>
   );
 }

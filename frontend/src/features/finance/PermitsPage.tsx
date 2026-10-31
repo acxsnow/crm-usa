@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import "../billing/billing.css";
 import "../notifications/notifications.css";
 import "./finance.css";
-import { PaginationControls } from "@/components/PaginationControls";
+import { PaginatedTable } from "@/components/DataTable";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import type { InspectionRow, PermitRow } from "./api";
 import { Tabs, fecha } from "./common";
@@ -46,21 +46,24 @@ function Permits() {
           <option value="not_required">No requeridos</option><option value="">Todos</option>
         </select>
       </div>
-      {lista.items.length === 0 ? <p className="acta-empty">Ningún permiso con este filtro.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proyecto</th><th>Permiso</th><th>Estado</th><th>Vence</th></tr></thead>
-          <tbody>{lista.items.map((p) => (
-            <tr key={p.id} className={p.days_to_expiry !== null && p.days_to_expiry <= 7 && p.days_to_expiry >= 0 ? "fin-overdue" : ""}>
-              <td><Link to={`/projects/${p.project_id}`} className="acta-link"><strong>{p.project_title}</strong></Link></td>
-              <td>{p.jurisdiction}<small>{[p.permit_type, p.permit_number].filter(Boolean).join(" · ")}</small></td>
-              <td><span className={`billing-chip ${PERMISO[p.status] ?? ""}`}>{p.status_label}</span>
-                {p.filed_on && <small>radicado {fecha(p.filed_on)}</small>}</td>
-              <td>{fecha(p.expires_on)}{p.days_to_expiry !== null && <small>{p.days_to_expiry < 0 ? `venció hace ${-p.days_to_expiry} días` : `en ${p.days_to_expiry} días`}</small>}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(p) => p.id} emptyMessage="Ningún permiso con este filtro."
+        rowClassName={(p) => (p.days_to_expiry !== null && p.days_to_expiry <= 7 && p.days_to_expiry >= 0 ? "fin-overdue" : undefined)}
+        columns={[
+          { key: "proyecto", header: "Proyecto", render: (p) => <Link to={`/projects/${p.project_id}`} className="acta-link"><strong>{p.project_title}</strong></Link> },
+          { key: "permiso", header: "Permiso", render: (p) => <>{p.jurisdiction}<small>{[p.permit_type, p.permit_number].filter(Boolean).join(" · ")}</small></> },
+          { key: "estado", header: "Estado", render: (p) => (
+            <>
+              <span className={`billing-chip ${PERMISO[p.status] ?? ""}`}>{p.status_label}</span>
+              {p.filed_on && <small>radicado {fecha(p.filed_on)}</small>}
+            </>
+          ) },
+          { key: "vence", header: "Vence", render: (p) => (
+            <>
+              {fecha(p.expires_on)}
+              {p.days_to_expiry !== null && <small>{p.days_to_expiry < 0 ? `venció hace ${-p.days_to_expiry} días` : `en ${p.days_to_expiry} días`}</small>}
+            </>
+          ) },
+        ]} />
     </article>
   );
 }
@@ -77,21 +80,18 @@ function Inspections() {
           <option value="passed">Aprobadas</option><option value="">Todas</option>
         </select>
       </div>
-      {lista.items.length === 0 ? <p className="acta-empty">Ninguna inspección con este filtro.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proyecto</th><th>Fecha</th><th>Inspector</th><th>Resultado</th></tr></thead>
-          <tbody>{lista.items.map((i) => (
-            <tr key={i.id}>
-              <td><Link to={`/projects/${i.project_id}`} className="acta-link"><strong>{i.project_title}</strong></Link></td>
-              <td>{new Date(i.scheduled_for).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}</td>
-              <td>{i.inspector_name ?? "—"}</td>
-              <td><span className={`billing-chip ${INSPECCION[i.result] ?? ""}`}>{i.result_label}</span>
-                {i.observations && <small>{i.observations}</small>}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(i) => i.id} emptyMessage="Ninguna inspección con este filtro."
+        columns={[
+          { key: "proyecto", header: "Proyecto", render: (i) => <Link to={`/projects/${i.project_id}`} className="acta-link"><strong>{i.project_title}</strong></Link> },
+          { key: "fecha", header: "Fecha", render: (i) => new Date(i.scheduled_for).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) },
+          { key: "inspector", header: "Inspector", render: (i) => i.inspector_name ?? "—" },
+          { key: "resultado", header: "Resultado", render: (i) => (
+            <>
+              <span className={`billing-chip ${INSPECCION[i.result] ?? ""}`}>{i.result_label}</span>
+              {i.observations && <small>{i.observations}</small>}
+            </>
+          ) },
+        ]} />
     </article>
   );
 }

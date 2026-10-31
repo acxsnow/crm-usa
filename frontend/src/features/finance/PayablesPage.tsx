@@ -5,9 +5,10 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "./finance.css";
-import { PaginationControls } from "@/components/PaginationControls";
+import { DataTable, PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
+import { useClientPagination } from "@/lib/useClientPagination";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { useSearchTextFromUrl } from "@/lib/useSearchTextFromUrl";
 import {
@@ -90,7 +91,6 @@ function Invoices() {
   const [nueva, setNueva] = useState(false);
   const params = filtro === "overdue" ? { overdue: true } : filtro === "soon" ? { status: "open", due_within_days: 7 } : { status: filtro || undefined };
   const lista = usePaginatedQuery<SupplierInvoice>({ key: ["supplier-invoices"], path: "/payables/invoices", pageSize: 20, params });
-  const [abierta, setAbierta] = useState<string | null>(null);
   return (
     <>
       <article className="acta">
@@ -107,78 +107,100 @@ function Invoices() {
           {hasPermission("payables.manage") && !nueva && <button type="button" className="acta-btn is-primary" onClick={() => setNueva(true)}>Registrar factura</button>}
         </div>
         {nueva && <NewInvoice onClose={() => setNueva(false)} />}
-        {lista.items.length === 0 ? <p className="acta-empty">No hay facturas con este filtro.</p> : (
-          <div className="tablewrap"><table className="notices-table">
-            <thead><tr><th>Proveedor · factura</th><th>Vence</th><th>Total</th><th>Saldo</th><th>Estado</th><th /></tr></thead>
-            <tbody>
-              {lista.items.map((i) => (
-                <InvoiceRow key={i.id} inv={i} abierta={abierta === i.id} onToggle={() => setAbierta(abierta === i.id ? null : i.id)}
-                  estado={cat?.invoice_statuses[i.status] ?? i.status} />
-              ))}
-            </tbody>
-          </table></div>
-        )}
-        <PaginationControls {...lista.controls} />
+        <PaginatedTable list={lista} getRowKey={(i) => i.id} emptyMessage="No hay facturas con este filtro."
+          rowClassName={(i) => (i.overdue_days > 0 ? "fin-overdue" : undefined)}
+          expandable={{ render: (i) => <InvoiceDetail inv={i} /> }}
+          columns={[
+            { key: "proveedor", header: "Proveedor · factura", render: (i, fila) => (
+              <>
+                <button type="button" className="acta-link fin-rowlink" aria-expanded={fila.expanded} onClick={fila.toggle}>
+                  <strong>{i.supplier_name}</strong></button>
+                <small>Factura {i.number} · {fecha(i.invoice_date)}</small>
+              </>
+            ) },
+            { key: "vence", header: "Vence", render: (i) => (
+              <>
+                {fecha(i.due_date)}{i.overdue_days > 0 && <small className="notices-error">vencida hace {i.overdue_days} días</small>}
+                {i.scheduled_payment_date && <small>pago programado {fecha(i.scheduled_payment_date)}</small>}
+              </>
+            ) },
+            { key: "total", header: "Total", className: "mono", render: (i) => money(i.total) },
+            { key: "saldo", header: "Saldo", className: "mono", render: (i) => money(i.balance) },
+            { key: "estado", header: "Estado", render: (i) => (
+              <>
+                <span className={`billing-chip ${CHIP[i.status]}`}>{cat?.invoice_statuses[i.status] ?? i.status}</span>
+                {i.approvals_missing.length > 0 && <small>Falta: {i.approvals_missing.map((c) => CAPACIDAD[c]).join(" y ")}</small>}
+              </>
+            ) },
+            { key: "acciones", header: "", render: (i, fila) => (
+              <RowActions>
+                <ApproveInvoice inv={i} />
+                <RowAction onClick={fila.toggle}>{fila.expanded ? "Ocultar" : "Detalle"}</RowAction>
+              </RowActions>
+            ) },
+          ]} />
       </article>
     </>
   );
 }
 
-function InvoiceRow({ inv, abierta, onToggle, estado }: { inv: SupplierInvoice; abierta: boolean; onToggle: () => void; estado: string }) {
+/** «Aprobar», solo si a esta persona le toca una de las aprobaciones que faltan. */
+function ApproveInvoice({ inv }: { inv: SupplierInvoice }) {
+  const qc = useQueryClient();
+  const { hasPermission } = useAuth();
+  const aprobar = useMutation({
+    mutationFn: () => approveInvoice(inv.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["supplier-invoices"] }); qc.invalidateQueries({ queryKey: ["payables-aging"] }); },
+  });
+  const puedeAprobar = inv.status === "pending_approval" && inv.approvals_missing.some((c) =>
+    (c === "approve" && hasPermission("payables.approve")) || (c === "accounting" && hasPermission("payables.manage")));
+  if (!puedeAprobar) return null;
+  return (
+    <>
+      <RowAction variant="primary" disabled={aprobar.isPending} onClick={() => aprobar.mutate()}>Aprobar</RowAction>
+      {aprobar.isError && <small className="notices-error">{apiErrorMessage(aprobar.error)}</small>}
+    </>
+  );
+}
+
+/** El detalle desplegado de una factura: sus renglones, aprobaciones y acciones. */
+function InvoiceDetail({ inv }: { inv: SupplierInvoice }) {
   const qc = useQueryClient();
   const { data: cat } = useQuery({ queryKey: ["payables-catalogs"], queryFn: payablesCatalogs, staleTime: Infinity });
   const { hasPermission } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [prog, setProg] = useState(inv.scheduled_payment_date ?? "");
   const listo = () => { setError(null); qc.invalidateQueries({ queryKey: ["supplier-invoices"] }); qc.invalidateQueries({ queryKey: ["payables-aging"] }); };
-  const aprobar = useMutation({ mutationFn: () => approveInvoice(inv.id), onSuccess: listo, onError: (e) => setError(apiErrorMessage(e)) });
   const programar = useMutation({ mutationFn: () => scheduleInvoice(inv.id, prog || null), onSuccess: listo, onError: (e) => setError(apiErrorMessage(e)) });
   const anular = useMutation({ mutationFn: (motivo: string) => voidInvoice(inv.id, motivo), onSuccess: listo, onError: (e) => setError(apiErrorMessage(e)) });
-  // Solo si a esta persona le toca una de las aprobaciones que faltan.
-  const puedeAprobar = inv.status === "pending_approval" && inv.approvals_missing.some((c) =>
-    (c === "approve" && hasPermission("payables.approve")) || (c === "accounting" && hasPermission("payables.manage")));
   return (
     <>
-      <tr className={inv.overdue_days > 0 ? "fin-overdue" : ""}>
-        <td><button type="button" className="acta-link fin-rowlink" aria-expanded={abierta} onClick={onToggle}>
-          <strong>{inv.supplier_name}</strong></button><small>Factura {inv.number} · {fecha(inv.invoice_date)}</small></td>
-        <td>{fecha(inv.due_date)}{inv.overdue_days > 0 && <small className="notices-error">vencida hace {inv.overdue_days} días</small>}
-          {inv.scheduled_payment_date && <small>pago programado {fecha(inv.scheduled_payment_date)}</small>}</td>
-        <td className="mono">{money(inv.total)}</td>
-        <td className="mono">{money(inv.balance)}</td>
-        <td><span className={`billing-chip ${CHIP[inv.status]}`}>{estado}</span>
-          {inv.approvals_missing.length > 0 && <small>Falta: {inv.approvals_missing.map((c) => CAPACIDAD[c]).join(" y ")}</small>}</td>
-        <td>{puedeAprobar && <button type="button" className="acta-btn is-line" disabled={aprobar.isPending} onClick={() => aprobar.mutate()}>Aprobar</button>}</td>
-      </tr>
-      {(abierta || error) && (
-        <tr className="fin-detail"><td colSpan={6}>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          {abierta && <>
-            <div className="tablewrap"><table className="fin-lines">
-              <thead><tr><th>Detalle</th><th>Tipo</th><th>Cant.</th><th>Costo</th><th>Importe</th><th>Proyecto</th></tr></thead>
-              <tbody>{inv.lines.map((l, n) => (
-                <tr key={n}><td>{l.description}</td><td>{cat?.cost_categories[l.category] ?? l.category}</td><td>{l.quantity}</td><td className="mono">{money(l.unit_cost)}</td>
-                  <td className="mono">{money(l.amount)}</td><td>{l.project_title ?? "General"}</td></tr>))}</tbody>
-              <tfoot><tr><td colSpan={4}>Impuestos {money(inv.tax)} · Envío {money(inv.shipping)}</td><td className="mono"><strong>{money(inv.total)}</strong></td><td>Pagado {money(inv.paid)}</td></tr></tfoot>
-            </table></div>
-            <p className="notices-hint">Aprobaciones: {inv.approvals.length ? inv.approvals.map((a) => `${a.user_name} (${CAPACIDAD[a.capacity] ?? a.capacity}, ${fecha(a.approved_at)})`).join(" · ") : "ninguna"}
-              {inv.void_reason && ` · Anulada: ${inv.void_reason}`}{inv.notes && ` · ${inv.notes}`}</p>
-            <div className="acta-actions">
-              {inv.has_file && <button type="button" className="acta-link" onClick={() => openFile(`/payables/invoices/${inv.id}/file`)}>Ver factura</button>}
-              {hasPermission("payables.approve") && ["approved", "partially_paid"].includes(inv.status) && (
-                <form className="fin-inline" onSubmit={(e) => { e.preventDefault(); programar.mutate(); }}>
-                  <label className="notices-hint" htmlFor={`prog-${inv.id}`}>Programar pago</label>
-                  <input id={`prog-${inv.id}`} type="date" value={prog} onChange={(e) => setProg(e.target.value)} />
-                  <button type="submit" className="acta-link">Guardar</button>
-                </form>
-              )}
-              {inv.status !== "void" && inv.paid === "0.00" && (hasPermission("payables.manage") || hasPermission("payables.approve")) && (
-                <button type="button" className="acta-link fin-danger" onClick={async () => { const m = await askText({ title: "Anular", label: "Motivo de la anulación", required: true, confirmLabel: "Anular", danger: true }); if (m?.trim()) anular.mutate(m); }}>Anular</button>
-              )}
-            </div>
-          </>}
-        </td></tr>
-      )}
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <DataTable rows={inv.lines.map((l, n) => ({ ...l, n }))} isLoading={false} getRowKey={(l) => String(l.n)}
+        columns={[
+          { key: "detalle", header: "Detalle", render: (l) => l.description },
+          { key: "tipo", header: "Tipo", render: (l) => cat?.cost_categories[l.category] ?? l.category },
+          { key: "cantidad", header: "Cant.", render: (l) => l.quantity },
+          { key: "costo", header: "Costo", className: "mono", render: (l) => money(l.unit_cost) },
+          { key: "importe", header: "Importe", className: "mono", render: (l) => money(l.amount) },
+          { key: "proyecto", header: "Proyecto", render: (l) => l.project_title ?? "General" },
+        ]}
+        footer={[`Impuestos ${money(inv.tax)} · Envío ${money(inv.shipping)}`, null, null, null, money(inv.total), `Pagado ${money(inv.paid)}`]} />
+      <p className="notices-hint">Aprobaciones: {inv.approvals.length ? inv.approvals.map((a) => `${a.user_name} (${CAPACIDAD[a.capacity] ?? a.capacity}, ${fecha(a.approved_at)})`).join(" · ") : "ninguna"}
+        {inv.void_reason && ` · Anulada: ${inv.void_reason}`}{inv.notes && ` · ${inv.notes}`}</p>
+      <div className="acta-actions">
+        {inv.has_file && <button type="button" className="acta-link" onClick={() => openFile(`/payables/invoices/${inv.id}/file`)}>Ver factura</button>}
+        {hasPermission("payables.approve") && ["approved", "partially_paid"].includes(inv.status) && (
+          <form className="fin-inline" onSubmit={(e) => { e.preventDefault(); programar.mutate(); }}>
+            <label className="notices-hint" htmlFor={`prog-${inv.id}`}>Programar pago</label>
+            <input id={`prog-${inv.id}`} type="date" value={prog} onChange={(e) => setProg(e.target.value)} />
+            <button type="submit" className="acta-link">Guardar</button>
+          </form>
+        )}
+        {inv.status !== "void" && inv.paid === "0.00" && (hasPermission("payables.manage") || hasPermission("payables.approve")) && (
+          <button type="button" className="acta-link fin-danger" onClick={async () => { const m = await askText({ title: "Anular", label: "Motivo de la anulación", required: true, confirmLabel: "Anular", danger: true }); if (m?.trim()) anular.mutate(m); }}>Anular</button>
+        )}
+      </div>
     </>
   );
 }
@@ -294,17 +316,17 @@ function Payments() {
         {hasPermission("payables.manage") && !nuevo && <button type="button" className="acta-btn is-primary" onClick={() => setNuevo(true)}>Registrar pago</button>}
       </div>
       {nuevo && <NewPayment onClose={() => setNuevo(false)} />}
-      {lista.items.length === 0 ? <p className="acta-empty">Sin pagos registrados.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Fecha</th><th>Proveedor</th><th>Monto</th><th>Forma</th><th>Facturas</th><th /></tr></thead>
-          <tbody>{lista.items.map((p) => (
-            <tr key={p.id}><td>{fecha(p.paid_on)}</td><td>{p.supplier_name}</td><td className="mono">{money(p.amount)}</td>
-              <td>{p.method_label}{p.reference && <small>{p.reference}</small>}</td><td>{p.allocations.length}</td>
-              <td>{p.has_file && <button type="button" className="acta-link" onClick={() => openFile(`/payables/payments/${p.id}/file`)}>Comprobante</button>}</td></tr>
-          ))}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(p) => p.id} emptyMessage="Sin pagos registrados."
+        columns={[
+          { key: "fecha", header: "Fecha", render: (p) => fecha(p.paid_on) },
+          { key: "proveedor", header: "Proveedor", render: (p) => p.supplier_name },
+          { key: "monto", header: "Monto", className: "mono", render: (p) => money(p.amount) },
+          { key: "forma", header: "Forma", render: (p) => <>{p.method_label}{p.reference && <small>{p.reference}</small>}</> },
+          { key: "facturas", header: "Facturas", render: (p) => p.allocations.length },
+          { key: "acciones", header: "", render: (p) => p.has_file && (
+            <RowActions><RowAction onClick={() => openFile(`/payables/payments/${p.id}/file`)}>Comprobante</RowAction></RowActions>
+          ) },
+        ]} />
     </article>
   );
 }
@@ -344,16 +366,18 @@ function NewPayment({ onClose }: { onClose: () => void }) {
           <input id="np-date" type="date" max={today()} value={fechaP} onChange={(e) => setFechaP(e.target.value)} required /></div>
       </div>
       {proveedor && (pagables.length === 0 ? <p className="acta-empty">Este proveedor no tiene facturas aprobadas con saldo.</p> : (
-        <div className="tablewrap"><table className="fin-lines">
-          <thead><tr><th>Factura</th><th>Vence</th><th>Saldo</th><th>Pagar ahora</th></tr></thead>
-          <tbody>{pagables.map((f) => (
-            <tr key={f.id}><td>{f.number}</td><td>{fecha(f.due_date)}</td><td className="mono">{money(f.balance)}</td>
-              <td><div className="fin-inline">
+        <DataTable rows={pagables} isLoading={false} getRowKey={(f) => f.id}
+          columns={[
+            { key: "factura", header: "Factura", render: (f) => f.number },
+            { key: "vence", header: "Vence", render: (f) => fecha(f.due_date) },
+            { key: "saldo", header: "Saldo", className: "mono", render: (f) => money(f.balance) },
+            { key: "pagar", header: "Pagar ahora", render: (f) => (
+              <div className="fin-inline">
                 <input aria-label={`Monto para ${f.number}`} inputMode="decimal" value={montos[f.id] ?? ""} onChange={(e) => setMontos({ ...montos, [f.id]: e.target.value })} />
-                <button type="button" className="acta-link" onClick={() => setMontos({ ...montos, [f.id]: f.balance })}>Todo</button>
-              </div></td></tr>
-          ))}</tbody>
-        </table></div>
+                <RowAction onClick={() => setMontos({ ...montos, [f.id]: f.balance })}>Todo</RowAction>
+              </div>
+            ) },
+          ]} />
       ))}
       <div className="fin-row">
         <div className="form-field"><label className="form-label" htmlFor="np-met">Forma de pago</label>
@@ -402,24 +426,22 @@ function Suppliers() {
       </div>
       {importar && <ImportSuppliers onClose={() => setImportar(false)} />}
       {edit && <SupplierForm initial={edit === "new" ? {} : edit} onClose={() => setEdit(null)} />}
-      {lista.items.length === 0 ? <p className="acta-empty">Sin proveedores.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proveedor</th><th>Contacto</th><th>Condiciones</th><th>Documentos</th><th>Saldo</th><th /></tr></thead>
-          <tbody>{lista.items.map((s) => (
-            <tr key={s.id} className={s.active ? "" : "fin-inactive"}>
-              <td><strong>{s.name}</strong><small>{s.legal_name ?? ""}{s.tax_id ? ` · EIN ${s.tax_id}` : ""}</small></td>
-              <td>{s.contact_name}<small>{[s.phone, s.email].filter(Boolean).join(" · ")}</small></td>
-              <td>{s.payment_terms_days === 0 ? "Contado" : `Net ${s.payment_terms_days}`}</td>
-              <td><small>W-9 {s.w9_on_file ? "✓" : "—"}</small>
-                {s.license_expires_on && <small>Licencia vence {fecha(s.license_expires_on)}</small>}
-                {s.insurance_expires_on && <small>Seguro vence {fecha(s.insurance_expires_on)}</small>}</td>
-              <td className="mono">{money(s.balance)}</td>
-              <td>{puede && <button type="button" className="acta-link" onClick={() => setEdit(s)}>Editar</button>}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
-      <PaginationControls {...lista.controls} />
+      <PaginatedTable list={lista} getRowKey={(s) => s.id} emptyMessage="Sin proveedores."
+        rowClassName={(s) => (s.active ? undefined : "fin-inactive")}
+        columns={[
+          { key: "proveedor", header: "Proveedor", render: (s) => <><strong>{s.name}</strong><small>{s.legal_name ?? ""}{s.tax_id ? ` · EIN ${s.tax_id}` : ""}</small></> },
+          { key: "contacto", header: "Contacto", render: (s) => <>{s.contact_name}<small>{[s.phone, s.email].filter(Boolean).join(" · ")}</small></> },
+          { key: "condiciones", header: "Condiciones", render: (s) => (s.payment_terms_days === 0 ? "Contado" : `Net ${s.payment_terms_days}`) },
+          { key: "documentos", header: "Documentos", render: (s) => (
+            <>
+              <small>W-9 {s.w9_on_file ? "✓" : "—"}</small>
+              {s.license_expires_on && <small>Licencia vence {fecha(s.license_expires_on)}</small>}
+              {s.insurance_expires_on && <small>Seguro vence {fecha(s.insurance_expires_on)}</small>}
+            </>
+          ) },
+          { key: "saldo", header: "Saldo", className: "mono", render: (s) => money(s.balance) },
+          { key: "acciones", header: "", render: (s) => puede && <RowActions><RowAction onClick={() => setEdit(s)}>Editar</RowAction></RowActions> },
+        ]} />
     </article>
   );
 }
@@ -536,6 +558,8 @@ function ImportSuppliers({ onClose }: { onClose: () => void }) {
 
 function AgingView() {
   const { data } = useQuery({ queryKey: ["payables-aging"], queryFn: payablesAging });
+  // Reporte calculado completo: se pagina aquí y los totales de arriba suman todo.
+  const proveedores = useClientPagination(data?.rows, !data);
   if (!data) return <p className="acta-empty">Cargando…</p>;
   return (
     <article className="acta">
@@ -544,16 +568,13 @@ function AgingView() {
           <small>{b.label}</small><strong>{money(data.totals[b.key])}</strong></div>)}
         <div className="fin-kpi is-total"><small>Total por pagar</small><strong>{money(data.totals.total)}</strong></div>
       </div>
-      {data.rows.length === 0 ? <p className="acta-empty">No se le debe nada a ningún proveedor.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proveedor</th>{data.buckets.map((b) => <th key={b.key}>{b.label}</th>)}<th>Total</th></tr></thead>
-          <tbody>{data.rows.map((r) => (
-            <tr key={r.supplier_id}><td><strong>{r.supplier_name}</strong><small>{r.invoices} facturas</small></td>
-              {data.buckets.map((b) => <td key={b.key} className="mono">{Number(r[b.key]) ? money(r[b.key] as string) : "—"}</td>)}
-              <td className="mono"><strong>{money(r.total)}</strong></td></tr>
-          ))}</tbody>
-        </table></div>
-      )}
+      <PaginatedTable list={proveedores} getRowKey={(r) => r.supplier_id} emptyMessage="No se le debe nada a ningún proveedor."
+        columns={[
+          { key: "proveedor", header: "Proveedor", render: (r) => <><strong>{r.supplier_name}</strong><small>{r.invoices} facturas</small></> },
+          ...data.buckets.map((b) => ({ key: b.key, header: b.label, className: "mono",
+            render: (r: (typeof data.rows)[number]) => (Number(r[b.key]) ? money(r[b.key] as string) : "—") })),
+          { key: "total", header: "Total", className: "mono", render: (r) => <strong>{money(r.total)}</strong> },
+        ]} />
       <p className="notices-hint">Al {fecha(data.as_of)}. Vencido = días desde la fecha de vencimiento.</p>
     </article>
   );

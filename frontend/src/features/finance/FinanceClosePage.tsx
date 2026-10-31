@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PaginatedTable } from "@/components/DataTable";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -10,6 +11,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { listPrograms, programKeys } from "@/features/programs/api";
+import { useClientPagination } from "@/lib/useClientPagination";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   ignoreLine,
@@ -58,6 +60,8 @@ function Profit() {
     queryFn: () => profitabilityReport({ date_from: desde || undefined, date_to: hasta || undefined, program_id: programa || undefined }),
   });
   const t = data?.totals;
+  // Reporte calculado completo: se pagina aquí y los totales de arriba suman todo.
+  const proyectos = useClientPagination(data?.rows, isLoading);
   return (
     <article className="acta">
       <div className="notices-toolbar fin-filters">
@@ -77,26 +81,36 @@ function Profit() {
             <strong>{money(t.margin as string)}</strong>{t.margin_pct !== null && <small>{t.margin_pct}%</small>}</div>
         </div>
       )}
-      {isLoading ? <p className="acta-empty">Cargando…</p> : (data?.rows ?? []).length === 0 ? <p className="acta-empty">Sin proyectos en el periodo.</p> : (
-        <div className="tablewrap"><table className="notices-table">
-          <thead><tr><th>Proyecto</th><th>Esperado</th><th>Cobrado</th><th>Costos</th><th>Margen cobrado</th><th>Margen estimado</th></tr></thead>
-          <tbody>{data!.rows.map((r) => (
-            <tr key={r.project_id} className={Number(r.margin) < 0 ? "fin-overdue" : ""}>
-              <td><Link to={`/projects/${r.project_id}`} className="acta-link"><strong>{r.title}</strong></Link>
-                <small>{[r.case_number, r.program, r.completed_date ? `cerrada ${fecha(r.completed_date)}` : "sin cerrar"].filter(Boolean).join(" · ")}</small></td>
-              <td className="mono">{money(r.expected)}</td>
-              <td className="mono">{money(r.collected)}</td>
-              <td className="mono">{money(r.costs)}
-                <small>{Object.entries(r.cost_breakdown).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${data!.cost_labels[k]} ${money(v)}`).join(" · ")}</small></td>
-              <td className="mono"><strong>{money(r.margin)}</strong>{r.margin_pct !== null && <small>{r.margin_pct}%</small>}</td>
-              <td className={`mono${r.estimated_margin_pct !== null && r.margin_pct !== null && r.margin_pct < r.estimated_margin_pct ? " fin-danger" : ""}`}>
+      <PaginatedTable list={proyectos} getRowKey={(r) => r.project_id} emptyMessage="Sin proyectos en el periodo."
+        rowClassName={(r) => (Number(r.margin) < 0 ? "fin-overdue" : undefined)}
+        columns={[
+          { key: "proyecto", header: "Proyecto", render: (r) => (
+            <>
+              <Link to={`/projects/${r.project_id}`} className="acta-link"><strong>{r.title}</strong></Link>
+              <small>{[r.case_number, r.program, r.completed_date ? `cerrada ${fecha(r.completed_date)}` : "sin cerrar"].filter(Boolean).join(" · ")}</small>
+            </>
+          ) },
+          { key: "esperado", header: "Esperado", className: "mono", render: (r) => money(r.expected) },
+          { key: "cobrado", header: "Cobrado", className: "mono", render: (r) => money(r.collected) },
+          { key: "costos", header: "Costos", className: "mono", render: (r) => (
+            <>
+              {money(r.costs)}
+              <small>{Object.entries(r.cost_breakdown).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${data!.cost_labels[k]} ${money(v)}`).join(" · ")}</small>
+            </>
+          ) },
+          { key: "margen", header: "Margen cobrado", className: "mono", render: (r) => (
+            <><strong>{money(r.margin)}</strong>{r.margin_pct !== null && <small>{r.margin_pct}%</small>}</>
+          ) },
+          { key: "estimado", header: "Margen estimado", className: "mono", render: (r) => {
+            const debajo = r.estimated_margin_pct !== null && r.margin_pct !== null && r.margin_pct < r.estimated_margin_pct;
+            return (
+              <span className={debajo ? "fin-danger" : undefined}>
                 {r.estimated_margin_pct !== null ? `${r.estimated_margin_pct}%` : "—"}
-                {r.estimated_margin_pct !== null && r.margin_pct !== null && r.margin_pct < r.estimated_margin_pct && <small>por debajo</small>}
-              </td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      )}
+                {debajo && <small>por debajo</small>}
+              </span>
+            );
+          } },
+        ]} />
       <p className="notices-hint">Margen cobrado = lo que ya entró a caja − (facturas de proveedor asignadas al proyecto, con su parte de impuestos y envío, + gastos de campo aprobados). La comisión del vendedor no está incluida. Margen estimado = el del estimado de la obra (Costo del trabajo); en rojo si el real quedó por debajo.</p>
     </article>
   );

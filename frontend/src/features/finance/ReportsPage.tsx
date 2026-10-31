@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import "../billing/billing.css";
 import "../notifications/notifications.css";
 import "./finance.css";
+import { PaginatedTable } from "@/components/DataTable";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useClientPagination } from "@/lib/useClientPagination";
 import { downloadFile, getReport } from "./api";
 import { Tabs, fecha } from "./common";
 
@@ -64,21 +66,28 @@ export function ReportsPage() {
               {data.kpis.map((k) => <div key={k.label} className="fin-kpi"><small>{k.label}</small>
                 <strong>{k.value === null || k.value === undefined ? "—" : /^-?\d+\.\d{2}$/.test(String(k.value)) ? `$${Number(k.value).toLocaleString("en-US", { minimumFractionDigits: 2 })}` : k.value}</strong></div>)}
             </div>
-            {data.sections.map((s) => (
-              <section key={s.title} className="fin-section">
-                <h2 className="fin-h2">{s.title}</h2>
-                {s.rows.length === 0 ? <p className="acta-empty">Sin datos en el periodo.</p> : (
-                  <div className="tablewrap"><table className="notices-table">
-                    <thead><tr>{s.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                    <tbody>{s.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={j > 0 ? "mono" : ""}>{c}</td>)}</tr>)}</tbody>
-                  </table></div>
-                )}
-              </section>
-            ))}
+            {data.sections.map((s) => <ReportSection key={s.title} section={s} />)}
           </>
         )}
       </article>
       )}
     </div>
+  );
+}
+
+type Section = { title: string; columns: string[]; rows: (string | number | null)[][] };
+
+/** Una sección del reporte: tabla común paginada (el reporte llega calculado completo). */
+function ReportSection({ section }: { section: Section }) {
+  const lista = useClientPagination(section.rows.map((celdas, n) => ({ celdas, n })), false);
+  return (
+    <section className="fin-section">
+      <h2 className="fin-h2">{section.title}</h2>
+      <PaginatedTable list={lista} getRowKey={(f) => String(f.n)} emptyMessage="Sin datos en el periodo."
+        columns={section.columns.map((c, j) => ({
+          key: String(j), header: c, className: j > 0 ? "mono" : undefined,
+          render: (f: { celdas: (string | number | null)[] }) => f.celdas[j] ?? "—",
+        }))} />
+    </section>
   );
 }
