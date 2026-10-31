@@ -121,6 +121,7 @@ class ReleaseStatus(StrEnum):
     AUTORIZADA = "autorizada"
     RECHAZADA = "rechazada"
     ENTREGADA = "entregada"
+    ANULADA = "anulada"
 
 
 RELEASE_STATUSES: dict[str, str] = {
@@ -129,6 +130,7 @@ RELEASE_STATUSES: dict[str, str] = {
     ReleaseStatus.AUTORIZADA: "Autorizada",
     ReleaseStatus.RECHAZADA: "Rechazada",
     ReleaseStatus.ENTREGADA: "Entregada",
+    ReleaseStatus.ANULADA: "Anulada",
 }
 
 # De dónde salió la línea: de la lista predefinida del tipo de trabajo (fase 2)
@@ -146,11 +148,12 @@ LINE_ORIGINS: dict[str, str] = {
 # Cuál es el siguiente estado al que se puede pasar. Se declara aquí para que la
 # pantalla no tenga que adivinar qué botones mostrar.
 RELEASE_TRANSITIONS: dict[str, tuple[str, ...]] = {
-    ReleaseStatus.BORRADOR: (ReleaseStatus.POR_AUTORIZAR,),
-    ReleaseStatus.POR_AUTORIZAR: (ReleaseStatus.AUTORIZADA, ReleaseStatus.RECHAZADA),
-    ReleaseStatus.AUTORIZADA: (ReleaseStatus.ENTREGADA,),
+    ReleaseStatus.BORRADOR: (ReleaseStatus.POR_AUTORIZAR, ReleaseStatus.ANULADA),
+    ReleaseStatus.POR_AUTORIZAR: (ReleaseStatus.AUTORIZADA, ReleaseStatus.RECHAZADA, ReleaseStatus.ANULADA),
+    ReleaseStatus.AUTORIZADA: (ReleaseStatus.ENTREGADA, ReleaseStatus.ANULADA),
     ReleaseStatus.RECHAZADA: (),
     ReleaseStatus.ENTREGADA: (),
+    ReleaseStatus.ANULADA: (),
 }
 
 

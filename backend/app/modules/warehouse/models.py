@@ -192,6 +192,10 @@ class WarehouseReleaseOrder(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     authorized_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     authorized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reject_reason: Mapped[str | None] = mapped_column(Text)
+    # Anulada por quien la pidió (o bodega) antes de entregarse (migración 0045).
+    cancelled_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_reason: Mapped[str | None] = mapped_column(Text)
     delivered_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # D-BOD-4: sin existencias no se bloquea la entrega; el motivo queda escrito.

@@ -617,6 +617,16 @@ async def reject_release(release_id: uuid.UUID, payload: RejectIn, db: AsyncSess
     return (await rel.orders_out(db, organization_id, [order]))[0]
 
 
+@router.post("/warehouse/releases/{release_id}/cancel")
+async def cancel_release(release_id: uuid.UUID, payload: RejectIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_request)) -> dict:
+    """Anula una salida que todavía no se entregó (quien la pidió o bodega)."""
+    order = await rel.cancel_order(db, organization_id=organization_id, user=current_user, order_id=release_id,
+                                   reason=payload.reason)
+    return _sin_costos((await rel.orders_out(db, organization_id, [order]))[0], current_user)
+
+
 @router.post("/warehouse/releases/{release_id}/deliver")
 async def deliver_release(release_id: uuid.UUID, payload: DeliverIn | None = None,
                           db: AsyncSession = Depends(get_db),

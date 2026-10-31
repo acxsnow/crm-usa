@@ -150,7 +150,8 @@ export function ProjectDetailPage() {
                   canSchedule={hasPermission("dispatch.manage")} />
                 <CancelProjectStep project={project} canCancel={hasPermission("projects.close")} />
                 <h4 className="acta-section-title">Materiales de la orden</h4>
-                <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update") && trabaja} closed={cerrada} />
+                <MaterialsPanel projectId={project.id} canManage={hasPermission("projects.update") && trabaja} closed={cerrada}
+                  hasTechnician={Boolean(project.primary_technician_user_id && project.scheduled_date)} />
                 <AssignmentsHistory projectId={project.id} />
               </>
             ),

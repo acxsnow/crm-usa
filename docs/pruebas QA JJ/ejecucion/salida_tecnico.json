@@ -1,0 +1,19 @@
+{
+ "BOD-005": [
+  {
+   "check": "SAL-2026-0005 tiene el botón «Anular»",
+   "ok": true,
+   "dato": "SAL-2026-0005\nBodega · QA anular\n\tPor autorizar\t\n1 renglón\n\t—\t2026-10-31\tAutorizarRechazarAnular"
+  },
+  {
+   "check": "Queda «Anulada» con el motivo",
+   "ok": true,
+   "dato": "SAL-2026-0005\nBodega · QA anular\n\tAnulada\nAnulada: QA: la pedí antes de asignar el técnico\n\t\n1 renglón\n\t—\t2026-10-31\t"
+  },
+  {
+   "check": "Obra sin técnico: no muestra «Pedir material a bodega» y avisa qué hacer primero",
+   "ok": true,
+   "dato": "2\nOrden liberada\nSin técnico ni fecha\nPendiente\nTécnico\nElige un técnico\nAdmin Demo\nAndrés Morales\nCarlos Ramírez\nDiego Jiménez\nFernando Ortiz\nHéctor Ruiz\nJorge Rojas\nJosé Castillo\nLuis Herrera\nManuel Navarro\nMiguel Torres\nPedro Vargas\nRaúl Mendoza\nRicardo Silva\nTito Técnico\nToño Segundo\nFecha de in"
+  }
+ ]
+}

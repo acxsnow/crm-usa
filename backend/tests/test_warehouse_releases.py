@@ -210,13 +210,13 @@ async def test_entregar_dos_veces_no_descuenta_dos_veces(app_client, login, acti
 # Lo entregado queda en la obra
 # ---------------------------------------------------------------------------
 
-async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, login, active_admin_user, active_admin_staff_user, seeded_org):
+async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, login, active_admin_user, active_admin_staff_user, seeded_org, active_technician_user):
     bodega = await login(active_admin_user.email)
     autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega, "Tubo cobre 3/8", sku="CU-38")
     await _entrada(app_client, bodega, item["id"], "50")
 
-    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
     orden = await _enviar(app_client, bodega,
                           (await _orden(app_client, bodega, item["id"], "12", project_id=str(project.id)))["id"])
     await _autorizar(app_client, autoriza, orden["id"])
@@ -233,14 +233,14 @@ async def test_lo_entregado_aparece_en_el_material_de_la_obra(app_client, db, lo
 
 
 async def test_la_salida_guarda_el_costo_del_dia(app_client, db, login, active_admin_user, active_admin_staff_user,
-                                                 seeded_org):
+                                                 seeded_org, active_technician_user):
     """D-018: la salida no guardaba el costo y la obra tomaba el del catálogo
     vigente; editar el costo cambiaba el de obras ya entregadas."""
     bodega = await login(active_admin_user.email)
     autoriza = await login(active_admin_staff_user.email)
     item = await _item(app_client, bodega)  # 3.25
     await _entrada(app_client, bodega, item["id"], "50")
-    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
     orden = await _enviar(app_client, bodega,
                           (await _orden(app_client, bodega, item["id"], "4", project_id=str(project.id)))["id"])
     await _autorizar(app_client, autoriza, orden["id"])

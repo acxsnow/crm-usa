@@ -256,6 +256,13 @@ async def schedule_installation(
     antes = {"technician": str(project.primary_technician_user_id) if project.primary_technician_user_id else None,
              "scheduled_date": project.scheduled_date.isoformat() if project.scheduled_date else None}
     await _record_assignment(db, project=project, technician_id=technician_id, starts_on=scheduled_date, user=user)
+    # Las salidas de bodega que no se han entregado siguen al técnico de la obra.
+    # Corre también si el técnico no cambia: así se corrigen las que quedaron
+    # a nombre de otro (solo toca las que no coinciden).
+    from app.modules.warehouse.releases import follow_project_technician
+
+    await follow_project_technician(db, organization_id=organization_id, user=user, project_id=project.id,
+                                    technician_id=technician_id)
     project.primary_technician_user_id = technician_id
     project.scheduled_date = scheduled_date
     if project.status in (ProjectStatus.planning, ProjectStatus.scheduled):

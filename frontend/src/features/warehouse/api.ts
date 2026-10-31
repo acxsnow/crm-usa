@@ -134,6 +134,9 @@ export interface WarehouseRelease {
   authorized_by_user_id: string | null;
   authorized_at: string | null;
   reject_reason: string | null;
+  cancelled_by_user_id?: string | null;
+  cancelled_at?: string | null;
+  cancel_reason?: string | null;
   delivered_by_user_id: string | null;
   delivered_at: string | null;
   shortage_note: string | null;
@@ -493,6 +496,10 @@ export const approveRelease = async (id: string) =>
 
 export const rejectRelease = async (id: string, reason: string) =>
   (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/reject`, { reason })).data;
+
+/** Anula una salida que todavía no se entregó (quien la pidió o bodega). */
+export const cancelRelease = async (id: string, reason: string) =>
+  (await apiClient.post<WarehouseRelease>(`/warehouse/releases/${id}/cancel`, { reason })).data;
 
 /** Lo que Bodega confirma que sale de un renglón y, si lleva serial, el de cada unidad. */
 export interface DeliverLineInput { line_id: string; quantity: string; serials?: string[] }

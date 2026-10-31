@@ -25,6 +25,7 @@ import {
   type DeliverLineInput,
   listKitsPage,
   rejectRelease,
+  cancelRelease,
   submitRelease,
   warehouseCatalogs,
   warehouseKeys,
@@ -68,7 +69,9 @@ export function WarehouseReleasesPage() {
   const navigate = useNavigate();
   const obraDeLaFicha = enlace.get("nueva") ? enlace.get("obra") : null;
   const [creando, setCreando] = useState(Boolean(enlace.get("nueva")));
-  const [rechazando, setRechazando] = useState<{ id: string; numero: string } | null>(null);
+  // Rechazar (quien autoriza) y anular (quien la pidió o bodega) piden motivo
+  // en el mismo formulario.
+  const [rechazando, setRechazando] = useState<{ id: string; numero: string; anular?: boolean } | null>(null);
   const [motivo, setMotivo] = useState("");
   const [entrega, setEntrega] = useState<DeliverResult | null>(null);
   const [entregando, setEntregando] = useState<WarehouseRelease | null>(null);
@@ -110,7 +113,7 @@ export function WarehouseReleasesPage() {
     onError: alFallar,
   });
   const rechazar = useMutation({
-    mutationFn: () => rejectRelease(rechazando?.id as string, motivo.trim()),
+    mutationFn: () => (rechazando?.anular ? cancelRelease : rejectRelease)(rechazando?.id as string, motivo.trim()),
     onSuccess: () => { setError(null); setRechazando(null); setMotivo(""); invalidarBodega(qc); },
     onError: alFallar,
   });
@@ -174,15 +177,17 @@ export function WarehouseReleasesPage() {
           className="acta fin-form fin-box"
           onSubmit={(e) => { e.preventDefault(); rechazar.mutate(); }}
         >
-          <h3 className="acta-section-title">Rechazar {rechazando.numero}</h3>
-          <p className="acta-lead">El técnico recibe el motivo, así que conviene decir qué falta o por qué no se autoriza.</p>
+          <h3 className="acta-section-title">{rechazando.anular ? "Anular" : "Rechazar"} {rechazando.numero}</h3>
+          <p className="acta-lead">{rechazando.anular
+            ? "La salida queda anulada y no se puede autorizar ni entregar. No mueve existencias: nada salió de bodega."
+            : "El técnico recibe el motivo, así que conviene decir qué falta o por qué no se autoriza."}</p>
           <div className="form-field">
             <label className="form-label" htmlFor="rel-motivo">Motivo</label>
             <textarea id="rel-motivo" rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
           </div>
           <div className="acta-actions">
             <button type="submit" className="acta-btn is-primary" disabled={rechazar.isPending || !motivo.trim()}>
-              {rechazar.isPending ? "Rechazando…" : "Rechazar la salida"}
+              {rechazar.isPending ? "Guardando…" : rechazando.anular ? "Anular la salida" : "Rechazar la salida"}
             </button>
             <button type="button" className="acta-btn is-quiet" onClick={() => { setRechazando(null); setMotivo(""); }}>
               Cancelar
@@ -232,6 +237,7 @@ export function WarehouseReleasesPage() {
                   <td>
                     {cat?.release_statuses[o.status] ?? o.status}
                     {o.reject_reason && <small>Motivo: {o.reject_reason}</small>}
+                    {o.cancel_reason && <small>Anulada: {o.cancel_reason}</small>}
                     {o.shortage_note && <small>Al entregar: {o.shortage_note}</small>}
                     {o.loading && o.loading.loadable > 0 && (
                       <small className={o.loading.required_pending > 0 ? "release-load is-pending" : "release-load"}>
@@ -271,6 +277,12 @@ export function WarehouseReleasesPage() {
                     {o.status === "autorizada" && puedeEntregar && (
                       <button type="button" className="acta-link" disabled={entregar.isPending}
                         onClick={() => setEntregando(o)}>Entregar</button>
+                    )}
+                    {["borrador", "por_autorizar", "autorizada"].includes(o.status)
+                      && (o.requested_by_user_id === user?.id || hasPermission("warehouse.manage")) && (
+                      <button type="button" className="acta-link is-danger"
+                        onClick={() => { setMotivo(""); setRechazando({ id: o.id, numero: o.number ?? "el borrador", anular: true }); }}>
+                        Anular</button>
                     )}
                   </td>
                 </tr>

@@ -16,7 +16,7 @@ import { approveRelease, listProjectReleases, submitRelease } from "@/features/w
 
 const ESTADO_SALIDA: Record<string, string> = {
   borrador: "Borrador", por_autorizar: "Por autorizar", autorizada: "Autorizada",
-  rechazada: "Rechazada", entregada: "Entregada",
+  rechazada: "Rechazada", entregada: "Entregada", anulada: "Anulada",
 };
 
 // Qué le falta a cada salida: el camino es borrador → por autorizar → autorizada → entregada.
@@ -25,6 +25,7 @@ const SIGUIENTE: Record<string, string> = {
   por_autorizar: "Espera que la autorice otra persona (no quien la pidió).",
   autorizada: "Autorizada: falta que bodega la entregue.",
   rechazada: "Rechazada: revisa el motivo en Salidas y pide otra.",
+  anulada: "Anulada por quien la pidió: no sale material.",
   entregada: "Entregada: el técnico marca «Lo llevo» al cargar la camioneta.",
 };
 
@@ -46,7 +47,11 @@ function cantidadLegible(valor: number | string): string {
  * que bodega entrega entra solo a la lista. Lo que se escribe a mano es lo que
  * no sale de bodega (lo comprado directo para la obra).
  */
-export function MaterialsPanel({ projectId, canManage, closed }: { projectId: string; canManage: boolean; closed: boolean }) {
+export function MaterialsPanel({ projectId, canManage, closed, hasTechnician = true }: {
+  projectId: string; canManage: boolean; closed: boolean;
+  /** Sin técnico y fecha la salida no sabe para quién es: primero «Orden liberada». */
+  hasTechnician?: boolean;
+}) {
   const { user } = useAuth();
   const veSalidas = hasAnyPermission(
     ["warehouse.read", "warehouse.manage", "warehouse.request_release", "warehouse.approve_release", "warehouse.deliver"], user);
@@ -105,12 +110,17 @@ export function MaterialsPanel({ projectId, canManage, closed }: { projectId: st
         <div className="materials-releases">
           <div className="materials-releases-head">
             <h5>Salidas de bodega de esta obra</h5>
-            {puedePedir && !closed && (
+            {puedePedir && !closed && hasTechnician && (
               <Link className="acta-btn is-primary" to={`/warehouse/releases?nueva=1&obra=${projectId}`}>
                 Pedir material a bodega
               </Link>
             )}
           </div>
+          {puedePedir && !closed && !hasTechnician && (
+            <p className="acta-note" role="status">
+              Primero asigna el técnico y la fecha en «Orden liberada»: la salida queda a nombre de quien va a instalar.
+            </p>
+          )}
           {(salidas ?? []).length === 0 ? (
             <p className="acta-empty">Todavía no se ha pedido material a bodega para esta obra.</p>
           ) : (

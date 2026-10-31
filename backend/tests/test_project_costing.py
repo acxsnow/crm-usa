@@ -119,12 +119,12 @@ def _fila(comparacion: dict, categoria: str) -> dict:
 # ---------------------------------------------------------------------------
 
 async def test_el_material_que_entra_por_factura_y_luego_sale_no_se_cuenta_dos_veces(
-        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user, active_technician_user):
     admin = await login(active_admin_user.email)
     autoriza = await login(active_admin_staff_user.email)
     org = seeded_org["org"]
     org_id = org.id
-    _, project = await approved_case_with_project(db, org.id)
+    _, project = await approved_case_with_project(db, org.id, technician_id=active_technician_user.id)
     project_id = project.id
     tubo = await _item(app_client, admin, "Tubo cobre 3/8", costo="5.00")
 
@@ -195,10 +195,10 @@ async def test_los_gastos_aprobados_del_proyecto_suman_al_costo_real(
 
 
 async def test_la_desviacion_por_categoria_sale_del_presupuesto_aprobado(
-        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user, active_technician_user):
     admin = await login(active_admin_user.email)
     autoriza = await login(active_admin_staff_user.email)
-    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    _, project = await approved_case_with_project(db, seeded_org["org"].id, technician_id=active_technician_user.id)
     tubo = await _item(app_client, admin, "Tubo cobre 3/8", costo="5.00")
     await _entrada(app_client, admin, tubo["id"], "100")
 
@@ -277,15 +277,15 @@ async def test_la_obra_con_presupuesto_no_ve_el_presupuesto_de_otra_organizacion
 
 
 async def test_compras_sugeridas_descuentan_lo_que_ya_salio_para_la_obra(
-        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user):
+        app_client, login, db, seeded_org, active_admin_user, active_admin_staff_user, active_technician_user):
     """Plan bodega-cierre, fase 4: una obra a medio surtir solo pide lo que le
     falta. Antes se contaba su presupuesto completo y se sugería comprar de más."""
     admin = await login(active_admin_user.email)
     supervisor = await login(active_admin_staff_user.email)
     org = seeded_org["org"]
-    _, a_medias = await approved_case_with_project(db, org.id)
-    _, sin_empezar = await approved_case_with_project(db, org.id)
-    _, de_mas = await approved_case_with_project(db, org.id)
+    _, a_medias = await approved_case_with_project(db, org.id, technician_id=active_technician_user.id)
+    _, sin_empezar = await approved_case_with_project(db, org.id, technician_id=active_technician_user.id)
+    _, de_mas = await approved_case_with_project(db, org.id, technician_id=active_technician_user.id)
     tubo = await _item(app_client, admin, "Tubo cobre 3/8", costo="5.00")
     await _entrada(app_client, admin, tubo["id"], "40")
 

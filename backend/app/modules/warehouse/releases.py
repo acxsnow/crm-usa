@@ -209,6 +209,12 @@ async def create_order(db: AsyncSession, *, organization_id, user, data: dict) -
 
         tecnico = (await db.execute(select(Project.primary_technician_user_id).where(
             Project.id == data["project_id"], Project.organization_id == organization_id))).scalar_one_or_none()
+        # Sin técnico la orden quedaba a nombre de quien la pidió en la oficina y
+        # no seguía al técnico que se asignaba después (QA del 31 oct): primero
+        # se libera la orden con técnico y fecha, y luego se pide el material.
+        if not tecnico:
+            raise ConflictError("Primero asigna el técnico y la fecha en «Orden liberada»; luego pide el material.",
+                                code="project_without_technician")
     order = WarehouseReleaseOrder(
         organization_id=organization_id, status=ReleaseStatus.BORRADOR, location_id=ubicacion.id,
         project_id=data.get("project_id"), technician_user_id=tecnico or user.id,
@@ -332,6 +338,65 @@ async def reject_order(db: AsyncSession, *, organization_id, user, order_id, rea
     await db.commit()
     await db.refresh(order)
     return order
+
+
+# Lo que todavía no salió de bodega: se puede anular y sigue al técnico de la obra.
+OPEN_STATUSES = (ReleaseStatus.BORRADOR, ReleaseStatus.POR_AUTORIZAR, ReleaseStatus.AUTORIZADA)
+
+
+async def cancel_order(db: AsyncSession, *, organization_id, user, order_id, reason: str) -> WarehouseReleaseOrder:
+    """Anula una salida que se pidió por error, con motivo, mientras no se haya
+    entregado. La anula quien la pidió o bodega (`warehouse.manage`); como nada
+    salió de bodega, no hay movimientos que deshacer. Antes solo se podía pedir
+    a otra persona que la rechazara (QA del 31 oct)."""
+    motivo = (reason or "").strip()
+    if not motivo:
+        raise InvalidInputError("Para anular hay que decir por qué.", code="cancel_reason_required")
+    order = await get_order(db, organization_id, order_id, for_update=True)
+    _check_owner(order, user)
+    if order.status not in OPEN_STATUSES:
+        raise InvalidInputError("Solo se anula una salida que todavía no se ha entregado.",
+                                code="release_not_cancellable")
+    antes = order.status
+    order.status = ReleaseStatus.ANULADA
+    order.cancelled_by_user_id = user.id
+    order.cancelled_at = _now()
+    order.cancel_reason = motivo
+    await db.flush()
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="warehouse.release_cancelled", entity_type="warehouse_release_order",
+                             entity_id=str(order.id), before_data={"status": antes},
+                             after_data={"number": order.number, "motivo": motivo})
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+async def follow_project_technician(db: AsyncSession, *, organization_id, user, project_id, technician_id) -> int:
+    """Al cambiar el técnico de una obra, sus salidas que no se han entregado
+    pasan al técnico nuevo: es quien va a llevar el material (QA del 31 oct).
+    Las entregadas no se tocan: ese material ya lo tiene alguien. Si el técnico
+    nuevo fue quien autorizó una salida, vuelve a «Por autorizar» para que la
+    autorice otra persona. No hace commit: va en la misma transacción del cambio."""
+    ordenes = (await db.execute(select(WarehouseReleaseOrder).where(
+        WarehouseReleaseOrder.organization_id == organization_id,
+        WarehouseReleaseOrder.project_id == project_id,
+        WarehouseReleaseOrder.status.in_(OPEN_STATUSES),
+        WarehouseReleaseOrder.technician_user_id.is_distinct_from(technician_id)))).scalars().all()
+    for order in ordenes:
+        antes = {"technician_user_id": str(order.technician_user_id) if order.technician_user_id else None,
+                 "status": order.status}
+        order.technician_user_id = technician_id
+        if order.status == ReleaseStatus.AUTORIZADA and order.authorized_by_user_id == technician_id:
+            order.status = ReleaseStatus.POR_AUTORIZAR
+            order.authorized_by_user_id = None
+            order.authorized_at = None
+        await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                                 action="warehouse.release_reassigned", entity_type="warehouse_release_order",
+                                 entity_id=str(order.id), before_data=antes,
+                                 after_data={"technician_user_id": str(technician_id), "status": order.status})
+    await db.flush()
+    return len(ordenes)
 
 
 async def deliver_order(db: AsyncSession, *, organization_id, user, order_id, note: str | None = None,
@@ -565,6 +630,9 @@ def order_out(order: WarehouseReleaseOrder, lineas: list[WarehouseReleaseLine], 
         "authorized_by_user_id": str(order.authorized_by_user_id) if order.authorized_by_user_id else None,
         "authorized_at": order.authorized_at.isoformat() if order.authorized_at else None,
         "reject_reason": order.reject_reason,
+        "cancelled_by_user_id": str(order.cancelled_by_user_id) if order.cancelled_by_user_id else None,
+        "cancelled_at": order.cancelled_at.isoformat() if order.cancelled_at else None,
+        "cancel_reason": order.cancel_reason,
         "delivered_by_user_id": str(order.delivered_by_user_id) if order.delivered_by_user_id else None,
         "delivered_at": order.delivered_at.isoformat() if order.delivered_at else None,
         "shortage_note": order.shortage_note,
