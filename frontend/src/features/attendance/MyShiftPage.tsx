@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PaginatedTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { clockTime, getClockOutSummary, hm, listMyEntries, listMyShifts, SHIFT_STATUS_LABELS,
-  type ClockOutSummary } from "./api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
+import { clockTime, declareOvertime, deleteOvertime, getClockOutSummary, hm, listMyEntries, listMyShifts, OVERTIME_STATUS,
+  SHIFT_STATUS_LABELS, type ClockOutSummary, type OvertimeRow } from "./api";
 import { NoveltyForm } from "./NoveltyForm";
 import { ME_KEY, useMark, useMyAttendance, usePendingMarks } from "./useAttendance";
 import "./attendance.css";
@@ -17,6 +19,48 @@ function isoDia(d: Date): string {
  * novedades y FINALIZAR TURNO con su resumen. Pensada para el celular en el
  * parque, con botones grandes.
  */
+/** Las horas extras se declaran; el jefe define cuánto valen (Don Aldo). */
+function MisExtras() {
+  const qc = useQueryClient();
+  const [dia, setDia] = useState(isoDia(new Date()));
+  const [horas, setHoras] = useState("");
+  const [nota, setNota] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const lista = usePaginatedQuery<OvertimeRow>({ key: ["my-overtime"], path: "/attendance/me/overtime", pageSize: 5 });
+  const mensaje = (e: unknown) => (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "No se pudo guardar.";
+  const listo = () => { setError(null); return qc.invalidateQueries({ queryKey: ["my-overtime"] }); };
+  const declarar = useMutation({
+    mutationFn: () => declareOvertime({ work_date: dia, hours: horas, notes: nota.trim() || undefined }),
+    onSuccess: () => { setHoras(""); setNota(""); return listo(); },
+    onError: (e) => setError(mensaje(e)),
+  });
+  const borrar = useMutation({ mutationFn: deleteOvertime, onSuccess: listo, onError: (e) => setError(mensaje(e)) });
+  return (
+    <section className="att-card" aria-labelledby="att-extras-mias">
+      <h2 id="att-extras-mias">Horas extras</h2>
+      <p className="att-muted">Declara las horas de más que trabajaste. Tu jefe define cuánto valen.</p>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <form className="att-form" onSubmit={(e) => { e.preventDefault(); declarar.mutate(); }}>
+        <div className="att-form-row">
+          <label>Día<input type="date" required max={isoDia(new Date())} value={dia} onChange={(e) => setDia(e.target.value)} /></label>
+          <label>Horas<input type="number" required min="0.25" max="24" step="0.25" inputMode="decimal" value={horas} onChange={(e) => setHoras(e.target.value)} /></label>
+        </div>
+        <label>Nota (opcional)<input maxLength={500} value={nota} onChange={(e) => setNota(e.target.value)} /></label>
+        <div className="att-actions"><button type="submit" className="att-btn is-primary" disabled={declarar.isPending}>Declarar</button></div>
+      </form>
+      <PaginatedTable list={lista} getRowKey={(r) => r.id} className="att-table" emptyMessage="Todavía no has declarado horas extras."
+        columns={[
+          { key: "dia", header: "Día", render: (r) => r.work_date },
+          { key: "horas", header: "Horas", render: (r) => r.hours },
+          { key: "estado", header: "Estado", render: (r) => OVERTIME_STATUS[r.status] },
+          { key: "valor", header: "Valor", render: (r) => r.value_amount ? `$${r.value_amount}` : r.review_notes ?? "—" },
+          { key: "accion", header: "", render: (r) => r.status === "pending"
+            ? <button type="button" className="att-btn is-link" onClick={() => borrar.mutate(r.id)}>Borrar</button> : null },
+        ]} />
+    </section>
+  );
+}
+
 export function MyShiftPage() {
   const qc = useQueryClient();
   const { data: me, isLoading } = useMyAttendance();
@@ -168,6 +212,8 @@ export function MyShiftPage() {
           : <p className="att-muted">¿Llegaste tarde, olvidaste marcar o no tuviste señal? Regístralo aquí y
             Administración lo revisa.</p>}
       </section>
+
+      <MisExtras />
 
       <section className="att-card" aria-labelledby="att-proximos">
         <h2 id="att-proximos">Próximos turnos</h2>

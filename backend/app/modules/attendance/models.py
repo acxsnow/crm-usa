@@ -20,6 +20,7 @@ organización (`organizations.timezone`, `field_ops/clock.py`).
 """
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -30,6 +31,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -58,7 +60,8 @@ class AttendanceSettings(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     tracking_interval_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     location_retention_days: Mapped[int] = mapped_column(Integer, default=90, nullable=False)
     # Bloquear el trabajo de campo (evidencias, checklist, diario…) hasta marcar.
-    require_clock_in_for_field_work: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Encendido por decisión de Don Aldo (24 oct).
+    require_clock_in_for_field_work: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     # ¿La pausa se paga? Por defecto no: resta de las horas efectivas.
     paid_pauses: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -243,3 +246,41 @@ class PayrollPeriodEvent(UUIDPKMixin, OrgScopedMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
+
+
+class EmployeePaySetting(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Cómo se le paga a cada persona (respuesta de Don Aldo): por día o por
+    hora el almuerzo va incluido (la pausa no resta); por trabajo, no. Sin fila
+    aplica `AttendanceSettings.paid_pauses`."""
+
+    __tablename__ = "employee_pay_settings"
+    __table_args__ = (UniqueConstraint("organization_id", "user_id", name="uq_employee_pay_user"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # day | hour | job
+    pay_type: Mapped[str] = mapped_column(String(10), nullable=False)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
+class OvertimeDeclaration(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Horas extras declaradas (respuesta de Don Aldo): la persona declara las
+    horas de un día y el jefe define cuánto valen y las aprueba. Una por día."""
+
+    __tablename__ = "overtime_declarations"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "user_id", "work_date", name="uq_overtime_user_day"),
+        Index("ix_overtime_org_date", "organization_id", "work_date"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    work_date: Mapped[date] = mapped_column(Date, nullable=False)
+    hours: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    notes: Mapped[str | None] = mapped_column(String(500))
+    # pending | approved | rejected
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # Lo que define el jefe: el valor total de esas horas, en USD.
+    value_amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    review_notes: Mapped[str | None] = mapped_column(String(500))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

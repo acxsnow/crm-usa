@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ageLabel, clockTime, getDashboard, getLive, hm, hmCorto, listPeople, SHIFT_STATUS_LABELS,
   type Dashboard } from "./api";
+import { useAuth } from "@/features/auth/AuthContext";
 import { useMyAttendance } from "./useAttendance";
 import { PaginatedTable } from "@/components/DataTable";
 import { useClientPagination } from "@/lib/useClientPagination";
@@ -106,6 +107,7 @@ function PunctualityLine({ points }: { points: Dashboard["punctuality"] }) {
  * persona sin señal no aparece como ausente.
  */
 export function AttendanceDashboardPage() {
+  const { hasPermission } = useAuth();
   const [tipo, setTipo] = useState("semana");
   const [persona, setPersona] = useState("");
   const [desde, hasta] = rango(tipo);
@@ -163,7 +165,7 @@ export function AttendanceDashboardPage() {
       <section className="att-card" aria-labelledby="att-vivo">
         <div className="att-card-head">
           <h2 id="att-vivo">Hoy, en vivo</h2>
-          <Link to="/operations-map" className="att-btn">Ver en el mapa</Link>
+          {hasPermission("locations.view") && <Link to="/operations-map" className="att-btn">Ver en el mapa</Link>}
         </div>
         <PaginatedTable list={enVivo} getRowKey={(f) => f.user_id} className="att-table" emptyMessage="Nadie tiene turno hoy."
           columns={[

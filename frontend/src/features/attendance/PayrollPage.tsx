@@ -4,7 +4,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { askText, confirmAction } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
 import { toast } from "@/lib/toast";
-import { createPeriod, downloadPayroll, getPayroll, hm, listPeriods, setPeriodStatus } from "./api";
+import { createPeriod, downloadPayroll, getPayroll, hm, listPeriods, PAY_TYPE_LABELS, setPayType, setPeriodStatus,
+  type PaySetting, type PayType } from "./api";
+import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import { PaginatedTable } from "@/components/DataTable";
 import { useClientPagination } from "@/lib/useClientPagination";
 import "./attendance.css";
@@ -14,6 +16,37 @@ function iso(d: Date): string {
 }
 function apiError(e: unknown): string {
   return (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "No se pudo guardar.";
+}
+
+const usd = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+
+/** Por día o por hora el almuerzo va incluido; por trabajo, no (Don Aldo). */
+function FormaDePago() {
+  const qc = useQueryClient();
+  const lista = usePaginatedQuery<PaySetting>({ key: ["pay-settings"], path: "/attendance/pay-settings", pageSize: 20 });
+  const guardar = useMutation({
+    mutationFn: (v: { id: string; tipo: PayType | null }) => setPayType(v.id, v.tipo),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["pay-settings"] }); qc.invalidateQueries({ queryKey: ["payroll"] }); },
+    onError: (e) => toast(apiError(e)),
+  });
+  return (
+    <section className="att-card" aria-labelledby="att-forma-pago">
+      <h2 id="att-forma-pago">Forma de pago</h2>
+      <p className="att-muted">Define si el almuerzo va incluido: por día o por hora la pausa no resta horas; por trabajo, sí resta. Sin elegir, aplica la regla general de «Reglas de asistencia».</p>
+      <PaginatedTable list={lista} getRowKey={(r) => r.user_id} className="att-table" emptyMessage="No hay personas activas."
+        columns={[
+          { key: "persona", header: "Persona", render: (r) => <strong>{r.name}</strong> },
+          { key: "forma", header: "Forma de pago", render: (r) => (
+            <select aria-label={`Forma de pago de ${r.name}`} value={r.pay_type ?? ""} disabled={guardar.isPending}
+              onChange={(e) => guardar.mutate({ id: r.user_id, tipo: (e.target.value || null) as PayType | null })}>
+              <option value="">Regla general</option>
+              {(Object.keys(PAY_TYPE_LABELS) as PayType[]).map((k) => <option key={k} value={k}>{PAY_TYPE_LABELS[k]}</option>)}
+            </select>
+          ) },
+          { key: "almuerzo", header: "Almuerzo", render: (r) => r.lunch_included === null ? "Según la regla general" : r.lunch_included ? "Incluido" : "No incluido" },
+        ]} />
+    </section>
+  );
 }
 
 /**
@@ -81,9 +114,11 @@ export function PayrollPage() {
             { key: "programadas", header: "Programadas", render: (r) => hm(r.scheduled_minutes) },
             { key: "registradas", header: "Registradas", render: (r) => hm(r.recorded_minutes) },
             { key: "pausas", header: "Pausas", render: (r) => hm(r.pause_minutes) },
-            { key: "extras_dia", header: "Extras día", render: (r) => hm(r.daily_overtime_minutes) },
-            { key: "extras_semana", header: "Extras semana", render: (r) => hm(r.weekly_overtime_minutes) },
             { key: "aprobadas", header: "Aprobadas", render: (r) => <strong>{hm(r.approved_minutes)}</strong> },
+            { key: "extras_declaradas", header: "Extras declaradas", render: (r) => `${r.declared_overtime_hours} h` },
+            { key: "extras_aprobadas", header: "Extras aprobadas", render: (r) => `${r.approved_overtime_hours} h` },
+            { key: "valor_extras", header: "Valor de extras", render: (r) => usd(r.overtime_value) },
+            { key: "extras_marcas", header: "Según marcas", render: (r) => hm(r.marked_overtime_minutes) },
             { key: "ausencias", header: "Ausencias", render: (r) => r.absences },
             { key: "tarde", header: "Tarde", render: (r) => r.late_arrivals },
             { key: "antes", header: "Salió antes", render: (r) => r.early_departures },
@@ -93,11 +128,15 @@ export function PayrollPage() {
             { key: "sin_aprobar", header: "Sin aprobar", render: (r) => <span className={r.unapproved_entries ? "att-warn" : ""}>{r.unapproved_entries}</span> },
           ]}
           footer={["Total", hm(total("scheduled_minutes")), hm(total("recorded_minutes")), hm(total("pause_minutes")),
-            hm(total("daily_overtime_minutes")), hm(total("weekly_overtime_minutes")), hm(total("approved_minutes")),
+            hm(total("approved_minutes")), `${total("declared_overtime_hours")} h`, `${total("approved_overtime_hours")} h`,
+            usd(total("overtime_value")), hm(total("marked_overtime_minutes")),
             total("absences"), total("late_arrivals"), total("early_departures"), total("corrections"), total("novelties"),
             total("open_entries"), total("unapproved_entries")]} />
-        <p className="att-muted">«Ausencias» son turnos vencidos sin marcación: confírmalas con la persona antes de descontar.</p>
+        <p className="att-muted">«Ausencias» son turnos vencidos sin marcación: confírmalas con la persona antes de descontar.
+          Las extras se declaran y su valor lo define el jefe en «Novedades y horas»; «Según marcas» es solo una referencia para revisarlas y no se paga.</p>
       </section>
+
+      {hasPermission("attendance.review") && <FormaDePago />}
 
       <section className="att-card" aria-labelledby="att-periodos">
         <h2 id="att-periodos">Períodos</h2>

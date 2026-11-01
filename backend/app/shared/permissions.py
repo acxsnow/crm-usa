@@ -528,7 +528,6 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "notifications.read_own",
         "attendance.clock",
         "attendance.dashboard",
-        "locations.view",
         "profile.manage",
     ],
 }

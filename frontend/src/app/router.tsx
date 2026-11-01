@@ -432,7 +432,7 @@ export const router = createBrowserRouter([
       {
         path: "operations-map",
         element: (
-          <RequireAccess permission={["locations.view", "projects.read_all", "projects.read_assigned"]} moduleLabel="el mapa operativo">
+          <RequireAccess permission={["locations.view", "projects.read_assigned"]} moduleLabel="el mapa operativo">
             <OperationsMapPage />
           </RequireAccess>
         ),

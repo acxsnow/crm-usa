@@ -49,8 +49,7 @@ MATRIZ = [
     ("PUT", "/attendance/settings", {"active_admin_user", "active_admin_staff_user"}),
     ("POST", "/attendance/payroll/periods", {"active_admin_user", "active_accounting_user"}),
     ("GET", "/operations-map/people",
-     {"active_admin_user", "active_admin_staff_user", "active_accounting_user", "active_management_user",
-      "active_technician_user"}),
+     {"active_admin_user", "active_admin_staff_user", "active_technician_user"}),
 ]
 
 
@@ -117,10 +116,10 @@ async def test_la_ubicacion_ajena_solo_con_locations_view(app_client, login, db,
     # Contabilidad ve el tablero, pero sin ubicación (no tiene locations.view).
     fila = (await app_client.get(f"{API}/attendance/live", headers=conta)).json()[0]
     assert fila["entry_status"] == "open" and fila["location"] is None
-    assert (await app_client.get(f"{API}/operations-map/people", headers=conta)).json() == []
-    # Gerencia sí la ve.
-    gente = (await app_client.get(f"{API}/operations-map/people", headers=gerencia)).json()
-    assert [g["user_id"] for g in gente] == [str(active_technician_user.id)] and gente[0]["shift_open"]
+    assert (await app_client.get(f"{API}/operations-map/people", headers=conta)).status_code == 403
+    # Gerencia tampoco, por decisión de Don Aldo: el mapa es de Administrador y Administración.
+    assert (await app_client.get(f"{API}/operations-map/people", headers=gerencia)).status_code == 403
+    assert (await app_client.get(f"{API}/attendance/live", headers=gerencia)).json()[0]["location"] is None
     # El técnico solo se ve a sí mismo, y su marcación sí trae su ubicación.
     yo = (await app_client.get(f"{API}/operations-map/people", headers=tec)).json()
     assert [g["user_id"] for g in yo] == [str(active_technician_user.id)]
