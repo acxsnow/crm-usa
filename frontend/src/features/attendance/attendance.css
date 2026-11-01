@@ -136,3 +136,6 @@
 .map-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .map-popup { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; }
 .map-popup a { margin-top: 4px; font-weight: 600; }
+.att-gate-help { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--red); border-radius: 10px; background: var(--red-wash); font-size: 0.8125rem; }
+.att-gate-help p { margin: 0; }
+.att-gate-help ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }

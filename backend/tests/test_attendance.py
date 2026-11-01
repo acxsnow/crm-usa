@@ -75,7 +75,8 @@ async def test_la_ventana_obligatoria_aparece_con_turno_pendiente_y_se_va_al_mar
         app_client, login, reloj, phoenix, active_admin_staff_user, active_technician_user):
     oficina, tec = await login(active_admin_staff_user), await login(active_technician_user)
     sin_turno = (await app_client.get(f"{API}/me", headers=tec)).json()
-    assert sin_turno["must_clock_in"] is False and sin_turno["shift"] is None
+    # El técnico marca aunque no esté en la malla.
+    assert sin_turno["must_clock_in"] is True and sin_turno["shift"] is None
 
     malla = await _malla(app_client, oficina, active_technician_user)
     assert len(malla["created"]) == 1 and malla["created"][0]["scheduled_minutes"] == 480
@@ -183,10 +184,14 @@ async def test_ubicacion_invalida_se_rechaza_y_sin_permiso_no_se_inventa(
     tec = await login(active_technician_user)
     r = await _evento(app_client, tec, "clock_in", latitude=200, longitude=5, location_status="ok")
     assert (r.status_code, r.json()["code"]) == (400, "invalid_location")
+    # Negar el permiso no deja iniciar turno; el GPS sin señal sí, sin coordenadas.
     r = await _evento(app_client, tec, "clock_in", client_event_id="deny-0001", location_status="denied")
+    assert (r.status_code, r.json()["code"]) == (409, "location_required")
+    assert (await app_client.get(f"{API}/me", headers=tec)).json()["entry"] is None
+    r = await _evento(app_client, tec, "clock_in", client_event_id="gps-0001", location_status="timeout", latitude=33, longitude=-112)
     assert r.status_code == 201
     ev = (await db.execute(select(AttendanceEvent))).scalar_one()
-    assert ev.location_status == "denied" and ev.latitude is None and ev.longitude is None
+    assert ev.location_status == "timeout" and ev.latitude is None and ev.longitude is None
 
 
 async def test_turno_nocturno_y_malla_por_grupo_con_choques(
@@ -453,3 +458,30 @@ async def test_nadie_aprueba_sus_extras_y_otra_organizacion_no_las_ve(app_client
                                  headers=otro)).status_code == 404
     propia = await app_client.put(f"{API}/pay-settings/{active_admin_user.id}", json={"pay_type": "day"}, headers=jefe)
     assert (propia.status_code, propia.json()["code"]) == (403, "self_review_forbidden")
+
+
+async def test_sin_malla_marcan_tecnicos_y_vendedores_pero_no_la_oficina(
+        app_client, login, reloj, phoenix, active_admin_user, active_technician_user, active_salesperson_user,
+        active_accounting_user, active_admin_staff_user):
+    jefe, tec, vendedor = (await login(active_admin_user), await login(active_technician_user),
+                           await login(active_salesperson_user))
+    me = lambda h: app_client.get(f"{API}/me", headers=h)  # noqa: E731
+    assert (await me(tec)).json()["must_clock_in"] is True
+    assert (await me(vendedor)).json()["must_clock_in"] is True
+    assert (await me(await login(active_accounting_user))).json()["must_clock_in"] is False
+    assert (await me(await login(active_admin_staff_user))).json()["must_clock_in"] is False
+    assert (await me(jefe)).json()["must_clock_in"] is False
+    # Inicia sin turno de la malla, y al finalizar no se le vuelve a pedir ese día.
+    reloj.ir(hours=0)
+    r = await _evento(app_client, tec, "clock_in", client_event_id="sin-malla-1", **GPS)
+    assert r.status_code == 201, r.text
+    assert (await me(tec)).json()["must_clock_in"] is False
+    reloj.ir(hours=4)
+    await _evento(app_client, tec, "clock_out", client_event_id="sin-malla-2", **GPS)
+    assert (await me(tec)).json()["must_clock_in"] is False
+    # Al día siguiente, otra vez.
+    reloj.ir(hours=26)
+    assert (await me(tec)).json()["must_clock_in"] is True
+    # Apagar la marcación obligatoria quita la exigencia para quien no está en la malla.
+    await app_client.put(f"{API}/settings", json={"require_clock_in_for_field_work": False}, headers=jefe)
+    assert (await me(vendedor)).json()["must_clock_in"] is False

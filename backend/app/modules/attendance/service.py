@@ -46,6 +46,7 @@ NEEDS_OPEN_ENTRY = {"clock_out", "pause_start", "pause_end", "en_route", "arrive
 # Los que apuntan a una obra.
 PROJECT_EVENTS = {"en_route", "arrived", "left_site"}
 LOCATION_STATUSES = {"ok", "denied", "unavailable", "timeout", "not_requested"}
+FIELD_ROLES = {"field_technician", "salesperson"}
 
 
 def now() -> datetime:
@@ -238,6 +239,11 @@ async def record_event(db: AsyncSession, *, organization_id: uuid.UUID, user: Us
         recibido = now()
         ocurrio, sin_senal = _resolve_time(data.get("device_at"), recibido)
         lat, lng, acc, estado = _location(data)
+        # Negar el permiso no deja iniciar turno. Sin señal o sin GPS sí: en los parques
+        # no es culpa de la persona, y queda marcado «sin ubicación» (decisión del 1 nov).
+        if tipo == "clock_in" and estado == "denied":
+            raise ConflictError("Activa la ubicación del navegador para iniciar turno, o registra una novedad.",
+                                code="location_required")
         project_id = await _check_project(db, organization_id, user, data.get("project_id")) \
             if tipo in PROJECT_EVENTS or data.get("project_id") else None
         if tipo in PROJECT_EVENTS and project_id is None:
@@ -423,11 +429,27 @@ async def me(db: AsyncSession, *, organization_id: uuid.UUID, user: User) -> dic
         "shift_project": proyecto,
         "entry": entry_out(entry, now=ahora, paid_pauses=await pauses_paid_for(db, s, entry.user_id)) if entry else None,
         # La ventana obligatoria: hay un turno para marcar y no hay marcación.
-        "must_clock_in": entry is None and turno is not None,
+        # También sin malla, para quien trabaja en campo (ver `_must_clock_without_shift`).
+        "must_clock_in": entry is None and (turno is not None
+                                            or await _must_clock_without_shift(db, s, user, ahora)),
         "tracking_interval_minutes": s.tracking_interval_minutes,
         "location_retention_days": s.location_retention_days,
         "projects_today": await _projects_for(db, organization_id, user),
     }
+
+
+async def _must_clock_without_shift(db: AsyncSession, s: AttendanceSettings, user: User, ahora: datetime) -> bool:
+    """Técnicos y vendedores inician turno para usar la app aunque no los hayan
+    programado en la malla, una vez al día (decisión de Mateo, 1 nov). La oficina
+    no: Contabilidad o Administración no marcan para abrir la app. El interruptor
+    es la marcación obligatoria de «Reglas de asistencia»."""
+    if not s.require_clock_in_for_field_work or not FIELD_ROLES & {ur.role.code for ur in user.roles}:
+        return False
+    hoy = clock.local_date(ahora, await clock.org_zone(db, s.organization_id))
+    ya_marco = (await db.execute(select(TimeEntry.id).where(
+        TimeEntry.organization_id == s.organization_id, TimeEntry.user_id == user.id,
+        TimeEntry.work_date == hoy).limit(1))).first()
+    return ya_marco is None
 
 
 async def _projects_for(db: AsyncSession, organization_id: uuid.UUID, user: User) -> list[dict]:
