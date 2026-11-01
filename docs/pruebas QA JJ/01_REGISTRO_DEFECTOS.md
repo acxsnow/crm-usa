@@ -26,7 +26,7 @@ Cada defecto con su ID `D-###`, en orden de aparición. Un defecto solo pasa a *
 | D-016 | Factura, pago y gasto con datos inválidos responden 500 | Finanzas | P2 | Cerrado (2026-10-25) | FIN-002 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-017 | Importar dos veces el mismo extracto duplica los movimientos | Finanzas | P2 | Cerrado (2026-10-25) | FIN-003 | José Javier Miranda (`finance`, paquete de Mateo: avisarle) | 2026-10-25 |
 | D-018 | La salida de bodega no guarda el costo: cambia el costo de obras cerradas | Bodega | P2 | Cerrado (2026-10-25) | BOD-007 | José Javier Miranda (`warehouse`, paquete de Mateo: avisarle) | 2026-10-25 |
-| D-019 | La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe | Turnos y nómina | P2 | Abierto (decisión pendiente) | TUR-005 | José Javier Miranda y Mateo Mazo (`attendance`) | 2026-10-25 |
+| D-019 | La nómina no aplica las reglas de Don Aldo: almuerzo según la forma de pago y extras declaradas con el valor del jefe | Turnos y nómina | P2 | Corregido en código (1 nov 2026, c8bceff); falta repetir TUR-005 | TUR-005 | José Javier Miranda y Mateo Mazo (`attendance`) | 2026-10-25 |
 | D-020 | La auditoría no muestra el antes y el después | Seguridad / Auditoría | P2 | Cerrado (2026-10-25) | SEC-010 | José Javier Miranda (`organizations`) | 2026-10-25 |
 | D-021 | Pantallas de oficina se desbordan a lo ancho en el celular (390 px) | Interfaz | P3 | Cerrado (2026-10-25) | FIN-005 (barrido a 390 px) | José Javier Miranda (`styles/sistema.css`) | 2026-10-25 |
 
