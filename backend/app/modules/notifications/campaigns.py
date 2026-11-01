@@ -41,6 +41,7 @@ logger = structlog.get_logger(__name__)
 
 CHANNELS = ("sms", "email", "both")
 OPT_OUT_FOOTER = "Responde STOP para no recibir más."
+_OPT_OUT_PHRASE = re.compile(r"\b(responde|responder|env[ií]a|escribe|reply|text)\s+stop\b", re.I)
 # Solo palabras inequívocas: un "sí" puede ser respuesta a otra cosa.
 START_WORDS = {"START", "UNSTOP"}
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "ALTO", "PARAR", "BAJA", "CANCELAR"}
@@ -80,8 +81,11 @@ def next_allowed(moment: datetime, zone: str) -> datetime:
 
 
 def with_footer(texto: str) -> str:
+    """Agrega cómo darse de baja, salvo que el mensaje ya lo diga con una frase
+    de baja. Una palabra suelta no cuenta: un nombre o una obra con «stop»
+    (Stopford, «Stop leak») dejaría el SMS sin el aviso que exige la ley."""
     texto = (texto or "").strip()
-    return texto if "STOP" in texto.upper() else f"{texto} {OPT_OUT_FOOTER}"
+    return texto if _OPT_OUT_PHRASE.search(texto) else f"{texto} {OPT_OUT_FOOTER}"
 
 
 def channels_of(campaign_channel: str) -> list[str]:

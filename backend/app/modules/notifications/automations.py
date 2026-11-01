@@ -15,6 +15,8 @@ no les escribe de golpe a todos los clientes viejos.
 """
 from datetime import datetime, timedelta, timezone
 
+import structlog
+from sqlalchemy import delete as sql_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,8 @@ from app.modules.notifications.models import (
 from app.modules.notifications.service import render
 from app.shared.audit import record_audit_event
 from app.shared.errors import InvalidInputError, NotFoundError
+
+logger = structlog.get_logger(__name__)
 
 TRIGGERS = {
     "job_completed": "Al cerrar la obra",
@@ -73,6 +77,33 @@ def _validate(data: dict) -> dict:
             "message": mensaje, "active": data.get("active") is not False}
 
 
+async def _pending(db: AsyncSession, a: CampaignAutomation) -> list[CampaignRecipient]:
+    return list((await db.execute(select(CampaignRecipient).where(
+        CampaignRecipient.campaign_id == a.campaign_id, CampaignRecipient.status == "pending"))).scalars().all())
+
+
+async def _skip_pending(db: AsyncSession, a: CampaignAutomation, motivo: str) -> None:
+    """Pausar o eliminar también detiene lo que ya estaba en cola."""
+    for r in await _pending(db, a):
+        r.status, r.last_error, r.next_attempt_at = "skipped", motivo, None
+
+
+async def _requeue_pending(db: AsyncSession, a: CampaignAutomation) -> None:
+    """Con el texto editado, lo pendiente no sale con el texto viejo: se saca de
+    la cola y sus obras vuelven a procesarse en la próxima corrida."""
+    from app.modules.field_ops.models import Project
+
+    pendientes = await _pending(db, a)
+    clientes = {r.customer_id for r in pendientes if r.customer_id}
+    for r in pendientes:
+        await db.delete(r)
+    await db.flush()
+    if clientes:
+        await db.execute(sql_delete(CampaignAutomationSend).where(
+            CampaignAutomationSend.automation_id == a.id, CampaignAutomationSend.result == "queued",
+            CampaignAutomationSend.project_id.in_(select(Project.id).where(Project.customer_id.in_(clientes)))))
+
+
 async def get(db: AsyncSession, organization_id, automation_id) -> CampaignAutomation:
     a = await db.get(CampaignAutomation, automation_id)
     if a is None or a.organization_id != organization_id:
@@ -102,6 +133,7 @@ async def update(db: AsyncSession, *, organization_id, user, automation_id, data
     a = await get(db, organization_id, automation_id)
     datos = _validate({**out(a), **{k: v for k, v in data.items() if v is not None}})
     antes = a.active
+    texto_cambio = (datos["message"], datos["subject"], datos["channel"]) != (a.message, a.subject, a.channel)
     for k, v in datos.items():
         setattr(a, k, v)
     if a.active and not antes:
@@ -109,6 +141,10 @@ async def update(db: AsyncSession, *, organization_id, user, automation_id, data
         a.starts_on = _now()
     contenedora = await db.get(Campaign, a.campaign_id)
     contenedora.channel, contenedora.subject, contenedora.message = a.channel, a.subject, a.message
+    if antes and not a.active:
+        await _skip_pending(db, a, "Automatización pausada")
+    elif texto_cambio:
+        await _requeue_pending(db, a)
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="campaigns.automation_updated", entity_type="campaign_automation",
                              entity_id=str(a.id), after_data={"active": a.active, "delay_days": a.delay_days})
@@ -119,9 +155,7 @@ async def update(db: AsyncSession, *, organization_id, user, automation_id, data
 async def delete(db: AsyncSession, *, organization_id, user, automation_id) -> None:
     a = await get(db, organization_id, automation_id)
     contenedora = await db.get(Campaign, a.campaign_id)
-    for r in (await db.execute(select(CampaignRecipient).where(
-            CampaignRecipient.campaign_id == a.campaign_id, CampaignRecipient.status == "pending"))).scalars().all():
-        r.status, r.last_error, r.next_attempt_at = "skipped", "Automatización eliminada", None
+    await _skip_pending(db, a, "Automatización eliminada")
     contenedora.status, contenedora.finished_at = "cancelled", _now()
     await db.delete(a)
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
@@ -153,51 +187,69 @@ async def _due_projects(db: AsyncSession, a: CampaignAutomation, hoy) -> list:
 
 async def run_due(db: AsyncSession) -> int:
     """Pone en la cola los mensajes que ya tocan. La corre Celery cada hora;
-    `send_due` de campañas los manda respetando permisos y horario."""
-    from app.modules.crm.models import Customer
+    `send_due` de campañas los manda respetando permisos y horario. Cada
+    automatización va en su propia transacción: si una falla se registra y las
+    de las demás organizaciones siguen."""
     from app.modules.field_ops.clock import org_today
 
+    ids = [(i, org) for i, org in (await db.execute(select(CampaignAutomation.id, CampaignAutomation.organization_id)
+                                                    .where(CampaignAutomation.active.is_(True)))).all()]
     encoladas = 0
-    for a in (await db.execute(select(CampaignAutomation).where(CampaignAutomation.active.is_(True)))).scalars().all():
-        hoy = await org_today(db, a.organization_id)
-        obras = await _due_projects(db, a, hoy)
-        if not obras:
-            continue
-        sms, mails = await camp._sms_consents(db, a.organization_id), await camp._email_consents(db, a.organization_id)
-        for p in obras:
-            cliente = await db.get(Customer, p.customer_id)
-            tel = camp.valid_phone(cliente.main_phone) if cliente else None
-            mail = camp.normalize_email(cliente.email) if cliente else None
-            ctx = {"nombre": (cliente.legal_name or "").split(" ")[0] if cliente else "", "obra": p.title,
-                   "fecha_cierre": p.completed_date.strftime("%m/%d/%Y")}
-            zona = camp.zone_for_state(p.address_state)
-            ahora = _now()
-            resultado = "no_contact" if not (tel or mail) else "no_consent"
-            for canal in camp.channels_of(a.channel):
-                direccion = mail if canal == "email" else tel
-                permisos = mails if canal == "email" else sms
-                if not direccion or direccion not in permisos or permisos[direccion].status != "granted":
-                    continue
-                ya = (await db.execute(select(CampaignRecipient.id).where(
-                    CampaignRecipient.campaign_id == a.campaign_id, CampaignRecipient.channel == canal,
-                    CampaignRecipient.address == direccion))).first()
-                if ya:
-                    # Una persona recibe cada automatización una sola vez por canal
-                    # (la cola no repite dirección por campaña), aunque tenga dos obras.
-                    resultado = "already_sent"
-                    continue
-                cuerpo = render(a.message, ctx)
-                db.add(CampaignRecipient(
-                    organization_id=a.organization_id, campaign_id=a.campaign_id, customer_id=p.customer_id,
-                    name=cliente.legal_name if cliente else None, channel=canal, address=direccion,
-                    phone=tel if canal == "sms" else None, email=mail if canal == "email" else None,
-                    timezone=zona, status="pending", attempts=0,
-                    subject=render(a.subject or "", ctx) if canal == "email" else None,
-                    body=camp.with_footer(cuerpo) if canal == "sms" else cuerpo,
-                    next_attempt_at=camp.next_allowed(ahora, zona) if canal == "sms" else ahora))
-                resultado = "queued"
-                encoladas += 1
-            db.add(CampaignAutomationSend(organization_id=a.organization_id, automation_id=a.id, project_id=p.id,
-                                          result=resultado, processed_at=_now()))
-        await db.commit()
+    for automation_id, organization_id in ids:
+        try:
+            a = await db.get(CampaignAutomation, automation_id)
+            hoy = await org_today(db, a.organization_id)
+            encoladas += await _run_one(db, a, hoy)
+            await db.commit()
+        except Exception as exc:  # noqa: BLE001 — una automatización rota no frena a las otras
+            await db.rollback()
+            logger.warning("automations.run_failed", automation_id=str(automation_id),
+                           organization_id=str(organization_id), error_type=type(exc).__name__, error=str(exc))
+    return encoladas
+
+
+async def _run_one(db: AsyncSession, a: CampaignAutomation, hoy) -> int:
+    from app.modules.crm.models import Customer
+
+    obras = await _due_projects(db, a, hoy)
+    if not obras:
+        return 0
+    encoladas = 0
+    sms, mails = await camp._sms_consents(db, a.organization_id), await camp._email_consents(db, a.organization_id)
+    for p in obras:
+        cliente = await db.get(Customer, p.customer_id)
+        tel = camp.valid_phone(cliente.main_phone) if cliente else None
+        mail = camp.normalize_email(cliente.email) if cliente else None
+        ctx = {"nombre": (cliente.legal_name or "").split(" ")[0] if cliente else "", "obra": p.title,
+               "fecha_cierre": p.completed_date.strftime("%m/%d/%Y")}
+        zona = camp.zone_for_state(p.address_state)
+        ahora = _now()
+        resultado = "no_contact" if not (tel or mail) else "no_consent"
+        for canal in camp.channels_of(a.channel):
+            direccion = mail if canal == "email" else tel
+            permisos = mails if canal == "email" else sms
+            if not direccion or direccion not in permisos or permisos[direccion].status != "granted":
+                continue
+            ya = (await db.execute(select(CampaignRecipient.id).where(
+                CampaignRecipient.campaign_id == a.campaign_id, CampaignRecipient.channel == canal,
+                CampaignRecipient.address == direccion))).first()
+            if ya:
+                # Una persona recibe cada automatización una sola vez por canal
+                # (la cola no repite dirección por campaña), aunque tenga dos obras.
+                resultado = "already_sent"
+                continue
+            cuerpo = render(a.message, ctx)
+            # El título de la obra entra al asunto: sin saltos de línea y dentro del límite de la columna.
+            asunto = " ".join(render(a.subject or "", ctx).split())[:255] if canal == "email" else None
+            db.add(CampaignRecipient(
+                organization_id=a.organization_id, campaign_id=a.campaign_id, customer_id=p.customer_id,
+                name=cliente.legal_name if cliente else None, channel=canal, address=direccion,
+                phone=tel if canal == "sms" else None, email=mail if canal == "email" else None,
+                timezone=zona, status="pending", attempts=0, subject=asunto,
+                body=camp.with_footer(cuerpo) if canal == "sms" else cuerpo,
+                next_attempt_at=camp.next_allowed(ahora, zona) if canal == "sms" else ahora))
+            resultado = "queued"
+            encoladas += 1
+        db.add(CampaignAutomationSend(organization_id=a.organization_id, automation_id=a.id, project_id=p.id,
+                                      result=resultado, processed_at=_now()))
     return encoladas
