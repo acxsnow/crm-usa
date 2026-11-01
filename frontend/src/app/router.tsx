@@ -32,6 +32,7 @@ import { CampaignsPage } from "@/features/notifications/CampaignsPage";
 import { ExpensesPage } from "@/features/finance/ExpensesPage";
 import { PayablesPage } from "@/features/finance/PayablesPage";
 import { FinanceClosePage } from "@/features/finance/FinanceClosePage";
+import { AccountingPage } from "@/features/accounting/AccountingPage";
 import { ReportsPage } from "@/features/finance/ReportsPage";
 import { PermitsPage } from "@/features/finance/PermitsPage";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -203,6 +204,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["payables.manage", "suppliers.manage", "payables.approve"]} moduleLabel="Proveedores y pagos">
             <PayablesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "accounting",
+        element: (
+          <RequireAccess permission="accounting.read" moduleLabel="Contabilidad">
+            <AccountingPage />
           </RequireAccess>
         ),
       },

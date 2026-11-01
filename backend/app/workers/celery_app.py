@@ -52,6 +52,11 @@ celery_app.conf.beat_schedule = {
         "task": "workers.sweep_overdue_invoices",
         "schedule": crontab(hour=6, minute=0),  # once a day, 06:00 UTC
     },
+    # Contabilidad: asientos de lo nuevo en los documentos (además de al consultar).
+    "accounting-sync": {
+        "task": "accounting.sync",
+        "schedule": crontab(minute=30),
+    },
     # Turnos: retención de la ubicación del personal (spec 2026-10-24).
     # Banca conectada: movimientos nuevos de los bancos (spec 2026-10-25-pagos-tarjeta).
     "payments-sync-bank-feeds": {

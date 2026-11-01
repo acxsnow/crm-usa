@@ -115,6 +115,8 @@ PERMISSION_CATALOG: list[tuple[str, str]] = [
     ("reconciliation.manage", "Conciliar pagos y movimientos"),
     ("profitability.read", "Ver la rentabilidad por proyecto"),
     ("accounting.export", "Exportar información contable"),
+    ("accounting.read", "Ver la contabilidad y los estados financieros"),
+    ("accounting.manage", "Registrar asientos, editar el plan de cuentas y cerrar períodos"),
     # Reportes e indicadores (PDF §4.5 y §7)
     ("reports.view", "Ver reportes"),
     ("reports.generate", "Generar reportes"),
@@ -305,7 +307,8 @@ DEFAULT_MODULES: dict[str, Module] = {
     ),
     "finance_close": Module(
         "Conciliación y rentabilidad",
-        ["reconciliation.manage", "profitability.read", "accounting.export", "bankfeeds.manage"],
+        ["reconciliation.manage", "profitability.read", "accounting.export", "bankfeeds.manage", "accounting.read",
+         "accounting.manage"],
     ),
     # --- Administración ---
     "reports": Module(
@@ -473,6 +476,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "profile.manage",
     ],
     "accounting": [
+        "accounting.read",
+        "accounting.manage",
         "customers.read",
         "cases.read_all",
         "projects.read_all",
@@ -508,6 +513,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "profile.manage",
     ],
     "management": [
+        "accounting.read",
         "customers.read",
         "cases.read_all",
         "dashboards.commercial",

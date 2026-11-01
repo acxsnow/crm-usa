@@ -95,6 +95,7 @@ export const ICONO_DE_RUTA: Record<string, IconName> = {
   "/payroll": "dollar",
   "/operations-map": "map",
   "/banking": "bank",
+  "/accounting": "dollar",
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

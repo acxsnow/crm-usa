@@ -25,6 +25,7 @@ SERIES = {
     "COT": "Cotización de trabajo particular",
     # Orden de salida de material de bodega (cuestionario del 19 de octubre, punto 1).
     "SAL": "Orden de salida de bodega",
+    "AS": "Asiento contable",
 }
 
 

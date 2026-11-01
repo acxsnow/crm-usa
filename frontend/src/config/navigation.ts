@@ -215,6 +215,7 @@ const NAV_GROUPS: NavGroup[] = [
       },
       // Banca conectada (como QuickBooks): movimientos de las cuentas y tarjetas de la empresa.
       { label: "Banca", to: "/banking", icon: "▥", permission: "bankfeeds.manage" },
+      { label: "Contabilidad", to: "/accounting", icon: "▧", permission: "accounting.read" },
       {
         label: "Conciliación y rentabilidad",
         to: "/finance-close",

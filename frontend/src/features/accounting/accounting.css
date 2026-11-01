@@ -1,0 +1,32 @@
+/* Contabilidad: estados financieros, libro diario, plan de cuentas e impuestos. */
+.acc-page { display: grid; gap: 16px; min-width: 0; }
+.acc-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.acc-tabs button { padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; font: 500 0.875rem inherit; color: var(--ink-soft); cursor: pointer; }
+.acc-tabs button.is-on { color: var(--ink); border-bottom-color: var(--red); font-weight: 600; }
+.acc-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.acc-bar label { display: grid; gap: 4px; font-size: 0.8125rem; font-weight: 500; color: var(--ink-soft); }
+.acc-bar .acc-push { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.acc-sheet { display: grid; gap: 4px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); max-width: 760px; }
+.acc-sheet h3 { margin: 14px 0 4px; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.acc-sheet h3:first-child { margin-top: 0; }
+.acc-line { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 4px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+button.acc-line { cursor: pointer; }
+button.acc-line:hover span:first-child { text-decoration: underline; }
+.acc-line span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-line small { color: var(--ink-faint); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.acc-total { font-weight: 600; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+.acc-net { font-size: 1.125rem; font-weight: 700; border-top: 2px solid var(--ink); margin-top: 10px; padding-top: 10px; }
+.acc-ok { color: var(--ok); font-size: 0.8125rem; font-weight: 600; }
+.acc-bad { color: var(--red); font-size: 0.8125rem; font-weight: 600; }
+.acc-note { margin: 0; font-size: 0.8125rem; color: var(--ink-soft); max-width: 72ch; }
+.acc-box { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.acc-entry-line { display: grid; grid-template-columns: minmax(0, 1fr) 7rem 7rem auto; gap: 8px; align-items: center; }
+.acc-entry-lines { display: grid; gap: 8px; }
+.acc-subline { color: var(--ink-soft); font-size: 0.8125rem; }
+.acc-subline div { display: flex; justify-content: space-between; gap: 12px; }
+.acc-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+@media (max-width: 640px) {
+  .acc-entry-line { grid-template-columns: 1fr 1fr; }
+  .acc-entry-line select { grid-column: 1 / -1; }
+  .acc-bar .acc-push { margin-left: 0; }
+}

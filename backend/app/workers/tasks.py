@@ -61,3 +61,18 @@ def sync_bank_feeds_task() -> int:
     hechas = asyncio.run(_sync_bank_feeds())
     logger.info("payments.bank_feeds_synced", connections=hechas)
     return hechas
+
+
+async def _sync_accounting() -> int:
+    from app.modules.accounting.posting import sync_all
+
+    async with worker_session() as db:
+        return await sync_all(db)
+
+
+@celery_app.task(name="accounting.sync")
+def sync_accounting_task() -> int:
+    """Pasa a asientos lo nuevo de facturas, pagos, gastos y bodega."""
+    hechas = asyncio.run(_sync_accounting())
+    logger.info("accounting.synced", organizations=hechas)
+    return hechas
