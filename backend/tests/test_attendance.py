@@ -451,3 +451,5 @@ async def test_nadie_aprueba_sus_extras_y_otra_organizacion_no_las_ve(app_client
     assert (await app_client.get(f"{API}/overtime", headers=otro)).json() == []
     assert (await app_client.put(f"{API}/pay-settings/{active_admin_user.id}", json={"pay_type": "day"},
                                  headers=otro)).status_code == 404
+    propia = await app_client.put(f"{API}/pay-settings/{active_admin_user.id}", json={"pay_type": "day"}, headers=jefe)
+    assert (propia.status_code, propia.json()["code"]) == (403, "self_review_forbidden")

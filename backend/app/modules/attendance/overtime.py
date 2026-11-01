@@ -43,6 +43,10 @@ async def set_pay_setting(db: AsyncSession, *, organization_id, actor, user_id, 
     persona = await db.get(User, user_id)
     if persona is None or persona.organization_id != organization_id:
         raise NotFoundError("La persona no existe.", code="user_not_found")
+    # Decide si sus pausas se pagan: nadie cambia la propia. Las horas ya aprobadas
+    # no se recalculan, porque `approved_minutes` quedó guardado al aprobar.
+    if user_id == actor.id:
+        raise ForbiddenError("Nadie cambia su propia forma de pago.", code="self_review_forbidden")
     fila = (await db.execute(select(EmployeePaySetting).where(EmployeePaySetting.organization_id == organization_id,
                                                               EmployeePaySetting.user_id == user_id))
             ).scalar_one_or_none()

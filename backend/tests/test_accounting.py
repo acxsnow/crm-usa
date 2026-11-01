@@ -192,6 +192,8 @@ async def test_un_automatico_no_se_reversa_a_mano_y_plan_de_cuentas(app_client, 
     r = await app_client.patch(f"{API}/accounts/{banco['id']}", headers=admin, json={"active": False})
     assert (r.status_code, r.json()["code"]) == (409, "account_system")
     assert (await app_client.patch(f"{API}/accounts/{banco['id']}", headers=admin, json={"name": "Chase Business"})).json()["name"] == "Chase Business"
+    malo = await app_client.patch(f"{API}/accounts/{banco['id']}", headers=admin, json={"account_type": "inventado"})
+    assert malo.status_code == 422
     r = await app_client.post(f"{API}/accounts", headers=admin, json={"code": "1000", "name": "Otra", "account_type": "asset"})
     assert (r.status_code, r.json()["code"]) == (409, "account_code_taken")
     r = await app_client.post(f"{API}/accounts", headers=admin, json={"code": "1001", "name": "Wells Fargo", "account_type": "asset"})
@@ -218,6 +220,12 @@ async def test_impuestos_y_1099_por_anio(app_client, db, seeded_org, admin):
     assert r["contractors_1099"][0]["missing"] == ["W-9", "dirección"]
     assert next(l for l in r["lines"] if l["tax_category"] == "Ingresos brutos")["amount"] == "5000.00"
     assert ledger.threshold_for(2025) == Decimal("600")
+    # Quien exporta ve el TIN; Gerencia, que solo lee, lo ve enmascarado y sin dirección.
+    assert r["contractors_1099"][0]["tax_id"] == "12-345"
+    from app.modules.accounting.ledger import tax_summary
+
+    enmascarado = await tax_summary(db, org, 2026)
+    assert enmascarado["contractors_1099"][0]["tax_id"] == "···-345" and enmascarado["contractors_1099"][0]["address"] is None
     # El CSV no deja una fórmula viva en Excel.
     csv = (await app_client.get(f"{API}/export/tax-summary.csv", params={"year": 2026}, headers=admin)).text
     assert "'=cmd Instalador LLC" in csv

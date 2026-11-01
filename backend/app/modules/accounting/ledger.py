@@ -71,6 +71,8 @@ async def save_account(db: AsyncSession, *, organization_id, user, data: dict, a
     if a.system_key and data.get("active") is False:
         raise ConflictError("Esa cuenta la usan los asientos automáticos y no se desactiva.", code="account_system")
     if account_id and data.get("account_type") and data["account_type"] != a.account_type:
+        if data["account_type"] not in ACCOUNT_TYPES:
+            raise InvalidInputError("El tipo de cuenta no existe.", code="account_type_invalid")
         usos = (await db.execute(select(func.count()).select_from(JournalLine).where(JournalLine.account_id == a.id))).scalar_one()
         if a.system_key or usos:
             raise ConflictError("El tipo de una cuenta con movimientos no se cambia.", code="account_type_locked")
@@ -142,7 +144,11 @@ async def get_entry(db: AsyncSession, organization_id, entry_id) -> JournalEntry
 
 
 async def reverse_manual(db: AsyncSession, *, organization_id, user, entry_id, on: date | None, reason: str) -> JournalEntry:
-    e = await get_entry(db, organization_id, entry_id)
+    # Bloqueada: dos reversas simultáneas no pueden pasar las dos la revisión.
+    e = (await db.execute(select(JournalEntry).where(JournalEntry.id == entry_id, JournalEntry.organization_id == organization_id)
+                          .with_for_update())).scalar_one_or_none()
+    if e is None:
+        raise NotFoundError("El asiento no existe.", code="journal_entry_not_found")
     if e.source_key:
         raise ConflictError("Un asiento automático se corrige en su documento (factura, gasto o pago).", code="journal_automatic")
     if e.reversed_by_id or e.reversal_of_id:
@@ -323,7 +329,11 @@ async def account_ledger(db, organization_id, account_id, date_from=None, date_t
     return {"account": account_out(a), "opening_balance": str(apertura), "closing_balance": str(saldo), "rows": filas}
 
 
-async def tax_summary(db, organization_id, year: int, threshold: Decimal | None = None) -> dict:
+def _mask_tin(tin: str | None) -> str | None:
+    return f"···{tin[-4:]}" if tin else None
+
+
+async def tax_summary(db, organization_id, year: int, threshold: Decimal | None = None, *, sensitive: bool = False) -> dict:
     """Lo que el contador necesita para declarar: resultado del año por renglón y
     pagos a proveedores para el 1099-NEC. No reemplaza su revisión ni presenta nada."""
     from app.modules.finance.models import Supplier, SupplierPayment
@@ -358,7 +368,9 @@ async def tax_summary(db, organization_id, year: int, threshold: Decimal | None 
         if s is None or total < umbral or not set(s.kinds or []) & KINDS_1099:
             continue
         faltan = [n for n, ok in (("W-9", s.w9_on_file), ("TIN", bool(s.tax_id)), ("dirección", bool(s.address))) if not ok]
-        lista.append({"supplier_id": str(sid), "name": s.legal_name or s.name, "tax_id": s.tax_id, "address": s.address,
+        lista.append({"supplier_id": str(sid), "name": s.legal_name or s.name,
+                      # TIN y dirección completos solo para quien exporta a la contaduría.
+                      "tax_id": s.tax_id if sensitive else _mask_tin(s.tax_id), "address": s.address if sensitive else None,
                       "kinds": s.kinds or [], "total_paid": str(total), "w9_on_file": s.w9_on_file, "missing": faltan})
     lista.sort(key=lambda x: x["name"])
     ingresos = sum((Decimal(f["amount"]) for f in filas if f["group"] == ACCOUNT_TYPES["income"]), ZERO)

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_organization_id, require_permission
+from app.api.deps import get_effective_permissions, get_organization_id, require_permission
 from app.db.session import get_db
 from app.modules.accounting import ledger, posting
 from app.modules.accounting.chart import ensure_chart, settings_of
@@ -25,7 +25,7 @@ _export = require_permission("accounting.export")
 class AccountIn(BaseModel):
     code: str | None = Field(default=None, max_length=20)
     name: str | None = Field(default=None, max_length=120)
-    account_type: str | None = Field(default=None, max_length=20)
+    account_type: str | None = Field(default=None, pattern="^(asset|liability|equity|income|cogs|expense)$")
     tax_category: str | None = Field(default=None, max_length=80)
     active: bool | None = None
 
@@ -179,7 +179,8 @@ async def tax_summary(year: int = Query(ge=2000, le=2100), threshold: Decimal | 
                       db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                       current_user: User = Depends(_read)) -> dict:
     await posting.sync(db, organization_id)
-    return await ledger.tax_summary(db, organization_id, year, threshold)
+    return await ledger.tax_summary(db, organization_id, year, threshold,
+                                    sensitive="accounting.export" in get_effective_permissions(current_user))
 
 
 # --- Exportar para el contador ------------------------------------------------
@@ -227,7 +228,7 @@ async def export_tax(year: int = Query(ge=2000, le=2100), db: AsyncSession = Dep
                      organization_id: uuid.UUID = Depends(get_organization_id),
                      current_user: User = Depends(_export)) -> Response:
     await posting.sync(db, organization_id)
-    r = await ledger.tax_summary(db, organization_id, year)
+    r = await ledger.tax_summary(db, organization_id, year, sensitive=True)
     salida = [[f"Resumen para impuestos {year}"], [], ["Grupo", "Renglón", "Valor", "Cuentas"]]
     salida.extend([f["group"], f["tax_category"], f["amount"], "; ".join(f["accounts"])] for f in r["lines"])
     salida += [[], ["Utilidad neta", "", r["net_income"]], [], [f"Proveedores para 1099-NEC (desde ${r['threshold_1099']})"],

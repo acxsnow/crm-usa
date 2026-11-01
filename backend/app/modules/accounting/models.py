@@ -49,7 +49,8 @@ class JournalEntry(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     # La fecha del documento: un período cerrado corre `entry_date`, no el documento.
     source_date: Mapped[date | None] = mapped_column(Date)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    reversal_of_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("journal_entries.id"))
+    # Único: un asiento se reversa una sola vez, aunque lleguen dos a la vez.
+    reversal_of_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("journal_entries.id"), unique=True)
     reversed_by_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("journal_entries.id"))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     notes: Mapped[str | None] = mapped_column(Text)
