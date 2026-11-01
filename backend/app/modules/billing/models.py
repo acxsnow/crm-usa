@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, text
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, OrgScopedMixin, TimestampMixin, UUIDPKMixin
@@ -463,18 +463,50 @@ class Quote(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_reason: Mapped[str | None] = mapped_column(Text)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    # Opciones tipo básica / mejor / premium (Housecall Pro): [{"key": "A",
+    # "label": "Básica"}, ...]. Las líneas sin `option_key` van en todas; el
+    # cliente elige una al aceptar. Vacío = cotización de una sola opción.
+    options: Mapped[list] = mapped_column(JSON, default=list, nullable=False, server_default="[]")
+    accepted_option: Mapped[str | None] = mapped_column(String(10))
+    # Enlace público para que el cliente la vea, elija, firme o la rechace
+    # (spec 2026-10-31-cotizacion-despacho-mano-de-obra-automatizaciones).
+    public_token_hash: Mapped[str | None] = mapped_column(String(128), unique=True, index=True)
+    public_sent_to: Mapped[str | None] = mapped_column(String(255))
+    viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    signer_name: Mapped[str | None] = mapped_column(String(255))
+    signature_path: Mapped[str | None] = mapped_column(String(500))
+    signed_ip: Mapped[str | None] = mapped_column(String(64))
+    # Quién decidió: «office» (desde la plataforma) o «customer» (por el enlace).
+    decided_by: Mapped[str | None] = mapped_column(String(20))
 
     lines: Mapped[list["QuoteLine"]] = relationship(
         "QuoteLine", back_populates="quote", cascade="all, delete-orphan",
         order_by="QuoteLine.sort_order", lazy="selectin",
     )
 
-    @property
-    def total(self) -> Decimal:
+    def lines_for(self, option: str | None) -> list["QuoteLine"]:
+        """Las líneas comunes más las de la opción (todas si no hay opciones)."""
+        if not self.options:
+            return list(self.lines)
+        return [l for l in self.lines if l.option_key in (None, option)]
+
+    def total_for(self, option: str | None) -> Decimal:
         from app.modules.billing.money import money_sum
 
-        rebates = money_sum(l.amount for l in self.lines if l.kind == "rebate")
-        return money_sum(l.amount for l in self.lines if l.kind != "rebate") - rebates
+        lineas = self.lines_for(option)
+        rebates = money_sum(l.amount for l in lineas if l.kind == "rebate")
+        return money_sum(l.amount for l in lineas if l.kind != "rebate") - rebates
+
+    @property
+    def total(self) -> Decimal:
+        """El total de la opción aceptada; si no hay, el de la primera opción."""
+        if not self.options:
+            return self.total_for(None)
+        return self.total_for(self.accepted_option or self.options[0]["key"])
+
+    @property
+    def option_totals(self) -> list[dict]:
+        return [{"key": o["key"], "label": o["label"], "total": self.total_for(o["key"])} for o in self.options or []]
 
     def status_on(self, today: date) -> str:
         """Vencida se calcula: una enviada cuya vigencia ya pasó."""
@@ -496,5 +528,7 @@ class QuoteLine(UUIDPKMixin, Base):
     quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    # La opción a la que pertenece (ver `Quote.options`); None = va en todas.
+    option_key: Mapped[str | None] = mapped_column(String(10))
 
     quote: Mapped["Quote"] = relationship("Quote", back_populates="lines")
