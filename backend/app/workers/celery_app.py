@@ -38,6 +38,11 @@ celery_app.conf.beat_schedule = {
         "task": "campaigns.send_due",
         "schedule": 60.0,
     },
+    # Campañas automáticas por evento (gracias, mantenimiento): cada hora.
+    "campaigns-run-automations": {
+        "task": "campaigns.run_automations",
+        "schedule": crontab(minute=15),
+    },
     # Alertas de aprobación demorada y permisos por vencer (7 a. m. en Arizona).
     "notifications-daily-alerts": {
         "task": "notifications.daily_alerts",

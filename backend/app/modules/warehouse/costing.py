@@ -134,6 +134,11 @@ async def project_actual_costs(db: AsyncSession, organization_id, project_ids: s
     for project_id, por_categoria in (await cost_entries_by_category(db, organization_id, project_ids)).items():
         for categoria, valor in por_categoria.items():
             costos[project_id][categoria] = costos[project_id].get(categoria, ZERO) + to_money(valor)
+    # Mano de obra por horas aprobadas en la obra × tarifa de cada técnico.
+    from app.modules.warehouse.labor import costs_by_project
+
+    for project_id, valor in (await costs_by_project(db, organization_id, project_ids)).items():
+        costos[project_id]["labor"] = costos[project_id].get("labor", ZERO) + to_money(valor)
     return costos
 
 

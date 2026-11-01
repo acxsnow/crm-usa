@@ -452,7 +452,20 @@ export const updateCategory = async (id: string, data: { label?: string; active?
 export const warehouseCatalogs = async () =>
   (await apiClient.get<WarehouseCatalogs>("/warehouse/catalogs")).data;
 
+export interface LaborHours {
+  rows: { user_id: string; name: string; minutes: number; hourly_rate: string | null; cost: string | null }[];
+  total: string;
+  missing_rate: string[];
+}
+export interface LaborRateRow { user_id: string; name: string; hourly_rate: string | null }
+export const getLaborHours = async (projectId: string) =>
+  (await apiClient.get<LaborHours>(`/projects/${projectId}/labor-hours`)).data;
+export const setLaborRate = async (userId: string, hourlyRate: string | null) =>
+  (await apiClient.put<LaborRateRow>(`/jobcost/labor-rates/${userId}`, { hourly_rate: hourlyRate })).data;
+
 export const warehouseKeys = {
+  laborHours: (projectId: string) => ["labor-hours", projectId] as const,
+  laborRates: ["labor-rates"] as const,
   catalogs: ["warehouse-catalogs"] as const,
   categories: ["warehouse-categories"] as const,
   items: ["warehouse-items"] as const,

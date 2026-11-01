@@ -67,6 +67,7 @@ export const ICONO_DE_RUTA: Record<string, IconName> = {
   "/projects": "briefcase",
   "/technician-monitor": "radar",
   "/my-schedule": "calendar",
+  "/dispatch": "grid",
   "/works-calendar": "layers",
   "/checklists": "checklist",
   "/permits": "shield",

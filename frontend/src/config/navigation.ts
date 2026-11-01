@@ -104,6 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "◷",
         permission: ["dispatch.read_own", "dispatch.manage"],
       },
+      { label: "Despacho", to: "/dispatch", icon: "▤", permission: "dispatch.manage" },
       // Quién estuvo en cada obra y qué se hizo cada día (plan bodega-cierre, fase 5).
       {
         label: "Calendario de obras",

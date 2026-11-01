@@ -67,11 +67,26 @@ export interface Contact {
 }
 export interface AudienceSummary { total: number; with_consent: number; without_consent: number; opted_out: number; no_address: number }
 export interface CampaignStats { pending: number; sent: number; failed: number; skipped: number }
+export type AutomationTrigger = "job_completed" | "maintenance_due";
 export interface Campaign {
   id: string; name: string; product_id: string | null; channel: CampaignChannel; subject: string | null; preview_subject: string;
   message: string; audience: Audience & { launch_summary?: { queued: number; without_consent: number; opted_out: number } };
   status: "draft" | "scheduled" | "sending" | "sent" | "cancelled"; scheduled_at: string | null; finished_at: string | null;
   created_at: string | null; preview: string; stats: CampaignStats;
+}
+export interface CampaignAutomation {
+  id: string;
+  name: string;
+  trigger: AutomationTrigger;
+  trigger_label: string;
+  delay_days: number;
+  channel: CampaignChannel;
+  subject: string | null;
+  message: string;
+  active: boolean;
+  starts_on: string;
+  campaign_id: string;
+  stats: { jobs: Record<string, number>; messages: CampaignStats };
 }
 export interface Recipient { id: string; name: string | null; channel: "sms" | "email"; address: string; status: string; attempts: number;
   last_error: string | null; next_attempt_at: string | null; sent_at: string | null }
@@ -80,7 +95,8 @@ export interface OwnContact { id: string; name: string | null; phone: string | n
 export const campaignKeys = {
   list: ["campaigns"] as const, one: (id: string) => ["campaign", id] as const, products: ["products"] as const,
   recipients: (id: string) => ["campaign-recipients", id] as const, optOuts: ["opt-outs"] as const,
-  contacts: ["own-contacts"] as const,
+  contacts: ["own-contacts"] as const, automations: ["campaign-automations"] as const,
+  automation: (id: string) => ["campaign-automation", id] as const,
 };
 export const listProducts = async () => (await apiClient.get<Product[]>("/products")).data;
 export const saveProduct = async (p: Partial<Product> & { name: string }) =>
@@ -94,6 +110,15 @@ export const getCampaign = async (id: string) => (await apiClient.get<Campaign>(
 export const saveCampaign = async (id: string | null, body: { name: string; product_id: string | null; channel: CampaignChannel;
   subject: string | null; message: string; audience: Audience }) =>
   (id ? await apiClient.put<Campaign>(`/campaigns/${id}`, body) : await apiClient.post<Campaign>("/campaigns", body)).data;
+export const getAutomation = async (id: string) =>
+  (await apiClient.get<CampaignAutomation>(`/campaign-automations/${id}`)).data;
+export const saveAutomation = async (id: string | null, body: {
+  name?: string | null; trigger?: AutomationTrigger | null; delay_days?: number | null; channel?: CampaignChannel | null;
+  subject?: string | null; message?: string | null; active?: boolean | null;
+}) => (id
+  ? await apiClient.patch<CampaignAutomation>(`/campaign-automations/${id}`, body)
+  : await apiClient.post<CampaignAutomation>("/campaign-automations", body)).data;
+export const deleteAutomation = async (id: string) => (await apiClient.delete(`/campaign-automations/${id}`)).data;
 export const launchCampaign = async (id: string, scheduled_at?: string) =>
   (await apiClient.post<{ summary: { queued: number }; campaign: Campaign }>(`/campaigns/${id}/launch`, { scheduled_at: scheduled_at || null })).data;
 export const cancelCampaign = async (id: string) => (await apiClient.post<Campaign>(`/campaigns/${id}/cancel`)).data;

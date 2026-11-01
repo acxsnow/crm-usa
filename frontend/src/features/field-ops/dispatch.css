@@ -1,0 +1,26 @@
+/* Despacho: fila por técnico, columna por día (spec 2026-10-31). */
+.dispatch-page { display: grid; gap: 16px; min-width: 0; }
+.dispatch-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
+.dispatch-nav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dispatch-views { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dispatch-views button { padding: 6px 14px; border: 0; background: var(--surface); color: var(--ink-soft); font: inherit; cursor: pointer; }
+.dispatch-views button.is-on { background: var(--navy-900, #0b1d36); color: #fff; }
+.dispatch-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.dispatch-grid { width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed; font-size: 0.8125rem; }
+.dispatch-grid th, .dispatch-grid td { padding: 8px; border-bottom: 1px solid var(--line-soft, var(--line)); border-left: 1px solid var(--line-soft, var(--line)); vertical-align: top; text-align: left; }
+.dispatch-grid thead th { font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+.dispatch-grid tbody th { font-weight: 600; width: 130px; }
+.dispatch-grid thead th:first-child { width: 130px; }
+.dispatch-grid td { height: 72px; }
+.dispatch-grid .is-today { background: var(--info-wash, #eff8ff); }
+.dispatch-shift { display: block; margin-bottom: 4px; color: var(--ink-faint); }
+.dispatch-job { display: grid; gap: 2px; width: 100%; min-height: 44px; margin-bottom: 4px; padding: 6px 8px; text-align: left; font: inherit; color: var(--ink); border: 1px solid var(--line); border-left: 3px solid var(--navy-900, #0b1d36); border-radius: 6px; background: var(--surface); cursor: grab; overflow-wrap: anywhere; }
+.dispatch-job small { color: var(--ink-soft); }
+.dispatch-job.is-late { border-left-color: var(--red); }
+.dispatch-late { color: var(--red) !important; font-weight: 600; }
+.dispatch-tray { display: grid; gap: 10px; }
+.dispatch-tray h3 { margin: 0; font-size: 0.9375rem; }
+.dispatch-tray-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.dispatch-dialog { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(11, 29, 54, 0.45); }
+.dispatch-dialog-card { display: grid; gap: 8px; width: min(420px, 100%); padding: 20px; border-radius: 12px; background: var(--surface); }
+.dispatch-dialog-card h3 { margin: 0; }

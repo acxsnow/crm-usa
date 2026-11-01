@@ -55,6 +55,8 @@ import { PayrollPage } from "@/features/attendance/PayrollPage";
 import { OperationsMapPage } from "@/features/map/OperationsMapPage";
 import { BankingPage } from "@/features/payments/BankingPage";
 import { PayInvoicePage } from "@/features/payments/PayInvoicePage";
+import { PublicQuotePage } from "@/features/billing/PublicQuotePage";
+import { DispatchBoardPage } from "@/features/field-ops/DispatchBoardPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -71,6 +73,7 @@ export const router = createBrowserRouter([
   { path: "/customer-signature", element: <CustomerSignaturePage /> },
   // Factura en línea del cliente, sin sesión (pagos, spec 2026-10-25).
   { path: "/pagar/:token", element: <PayInvoicePage /> },
+  { path: "/cotizacion/:token", element: <PublicQuotePage /> },
   {
     path: "/",
     element: (
@@ -128,6 +131,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["projects.read_all", "dispatch.manage", "daylogs.manage"]} moduleLabel="el calendario de obras">
             <WorksCalendarPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "dispatch",
+        element: (
+          <RequireAccess permission="dispatch.manage" moduleLabel="el despacho">
+            <DispatchBoardPage />
           </RequireAccess>
         ),
       },

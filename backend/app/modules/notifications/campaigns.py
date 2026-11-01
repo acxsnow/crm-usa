@@ -432,9 +432,9 @@ async def opt_in_again(db: AsyncSession, *, phone: str, word: str) -> int:
 # Campañas
 # ---------------------------------------------------------------------------
 
-async def get_campaign(db, organization_id, campaign_id) -> Campaign:
+async def get_campaign(db, organization_id, campaign_id, *, allow_auto: bool = False) -> Campaign:
     c = await db.get(Campaign, campaign_id)
-    if c is None or c.organization_id != organization_id:
+    if c is None or c.organization_id != organization_id or (c.status == "auto" and not allow_auto):
         raise NotFoundError("La campaña no existe.", code="campaign_not_found")
     return c
 
@@ -558,7 +558,7 @@ async def send_due(db: AsyncSession, limit: int = 200) -> int:
     filas = (await db.execute(select(CampaignRecipient, Campaign).join(
         Campaign, Campaign.id == CampaignRecipient.campaign_id).where(
         CampaignRecipient.status == "pending", CampaignRecipient.next_attempt_at <= ahora,
-        Campaign.status.in_(("scheduled", "sending"))).limit(limit))).all()
+        Campaign.status.in_(("scheduled", "sending", "auto"))).limit(limit))).all()
     tocadas = set()
     for r, c in filas:
         tocadas.add(c.id)
@@ -596,8 +596,9 @@ async def send_due(db: AsyncSession, limit: int = 200) -> int:
     for cid in tocadas:
         quedan = (await db.execute(select(func.count()).select_from(CampaignRecipient).where(
             CampaignRecipient.campaign_id == cid, CampaignRecipient.status == "pending"))).scalar_one()
-        if quedan == 0:
-            c = await db.get(Campaign, cid)
+        c = await db.get(Campaign, cid)
+        # La campaña de una automatización («auto») sigue abierta: le llegan envíos nuevos.
+        if quedan == 0 and c.status != "auto":
             c.status, c.finished_at = "sent", ahora
     await db.commit()
     return len(filas)
