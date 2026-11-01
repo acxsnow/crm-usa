@@ -16,19 +16,24 @@ import {
   addOptOut,
   campaignKeys,
   cancelCampaign,
+  deleteAutomation,
   deleteOwnContact,
   getAudience,
+  getAutomation,
   getCampaign,
   grantConsent,
   importOwnContacts,
   launchCampaign,
   listProducts,
+  saveAutomation,
   saveCampaign,
   saveProduct,
   testCampaign,
   timeAgo,
   type Audience,
+  type AutomationTrigger,
   type Campaign,
+  type CampaignAutomation,
   type OptOut,
   type OwnContact,
   type Recipient,
@@ -41,11 +46,17 @@ import { confirmAction } from "@/components/ui/ConfirmDialog";
 /** Filas por página en destinatarios, contactos y bajas (los tres pueden ser miles). */
 const PAGE_SIZE = 50;
 
-type Tab = "campaigns" | "contacts" | "products" | "optouts";
+type Tab = "campaigns" | "automations" | "contacts" | "products" | "optouts";
+const AUTOMATION_TRIGGER: Record<AutomationTrigger, string> = {
+  job_completed: "Al cerrar la obra",
+  maintenance_due: "Recordatorio de mantenimiento",
+};
+const AUTOMATION_DELAY: Record<AutomationTrigger, number> = { job_completed: 0, maintenance_due: 180 };
 const ESTADO: Record<Campaign["status"], [string, string]> = {
   draft: ["Borrador", "is-draft"], scheduled: ["Programada", "is-submitted"], sending: ["Enviando", "is-submitted"],
   sent: ["Terminada", "is-paid"], cancelled: ["Cancelada", "is-void"],
 };
+const AUTOMATION_STATUS = { true: ["Activa", "is-paid"], false: ["Pausada", "is-void"] } as const;
 const PERMISO: Record<ConsentState, [string, string]> = {
   granted: ["Con permiso", "is-paid"], none: ["Sin permiso", "is-preparing"], revoked: ["De baja", "is-rejected"],
   no_phone: ["—", "is-void"], no_email: ["—", "is-void"],
@@ -62,6 +73,7 @@ const tel = (t: string | null) => (t ? t.replace(/(\d{3})(\d{3})(\d{4})/, "($1) 
 export function CampaignsPage() {
   const [tab, setTab] = useState<Tab>("campaigns");
   const [abierta, setAbierta] = useState<string | "new" | null>(null);
+  const [automatizacionAbierta, setAutomatizacionAbierta] = useState<string | "new" | null>(null);
   return (
     <div className="billing-page notices-page campaigns-page">
       <header className="billing-head">
@@ -72,15 +84,21 @@ export function CampaignsPage() {
         {tab === "campaigns" && abierta === null && (
           <div className="acta-actions"><button type="button" className="acta-btn is-primary" onClick={() => setAbierta("new")}>Nueva campaña</button></div>
         )}
+        {tab === "automations" && automatizacionAbierta === null && (
+          <div className="acta-actions"><button type="button" className="acta-btn is-primary" onClick={() => setAutomatizacionAbierta("new")}>Nueva automatización</button></div>
+        )}
       </header>
       <div className="notices-tabs" role="tablist">
-        {([["campaigns", "Campañas"], ["contacts", "Contactos propios"], ["products", "Productos"], ["optouts", "Bajas"]] as [Tab, string][]).map(([k, l]) => (
+        {([["campaigns", "Campañas"], ["automations", "Automatizaciones"], ["contacts", "Contactos propios"], ["products", "Productos"], ["optouts", "Bajas"]] as [Tab, string][]).map(([k, l]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} className={tab === k ? "is-on" : ""}
-            onClick={() => { setTab(k); setAbierta(null); }}>{l}</button>
+            onClick={() => { setTab(k); setAbierta(null); setAutomatizacionAbierta(null); }}>{l}</button>
         ))}
       </div>
       {tab === "campaigns" && (abierta === null ? <CampaignList onOpen={setAbierta} />
         : <CampaignEditor id={abierta === "new" ? null : abierta} onClose={() => setAbierta(null)} onCreated={setAbierta} />)}
+      {tab === "automations" && (automatizacionAbierta === null ? <AutomationList onOpen={setAutomatizacionAbierta} />
+        : <AutomationEditor id={automatizacionAbierta === "new" ? null : automatizacionAbierta}
+            onClose={() => setAutomatizacionAbierta(null)} onCreated={setAutomatizacionAbierta} />)}
       {tab === "contacts" && <OwnContacts />}
       {tab === "products" && <Products />}
       {tab === "optouts" && <OptOuts />}
@@ -111,6 +129,211 @@ function CampaignList({ onOpen }: { onOpen: (id: string) => void }) {
         </ul>
       )}
       <PaginationControls {...lista.controls} />
+    </article>
+  );
+}
+
+function renderAutomationPreview(text: string, trigger: AutomationTrigger) {
+  return text
+    .replace(/\{\{\s*nombre\s*\}\}/g, "María")
+    .replace(/\{\{\s*obra\s*\}\}/g, "Cambio completo del sistema")
+    .replace(/\{\{\s*fecha_cierre\s*\}\}/g, trigger === "maintenance_due" ? "04/29/2027" : "11/01/2026")
+    .trim();
+}
+
+function AutomationList({ onOpen }: { onOpen: (id: string) => void }) {
+  const lista = usePaginatedQuery<CampaignAutomation>({
+    key: campaignKeys.automations,
+    path: "/campaign-automations",
+    pageSize: 20,
+  });
+  const { items: data, isLoading } = lista;
+  if (isLoading) return <article className="acta"><SkeletonRows rows={5} label="Cargando automatizaciones…" /></article>;
+  return (
+    <article className="acta">
+      {data.length === 0 ? <p className="acta-empty">Todavía no hay automatizaciones. Crea la primera con «Nueva automatización».</p> : (
+        <ul className="campaigns-list">
+          {data.map((a) => {
+            const jobs = a.stats.jobs;
+            return (
+              <li key={a.id}>
+                <button type="button" onClick={() => onOpen(a.id)}>
+                  <span className="campaign-main">
+                    <span className="campaign-thumb" aria-hidden="true"><Icon name="bolt" /></span>
+                    <span className="campaign-text">
+                      <strong>{a.name}</strong>
+                      <small>{AUTOMATION_TRIGGER[a.trigger]} · {CANAL[a.channel]} · {a.delay_days} día{a.delay_days === 1 ? "" : "s"}</small>
+                    </span>
+                  </span>
+                  <span className="queue-counts">
+                    <span className={`billing-chip ${AUTOMATION_STATUS[String(a.active) as "true" | "false"][1]}`}>
+                      {AUTOMATION_STATUS[String(a.active) as "true" | "false"][0]}
+                    </span>
+                    <small>{jobs.queued ?? 0} en cola · {a.stats.messages.sent} enviados</small>
+                    <span aria-hidden="true">›</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <PaginationControls {...lista.controls} />
+    </article>
+  );
+}
+
+function AutomationEditor({
+  id,
+  onClose,
+  onCreated,
+}: { id: string | null; onClose: () => void; onCreated: (id: string) => void }) {
+  const qc = useQueryClient();
+  const { data: a } = useQuery({ queryKey: campaignKeys.automation(id ?? ""), queryFn: () => getAutomation(id!), enabled: !!id });
+  const [name, setName] = useState("");
+  const [trigger, setTrigger] = useState<AutomationTrigger>("job_completed");
+  const [delayDays, setDelayDays] = useState(0);
+  const [channel, setChannel] = useState<CampaignChannel>("sms");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("Hola {{nombre}}, gracias por confiar en nosotros en {{obra}}.");
+  const [active, setActive] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (a) {
+      setName(a.name);
+      setTrigger(a.trigger);
+      setDelayDays(a.delay_days);
+      setChannel(a.channel);
+      setSubject(a.subject ?? "");
+      setMessage(a.message);
+      setActive(a.active);
+    }
+  }, [a]);
+
+  const preview = renderAutomationPreview(message, trigger);
+  const previewSms = /stop/i.test(preview) ? preview : `${preview} Responde STOP para no recibir más.`;
+  const withSms = channel !== "email";
+  const withEmail = channel !== "sms";
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: campaignKeys.automations });
+    if (id) qc.invalidateQueries({ queryKey: campaignKeys.automation(id) });
+  };
+  const save = useMutation({
+    mutationFn: () => saveAutomation(id, {
+      name,
+      trigger,
+      delay_days: delayDays,
+      channel,
+      subject: subject || null,
+      message,
+      active,
+    }),
+    onSuccess: (row) => {
+      setError(null);
+      setNotice("Automatización guardada.");
+      refresh();
+      if (!id) onCreated(row.id);
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteAutomation(id!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.automations });
+      onClose();
+    },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+
+  if (id && !a) return <p className="acta-empty">Cargando…</p>;
+  return (
+    <article className="acta">
+      <button type="button" className="acta-back" onClick={onClose}><span aria-hidden="true">‹</span> Automatizaciones</button>
+      <form className="campaign-form" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+        <div className="campaign-row">
+          <div className="form-field">
+            <label className="form-label" htmlFor="auto-name">Nombre</label>
+            <input id="auto-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej.: Gracias por confiar en nosotros" required />
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="auto-trigger">Evento</label>
+            <select id="auto-trigger" value={trigger} onChange={(e) => {
+              const next = e.target.value as AutomationTrigger;
+              setTrigger(next);
+              setDelayDays(AUTOMATION_DELAY[next]);
+            }}>
+              <option value="job_completed">{AUTOMATION_TRIGGER.job_completed}</option>
+              <option value="maintenance_due">{AUTOMATION_TRIGGER.maintenance_due}</option>
+            </select>
+          </div>
+        </div>
+        <div className="campaign-row">
+          <div className="form-field">
+            <label className="form-label" htmlFor="auto-delay">Días después del evento</label>
+            <input id="auto-delay" type="number" min={0} max={730} value={delayDays} onChange={(e) => setDelayDays(Number(e.target.value || 0))} />
+          </div>
+          <div className="form-field">
+            <span className="form-label">Canal</span>
+            <div className="notices-channels" role="radiogroup" aria-label="Canal de automatización">
+              {(["sms", "email", "both"] as CampaignChannel[]).map((k) => (
+                <button key={k} type="button" role="radio" aria-checked={channel === k} className={channel === k ? "is-on" : ""}
+                  onClick={() => setChannel(k)}>{CANAL[k]}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {withEmail && (
+          <div className="form-field">
+            <label className="form-label" htmlFor="auto-subject">Asunto del correo</label>
+            <input id="auto-subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={255}
+              placeholder="Ej.: {{nombre}}, gracias por elegirnos" />
+          </div>
+        )}
+        <div className="form-field">
+          <label className="form-label" htmlFor="auto-message">Mensaje</label>
+          <textarea id="auto-message" rows={withEmail ? 6 : 4} maxLength={1600} value={message} onChange={(e) => setMessage(e.target.value)} />
+          <small className="notices-hint">Variables: {"{{nombre}} {{obra}} {{fecha_cierre}}"}</small>
+        </div>
+        <div className="campaign-previews">
+          {withSms && <div className="campaign-preview" aria-label="Vista previa SMS"><small>Así llega el SMS</small><p>{previewSms}</p></div>}
+          {withEmail && (
+            <div className="campaign-preview is-email" aria-label="Vista previa correo">
+              <small>Así llega el correo</small>
+              <strong>{renderAutomationPreview(subject || name, trigger) || "(sin asunto)"}</strong>
+              <p>{preview}</p>
+              <small>Al pie: dirección de la empresa y enlace «Darme de baja».</small>
+            </div>
+          )}
+        </div>
+        <label className="billing-check">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          Automatización activa
+        </label>
+        <p className="notices-hint">Se procesa cada hora y solo toma obras cerradas desde que esta automatización quedó activa.</p>
+        {a && (
+          <dl className="acta-meta">
+            <div><dt>Obras procesadas</dt><dd>{Object.values(a.stats.jobs).reduce((sum, value) => sum + value, 0)}</dd></div>
+            <div><dt>En cola</dt><dd>{a.stats.messages.pending}</dd></div>
+            <div><dt>Enviados</dt><dd>{a.stats.messages.sent}</dd></div>
+            <div><dt>Sin permiso/contacto</dt><dd>{(a.stats.jobs.no_consent ?? 0) + (a.stats.jobs.no_contact ?? 0)}</dd></div>
+          </dl>
+        )}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        {notice && <p className="info-banner" role="status">{notice}</p>}
+        <div className="acta-actions">
+          <button type="submit" className="acta-btn is-primary" disabled={!name.trim() || !message.trim() || save.isPending}>Guardar automatización</button>
+          {id && (
+            <button type="button" className="acta-btn is-quiet" disabled={remove.isPending}
+              onClick={async () => {
+                if (await confirmAction({ title: "¿Eliminar esta automatización?", message: "No se borrarán los mensajes ya enviados.", confirmLabel: "Eliminar", danger: true })) remove.mutate();
+              }}>
+              Eliminar
+            </button>
+          )}
+        </div>
+      </form>
     </article>
   );
 }
