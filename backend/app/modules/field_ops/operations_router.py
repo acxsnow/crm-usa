@@ -162,6 +162,21 @@ async def dispatch_technicians(
     )
 
 
+@router.get("/dispatch/board")
+async def dispatch_board(
+    date_from: date = Query(...),
+    date_to: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("dispatch.manage")),
+) -> dict:
+    """Tablero de despacho: fila por técnico, columna por día (hasta 31) y las
+    obras sin agendar. Para mover una obra, `PATCH /projects/{id}/schedule`."""
+    from app.modules.field_ops.board import board
+
+    return await board(db, organization_id=organization_id, date_from=date_from, date_to=date_to)
+
+
 @router.get("/dispatch/agenda", response_model=list[AgendaRow])
 async def dispatch_agenda(
     response: Response,
