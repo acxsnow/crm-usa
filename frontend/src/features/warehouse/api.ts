@@ -453,11 +453,15 @@ export const warehouseCatalogs = async () =>
   (await apiClient.get<WarehouseCatalogs>("/warehouse/catalogs")).data;
 
 export interface LaborHours {
-  rows: { user_id: string; name: string; minutes: number; hourly_rate: string | null; cost: string | null }[];
+  rows: { user_id: string; name: string; minutes: number; hourly_rate: string | null; pay_type: string | null; cost: string | null }[];
   total: string;
   missing_rate: string[];
 }
-export interface LaborRateRow { user_id: string; name: string; hourly_rate: string | null }
+export interface LaborRateRow { user_id: string; name: string; hourly_rate: string | null; pay_type: "day" | "hour" | "job" | null; effective_rate: string | null }
+export interface PlantRate { plant_hourly_rate: string; plant_daily_hours: string; plant_daily_value: string }
+export const getPlantRate = async () => (await apiClient.get<PlantRate>("/jobcost/plant-rate")).data;
+export const setPlantRate = async (hourly_rate: string, daily_hours: string) =>
+  (await apiClient.put<PlantRate>("/jobcost/plant-rate", { hourly_rate, daily_hours })).data;
 export const getLaborHours = async (projectId: string) =>
   (await apiClient.get<LaborHours>(`/projects/${projectId}/labor-hours`)).data;
 export const setLaborRate = async (userId: string, hourlyRate: string | null) =>

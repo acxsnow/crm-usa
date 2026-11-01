@@ -41,6 +41,11 @@ class LaborRateIn(BaseModel):
     hourly_rate: Decimal | None = Field(default=None, ge=0, le=1000)
 
 
+class PlantRateIn(BaseModel):
+    hourly_rate: Decimal = Field(gt=0, le=1000)
+    daily_hours: Decimal = Field(gt=0, le=24)
+
+
 class ApplyTemplateIn(BaseModel):
     template_id: uuid.UUID
     expected_revenue: str | None = None
@@ -241,6 +246,20 @@ async def list_labor_rates(response: Response, db: AsyncSession = Depends(get_db
 
     return paginate_list(await labor_svc.list_rates(db, organization_id), limit=pag[0], offset=pag[1],
                          response=response)
+
+
+@router.get("/jobcost/plant-rate")
+async def get_plant_rate(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    return await labor_svc.get_plant(db, organization_id)
+
+
+@router.put("/jobcost/plant-rate")
+async def set_plant_rate(payload: PlantRateIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    return await labor_svc.set_plant(db, organization_id=organization_id, user=current_user,
+                                     hourly_rate=payload.hourly_rate, daily_hours=payload.daily_hours)
 
 
 @router.put("/jobcost/labor-rates/{user_id}")

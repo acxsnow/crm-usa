@@ -236,3 +236,37 @@ async def test_aprobado_menor_a_lo_marcado_reparte_en_proporcion(db, seeded_org,
 async def test_tarifas_con_permiso(app_client, active_technician_user):
     tec = await headers_for(app_client, active_technician_user.email)
     assert (await app_client.get(f"{API}/jobcost/labor-rates", headers=tec)).status_code == 403
+
+
+async def test_tarifa_de_planta_y_por_trabajo_segun_el_cliente(app_client, db, seeded_org, admin, active_technician_user):
+    org = seeded_org["org"].id
+    tec = active_technician_user.id
+    _, obra = await approved_case_with_project(db, org)
+    await _turno(db, org, tec, [("arrived", obra.id, 0), ("left_site", obra.id, 120)], aprobado=480)
+    planta = (await app_client.get(f"{API}/jobcost/plant-rate", headers=admin)).json()
+    assert (planta["plant_hourly_rate"], planta["plant_daily_hours"], planta["plant_daily_value"]) == ("45.00", "8.00", "360.00")
+    # Sin forma de pago no suma y se avisa.
+    assert await labor.costs_by_project(db, org, {obra.id}) == {}
+    assert (await app_client.get(f"{API}/projects/{obra.id}/labor-hours", headers=admin)).json()["missing_rate"]
+    # Por hora: 2 h × 45.
+    r = await app_client.put(f"{API}/attendance/pay-settings/{tec}", json={"pay_type": "hour"}, headers=admin)
+    assert r.status_code == 200
+    assert (await labor.costs_by_project(db, org, {obra.id}))[obra.id] == Decimal("90.00")
+    # Una tarifa propia manda sobre la de planta.
+    await app_client.put(f"{API}/jobcost/labor-rates/{tec}", json={"hourly_rate": "50"}, headers=admin)
+    assert (await labor.costs_by_project(db, org, {obra.id}))[obra.id] == Decimal("100.00")
+    # Por trabajo no suma por horas: su pago va por obra, y no se avisa como faltante.
+    await app_client.put(f"{API}/attendance/pay-settings/{tec}", json={"pay_type": "job"}, headers=admin)
+    assert await labor.costs_by_project(db, org, {obra.id}) == {}
+    assert (await app_client.get(f"{API}/projects/{obra.id}/labor-hours", headers=admin)).json()["missing_rate"] == []
+    # La tarifa de planta se puede cambiar.
+    r = await app_client.put(f"{API}/jobcost/plant-rate", json={"hourly_rate": "47", "daily_hours": "8"}, headers=admin)
+    assert r.json()["plant_daily_value"] == "376.00"
+
+
+def test_plantillas_de_pedestal_con_las_cifras_del_cliente():
+    from app.modules.warehouse.jobcost import DEFAULT_TEMPLATES
+
+    linea = lambda nombre, cat: next(l for t in DEFAULT_TEMPLATES if t["name"] == nombre for l in t["lines"] if l["category"] == cat)  # noqa: E731
+    assert linea("Pedestal (rebate) con personal propio", "labor")["value"] == "600"
+    assert linea("Pedestal (rebate) con subcontratista", "contractor")["value"] == "1000"

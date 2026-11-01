@@ -62,6 +62,9 @@ class AttendanceSettings(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     # Bloquear el trabajo de campo (evidencias, checklist, diario…) hasta marcar.
     # Encendido por decisión de Don Aldo (24 oct).
     require_clock_in_for_field_work: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Técnicos fijos de planta (cliente, 1 nov): 45 USD la hora, 8 horas diarias.
+    plant_hourly_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("45"), server_default="45", nullable=False)
+    plant_daily_hours: Mapped[Decimal] = mapped_column(Numeric(4, 2), default=Decimal("8"), server_default="8", nullable=False)
     # ¿La pausa se paga? Por defecto no: resta de las horas efectivas.
     paid_pauses: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

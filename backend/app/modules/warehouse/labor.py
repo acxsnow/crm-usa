@@ -1,9 +1,12 @@
 """Mano de obra por técnico desde las horas aprobadas (como el «job costing»
 de Housecall Pro).
 
-- Cada técnico tiene una tarifa por hora (`LaborRate`); quien no tiene tarifa
-  no suma por horas (por ejemplo, a quien se le paga por trabajo y ya se anota
-  a mano en el costo).
+- Tarifa de cada persona, en este orden (cifras del cliente, 1 nov):
+  - «Por trabajo» (Nómina): no suma por horas. Su pago va por obra: 600 USD por
+    pedestal al técnico propio y 1.000 al subcontratista, en plantilla y costos.
+  - Tarifa propia (`LaborRate`), si se le puso una.
+  - «Por hora» o «por día»: la de planta de la organización (45 USD la hora).
+  - Sin forma de pago ni tarifa propia: no suma y se avisa.
 - Las horas de una obra salen de las marcas del turno: desde «en camino» o
   «llegué» a esa obra hasta «salí de la obra» (o hasta la siguiente obra, o el
   fin del turno). El viaje cuenta, como en Housecall Pro.
@@ -29,19 +32,67 @@ STARTS = {"en_route", "arrived"}
 MAX_RATE = Decimal("1000")
 
 
-async def rates(db: AsyncSession, organization_id) -> dict:
+async def explicit_rates(db: AsyncSession, organization_id) -> dict:
     return {r.user_id: r.hourly_rate for r in (await db.execute(select(LaborRate).where(
         LaborRate.organization_id == organization_id))).scalars().all()}
 
 
+async def rates(db: AsyncSession, organization_id) -> dict:
+    """{user_id: tarifa} efectiva de quien suma por horas (ver el orden arriba)."""
+    from app.modules.attendance.models import EmployeePaySetting
+    from app.modules.attendance.service import get_settings
+
+    propias = await explicit_rates(db, organization_id)
+    s = await get_settings(db, organization_id)
+    tarifas = dict(propias)
+    for uid, tipo in (await db.execute(select(EmployeePaySetting.user_id, EmployeePaySetting.pay_type).where(
+            EmployeePaySetting.organization_id == organization_id))).all():
+        if tipo == "job":
+            tarifas.pop(uid, None)
+        elif uid not in propias:
+            tarifas[uid] = s.plant_hourly_rate
+    return tarifas
+
+
 async def list_rates(db: AsyncSession, organization_id) -> list[dict]:
-    """Los técnicos activos con su tarifa (vacía si no tiene)."""
+    """Los técnicos activos con su tarifa propia y la que de verdad les aplica."""
+    from app.modules.attendance.service import pay_types
     from app.modules.field_ops.installation import list_installers
 
-    tarifas = await rates(db, organization_id)
+    propias, efectivas, tipos = (await explicit_rates(db, organization_id), await rates(db, organization_id),
+                                 await pay_types(db, organization_id))
     return [{"user_id": str(u.id), "name": u.full_name,
-             "hourly_rate": str(tarifas[u.id]) if u.id in tarifas else None}
+             "hourly_rate": str(propias[u.id]) if u.id in propias else None,
+             "pay_type": tipos.get(u.id),
+             "effective_rate": str(efectivas[u.id]) if u.id in efectivas else None}
             for u in await list_installers(db, organization_id=organization_id)]
+
+
+async def get_plant(db: AsyncSession, organization_id) -> dict:
+    from app.modules.attendance.service import get_settings
+
+    s = await get_settings(db, organization_id)
+    await db.commit()
+    return _plant_out(s)
+
+
+def _plant_out(s) -> dict:
+    tarifa, horas = to_money(s.plant_hourly_rate), to_money(s.plant_daily_hours)
+    return {"plant_hourly_rate": str(tarifa), "plant_daily_hours": str(horas), "plant_daily_value": str(to_money(tarifa * horas))}
+
+
+async def set_plant(db: AsyncSession, *, organization_id, user, hourly_rate: Decimal, daily_hours: Decimal) -> dict:
+    from app.modules.attendance.service import get_settings
+
+    if not Decimal("0") < hourly_rate <= MAX_RATE or not Decimal("0") < daily_hours <= Decimal("24"):
+        raise InvalidInputError("Revisa la tarifa y las horas del día.", code="invalid_rate")
+    s = await get_settings(db, organization_id)
+    antes = _plant_out(s)
+    s.plant_hourly_rate, s.plant_daily_hours = to_money(hourly_rate), to_money(daily_hours)
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id, action="jobcost.plant_rate_set",
+                             entity_type="AttendanceSettings", entity_id=str(s.id), before_data=antes, after_data=_plant_out(s))
+    await db.commit()
+    return _plant_out(s)
 
 
 async def set_rate(db: AsyncSession, *, organization_id, user, user_id, hourly_rate: Decimal | None) -> dict:
@@ -157,13 +208,16 @@ async def project_detail(db: AsyncSession, organization_id, project_id: uuid.UUI
     por_persona = (await minutes_by_project(db, organization_id, {project_id})).get(project_id, {})
     nombres = dict((await db.execute(select(User.id, User.full_name).where(User.id.in_(por_persona.keys())))).all()) \
         if por_persona else {}
+    from app.modules.attendance.service import pay_types
+
+    tipos = await pay_types(db, organization_id)
     filas, total = [], ZERO
     for uid, mins in sorted(por_persona.items(), key=lambda x: -x[1]):
         tarifa = tarifas.get(uid)
         costo = to_money(Decimal(str(mins)) / 60 * tarifa) if tarifa is not None else None
         total += costo or ZERO
         filas.append({"user_id": str(uid), "name": nombres.get(uid, "—"), "minutes": round(mins),
-                      "hourly_rate": str(tarifa) if tarifa is not None else None,
+                      "hourly_rate": str(tarifa) if tarifa is not None else None, "pay_type": tipos.get(uid),
                       "cost": str(costo) if costo is not None else None})
     return {"rows": filas, "total": str(to_money(total)),
-            "missing_rate": [f["name"] for f in filas if f["hourly_rate"] is None]}
+            "missing_rate": [f["name"] for f in filas if f["hourly_rate"] is None and f["pay_type"] != "job"]}
