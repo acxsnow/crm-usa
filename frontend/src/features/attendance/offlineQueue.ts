@@ -90,11 +90,20 @@ export function currentPosition(timeoutMs = 15000): Promise<{
   });
 }
 
+export const LOCATION_REQUIRED = "location_required";
+
 /** Encola una marca y trata de enviarla. */
 export async function mark(event_type: EventType, extra: {
   project_id?: string | null; note?: string | null; withLocation?: boolean } = {}): Promise<SendResult> {
   const pos = extra.withLocation === false ? { location_status: "not_requested" as const }
     : await currentPosition();
+  // Negar el permiso no deja iniciar turno: no entra a la cola, queda el aviso de que
+  // se negó y la pantalla explica cómo activarlo. Sin señal o sin GPS sí sigue.
+  if (event_type === "clock_in" && pos.location_status === "denied") {
+    void mark("location_denied", { withLocation: false });
+    return { sent: 0, offline: false, errors: [{ client_event_id: "", code: LOCATION_REQUIRED,
+      message: "Activa la ubicación del navegador para iniciar turno." }] };
+  }
   const evento: AttendanceEventIn = {
     event_type, client_event_id: newId(), device_at: new Date().toISOString(), ...pos,
     project_id: extra.project_id ?? null, note: extra.note ?? null,
