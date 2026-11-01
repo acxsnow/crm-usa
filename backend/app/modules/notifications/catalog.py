@@ -143,6 +143,17 @@ NOTICES: dict[str, dict] = {
         "title": "Toca contar la bodega",
         "body": "El último conteo físico fue el {{fecha}} (hace {{dias}} días). Toca el conteo mensual.",
     },
+    # Cotización por enlace (billing/quote_links.py, spec 2026-10-31)
+    "quote.customer_accepted": {
+        "label": "El cliente aceptó una cotización", "audience": "Quien maneja cotizaciones (quotes.manage)",
+        "title": "Cotización aceptada: {{cotizacion}} · {{monto}}",
+        "body": "{{cliente}} aceptó y firmó la cotización {{cotizacion}} por {{monto}}. Ya nacieron la factura en borrador y la obra por agendar.",
+    },
+    "quote.customer_rejected": {
+        "label": "El cliente rechazó una cotización", "audience": "Quien maneja cotizaciones (quotes.manage)",
+        "title": "Cotización rechazada: {{cotizacion}}",
+        "body": "{{cliente}} no aceptó la cotización {{cotizacion}}. Motivo: {{motivo}}.",
+    },
     # Pagos en línea (payments/, spec 2026-10-25-pagos-tarjeta)
     "payment.received": {
         "label": "Pago en línea recibido", "audience": "Quien registra pagos (invoices.record_payment)",
@@ -177,6 +188,8 @@ DEFAULT_PERMISSION = {
     "warehouse.release_pending": "warehouse.approve_release",
     "warehouse.stock_low": "warehouse.manage",
     "warehouse.count_due": "warehouse.manage",
+    "quote.customer_accepted": "quotes.manage",
+    "quote.customer_rejected": "quotes.manage",
     "payment.received": "invoices.record_payment",
     "payment.failed": "invoices.record_payment",
     "payment.disputed": "invoices.record_payment",

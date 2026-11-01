@@ -245,6 +245,8 @@ export interface LineInput {
   description: string;
   quantity: number;
   unit_price: number;
+  /** La opción de la cotización a la que pertenece; sin ella va en todas. */
+  option_key?: string | null;
 }
 
 export const LINE_KIND_LABELS: Record<string, string> = {
@@ -272,8 +274,42 @@ export interface Quote {
   decided_at: string | null;
   rejection_reason: string | null;
   total: number;
-  lines: InvoiceLine[];
+  options: QuoteOption[];
+  accepted_option: string | null;
+  decided_by: "office" | "customer" | null;
+  public_sent_to: string | null;
+  viewed_at: string | null;
+  signer_name: string | null;
+  has_public_link: boolean;
+  lines: (InvoiceLine & { option_key?: string | null })[];
   created_at: string;
+}
+
+export interface QuoteOption {
+  key: string;
+  label: string;
+  total: number;
+}
+
+/** Lo que ve el cliente por el enlace, sin sesión. */
+export interface PublicQuote {
+  company: string;
+  customer_name: string;
+  quote_number: string;
+  version: number;
+  title: string | null;
+  status: QuoteStatus;
+  status_label: string;
+  can_decide: boolean;
+  valid_until: string | null;
+  notes: string | null;
+  sent_at: string | null;
+  options: { key: string; label: string; total: string }[];
+  accepted_option: string | null;
+  total: string;
+  lines: { kind: string; description: string; quantity: string; unit_price: string; amount: string; option_key: string | null }[];
+  signer_name: string | null;
+  decided_at: string | null;
 }
 
 export interface QuoteDetail extends Quote {

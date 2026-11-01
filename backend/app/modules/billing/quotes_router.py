@@ -6,12 +6,14 @@ Cadena A retiró (COD-01) y su prueba exige que no responda."""
 import uuid
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_permission
+from app.core.rate_limit import is_rate_limited
 from app.db.session import get_db
+from app.modules.billing import quote_links
 from app.modules.billing import quotes as quotes_service
 from app.modules.billing.models import QUOTE_STATUS_LABELS
 from app.modules.billing.schemas import InvoiceLineIn, InvoiceLineResponse, InvoiceResponse, Money, invoice_response
@@ -19,6 +21,17 @@ from app.modules.users.models import User
 from app.shared.pagination import pagination_params
 
 router = APIRouter(prefix="/billing/quotes", tags=["quotes"])
+# El cliente abre su cotización sin sesión, con el token del enlace.
+public_router = APIRouter(prefix="/public/quotes", tags=["quotes"])
+
+
+class QuoteLineIn(InvoiceLineIn):
+    option_key: str | None = Field(default=None, max_length=10)
+
+
+class QuoteOptionIn(BaseModel):
+    key: str = Field(min_length=1, max_length=10)
+    label: str = Field(min_length=1, max_length=60)
 
 
 class QuoteCreate(BaseModel):
@@ -27,14 +40,39 @@ class QuoteCreate(BaseModel):
     title: str | None = Field(default=None, max_length=255)
     valid_until: date | None = None
     notes: str | None = None
-    lines: list[InvoiceLineIn] = Field(min_length=1)
+    options: list[QuoteOptionIn] = Field(default_factory=list, max_length=4)
+    lines: list[QuoteLineIn] = Field(min_length=1)
 
 
 class QuoteUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=255)
     valid_until: date | None = None
     notes: str | None = None
-    lines: list[InvoiceLineIn] | None = None
+    options: list[QuoteOptionIn] | None = Field(default=None, max_length=4)
+    lines: list[QuoteLineIn] | None = None
+
+
+class QuoteAccept(BaseModel):
+    option: str | None = Field(default=None, max_length=10)
+
+
+class QuoteLinkIn(BaseModel):
+    email: bool = False
+
+
+class QuoteLinkOut(BaseModel):
+    url: str
+    emailed_to: str | None
+
+
+class PublicAccept(BaseModel):
+    option: str | None = Field(default=None, max_length=10)
+    signer_name: str = Field(min_length=1, max_length=255)
+    signature_base64: str = Field(min_length=20, max_length=2_000_000)
+
+
+class PublicReject(BaseModel):
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 class QuoteReject(BaseModel):
@@ -47,6 +85,16 @@ class QuoteVersion(BaseModel):
     status: str
     total: Money
     created_at: datetime
+
+
+class QuoteLineResponse(InvoiceLineResponse):
+    option_key: str | None = None
+
+
+class QuoteOptionTotal(BaseModel):
+    key: str
+    label: str
+    total: Money
 
 
 class QuoteResponse(BaseModel):
@@ -65,7 +113,14 @@ class QuoteResponse(BaseModel):
     decided_at: datetime | None
     rejection_reason: str | None
     total: Money
-    lines: list[InvoiceLineResponse]
+    options: list[QuoteOptionTotal] = []
+    accepted_option: str | None = None
+    decided_by: str | None = None
+    public_sent_to: str | None = None
+    viewed_at: datetime | None = None
+    signer_name: str | None = None
+    has_public_link: bool = False
+    lines: list[QuoteLineResponse]
     created_at: datetime
 
 
@@ -85,9 +140,11 @@ def _quote(q, hoy: date) -> dict:
         **{c: getattr(q, c) for c in (
             "id", "quote_number", "version", "previous_version_id", "customer_id", "project_id", "title",
             "valid_until", "notes", "sent_at", "decided_at", "rejection_reason", "total", "created_at",
+            "accepted_option", "decided_by", "public_sent_to", "viewed_at", "signer_name",
         )},
         "status": estado, "status_label": QUOTE_STATUS_LABELS[estado],
-        "lines": [InvoiceLineResponse.model_validate(l) for l in q.lines],
+        "options": q.option_totals, "has_public_link": bool(q.public_token_hash),
+        "lines": [QuoteLineResponse.model_validate(l) for l in q.lines],
     }
 
 
@@ -176,14 +233,24 @@ async def revise_quote(quote_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                                                                user=current_user, quote_id=quote_id))
 
 
+@router.post("/{quote_id}/link", response_model=QuoteLinkOut)
+async def quote_link(quote_id: uuid.UUID, payload: QuoteLinkIn | None = None, db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_manage)):
+    """Enlace para que el cliente la vea, elija, firme y acepte. Cada llamada
+    genera uno nuevo y el anterior deja de servir."""
+    return await quote_links.create_link(db, organization_id=organization_id, user=current_user, quote_id=quote_id,
+                                         email=bool(payload and payload.email))
+
+
 @router.post("/{quote_id}/accept", response_model=QuoteAcceptResponse)
-async def accept_quote(quote_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+async def accept_quote(quote_id: uuid.UUID, payload: QuoteAccept | None = None, db: AsyncSession = Depends(get_db),
                        organization_id: uuid.UUID = Depends(get_organization_id),
                        current_user: User = Depends(_manage)):
     from app.modules.field_ops.clock import org_today
 
     q, factura = await quotes_service.accept_quote(db, organization_id=organization_id, user=current_user,
-                                                   quote_id=quote_id)
+                                                   quote_id=quote_id, option=payload.option if payload else None)
     hoy = await org_today(db, organization_id)
     return {"quote": QuoteResponse.model_validate(_quote(q, hoy)), "invoice": invoice_response(factura, hoy)}
 
@@ -195,3 +262,31 @@ async def reject_quote(quote_id: uuid.UUID, payload: QuoteReject, db: AsyncSessi
     return await _detail(db, await quotes_service.reject_quote(db, organization_id=organization_id,
                                                                user=current_user, quote_id=quote_id,
                                                                reason=payload.reason))
+
+
+async def _limite_publico(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    if await is_rate_limited(f"quote:ip:{ip}", max_attempts=60, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Espera un minuto.")
+
+
+@public_router.get("/{token}")
+async def public_quote(token: str, request: Request, db: AsyncSession = Depends(get_db)) -> dict:
+    await _limite_publico(request)
+    return await quote_links.public_view(db, token[:128])
+
+
+@public_router.post("/{token}/accept")
+async def public_quote_accept(token: str, payload: PublicAccept, request: Request,
+                              db: AsyncSession = Depends(get_db)) -> dict:
+    await _limite_publico(request)
+    return await quote_links.public_accept(db, raw_token=token[:128], option=payload.option,
+                                           signer_name=payload.signer_name, signature_base64=payload.signature_base64,
+                                           ip_address=request.client.host if request.client else None)
+
+
+@public_router.post("/{token}/reject")
+async def public_quote_reject(token: str, payload: PublicReject, request: Request,
+                              db: AsyncSession = Depends(get_db)) -> dict:
+    await _limite_publico(request)
+    return await quote_links.public_reject(db, raw_token=token[:128], reason=payload.reason)

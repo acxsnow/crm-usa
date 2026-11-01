@@ -4,14 +4,20 @@ import { money } from "./billingApi";
 export const emptyLine = (): LineInput => ({ kind: "service", description: "", quantity: 1, unit_price: 0 });
 
 export const toInputs = (lines: InvoiceLine[]): LineInput[] =>
-  lines.map((l) => ({ kind: l.kind, description: l.description, quantity: l.quantity, unit_price: l.unit_price }));
+  lines.map((l) => ({ kind: l.kind, description: l.description, quantity: l.quantity, unit_price: l.unit_price,
+    option_key: (l as { option_key?: string | null }).option_key ?? null }));
 
 /** Total mostrado mientras se edita; el que vale es el que calcula el servidor. */
 export const linesTotal = (lines: LineInput[]) =>
   lines.reduce((acc, l) => acc + Math.round(l.quantity * l.unit_price * 100) / 100, 0);
 
 /** Líneas de cotización o de factura en borrador: tipo, descripción, cantidad y precio. */
-export function LinesEditor({ lines, onChange }: { lines: LineInput[]; onChange: (l: LineInput[]) => void }) {
+export function LinesEditor({ lines, onChange, options }: {
+  lines: LineInput[];
+  onChange: (l: LineInput[]) => void;
+  /** Con opciones (básica / premium) cada línea dice a cuál pertenece. */
+  options?: { key: string; label: string }[];
+}) {
   const set = (i: number, patch: Partial<LineInput>) => onChange(lines.map((l, n) => (n === i ? { ...l, ...patch } : l)));
   return (
     <div className="lines-editor">
@@ -32,11 +38,27 @@ export function LinesEditor({ lines, onChange }: { lines: LineInput[]; onChange:
           <span className="billing-amount">{money(l.quantity * l.unit_price)}</span>
           <button type="button" className="acta-btn is-quiet" aria-label="Quitar línea" disabled={lines.length === 1}
             onClick={() => onChange(lines.filter((_, n) => n !== i))}>✕</button>
+          {!!options?.length && (
+            <label className="lines-option">
+              <span>Va en</span>
+              <select value={l.option_key ?? ""} onChange={(e) => set(i, { option_key: e.target.value || null })}>
+                <option value="">Todas las opciones</option>
+                {options.map((o) => <option key={o.key} value={o.key}>{o.label || `Opción ${o.key}`}</option>)}
+              </select>
+            </label>
+          )}
         </div>
       ))}
       <div className="acta-actions" style={{ justifyContent: "space-between" }}>
         <button type="button" className="acta-btn is-line" onClick={() => onChange([...lines, emptyLine()])}>+ Agregar línea</button>
-        <div className="lines-total"><span>Total</span><span className="billing-amount">{money(linesTotal(lines))}</span></div>
+        {options?.length ? (
+          <div className="lines-total">
+            {options.map((o) => (
+              <span key={o.key}>{o.label || `Opción ${o.key}`}: <span className="billing-amount">
+                {money(linesTotal(lines.filter((l) => !l.option_key || l.option_key === o.key)))}</span></span>
+            ))}
+          </div>
+        ) : <div className="lines-total"><span>Total</span><span className="billing-amount">{money(linesTotal(lines))}</span></div>}
       </div>
     </div>
   );

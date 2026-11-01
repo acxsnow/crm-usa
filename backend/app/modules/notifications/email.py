@@ -98,6 +98,14 @@ def _render_template(template: str, context: dict) -> tuple[str, str]:
             "Firma requerida para tu proyecto",
             f"Hola,\n\nEl equipo solicita tu firma para el proyecto: {context.get('project_title', 'tu proyecto')}.\n\nFirma aquí: {context.get('signing_link', '')}\n\nEste enlace vence el {context.get('expires_at', '')}.\n\nSi no esperabas este correo, puedes ignorarlo.",
         )
+    if template == "quote_link":
+        return (
+            f"Cotización {context.get('quote_number', '')} de {context.get('company', 'tu contratista')}",
+            f"Hola {context.get('customer_name', '')},\n\n{context.get('company', 'Tu contratista')} te envió la "
+            f"cotización {context.get('quote_number', '')} por {context.get('total', '')}.\n\n"
+            f"Revísala, elige la opción y fírmala aquí: {context.get('quote_link', '')}\n\n"
+            f"Vigente hasta: {context.get('valid_until') or 'sin fecha límite'}.",
+        )
     if template == "account_invitation":
         return ("Invitación a tu cuenta", f"Has sido invitado a usar la plataforma. Acepta la invitación aquí: {context.get('invite_link', '')}")
     if template == "password_reset_request":

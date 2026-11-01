@@ -4,6 +4,7 @@ from app.modules.attendance.router import router as attendance_router
 from app.modules.auth.router import router as auth_router
 from app.modules.billing.claims_router import router as billing_claims_router
 from app.modules.billing.program_router import router as billing_program_router
+from app.modules.billing.quotes_router import public_router as public_quotes_router
 from app.modules.billing.quotes_router import router as billing_quotes_router
 from app.modules.billing.router import router as billing_router
 from app.modules.cases.intake_router import router as cases_intake_router
@@ -35,6 +36,7 @@ api_router.include_router(billing_router)
 api_router.include_router(billing_program_router)
 api_router.include_router(billing_claims_router)
 api_router.include_router(billing_quotes_router)
+api_router.include_router(public_quotes_router)
 api_router.include_router(cases_router)
 api_router.include_router(programs_router)
 api_router.include_router(cases_intake_router)
