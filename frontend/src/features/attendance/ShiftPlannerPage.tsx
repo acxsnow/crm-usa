@@ -279,15 +279,18 @@ function SettingsPanel() {
           {num("early_leave_tolerance_minutes", "Tolerancia de salida (min)", 240)}
         </div>
         <div className="att-form-row">
-          {num("daily_overtime_after_minutes", "Extras desde (min al día)", 1440, `${hm(v.daily_overtime_after_minutes)} · 0 apaga`)}
-          {num("weekly_overtime_after_minutes", "Extras desde (min a la semana)", 10080, `${hm(v.weekly_overtime_after_minutes)} · 0 apaga`)}
+          {num("daily_overtime_after_minutes", "Extras de referencia desde (min al día)", 1440, `${hm(v.daily_overtime_after_minutes)} · 0 apaga`)}
+          {num("weekly_overtime_after_minutes", "Extras de referencia desde (min a la semana)", 10080, `${hm(v.weekly_overtime_after_minutes)} · 0 apaga`)}
         </div>
         <div className="att-form-row">
-          {num("tracking_interval_minutes", "Ubicación con la app abierta cada (min)", 240, "0 = solo en las marcas")}
           {num("location_retention_days", "Borrar coordenadas a los (días)", 730)}
         </div>
+        <label className="att-check"><input type="checkbox" checked={v.tracking_interval_minutes > 0}
+          onChange={(e) => setDraft({ ...draft, tracking_interval_minutes: e.target.checked ? 60 : 0 })} />
+          Seguimiento periódico: un punto de ubicación cada hora con la app abierta (apagado, solo en las marcas)</label>
         <label className="att-check"><input type="checkbox" checked={v.paid_pauses}
-          onChange={(e) => setDraft({ ...draft, paid_pauses: e.target.checked })} /> Las pausas se pagan</label>
+          onChange={(e) => setDraft({ ...draft, paid_pauses: e.target.checked })} /> Regla general: las pausas se pagan
+          (para quien no tiene forma de pago definida en Nómina)</label>
         <label className="att-check"><input type="checkbox" checked={v.require_clock_in_for_field_work}
           onChange={(e) => setDraft({ ...draft, require_clock_in_for_field_work: e.target.checked })} />
           Bloquear evidencias, checklist y diario hasta que el técnico inicie su turno</label>

@@ -258,6 +258,11 @@ export interface PayrollRow {
   daily_overtime_minutes: number;
   weekly_overtime_minutes: number;
   approved_minutes: number;
+  pay_type: PayType | null;
+  marked_overtime_minutes: number;
+  declared_overtime_hours: number;
+  approved_overtime_hours: number;
+  overtime_value: number;
   absences: number;
   late_arrivals: number;
   early_departures: number;
@@ -266,6 +271,36 @@ export interface PayrollRow {
   corrections: number;
   novelties: number;
 }
+export type PayType = "day" | "hour" | "job";
+export const PAY_TYPE_LABELS: Record<PayType, string> = { day: "Por día", hour: "Por hora", job: "Por trabajo" };
+export interface PaySetting {
+  user_id: string;
+  name: string;
+  pay_type: PayType | null;
+  pay_type_label: string | null;
+  lunch_included: boolean | null;
+}
+export interface OvertimeRow {
+  id: string;
+  user_id: string;
+  user_name: string;
+  work_date: string;
+  hours: string;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  value_amount: string | null;
+  review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+export const OVERTIME_STATUS: Record<OvertimeRow["status"], string> = { pending: "Por revisar", approved: "Aprobadas", rejected: "No aprobadas" };
+export const setPayType = (userId: string, payType: PayType | null) =>
+  apiClient.put<PaySetting>(`/attendance/pay-settings/${userId}`, { pay_type: payType }).then((r) => r.data);
+export const declareOvertime = (body: { work_date: string; hours: string; notes?: string }) =>
+  apiClient.post<OvertimeRow>("/attendance/overtime", body).then((r) => r.data);
+export const deleteOvertime = (id: string) => apiClient.delete(`/attendance/overtime/${id}`);
+export const reviewOvertime = (id: string, body: { approve: boolean; value_amount?: string; notes?: string }) =>
+  apiClient.post<OvertimeRow>(`/attendance/overtime/${id}/review`, body).then((r) => r.data);
 export interface PayrollReport {
   date_from: string;
   date_to: string;

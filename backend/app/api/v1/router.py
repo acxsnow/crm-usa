@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.modules.accounting.router import router as accounting_router
 from app.modules.attendance.router import router as attendance_router
 from app.modules.auth.router import router as auth_router
 from app.modules.billing.claims_router import router as billing_claims_router
@@ -26,6 +27,7 @@ from app.modules.warehouse.router import router as warehouse_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
+api_router.include_router(accounting_router)
 api_router.include_router(users_router)
 api_router.include_router(roles_router)
 api_router.include_router(organizations_router)

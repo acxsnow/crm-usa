@@ -2,6 +2,7 @@
 permiso; la organización sale del token (spec, «Permisos y privacidad»)."""
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, Field
@@ -9,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
-from app.modules.attendance import mapdata, reports, review
+from app.modules.attendance import mapdata, overtime, reports, review
 from app.modules.attendance import service as svc
 from app.modules.users.models import User
-from app.shared.pagination import paginate_list, pagination_params
+from app.shared.pagination import paginate, paginate_list, pagination_params
 
 router = APIRouter(tags=["attendance"])
 
@@ -25,6 +26,9 @@ _shifts_read = require_any_permission("shifts.manage", "attendance.review", "att
 _entries_read = require_any_permission("attendance.review", "attendance.dashboard")
 _novelties = require_any_permission("attendance.clock", "attendance.review")
 _map = require_any_permission("locations.view", "projects.read_all", "projects.read_assigned")
+# El mapa operativo lo ven Administrador y Administración (Don Aldo, 24 oct); el
+# técnico, sus propias obras. `_map` queda para el minimapa de una obra.
+_map_page = require_any_permission("locations.view", "projects.read_assigned")
 _project_location = require_permission("projects.update")
 
 
@@ -291,8 +295,9 @@ async def _entries(db, organization_id, date_from, date_to, user_id, status) -> 
     s = await svc.get_settings(db, organization_id)
     nombres = await reports._names(db, organization_id, list({e.user_id for e in filas}))
     ahora = svc.now()
-    return [{**svc.entry_out(e, now=ahora, paid_pauses=s.paid_pauses), "user_name": nombres.get(e.user_id)}
-            for e in filas]
+    tipos = await svc.pay_types(db, organization_id)
+    return [{**svc.entry_out(e, now=ahora, paid_pauses=svc.pauses_paid(s, tipos, e.user_id)),
+             "user_name": nombres.get(e.user_id)} for e in filas]
 
 
 @router.get("/attendance/entries")
@@ -523,7 +528,7 @@ async def map_projects(status: str | None = None, technician_user_id: uuid.UUID 
                        ids: list[uuid.UUID] | None = Query(default=None, max_length=500),
                        db: AsyncSession = Depends(get_db),
                        organization_id: uuid.UUID = Depends(get_organization_id),
-                       current_user: User = Depends(_map)) -> dict:
+                       current_user: User = Depends(_map_page)) -> dict:
     return await mapdata.projects(db, organization_id=organization_id, user=current_user, status=status,
                                   technician_id=technician_user_id, customer_q=customer, on_date=on_date, ids=ids)
 
@@ -532,7 +537,7 @@ async def map_projects(status: str | None = None, technician_user_id: uuid.UUID 
 async def map_people(response: Response, user_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db),
                      organization_id: uuid.UUID = Depends(get_organization_id),
                      pag: tuple[int, int] = Depends(pagination_params),
-                     current_user: User = Depends(_map)) -> list[dict]:
+                     current_user: User = Depends(_map_page)) -> list[dict]:
     return paginate_list(await mapdata.people(db, organization_id=organization_id, user=current_user,
                                               user_id=user_id), limit=pag[0], offset=pag[1], response=response)
 
@@ -572,6 +577,89 @@ async def geocode_projects(payload: GeocodeIn, db: AsyncSession = Depends(get_db
 @router.get("/operations-map/route")
 async def map_route(on_date: date, user_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_db),
                     organization_id: uuid.UUID = Depends(get_organization_id),
-                    current_user: User = Depends(_map)) -> dict:
+                    current_user: User = Depends(_map_page)) -> dict:
     return await mapdata.route(db, organization_id=organization_id, user=current_user,
                                user_id=user_id or current_user.id, on_date=on_date)
+
+
+# ---------------------------------------------------------------------------
+# Forma de pago y horas extras declaradas (respuestas de Don Aldo)
+# ---------------------------------------------------------------------------
+
+class PaySettingIn(BaseModel):
+    pay_type: str | None = Field(default=None, pattern="^(day|hour|job)$")
+
+
+class OvertimeIn(BaseModel):
+    work_date: date
+    hours: Decimal = Field(gt=0, le=24)
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class OvertimeReviewIn(BaseModel):
+    approve: bool
+    value_amount: Decimal | None = Field(default=None, ge=0, le=100000)
+    notes: str | None = Field(default=None, max_length=500)
+
+
+@router.get("/attendance/pay-settings")
+async def list_pay_settings(response: Response, db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            pag: tuple[int, int] = Depends(pagination_params),
+                            current_user: User = Depends(_review)) -> list[dict]:
+    return paginate_list(await overtime.list_pay_settings(db, organization_id), limit=pag[0], offset=pag[1],
+                         response=response)
+
+
+@router.put("/attendance/pay-settings/{user_id}")
+async def set_pay_setting(user_id: uuid.UUID, payload: PaySettingIn, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_review)) -> dict:
+    """Sin `pay_type` se quita y vuelve a aplicar la regla general."""
+    return await overtime.set_pay_setting(db, organization_id=organization_id, actor=current_user, user_id=user_id,
+                                          pay_type=payload.pay_type)
+
+
+@router.post("/attendance/overtime", status_code=201)
+async def declare_overtime(payload: OvertimeIn, db: AsyncSession = Depends(get_db),
+                           organization_id: uuid.UUID = Depends(get_organization_id),
+                           current_user: User = Depends(_clock)) -> dict:
+    return await overtime.declare(db, organization_id=organization_id, user=current_user, work_date=payload.work_date,
+                                  hours=payload.hours, notes=payload.notes)
+
+
+@router.get("/attendance/me/overtime")
+async def my_overtime(response: Response, db: AsyncSession = Depends(get_db),
+                      organization_id: uuid.UUID = Depends(get_organization_id),
+                      pag: tuple[int, int] = Depends(pagination_params),
+                      current_user: User = Depends(_clock)) -> list[dict]:
+    filas = await paginate(db, overtime.stmt(organization_id, user_id=current_user.id), limit=pag[0], offset=pag[1],
+                           response=response)
+    return await overtime.rows_out(db, organization_id, filas)
+
+
+@router.delete("/attendance/overtime/{declaration_id}", status_code=204)
+async def delete_overtime(declaration_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_clock)) -> None:
+    await overtime.delete(db, organization_id=organization_id, user=current_user, declaration_id=declaration_id)
+
+
+@router.get("/attendance/overtime")
+async def list_overtime(response: Response, status: str | None = Query(default=None, pattern="^(pending|approved|rejected)$"),
+                        date_from: date | None = None, date_to: date | None = None,
+                        db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                        pag: tuple[int, int] = Depends(pagination_params),
+                        current_user: User = Depends(_review)) -> list[dict]:
+    filas = await paginate(db, overtime.stmt(organization_id, status=status, date_from=date_from, date_to=date_to),
+                           limit=pag[0], offset=pag[1], response=response)
+    return await overtime.rows_out(db, organization_id, filas)
+
+
+@router.post("/attendance/overtime/{declaration_id}/review")
+async def review_overtime(declaration_id: uuid.UUID, payload: OvertimeReviewIn, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_review)) -> dict:
+    return await overtime.review(db, organization_id=organization_id, actor=current_user,
+                                 declaration_id=declaration_id, approve=payload.approve,
+                                 value_amount=payload.value_amount, notes=payload.notes)
