@@ -168,9 +168,52 @@ async def test_refresh_rotation_denylists_old_token(app_client, active_admin_use
     assert "access_token" in first_refresh.json()
     assert first_refresh.cookies["crm_refresh"] != old_refresh_token
 
-    # Replaying the now-rotated-away token must fail.
-    replay = await _refresh_with(app_client, old_refresh_token)
+    # Pasado el margen de gracia, la llave vieja ya no sirve.
+    from app.core import token_denylist
+
+    real_time = token_denylist.time.time
+    monkeypatch_time = real_time() + 61
+    token_denylist.time.time = lambda: monkeypatch_time
+    try:
+        replay = await _refresh_with(app_client, old_refresh_token)
+    finally:
+        token_denylist.time.time = real_time
     assert replay.status_code == 401
+
+
+async def test_refresh_grace_keeps_the_session_when_the_new_cookie_was_lost(app_client, active_admin_user):
+    """En producción la sesión se caía (3 nov 2026): si la respuesta con la
+    cookie nueva no llega al navegador (corte de señal, recarga a mitad de la
+    renovación, dos dispositivos), la siguiente renovación llega con la llave
+    anterior. Dentro del margen se acepta y se entrega una llave vigente."""
+    login = await app_client.post(
+        "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
+    )
+    old_refresh_token = login.cookies["crm_refresh"]
+    first = await _refresh_with(app_client, old_refresh_token)
+    assert first.status_code == 200
+
+    # La respuesta «se perdió»: el navegador vuelve a mandar la llave anterior.
+    retry = await _refresh_with(app_client, old_refresh_token)
+    assert retry.status_code == 200
+    assert "access_token" in retry.json()
+    # Y la llave nueva que entrega también sirve para seguir.
+    nueva = retry.cookies["crm_refresh"]
+    assert (await _refresh_with(app_client, nueva)).status_code == 200
+
+
+async def test_logout_has_no_grace(app_client, active_admin_user):
+    """Cerrar sesión invalida la llave de inmediato, sin margen."""
+    login = await app_client.post(
+        "/api/v1/auth/login", json={"email": "admin@acme-demo.com", "password": "SuperSecret123"}
+    )
+    refresh_token = login.cookies["crm_refresh"]
+    rotated = await _refresh_with(app_client, refresh_token)
+    current = rotated.cookies["crm_refresh"]
+    app_client.cookies.clear()
+    app_client.cookies.set("crm_refresh", current)
+    assert (await app_client.post("/api/v1/auth/logout")).status_code == 200
+    assert (await _refresh_with(app_client, current)).status_code == 401
 
 
 async def test_password_reset_confirm_revokes_all_sessions(app_client, active_admin_user, monkeypatch):

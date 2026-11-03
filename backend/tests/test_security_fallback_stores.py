@@ -29,6 +29,9 @@ class _RedisDenylist:
     async def exists(self, key: str) -> int:
         return int(key in self.values)
 
+    async def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
 
 class _RedisBrokenDenylist:
     async def setex(self, key: str, ttl_seconds: int, value: str) -> None:
@@ -131,3 +134,36 @@ async def test_denylist_ignores_non_positive_ttl():
     token_denylist.clear_denylist()
     await token_denylist.denylist_jti("nope", 0)
     assert await token_denylist.is_denylisted("nope") is False
+
+
+async def test_rotation_grace_expires_and_logout_is_strict(monkeypatch):
+    """La gracia de la rotación dura `grace_seconds`; sin gracia (logout) no hay margen."""
+    token_denylist.clear_denylist()
+    now = [100.0]
+    monkeypatch.setattr(token_denylist.time, "time", lambda: now[0])
+
+    async def sin_redis():
+        return None
+
+    monkeypatch.setattr(token_denylist, "get_redis_if_available", sin_redis)
+    await token_denylist.denylist_jti("rotada", 600, grace_seconds=60)
+    await token_denylist.denylist_jti("cerrada", 600)
+    assert await token_denylist.in_grace("rotada") is True
+    assert await token_denylist.in_grace("cerrada") is False
+    now[0] = 161.0
+    assert await token_denylist.in_grace("rotada") is False
+    assert await token_denylist.is_denylisted("rotada") is True
+
+
+async def test_rotation_grace_with_redis(monkeypatch):
+    token_denylist.clear_denylist()
+    redis = _RedisDenylist()
+
+    async def fake_get_redis():
+        return redis
+
+    monkeypatch.setattr(token_denylist, "get_redis_if_available", fake_get_redis)
+    await token_denylist.denylist_jti("rotada", 600, grace_seconds=60)
+    await token_denylist.denylist_jti("cerrada", 600)
+    assert await token_denylist.in_grace("rotada") is True
+    assert await token_denylist.in_grace("cerrada") is False
