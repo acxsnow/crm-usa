@@ -41,6 +41,7 @@ logger = structlog.get_logger(__name__)
 
 CHANNELS = ("sms", "email", "both")
 OPT_OUT_FOOTER = "Responde STOP para no recibir más."
+_OPT_OUT_PHRASE = re.compile(r"\b(responde|responder|env[ií]a|escribe|reply|text)\s+stop\b", re.I)
 # Solo palabras inequívocas: un "sí" puede ser respuesta a otra cosa.
 START_WORDS = {"START", "UNSTOP"}
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "ALTO", "PARAR", "BAJA", "CANCELAR"}
@@ -80,8 +81,11 @@ def next_allowed(moment: datetime, zone: str) -> datetime:
 
 
 def with_footer(texto: str) -> str:
+    """Agrega cómo darse de baja, salvo que el mensaje ya lo diga con una frase
+    de baja. Una palabra suelta no cuenta: un nombre o una obra con «stop»
+    (Stopford, «Stop leak») dejaría el SMS sin el aviso que exige la ley."""
     texto = (texto or "").strip()
-    return texto if "STOP" in texto.upper() else f"{texto} {OPT_OUT_FOOTER}"
+    return texto if _OPT_OUT_PHRASE.search(texto) else f"{texto} {OPT_OUT_FOOTER}"
 
 
 def channels_of(campaign_channel: str) -> list[str]:
@@ -432,9 +436,9 @@ async def opt_in_again(db: AsyncSession, *, phone: str, word: str) -> int:
 # Campañas
 # ---------------------------------------------------------------------------
 
-async def get_campaign(db, organization_id, campaign_id) -> Campaign:
+async def get_campaign(db, organization_id, campaign_id, *, allow_auto: bool = False) -> Campaign:
     c = await db.get(Campaign, campaign_id)
-    if c is None or c.organization_id != organization_id:
+    if c is None or c.organization_id != organization_id or (c.status == "auto" and not allow_auto):
         raise NotFoundError("La campaña no existe.", code="campaign_not_found")
     return c
 
@@ -558,7 +562,7 @@ async def send_due(db: AsyncSession, limit: int = 200) -> int:
     filas = (await db.execute(select(CampaignRecipient, Campaign).join(
         Campaign, Campaign.id == CampaignRecipient.campaign_id).where(
         CampaignRecipient.status == "pending", CampaignRecipient.next_attempt_at <= ahora,
-        Campaign.status.in_(("scheduled", "sending"))).limit(limit))).all()
+        Campaign.status.in_(("scheduled", "sending", "auto"))).limit(limit))).all()
     tocadas = set()
     for r, c in filas:
         tocadas.add(c.id)
@@ -596,8 +600,9 @@ async def send_due(db: AsyncSession, limit: int = 200) -> int:
     for cid in tocadas:
         quedan = (await db.execute(select(func.count()).select_from(CampaignRecipient).where(
             CampaignRecipient.campaign_id == cid, CampaignRecipient.status == "pending"))).scalar_one()
-        if quedan == 0:
-            c = await db.get(Campaign, cid)
+        c = await db.get(Campaign, cid)
+        # La campaña de una automatización («auto») sigue abierta: le llegan envíos nuevos.
+        if quedan == 0 and c.status != "auto":
             c.status, c.finished_at = "sent", ahora
     await db.commit()
     return len(filas)

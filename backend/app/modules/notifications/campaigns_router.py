@@ -243,9 +243,15 @@ async def list_campaigns(response: Response, pagination: tuple[int, int] = Depen
                          db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                          current_user: User = Depends(_manage)) -> list[dict]:
     limit, offset = pagination
-    filas = await paginate(db, select(Campaign).where(Campaign.organization_id == organization_id)
-                           .order_by(Campaign.created_at.desc(), Campaign.id.desc()),
-                           limit=limit, offset=offset, response=response)
+    filas = await paginate(
+        db,
+        select(Campaign)
+        .where(Campaign.organization_id == organization_id, Campaign.status != "auto")
+        .order_by(Campaign.created_at.desc(), Campaign.id.desc()),
+        limit=limit,
+        offset=offset,
+        response=response,
+    )
     return [await _out(db, c) for c in filas]
 
 
@@ -421,3 +427,70 @@ async def unsubscribe(token: str, db: AsyncSession = Depends(get_db)):
                                               texto="Este enlace de baja no existe o ya no es válido."), status_code=404)
     return HTMLResponse(_BAJA_HTML.format(titulo="Listo, te dimos de baja",
                                           texto="No volverás a recibir nuestras promociones por correo."))
+
+
+# --- Automatizaciones por evento ----------------------------------------------
+
+class AutomationIn(BaseModel):
+    name: str | None = Field(default=None, max_length=255)
+    trigger: str | None = Field(default=None, max_length=30)
+    delay_days: int | None = Field(default=None, ge=0, le=730)
+    channel: str | None = Field(default=None, max_length=10)
+    subject: str | None = Field(default=None, max_length=255)
+    message: str | None = Field(default=None, max_length=1600)
+    active: bool | None = None
+
+
+@router.get("/campaign-automations")
+async def list_automations(response: Response, pagination: tuple[int, int] = Depends(pagination_params),
+                           db: AsyncSession = Depends(get_db),
+                           organization_id: uuid.UUID = Depends(get_organization_id),
+                           current_user: User = Depends(_manage)) -> list[dict]:
+    from app.modules.notifications import automations as auto
+    from app.modules.notifications.models import CampaignAutomation
+
+    limit, offset = pagination
+    filas = await paginate(db, select(CampaignAutomation).where(
+        CampaignAutomation.organization_id == organization_id).order_by(CampaignAutomation.created_at),
+        limit=limit, offset=offset, response=response)
+    return [auto.out(a, await auto.stats(db, a)) for a in filas]
+
+
+@router.get("/campaign-automations/{automation_id}")
+async def get_automation(automation_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    from app.modules.notifications import automations as auto
+
+    a = await auto.get(db, organization_id, automation_id)
+    return auto.out(a, await auto.stats(db, a))
+
+
+@router.post("/campaign-automations", status_code=201)
+async def create_automation(payload: AutomationIn, db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            current_user: User = Depends(_manage)) -> dict:
+    from app.modules.notifications import automations as auto
+
+    a = await auto.create(db, organization_id=organization_id, user=current_user, data=payload.model_dump())
+    return auto.out(a, await auto.stats(db, a))
+
+
+@router.patch("/campaign-automations/{automation_id}")
+async def update_automation(automation_id: uuid.UUID, payload: AutomationIn, db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            current_user: User = Depends(_manage)) -> dict:
+    from app.modules.notifications import automations as auto
+
+    a = await auto.update(db, organization_id=organization_id, user=current_user, automation_id=automation_id,
+                          data=payload.model_dump(exclude_unset=True))
+    return auto.out(a, await auto.stats(db, a))
+
+
+@router.delete("/campaign-automations/{automation_id}", status_code=204)
+async def delete_automation(automation_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            current_user: User = Depends(_manage)) -> None:
+    from app.modules.notifications import automations as auto
+
+    await auto.delete(db, organization_id=organization_id, user=current_user, automation_id=automation_id)

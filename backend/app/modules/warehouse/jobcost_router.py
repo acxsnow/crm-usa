@@ -2,6 +2,7 @@
 estimado. El técnico no ve nada de esto: son costos y ganancia."""
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
@@ -12,6 +13,7 @@ from app.db.session import get_db
 from app.modules.users.models import User
 from app.modules.warehouse import budgets as budget_svc
 from app.modules.warehouse import jobcost as svc
+from app.modules.warehouse import labor as labor_svc
 from app.shared.pagination import paginate, pagination_params
 
 router = APIRouter(tags=["job-costing"])
@@ -33,6 +35,15 @@ class TemplateIn(BaseModel):
     applies_to: str = "both"
     active: bool = True
     lines: list[TemplateLineIn] = Field(default_factory=list, max_length=50)
+
+
+class LaborRateIn(BaseModel):
+    hourly_rate: Decimal | None = Field(default=None, ge=0, le=1000)
+
+
+class PlantRateIn(BaseModel):
+    hourly_rate: Decimal = Field(gt=0, le=1000)
+    daily_hours: Decimal = Field(gt=0, le=24)
 
 
 class ApplyTemplateIn(BaseModel):
@@ -220,3 +231,51 @@ async def get_job_costing(project_id: uuid.UUID, db: AsyncSession = Depends(get_
 
     project = await budget_svc.get_project(db, organization_id, project_id)
     return await costing.job_costing(db, organization_id=organization_id, project_id=project.id)
+
+
+# ---------------------------------------------------------------------------
+# Mano de obra por horas aprobadas (tarifa por técnico)
+# ---------------------------------------------------------------------------
+
+@router.get("/jobcost/labor-rates")
+async def list_labor_rates(response: Response, db: AsyncSession = Depends(get_db),
+                           organization_id: uuid.UUID = Depends(get_organization_id),
+                           pag: tuple[int, int] = Depends(pagination_params),
+                           current_user: User = Depends(_manage)) -> list[dict]:
+    from app.shared.pagination import paginate_list
+
+    return paginate_list(await labor_svc.list_rates(db, organization_id), limit=pag[0], offset=pag[1],
+                         response=response)
+
+
+@router.get("/jobcost/plant-rate")
+async def get_plant_rate(db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    return await labor_svc.get_plant(db, organization_id)
+
+
+@router.put("/jobcost/plant-rate")
+async def set_plant_rate(payload: PlantRateIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    return await labor_svc.set_plant(db, organization_id=organization_id, user=current_user,
+                                     hourly_rate=payload.hourly_rate, daily_hours=payload.daily_hours)
+
+
+@router.put("/jobcost/labor-rates/{user_id}")
+async def set_labor_rate(user_id: uuid.UUID, payload: LaborRateIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    """Sin `hourly_rate` (o vacío) se quita la tarifa."""
+    return await labor_svc.set_rate(db, organization_id=organization_id, user=current_user, user_id=user_id,
+                                    hourly_rate=payload.hourly_rate or None)
+
+
+@router.get("/projects/{project_id}/labor-hours")
+async def project_labor_hours(project_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                              organization_id: uuid.UUID = Depends(get_organization_id),
+                              current_user: User = Depends(_view)) -> dict:
+    from app.modules.field_ops.access import get_visible_project
+
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    return await labor_svc.project_detail(db, organization_id, project_id)

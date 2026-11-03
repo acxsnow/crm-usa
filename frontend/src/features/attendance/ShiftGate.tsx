@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { clockTime, SHIFT_STATUS_LABELS } from "./api";
 import { NoveltyForm } from "./NoveltyForm";
-import { flush, mark, setQueueUser } from "./offlineQueue";
+import { flush, LOCATION_REQUIRED, mark, setQueueUser } from "./offlineQueue";
+import { LocationHelp } from "./LocationHelp";
 import { useMark, useMyAttendance } from "./useAttendance";
 import "./attendance.css";
 
@@ -38,6 +39,7 @@ export function ShiftGate() {
   const { run, busy } = useMark();
   const navigate = useNavigate();
   const [novedad, setNovedad] = useState(false);
+  const [sinPermiso, setSinPermiso] = useState(false);
   const [salto, setSalto] = useState<string | null>(null);
   const [salida, setSalida] = useState<null | (() => Promise<void> | void)>(null);
   const turnoAbierto = useRef(false);
@@ -79,7 +81,8 @@ export function ShiftGate() {
     return () => { logoutHandler = null; };
   }, []);
 
-  const turnoId = me?.shift?.id ?? null;
+  // Sin turno de la malla, el «no puedo iniciar» vale por ese día.
+  const turnoId = me ? me.shift?.id ?? `sin-turno-${me.server_time.slice(0, 10)}` : null;
   useEffect(() => {
     if (!turnoId) return;
     try { setSalto(sessionStorage.getItem(SALTO_KEY + turnoId)); } catch { setSalto(null); }
@@ -107,7 +110,7 @@ export function ShiftGate() {
     </div>
   );
 
-  if (!puede || !me?.must_clock_in || !me.shift || salto) return avisoSalida || null;
+  if (!puede || !me?.must_clock_in || salto) return avisoSalida || null;
 
   const zona = me.timezone;
   const ahora = new Date(me.server_time);
@@ -122,7 +125,7 @@ export function ShiftGate() {
             {" · "}<strong>{clockTime(me.server_time, zona)}</strong> <small>(hora del servidor)</small>
           </p>
           <dl className="att-gate-facts">
-            <div><dt>Turno</dt><dd>{clockTime(me.shift.starts_at, zona)} a {clockTime(me.shift.ends_at, zona)}</dd></div>
+            <div><dt>Turno</dt><dd>{me.shift ? `${clockTime(me.shift.starts_at, zona)} a ${clockTime(me.shift.ends_at, zona)}` : "Sin turno programado hoy"}</dd></div>
             {me.shift_project && <div><dt>Obra</dt><dd>{me.shift_project.title}</dd></div>}
             <div><dt>Estado</dt><dd>
               {me.late_minutes > 0 ? `Tarde por ${me.late_minutes} min`
@@ -130,20 +133,24 @@ export function ShiftGate() {
           </dl>
           <p className="att-gate-privacy">
             Se guarda tu ubicación al iniciar, al marcar en camino, llegué o salida de obra, en las pausas y al
-            finalizar. La ven Administración y Gerencia, y se borra a los {me.location_retention_days} días.
-            Si niegas el permiso, el turno inicia igual y queda «sin ubicación».
+            finalizar. La ven el Administrador y Administración, y se borra a los {me.location_retention_days} días.
+            Tu navegador te pedirá permiso: sin él no se puede iniciar turno. Si no hay señal o GPS, inicia igual y queda «sin ubicación».
           </p>
+          {sinPermiso && !novedad && <LocationHelp />}
           {novedad ? (
             <NoveltyForm defaultKind="late_arrival" onCancel={() => setNovedad(false)} onDone={() => {
               setNovedad(false);
-              try { sessionStorage.setItem(SALTO_KEY + me.shift!.id, "1"); } catch { /* sin almacenamiento */ }
+              try { sessionStorage.setItem(SALTO_KEY + turnoId, "1"); } catch { /* sin almacenamiento */ }
               setSalto("1");
             }} />
           ) : (
             <div className="att-actions is-stacked">
               <button type="button" className="att-btn is-primary is-big" disabled={busy === "clock_in"}
-                onClick={() => void run("clock_in", { project_id: me.shift_project?.id ?? null })}>
-                {busy === "clock_in" ? "Tomando ubicación…" : "INICIAR TURNO"}
+                onClick={async () => {
+                  const r = await run("clock_in", { project_id: me.shift_project?.id ?? null });
+                  setSinPermiso(r.errors.some((e) => e.code === LOCATION_REQUIRED));
+                }}>
+                {busy === "clock_in" ? "Tomando ubicación…" : sinPermiso ? "YA LA ACTIVÉ: INICIAR TURNO" : "INICIAR TURNO"}
               </button>
               <button type="button" className="att-btn" onClick={() => setNovedad(true)}>
                 No puedo iniciar: registrar novedad

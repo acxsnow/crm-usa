@@ -16,13 +16,18 @@ import {
   deleteCostEntry,
   deliverExtraCharge,
   getJobCosting,
+  getLaborHours,
+  getPlantRate,
   getProjectBudget,
   listCostTemplatesPage,
   saveCostEntry,
+  setLaborRate,
+  setPlantRate,
   warehouseKeys,
   type CostEntry,
   type ExtraCharge,
   type JobCosting,
+  type LaborRateRow,
 } from "./api";
 import { confirmAction } from "@/components/ui/ConfirmDialog";
 
@@ -59,7 +64,7 @@ export function JobCostPanel({ projectId }: { projectId: string }) {
   function refrescar() {
     for (const key of [warehouseKeys.jobCosting(projectId), warehouseKeys.projectBudget(projectId),
       warehouseKeys.budgetVsActual(projectId), warehouseKeys.costEntries(projectId),
-      warehouseKeys.extraCharges(projectId), warehouseKeys.pendingExtras]) {
+      warehouseKeys.extraCharges(projectId), warehouseKeys.pendingExtras, warehouseKeys.laborHours(projectId)]) {
       qc.invalidateQueries({ queryKey: key });
     }
   }
@@ -78,7 +83,7 @@ export function JobCostPanel({ projectId }: { projectId: string }) {
       </div>
       <p className="acta-lead">
         Lo que se esperaba ganar contra lo que de verdad dejó el trabajo. Lo real sale de las salidas de bodega,
-        las compras y gastos de la obra y lo que se anota aquí (mano de obra, representante, cobros adicionales).
+        las compras y gastos de la obra, las horas aprobadas de cada técnico y lo que se anota aquí (representante, cobros adicionales).
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
 
@@ -105,6 +110,8 @@ export function JobCostPanel({ projectId }: { projectId: string }) {
       )}
 
       {puedeArmar && <ArmarEstimado projectId={projectId} onDone={refrescar} onError={setError} />}
+      <HorasEnObra projectId={projectId} />
+      {puedeArmar && <TarifasPorHora onChange={refrescar} />}
       {puedeArmar && <CostosAnotados projectId={projectId} onChange={refrescar} />}
       {puedeArmar && (
         <details className="fin-box">
@@ -279,6 +286,82 @@ function ArmarEstimado({ projectId, onDone, onError }: {
 }
 
 /** Mano de obra, subcontratista y representante: lo que en Housecall Pro es «Labor». */
+const horas = (minutos: number) => `${Math.floor(minutos / 60)} h ${String(minutos % 60).padStart(2, "0")} min`;
+
+/** Mano de obra que suma sola: horas aprobadas en la obra × tarifa de cada técnico. */
+function HorasEnObra({ projectId }: { projectId: string }) {
+  const { data } = useQuery({ queryKey: warehouseKeys.laborHours(projectId), queryFn: () => getLaborHours(projectId) });
+  if (!data || data.rows.length === 0) return null;
+  return (
+    <div className="fin-box">
+      <h4 className="acta-section-title">Horas aprobadas en la obra · {dinero(data.total)}</h4>
+      <p className="acta-lead">Salen de las marcas del turno (en camino, llegada y salida) de los turnos aprobados, y ya suman a Mano de obra.</p>
+      {data.missing_rate.length > 0 && (
+        <p className="form-error">Sin forma de pago ni tarifa, no suman: {data.missing_rate.join(", ")}. Defínela en Nómina o abajo en «Tarifa por hora de los técnicos».</p>
+      )}
+      <DataTable rows={data.rows} isLoading={false} getRowKey={(r) => r.user_id} className="billing-table"
+        columns={[
+          { key: "tecnico", header: "Técnico", render: (r) => r.name },
+          { key: "horas", header: "Horas", className: "num", render: (r) => horas(r.minutes) },
+          { key: "tarifa", header: "Tarifa", className: "num", render: (r) => r.pay_type === "job" ? "Por trabajo" : dinero(r.hourly_rate) },
+          { key: "costo", header: "Costo", className: "num", render: (r) => r.pay_type === "job" ? "Se anota por obra" : dinero(r.cost) },
+        ]} />
+    </div>
+  );
+}
+
+function TarifasPorHora({ onChange }: { onChange: () => void }) {
+  const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const lista = usePaginatedQuery<LaborRateRow>({ key: warehouseKeys.laborRates, path: "/jobcost/labor-rates", pageSize: 10 });
+  const { data: planta } = useQuery({ queryKey: ["plant-rate"], queryFn: getPlantRate });
+  const guardarPlanta = useMutation({
+    mutationFn: (v: { tarifa: string; horas: string }) => setPlantRate(v.tarifa, v.horas),
+    onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: ["plant-rate"] }); qc.invalidateQueries({ queryKey: warehouseKeys.laborRates }); onChange(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const guardar = useMutation({
+    mutationFn: (v: { userId: string; rate: string | null }) => setLaborRate(v.userId, v.rate),
+    onSuccess: () => { setError(null); qc.invalidateQueries({ queryKey: warehouseKeys.laborRates }); onChange(); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  return (
+    <details className="fin-box">
+      <summary>Tarifa por hora de los técnicos</summary>
+      <p className="acta-lead">Interna. Planta (forma de pago por hora o por día): la tarifa de abajo. Por trabajo: no suma por horas; el pedestal va a $600 con técnico propio y $1,000 con subcontratista, en la plantilla y en «Mano de obra y representante». Una tarifa propia manda sobre la de planta.</p>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <form className="fin-row" key={planta?.plant_hourly_rate ?? "cargando"} onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        guardarPlanta.mutate({ tarifa: String(f.get("tarifa")), horas: String(f.get("horas")) });
+      }}>
+        <div className="form-field">
+          <label className="form-label" htmlFor="jc-planta">Planta: USD por hora</label>
+          <input id="jc-planta" name="tarifa" required inputMode="decimal" defaultValue={planta?.plant_hourly_rate ?? ""} />
+        </div>
+        <div className="form-field">
+          <label className="form-label" htmlFor="jc-planta-horas">Horas al día{planta ? ` (día: ${dinero(planta.plant_daily_value)})` : ""}</label>
+          <input id="jc-planta-horas" name="horas" required inputMode="decimal" defaultValue={planta?.plant_daily_hours ?? ""} />
+        </div>
+        <button type="submit" className="acta-btn" disabled={guardarPlanta.isPending}>Guardar planta</button>
+      </form>
+      <DataTable rows={lista.items} isLoading={lista.isLoading} getRowKey={(r) => r.user_id} className="billing-table"
+        columns={[
+          { key: "tecnico", header: "Técnico", render: (r) => r.name },
+          { key: "aplica", header: "Le aplica", render: (r) => r.pay_type === "job" ? "Por trabajo" : r.effective_rate ? `${dinero(r.effective_rate)} / hora` : "Sin definir" },
+          { key: "tarifa", header: "Tarifa propia (opcional)", render: (r) => (
+            <input key={r.hourly_rate ?? "vacia"} inputMode="decimal" aria-label={`Tarifa de ${r.name}`} defaultValue={r.hourly_rate ?? ""}
+              onBlur={(e) => {
+                const valor = e.target.value.trim();
+                if (valor !== (r.hourly_rate ?? "")) guardar.mutate({ userId: r.user_id, rate: valor || null });
+              }} />
+          ) },
+        ]} />
+      <PaginationControls {...lista.controls} />
+    </details>
+  );
+}
+
 function CostosAnotados({ projectId, onChange }: { projectId: string; onChange: () => void }) {
   const qc = useQueryClient();
   const [categoria, setCategoria] = useState("labor");

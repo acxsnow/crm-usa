@@ -297,6 +297,15 @@ ul.billing-req li:last-child { border-bottom: 0; }
 .lines-editor { display: grid; gap: 0.5rem; }
 .lines-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 5rem 7.5rem 7rem auto; gap: 0.45rem; align-items: center; }
 .lines-row .billing-amount { text-align: right; }
+.lines-option { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); }
+.lines-option select { max-width: 16rem; }
+.quote-options { display: grid; gap: 0.5rem; margin-bottom: 0.9rem; }
+.quote-options-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.quote-options-row input[type="text"] { flex: 1 1 10rem; min-width: 0; }
+.quote-share { display: grid; gap: 0.6rem; margin-bottom: 0.9rem; padding: 0.9rem; border: 1px solid var(--line); border-radius: 10px; }
+.quote-share-url { display: flex; gap: 0.5rem; }
+.quote-share-url input { flex: 1; min-width: 0; font-size: 0.8125rem; }
+.quote-pick { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .lines-head { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
 .lines-total { display: flex; justify-content: flex-end; gap: 1rem; font-weight: 700; padding-top: 0.4rem; border-top: 1px solid var(--line); }
 .billing-page .lines-row input, .billing-page .lines-row select, .acta .lines-row input, .acta .lines-row select { width: 100%; }

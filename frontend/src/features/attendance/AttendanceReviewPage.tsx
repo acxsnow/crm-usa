@@ -7,8 +7,8 @@ import { askText } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/features/auth/AuthContext";
 import { toast } from "@/lib/toast";
 import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
-import { approveEntries, clockTime, correctEntry, getEntry, hm, reviewNovelty,
-  type Entry, type Novelty } from "./api";
+import { approveEntries, clockTime, correctEntry, getEntry, hm, OVERTIME_STATUS, reviewNovelty, reviewOvertime,
+  type Entry, type Novelty, type OvertimeRow } from "./api";
 import { useMyAttendance } from "./useAttendance";
 import "./attendance.css";
 
@@ -30,7 +30,7 @@ const UBICACION: Record<string, string> = { ok: "con ubicación", denied: "permi
 
 /** Lo que revisa Administración: novedades, marcaciones por aprobar y correcciones. */
 export function AttendanceReviewPage() {
-  const [tab, setTab] = useState<"novedades" | "marcaciones">("novedades");
+  const [tab, setTab] = useState<"novedades" | "marcaciones" | "extras">("novedades");
   return (
     <div className="att-page is-wide">
       <PageHeader title="Novedades y horas" description="Aprueba novedades y horas, y corrige marcaciones. Cada cambio guarda el valor original." />
@@ -39,8 +39,10 @@ export function AttendanceReviewPage() {
           onClick={() => setTab("novedades")}>Novedades</button>
         <button type="button" role="tab" aria-selected={tab === "marcaciones"} className={tab === "marcaciones" ? "is-on" : ""}
           onClick={() => setTab("marcaciones")}>Marcaciones</button>
+        <button type="button" role="tab" aria-selected={tab === "extras"} className={tab === "extras" ? "is-on" : ""}
+          onClick={() => setTab("extras")}>Horas extras</button>
       </div>
-      {tab === "novedades" ? <Novelties /> : <Entries />}
+      {tab === "novedades" ? <Novelties /> : tab === "marcaciones" ? <Entries /> : <OvertimeReview />}
     </div>
   );
 }
@@ -220,5 +222,50 @@ function EntryDetailPanel({ id, zona, propia }: { id: string; zona?: string; pro
         </form>
       )}
     </div>
+  );
+}
+
+
+/** Las extras que declaró cada persona: el jefe escribe cuánto valen y las aprueba. */
+export function OvertimeReview() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [estado, setEstado] = useState<OvertimeRow["status"]>("pending");
+  const lista = usePaginatedQuery<OvertimeRow>({ key: ["overtime", estado], path: "/attendance/overtime", params: { status: estado }, pageSize: 20 });
+  const revisar = useMutation({
+    mutationFn: (v: { id: string; approve: boolean; value_amount?: string; notes?: string }) =>
+      reviewOvertime(v.id, { approve: v.approve, value_amount: v.value_amount, notes: v.notes }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["overtime"] }); qc.invalidateQueries({ queryKey: ["payroll"] }); },
+    onError: (e) => toast(apiError(e)),
+  });
+  return (
+    <section className="att-card" aria-labelledby="att-extras">
+      <div className="att-card-head">
+        <h2 id="att-extras">Horas extras declaradas</h2>
+        <select aria-label="Estado" value={estado} onChange={(e) => setEstado(e.target.value as OvertimeRow["status"])}>
+          {(Object.keys(OVERTIME_STATUS) as OvertimeRow["status"][]).map((k) => <option key={k} value={k}>{OVERTIME_STATUS[k]}</option>)}
+        </select>
+      </div>
+      <PaginatedTable list={lista} getRowKey={(r) => r.id} className="att-table" emptyMessage="Nada en este estado."
+        columns={[
+          { key: "persona", header: "Persona", render: (r) => <strong>{r.user_name}</strong> },
+          { key: "dia", header: "Día", render: (r) => r.work_date },
+          { key: "horas", header: "Horas", render: (r) => r.hours },
+          { key: "nota", header: "Nota", render: (r) => r.notes ?? "—" },
+          { key: "valor", header: "Valor", render: (r) => r.value_amount ? `$${r.value_amount}` : r.review_notes ?? "—" },
+          { key: "acciones", header: "Acción", render: (r) => r.status !== "pending" || r.user_id === user?.id ? (r.reviewed_by ?? "—") : (
+            <RowActions>
+              <RowAction variant="primary" disabled={revisar.isPending} onClick={async () => {
+                const valor = await askText({ title: `Valor de ${r.hours} h de ${r.user_name}`, label: "Valor total en USD", required: true, confirmLabel: "Aprobar" });
+                if (valor) revisar.mutate({ id: r.id, approve: true, value_amount: valor.replace(/[$,\s]/g, "") });
+              }}>Definir valor y aprobar</RowAction>
+              <RowAction disabled={revisar.isPending} onClick={async () => {
+                const motivo = await askText({ title: "No aprobar", label: "Motivo", required: true, confirmLabel: "No aprobar" });
+                if (motivo) revisar.mutate({ id: r.id, approve: false, notes: motivo });
+              }}>No aprobar</RowAction>
+            </RowActions>
+          ) },
+        ]} />
+    </section>
   );
 }

@@ -4,6 +4,7 @@
  * se muestran con `apiErrorMessage` del módulo 5.
  */
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
 import { apiClient } from "@/lib/apiClient";
 import { fetchPage } from "@/lib/pagination";
@@ -19,6 +20,7 @@ import type {
   ProgramRate,
   ProgramRequirement,
   ProgramSummary,
+  PublicQuote,
   Quote,
   QuoteDetail,
 } from "@/types/billing";
@@ -157,8 +159,19 @@ export const updateQuote = async (id: string, body: {
 }) => (await apiClient.patch<QuoteDetail>(`${Q}/${id}`, body)).data;
 export const sendQuote = async (id: string) => (await apiClient.post<QuoteDetail>(`${Q}/${id}/send`)).data;
 export const reviseQuote = async (id: string) => (await apiClient.post<QuoteDetail>(`${Q}/${id}/revise`)).data;
-export const acceptQuote = async (id: string) =>
-  (await apiClient.post<{ quote: Quote; invoice: Invoice }>(`${Q}/${id}/accept`)).data;
+export const acceptQuote = async (id: string, option?: string) =>
+  (await apiClient.post<{ quote: Quote; invoice: Invoice }>(`${Q}/${id}/accept`, { option: option ?? null })).data;
+/** Enlace para el cliente. Cada llamada genera uno nuevo y apaga el anterior. */
+export const createQuoteLink = async (id: string, email: boolean) =>
+  (await apiClient.post<{ url: string; emailed_to: string | null }>(`${Q}/${id}/link`, { email })).data;
+// El cliente no tiene sesión: sin el refresco de token ni el salto al login de `apiClient`.
+const publico = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api/v1" });
+export const getPublicQuote = async (token: string) =>
+  (await publico.get<PublicQuote>(`/public/quotes/${token}`)).data;
+export const acceptPublicQuote = async (token: string, body: { option: string | null; signer_name: string; signature_base64: string }) =>
+  (await publico.post<PublicQuote>(`/public/quotes/${token}/accept`, body)).data;
+export const rejectPublicQuote = async (token: string, reason: string) =>
+  (await publico.post<PublicQuote>(`/public/quotes/${token}/reject`, { reason })).data;
 export const rejectQuote = async (id: string, reason: string) =>
   (await apiClient.post<QuoteDetail>(`${Q}/${id}/reject`, { reason })).data;
 

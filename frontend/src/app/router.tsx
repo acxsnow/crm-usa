@@ -32,6 +32,7 @@ import { CampaignsPage } from "@/features/notifications/CampaignsPage";
 import { ExpensesPage } from "@/features/finance/ExpensesPage";
 import { PayablesPage } from "@/features/finance/PayablesPage";
 import { FinanceClosePage } from "@/features/finance/FinanceClosePage";
+import { AccountingPage } from "@/features/accounting/AccountingPage";
 import { ReportsPage } from "@/features/finance/ReportsPage";
 import { PermitsPage } from "@/features/finance/PermitsPage";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -55,6 +56,8 @@ import { PayrollPage } from "@/features/attendance/PayrollPage";
 import { OperationsMapPage } from "@/features/map/OperationsMapPage";
 import { BankingPage } from "@/features/payments/BankingPage";
 import { PayInvoicePage } from "@/features/payments/PayInvoicePage";
+import { PublicQuotePage } from "@/features/billing/PublicQuotePage";
+import { DispatchBoardPage } from "@/features/field-ops/DispatchBoardPage";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -71,6 +74,7 @@ export const router = createBrowserRouter([
   { path: "/customer-signature", element: <CustomerSignaturePage /> },
   // Factura en línea del cliente, sin sesión (pagos, spec 2026-10-25).
   { path: "/pagar/:token", element: <PayInvoicePage /> },
+  { path: "/cotizacion/:token", element: <PublicQuotePage /> },
   {
     path: "/",
     element: (
@@ -128,6 +132,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["projects.read_all", "dispatch.manage", "daylogs.manage"]} moduleLabel="el calendario de obras">
             <WorksCalendarPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "dispatch",
+        element: (
+          <RequireAccess permission="dispatch.manage" moduleLabel="el despacho">
+            <DispatchBoardPage />
           </RequireAccess>
         ),
       },
@@ -192,6 +204,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["payables.manage", "suppliers.manage", "payables.approve"]} moduleLabel="Proveedores y pagos">
             <PayablesPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "accounting",
+        element: (
+          <RequireAccess permission="accounting.read" moduleLabel="Contabilidad">
+            <AccountingPage />
           </RequireAccess>
         ),
       },
@@ -421,7 +441,7 @@ export const router = createBrowserRouter([
       {
         path: "operations-map",
         element: (
-          <RequireAccess permission={["locations.view", "projects.read_all", "projects.read_assigned"]} moduleLabel="el mapa operativo">
+          <RequireAccess permission={["locations.view", "projects.read_assigned"]} moduleLabel="el mapa operativo">
             <OperationsMapPage />
           </RequireAccess>
         ),

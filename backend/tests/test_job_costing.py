@@ -132,7 +132,7 @@ async def test_rebate_toma_el_precio_de_la_tarifa_del_programa(app_client, login
 
     b = (await _aplicar(app_client, h, budget["id"], sub["id"])).json()
     assert (b["expected_revenue"], b["by_category"]["contractor"], b["expected_profit"]) == (
-        "4200.00", "1050.00", "1050.00")
+        "4200.00", "1000.00", "1100.00")
 
 
 async def test_plantilla_por_porcentaje_sin_precio_da_400(app_client, login, db, seeded_org, active_admin_user):

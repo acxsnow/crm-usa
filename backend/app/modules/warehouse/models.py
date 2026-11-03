@@ -528,3 +528,16 @@ class ProjectExtraCharge(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivered_to_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
+class LaborRate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Lo que cuesta una hora de cada técnico. Con ella, las horas aprobadas
+    en obra (llegada → salida) suman solas a la mano de obra del costo del
+    trabajo. Sin tarifa, esa persona no suma por horas."""
+
+    __tablename__ = "labor_rates"
+    __table_args__ = (UniqueConstraint("organization_id", "user_id", name="uq_labor_rate_user"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    hourly_rate: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))

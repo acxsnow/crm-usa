@@ -23,7 +23,8 @@ from app.modules.attendance.models import (
     TimeEntryCorrection,
     WorkShift,
 )
-from app.modules.attendance.service import get_settings, now
+from app.modules.attendance.overtime import overtime_totals
+from app.modules.attendance.service import get_settings, now, pauses_paid, pay_types
 from app.modules.users.models import User
 from app.shared.datetime_utils import as_utc
 from app.shared.errors import InvalidInputError
@@ -73,7 +74,8 @@ async def dashboard(db: AsyncSession, *, organization_id: uuid.UUID, date_from: 
     vivos = [t for t in turnos if t.status == "scheduled"]
     estados = {t.id: calc.shift_status(t, por_turno.get(t.id), now=ahora, late_tolerance=s.late_tolerance_minutes,
                                        early_tolerance=s.early_leave_tolerance_minutes) for t in vivos}
-    horas = {e.id: calc.entry_hours(e, now=ahora, paid_pauses=s.paid_pauses) for e in marcas}
+    tipos = await pay_types(db, organization_id)
+    horas = {e.id: calc.entry_hours(e, now=ahora, paid_pauses=pauses_paid(s, tipos, e.user_id)) for e in marcas}
     cerradas = [e for e in marcas if e.status in ("closed", "approved")]
 
     pendientes = (await db.execute(select(func.count()).select_from(AttendanceNovelty).where(
@@ -250,12 +252,16 @@ async def payroll_report(db: AsyncSession, *, organization_id: uuid.UUID, date_f
             AttendanceNovelty.work_date <= date_to).group_by(AttendanceNovelty.user_id))).all():
         novedades[uid] = n
 
+    tipos = await pay_types(db, organization_id)
+    extras = await overtime_totals(db, organization_id, date_from, date_to, user_id)
+    usuarios |= set(extras)
+    nombres = await _names(db, organization_id, list(usuarios))
     filas = []
     for uid in usuarios:
         mis_turnos = [t for t in vivos if t.user_id == uid]
         mis_marcas = [e for e in marcas if e.user_id == uid]
         cerradas = [e for e in mis_marcas if e.status in ("closed", "approved")]
-        horas = {e.id: calc.entry_hours(e, now=ahora, paid_pauses=s.paid_pauses) for e in cerradas}
+        horas = {e.id: calc.entry_hours(e, now=ahora, paid_pauses=pauses_paid(s, tipos, uid)) for e in cerradas}
         por_dia = defaultdict(int)
         for e in cerradas:
             por_dia[e.work_date] += horas[e.id].effective
@@ -270,6 +276,11 @@ async def payroll_report(db: AsyncSession, *, organization_id: uuid.UUID, date_f
             "pause_minutes": sum(h.pauses for h in horas.values()),
             "daily_overtime_minutes": ext_d, "weekly_overtime_minutes": ext_s,
             "approved_minutes": sum(e.approved_minutes or 0 for e in mis_marcas if e.status == "approved"),
+            "pay_type": tipos.get(uid),
+            "marked_overtime_minutes": ext_d + ext_s,
+            "declared_overtime_hours": float(extras.get(uid, {}).get("declared", 0)),
+            "approved_overtime_hours": float(extras.get(uid, {}).get("approved", 0)),
+            "overtime_value": float(extras.get(uid, {}).get("value", 0)),
             "absences": estados.count(calc.MISSED),
             "late_arrivals": sum(1 for x in estados if x in (calc.LATE, calc.LATE_EARLY)),
             "early_departures": sum(1 for x in estados if x in (calc.EARLY, calc.LATE_EARLY)),
@@ -291,8 +302,9 @@ async def payroll_report(db: AsyncSession, *, organization_id: uuid.UUID, date_f
 
 COLUMNS = [
     ("user_name", "Empleado"), ("scheduled_minutes", "Horas programadas"), ("recorded_minutes", "Horas registradas"),
-    ("pause_minutes", "Pausas"), ("daily_overtime_minutes", "Extras diarias"),
-    ("weekly_overtime_minutes", "Extras semanales"), ("approved_minutes", "Horas aprobadas"),
+    ("pause_minutes", "Pausas"), ("approved_minutes", "Horas aprobadas"),
+    ("declared_overtime_hours", "Extras declaradas (h)"), ("approved_overtime_hours", "Extras aprobadas (h)"),
+    ("overtime_value", "Valor de extras (USD)"), ("marked_overtime_minutes", "Extras según marcas (referencia)"),
     ("absences", "Ausencias"), ("late_arrivals", "Llegadas tarde"), ("early_departures", "Salidas anticipadas"),
     ("corrections", "Correcciones"), ("novelties", "Novedades"), ("open_entries", "Sin salida"),
     ("unapproved_entries", "Sin aprobar"),

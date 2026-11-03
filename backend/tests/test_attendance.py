@@ -75,7 +75,8 @@ async def test_la_ventana_obligatoria_aparece_con_turno_pendiente_y_se_va_al_mar
         app_client, login, reloj, phoenix, active_admin_staff_user, active_technician_user):
     oficina, tec = await login(active_admin_staff_user), await login(active_technician_user)
     sin_turno = (await app_client.get(f"{API}/me", headers=tec)).json()
-    assert sin_turno["must_clock_in"] is False and sin_turno["shift"] is None
+    # El técnico marca aunque no esté en la malla.
+    assert sin_turno["must_clock_in"] is True and sin_turno["shift"] is None
 
     malla = await _malla(app_client, oficina, active_technician_user)
     assert len(malla["created"]) == 1 and malla["created"][0]["scheduled_minutes"] == 480
@@ -183,10 +184,14 @@ async def test_ubicacion_invalida_se_rechaza_y_sin_permiso_no_se_inventa(
     tec = await login(active_technician_user)
     r = await _evento(app_client, tec, "clock_in", latitude=200, longitude=5, location_status="ok")
     assert (r.status_code, r.json()["code"]) == (400, "invalid_location")
+    # Negar el permiso no deja iniciar turno; el GPS sin señal sí, sin coordenadas.
     r = await _evento(app_client, tec, "clock_in", client_event_id="deny-0001", location_status="denied")
+    assert (r.status_code, r.json()["code"]) == (409, "location_required")
+    assert (await app_client.get(f"{API}/me", headers=tec)).json()["entry"] is None
+    r = await _evento(app_client, tec, "clock_in", client_event_id="gps-0001", location_status="timeout", latitude=33, longitude=-112)
     assert r.status_code == 201
     ev = (await db.execute(select(AttendanceEvent))).scalar_one()
-    assert ev.location_status == "denied" and ev.latitude is None and ev.longitude is None
+    assert ev.location_status == "timeout" and ev.latitude is None and ev.longitude is None
 
 
 async def test_turno_nocturno_y_malla_por_grupo_con_choques(
@@ -367,3 +372,116 @@ async def test_el_tablero_muestra_el_turno_abierto_si_hay_dos_en_el_dia(
     fila = (await app_client.get(f"{API}/live", headers=oficina)).json()[0]
     assert fila["entry_status"] == "open" and fila["shift"]["starts_at"].startswith("2026-10-26T20:00")
     assert fila["location"]["age_minutes"] == 0
+
+
+async def test_la_marcacion_obligatoria_arranca_encendida(app_client, login, active_admin_user):
+    jefe = await login(active_admin_user)
+    assert (await app_client.get(f"{API}/settings", headers=jefe)).json()["require_clock_in_for_field_work"] is True
+
+
+async def _turno_con_pausa(app_client, tec, reloj):
+    reloj.ir(hours=0)
+    await _evento(app_client, tec, "clock_in", client_event_id="pago-0001")
+    reloj.ir(hours=2)
+    await _evento(app_client, tec, "pause_start", client_event_id="pago-0002")
+    reloj.ir(hours=3)
+    await _evento(app_client, tec, "pause_end", client_event_id="pago-0003")
+    reloj.ir(hours=5)
+    r = await _evento(app_client, tec, "clock_out", client_event_id="pago-0004")
+    return r
+
+
+@pytest.mark.parametrize("forma,efectivos", [("hour", 300), ("day", 300), ("job", 240), (None, 240)])
+async def test_el_almuerzo_depende_de_la_forma_de_pago(app_client, login, reloj, phoenix, active_admin_user,
+                                                       active_technician_user, forma, efectivos):
+    jefe, tec = await login(active_admin_user), await login(active_technician_user)
+    r = await app_client.put(f"{API}/pay-settings/{active_technician_user.id}", json={"pay_type": forma}, headers=jefe)
+    assert r.status_code == 200 and r.json()["pay_type"] == forma
+    await _turno_con_pausa(app_client, tec, reloj)
+    dia = INICIO.date().isoformat()
+    fila = next(e for e in (await app_client.get(f"{API}/entries", params={
+        "date_from": dia, "date_to": dia}, headers=jefe)).json()
+        if e["user_id"] == str(active_technician_user.id))
+    assert fila["effective_minutes"] == efectivos
+    # La nómina usa la misma regla, y al aprobar queda esa cifra.
+    hoy = fila["work_date"]
+    nomina = (await app_client.get(f"{API}/payroll/report", params={"date_from": hoy, "date_to": hoy}, headers=jefe)).json()
+    assert next(x for x in nomina["rows"] if x["user_id"] == str(active_technician_user.id))["recorded_minutes"] == efectivos
+    r = await app_client.post(f"{API}/entries/approve", json={"entry_ids": [fila["id"]]}, headers=jefe)
+    assert r.json()["approved"] == [fila["id"]]
+    nomina = (await app_client.get(f"{API}/payroll/report", params={"date_from": hoy, "date_to": hoy}, headers=jefe)).json()
+    assert next(x for x in nomina["rows"] if x["user_id"] == str(active_technician_user.id))["approved_minutes"] == efectivos
+
+
+async def test_las_extras_se_declaran_y_el_jefe_define_el_valor(app_client, login, reloj, phoenix, active_admin_user,
+                                                                active_technician_user):
+    jefe, tec = await login(active_admin_user), await login(active_technician_user)
+    hoy = reloj().date().isoformat()
+    futuro = await app_client.post(f"{API}/overtime", json={"work_date": "2099-01-01", "hours": 2}, headers=tec)
+    assert (futuro.status_code, futuro.json()["code"]) == (400, "overtime_future_date")
+    r = await app_client.post(f"{API}/overtime", json={"work_date": hoy, "hours": "2.5", "notes": "Terminé tarde"}, headers=tec)
+    assert r.status_code == 201, r.text
+    d = r.json()
+    assert d["status"] == "pending" and d["value_amount"] is None
+    repetida = await app_client.post(f"{API}/overtime", json={"work_date": hoy, "hours": 1}, headers=tec)
+    assert (repetida.status_code, repetida.json()["code"]) == (409, "overtime_already_declared")
+    # El técnico no revisa, y aprobar exige el valor.
+    assert (await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": True, "value_amount": 50},
+                                  headers=tec)).status_code == 403
+    sin_valor = await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": True}, headers=jefe)
+    assert (sin_valor.status_code, sin_valor.json()["code"]) == (400, "overtime_value_required")
+    nomina = (await app_client.get(f"{API}/payroll/report", params={"date_from": hoy, "date_to": hoy}, headers=jefe)).json()
+    fila = next(x for x in nomina["rows"] if x["user_id"] == str(active_technician_user.id))
+    assert (fila["declared_overtime_hours"], fila["approved_overtime_hours"], fila["overtime_value"]) == (2.5, 0, 0)
+    r = await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": True, "value_amount": "75.50"}, headers=jefe)
+    assert r.status_code == 200 and r.json()["status"] == "approved"
+    nomina = (await app_client.get(f"{API}/payroll/report", params={"date_from": hoy, "date_to": hoy}, headers=jefe)).json()
+    fila = next(x for x in nomina["rows"] if x["user_id"] == str(active_technician_user.id))
+    assert (fila["approved_overtime_hours"], fila["overtime_value"]) == (2.5, 75.5)
+    # Ya revisada no se borra ni se revisa otra vez.
+    assert (await app_client.delete(f"{API}/overtime/{d['id']}", headers=tec)).status_code == 409
+    assert (await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": False, "notes": "No"},
+                                  headers=jefe)).status_code == 409
+
+
+async def test_nadie_aprueba_sus_extras_y_otra_organizacion_no_las_ve(app_client, login, reloj, phoenix, active_admin_user,
+                                                                      second_org_admin_user):
+    jefe, otro = await login(active_admin_user), await login(second_org_admin_user)
+    hoy = reloj().date().isoformat()
+    d = (await app_client.post(f"{API}/overtime", json={"work_date": hoy, "hours": 1}, headers=jefe)).json()
+    r = await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": True, "value_amount": 10}, headers=jefe)
+    assert (r.status_code, r.json()["code"]) == (403, "self_review_forbidden")
+    assert (await app_client.post(f"{API}/overtime/{d['id']}/review", json={"approve": True, "value_amount": 10},
+                                  headers=otro)).status_code == 404
+    assert (await app_client.get(f"{API}/overtime", headers=otro)).json() == []
+    assert (await app_client.put(f"{API}/pay-settings/{active_admin_user.id}", json={"pay_type": "day"},
+                                 headers=otro)).status_code == 404
+    propia = await app_client.put(f"{API}/pay-settings/{active_admin_user.id}", json={"pay_type": "day"}, headers=jefe)
+    assert (propia.status_code, propia.json()["code"]) == (403, "self_review_forbidden")
+
+
+async def test_sin_malla_marcan_tecnicos_y_vendedores_pero_no_la_oficina(
+        app_client, login, reloj, phoenix, active_admin_user, active_technician_user, active_salesperson_user,
+        active_accounting_user, active_admin_staff_user):
+    jefe, tec, vendedor = (await login(active_admin_user), await login(active_technician_user),
+                           await login(active_salesperson_user))
+    me = lambda h: app_client.get(f"{API}/me", headers=h)  # noqa: E731
+    assert (await me(tec)).json()["must_clock_in"] is True
+    assert (await me(vendedor)).json()["must_clock_in"] is True
+    assert (await me(await login(active_accounting_user))).json()["must_clock_in"] is False
+    assert (await me(await login(active_admin_staff_user))).json()["must_clock_in"] is False
+    assert (await me(jefe)).json()["must_clock_in"] is False
+    # Inicia sin turno de la malla, y al finalizar no se le vuelve a pedir ese día.
+    reloj.ir(hours=0)
+    r = await _evento(app_client, tec, "clock_in", client_event_id="sin-malla-1", **GPS)
+    assert r.status_code == 201, r.text
+    assert (await me(tec)).json()["must_clock_in"] is False
+    reloj.ir(hours=4)
+    await _evento(app_client, tec, "clock_out", client_event_id="sin-malla-2", **GPS)
+    assert (await me(tec)).json()["must_clock_in"] is False
+    # Al día siguiente, otra vez.
+    reloj.ir(hours=26)
+    assert (await me(tec)).json()["must_clock_in"] is True
+    # Apagar la marcación obligatoria quita la exigencia para quien no está en la malla.
+    await app_client.put(f"{API}/settings", json={"require_clock_in_for_field_work": False}, headers=jefe)
+    assert (await me(vendedor)).json()["must_clock_in"] is False

@@ -57,3 +57,16 @@ async def _campaigns() -> int:
 @celery_app.task(name="campaigns.send_due")
 def campaigns_send_due_task() -> int:
     return asyncio.run(_campaigns())
+
+
+async def _automations() -> int:
+    from app.modules.notifications import automations
+
+    async with worker_session() as db:
+        return await automations.run_due(db)
+
+
+@celery_app.task(name="campaigns.run_automations")
+def campaigns_run_automations_task() -> int:
+    """Campañas automáticas por evento: pone en la cola lo que ya toca."""
+    return asyncio.run(_automations())

@@ -38,6 +38,11 @@ celery_app.conf.beat_schedule = {
         "task": "campaigns.send_due",
         "schedule": 60.0,
     },
+    # Campañas automáticas por evento (gracias, mantenimiento): cada hora.
+    "campaigns-run-automations": {
+        "task": "campaigns.run_automations",
+        "schedule": crontab(minute=15),
+    },
     # Alertas de aprobación demorada y permisos por vencer (7 a. m. en Arizona).
     "notifications-daily-alerts": {
         "task": "notifications.daily_alerts",
@@ -46,6 +51,11 @@ celery_app.conf.beat_schedule = {
     "sweep-overdue-invoices-daily": {
         "task": "workers.sweep_overdue_invoices",
         "schedule": crontab(hour=6, minute=0),  # once a day, 06:00 UTC
+    },
+    # Contabilidad: asientos de lo nuevo en los documentos (además de al consultar).
+    "accounting-sync": {
+        "task": "accounting.sync",
+        "schedule": crontab(minute=30),
     },
     # Turnos: retención de la ubicación del personal (spec 2026-10-24).
     # Banca conectada: movimientos nuevos de los bancos (spec 2026-10-25-pagos-tarjeta).

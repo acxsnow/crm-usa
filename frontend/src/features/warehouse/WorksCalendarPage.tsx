@@ -127,7 +127,7 @@ export function WorksCalendarPage() {
           </p>
         </div>
         {/* Mapa del día: lee este mismo calendario (turnos, spec 2026-10-24). */}
-        <Link className="acta-btn" to={`/operations-map?date=${hoy}`}>Ver en mapa</Link>
+        {hasPermission("locations.view") && <Link className="acta-btn" to={`/operations-map?date=${hoy}`}>Ver en mapa</Link>}
       </header>
 
       <div className="works-calendar-bar">

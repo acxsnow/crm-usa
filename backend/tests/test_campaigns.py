@@ -1,13 +1,15 @@
 """Campañas de SMS: permiso de mercadeo, horario del cliente y STOP."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
 
+from app.modules.field_ops.models import ProjectStatus
+from app.modules.notifications import automations as automation_svc
 from app.modules.crm.models import Customer
 from app.modules.notifications import campaigns as svc
-from app.modules.notifications.models import CampaignRecipient, MarketingConsent
-from tests.field_helpers import headers_for
+from app.modules.notifications.models import CampaignAutomation, CampaignAutomationSend, CampaignRecipient, MarketingConsent
+from tests.field_helpers import approved_case_with_project, headers_for
 
 
 @pytest.fixture
@@ -242,3 +244,110 @@ async def test_campaign_recipients_are_paginated(app_client, db, seeded_org, adm
     await app_client.post(f"/api/v1/campaigns/{c['id']}/launch", json={}, headers=admin)
     r = await app_client.get(f"/api/v1/campaigns/{c['id']}/recipients?limit=1", headers=admin)
     assert r.headers["X-Total-Count"] == "2" and len(r.json()) == 1
+
+
+async def test_automations_are_managed_apart_from_manual_campaigns(app_client, db, seeded_org, admin):
+    a = (await app_client.post("/api/v1/campaign-automations", headers=admin, json={
+        "name": "Gracias por tu obra", "trigger": "job_completed", "delay_days": 0, "channel": "sms",
+        "message": "Hola {{nombre}}, gracias por confiar en nosotros en {{obra}}.",
+    })).json()
+    assert a["trigger_label"] == "Al cerrar la obra"
+    r = await app_client.get(f"/api/v1/campaign-automations/{a['id']}", headers=admin)
+    assert r.status_code == 200 and r.json()["campaign_id"]
+    r = await app_client.get("/api/v1/campaigns", headers=admin)
+    assert r.status_code == 200 and r.json() == []
+    r = await app_client.patch(f"/api/v1/campaign-automations/{a['id']}", headers=admin, json={"active": False})
+    assert r.status_code == 200 and r.json()["active"] is False
+    assert (await app_client.delete(f"/api/v1/campaign-automations/{a['id']}", headers=admin)).status_code == 204
+
+
+async def test_completed_projects_queue_automation_messages_only_once(app_client, db, seeded_org, admin):
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    customer = await db.get(Customer, project.customer_id)
+    customer.main_phone = "(818) 555-0101"
+    project.title = "Cambio completo del sistema"
+    await db.commit()
+    await app_client.post("/api/v1/campaigns/consents", headers=admin,
+                          json={"customer_ids": [str(customer.id)], "source": "Formulario firmado", "confirm": True})
+    a = (await app_client.post("/api/v1/campaign-automations", headers=admin, json={
+        "name": "Gracias", "trigger": "job_completed", "channel": "sms",
+        "message": "Hola {{nombre}}, gracias por confiar en nosotros en {{obra}}.",
+    })).json()
+    automatizacion = await db.get(CampaignAutomation, a["id"])
+    automatizacion.starts_on = datetime.now(timezone.utc) - timedelta(days=1)
+    project.status = ProjectStatus.completed
+    project.completed_date = automatizacion.starts_on.date()
+    await db.commit()
+
+    assert await automation_svc.run_due(db) == 1
+    assert await automation_svc.run_due(db) == 0
+
+    envio = (await db.execute(select(CampaignRecipient))).scalars().one()
+    assert envio.body == "Hola Marge, gracias por confiar en nosotros en Cambio completo del sistema. Responde STOP para no recibir más."
+    procesadas = (await db.execute(select(CampaignAutomationSend))).scalars().all()
+    assert len(procesadas) == 1 and procesadas[0].result == "queued"
+    r = await app_client.get(f"/api/v1/campaign-automations/{a['id']}", headers=admin)
+    assert r.status_code == 200 and r.json()["stats"]["jobs"]["queued"] == 1
+
+
+async def _automatizacion_con_obra(app_client, db, seeded_org, admin, *, titulo="Cambio completo", mensaje=None):
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    customer = await db.get(Customer, project.customer_id)
+    customer.main_phone = "(818) 555-0101"
+    project.title = titulo
+    await db.commit()
+    await app_client.post("/api/v1/campaigns/consents", headers=admin,
+                          json={"customer_ids": [str(customer.id)], "source": "Formulario firmado", "confirm": True})
+    a = (await app_client.post("/api/v1/campaign-automations", headers=admin, json={
+        "name": "Gracias", "trigger": "job_completed", "channel": "sms",
+        "message": mensaje or "Gracias por {{obra}}."})).json()
+    fila = await db.get(CampaignAutomation, a["id"])
+    fila.starts_on = datetime.now(timezone.utc) - timedelta(days=1)
+    project.status = ProjectStatus.completed
+    project.completed_date = fila.starts_on.date()
+    await db.commit()
+    return a
+
+
+async def test_una_obra_con_stop_en_el_titulo_no_quita_el_aviso_de_baja(app_client, db, seeded_org, admin):
+    await _automatizacion_con_obra(app_client, db, seeded_org, admin, titulo="Stop leak en el ducto")
+    assert await automation_svc.run_due(db) == 1
+    envio = (await db.execute(select(CampaignRecipient))).scalars().one()
+    assert envio.body == f"Gracias por Stop leak en el ducto. {svc.OPT_OUT_FOOTER}"
+    # Si el mensaje ya trae la frase de baja, no se repite.
+    assert svc.with_footer("Oferta. Reply STOP to opt out") == "Oferta. Reply STOP to opt out"
+
+
+async def test_pausar_detiene_la_cola_y_editar_no_manda_el_texto_viejo(app_client, db, seeded_org, admin):
+    a = await _automatizacion_con_obra(app_client, db, seeded_org, admin)
+    assert await automation_svc.run_due(db) == 1
+    r = await app_client.patch(f"/api/v1/campaign-automations/{a['id']}", headers=admin, json={"message": "Texto nuevo de {{obra}}."})
+    assert r.status_code == 200, r.text
+    db.expire_all()
+    assert (await db.execute(select(CampaignRecipient))).scalars().all() == []
+    assert await automation_svc.run_due(db) == 1
+    envio = (await db.execute(select(CampaignRecipient))).scalars().one()
+    assert envio.body.startswith("Texto nuevo de Cambio completo.")
+    assert (await app_client.patch(f"/api/v1/campaign-automations/{a['id']}", headers=admin,
+                                   json={"active": False})).status_code == 200
+    db.expire_all()
+    envio = (await db.execute(select(CampaignRecipient))).scalars().one()
+    assert envio.status == "skipped" and envio.next_attempt_at is None
+
+
+async def test_una_automatizacion_que_falla_no_frena_a_las_demas(app_client, db, seeded_org, admin, monkeypatch):
+    await _automatizacion_con_obra(app_client, db, seeded_org, admin)
+    (await app_client.post("/api/v1/campaign-automations", headers=admin, json={
+        "name": "Rota", "trigger": "job_completed", "channel": "sms", "message": "x"})).json()
+    original = automation_svc._run_one
+    llamadas = []
+
+    async def falla_la_primera(db_, a, hoy):
+        llamadas.append(a.id)
+        if len(llamadas) == 1:
+            raise RuntimeError("dato malo")
+        return await original(db_, a, hoy)
+
+    monkeypatch.setattr(automation_svc, "_run_one", falla_la_primera)
+    await automation_svc.run_due(db)
+    assert len(llamadas) == 2

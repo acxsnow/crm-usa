@@ -204,3 +204,40 @@ class MarketingContact(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     email: Mapped[str | None] = mapped_column(String(255), index=True)
     notes: Mapped[str | None] = mapped_column(String(255))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
+class CampaignAutomation(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Mensaje que sale solo N días después de cerrar una obra: «gracias» el
+    mismo día, recordatorio de mantenimiento a los 6 meses. Usa la misma cola,
+    permisos de mercadeo, horario y bajas que las campañas; `campaign_id` es
+    la campaña contenedora (estado «auto») donde caen sus envíos."""
+
+    __tablename__ = "campaign_automations"
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # job_completed | maintenance_due (mismo mecanismo; cambia el texto y el plazo sugerido)
+    trigger: Mapped[str] = mapped_column(String(30), nullable=False)
+    delay_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    channel: Mapped[str] = mapped_column(String(10), nullable=False, default="sms")
+    subject: Mapped[str | None] = mapped_column(String(255))
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Solo cuenta obras cerradas desde esta fecha: activar una automatización
+    # no le escribe a todos los clientes viejos de una vez.
+    starts_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("campaigns.id"), nullable=False)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
+class CampaignAutomationSend(UUIDPKMixin, OrgScopedMixin, Base):
+    """Una obra ya procesada por una automatización: nunca se repite."""
+
+    __tablename__ = "campaign_automation_sends"
+    __table_args__ = (UniqueConstraint("automation_id", "project_id", name="uq_automation_project"),)
+
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("campaign_automations.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    # queued (entró a la cola) | no_consent | no_contact
+    result: Mapped[str] = mapped_column(String(20), nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

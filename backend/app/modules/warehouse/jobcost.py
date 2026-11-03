@@ -55,7 +55,7 @@ DEFAULT_TEMPLATES: list[dict] = [
         {"category": "sales_rep", "description": "Representante de ventas", "mode": "amount", "value": "800"},
         {"category": "permit", "description": "Permisos", "mode": "amount", "value": "230"},
         {"category": "materials", "description": "Materiales", "mode": "amount", "value": "1070"},
-        {"category": "contractor", "description": "Pago al contratista", "mode": "amount", "value": "1050"},
+        {"category": "contractor", "description": "Pago al contratista", "mode": "amount", "value": "1000"},
     ]},
 ]
 

@@ -27,6 +27,7 @@ from app.modules.attendance.models import (
 )
 from app.modules.attendance.service import (
     ensure_period_open,
+    pauses_paid_for,
     entry_out,
     get_settings,
     now,
@@ -348,7 +349,7 @@ async def correct_entry(db: AsyncSession, *, organization_id: uuid.UUID, actor: 
     if commit:
         await db.commit()
     s = await get_settings(db, organization_id)
-    return entry_out(e, now=now(), paid_pauses=s.paid_pauses)
+    return entry_out(e, now=now(), paid_pauses=await pauses_paid_for(db, s, e.user_id))
 
 
 async def approve_entries(db: AsyncSession, *, organization_id: uuid.UUID, actor: User,
@@ -362,7 +363,7 @@ async def approve_entries(db: AsyncSession, *, organization_id: uuid.UUID, actor
             if e.status != "closed":
                 raise ConflictError("Solo se aprueban marcaciones cerradas.", code="entry_not_closed")
             await ensure_period_open(db, organization_id, e.work_date)
-            horas = calc.entry_hours(e, now=now(), paid_pauses=s.paid_pauses)
+            horas = calc.entry_hours(e, now=now(), paid_pauses=await pauses_paid_for(db, s, e.user_id))
             minutos = approved_minutes if approved_minutes is not None and len(entry_ids) == 1 else horas.effective
             if minutos < 0 or minutos > 24 * 60:
                 raise InvalidInputError("Minutos aprobados no válidos.", code="invalid_minutes")
@@ -409,7 +410,7 @@ async def entry_detail(db: AsyncSession, *, organization_id: uuid.UUID, user: Us
         TimeEntryCorrection.organization_id == organization_id, TimeEntryCorrection.time_entry_id == e.id
     ).order_by(TimeEntryCorrection.corrected_at))).all()
     return {
-        **entry_out(e, now=now(), paid_pauses=s.paid_pauses),
+        **entry_out(e, now=now(), paid_pauses=await pauses_paid_for(db, s, e.user_id)),
         "events": [event_out(ev, with_location=ve_ubicacion) for ev in eventos],
         "corrections": [{"by": nombre, "at": as_utc(c.corrected_at).isoformat(), "reason": c.reason,
                          "before": c.before_data, "after": c.after_data} for c, nombre in correcciones],

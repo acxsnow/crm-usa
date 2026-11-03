@@ -104,6 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "◷",
         permission: ["dispatch.read_own", "dispatch.manage"],
       },
+      { label: "Despacho", to: "/dispatch", icon: "▤", permission: "dispatch.manage" },
       // Quién estuvo en cada obra y qué se hizo cada día (plan bodega-cierre, fase 5).
       {
         label: "Calendario de obras",
@@ -130,7 +131,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Panel de asistencia", to: "/attendance", icon: "◔", permission: "attendance.dashboard" },
       { label: "Novedades y horas", to: "/attendance-review", icon: "✎", permission: "attendance.review" },
       { label: "Nómina", to: "/payroll", icon: "$", permission: "attendance.dashboard" },
-      { label: "Mapa operativo", to: "/operations-map", icon: "⌖", permission: ["locations.view", "projects.read_all"] },
+      { label: "Mapa operativo", to: "/operations-map", icon: "⌖", permission: "locations.view" },
     ],
   },
   {
@@ -214,6 +215,7 @@ const NAV_GROUPS: NavGroup[] = [
       },
       // Banca conectada (como QuickBooks): movimientos de las cuentas y tarjetas de la empresa.
       { label: "Banca", to: "/banking", icon: "▥", permission: "bankfeeds.manage" },
+      { label: "Contabilidad", to: "/accounting", icon: "▧", permission: "accounting.read" },
       {
         label: "Conciliación y rentabilidad",
         to: "/finance-close",
