@@ -227,31 +227,20 @@ async def test_field_technician_forbidden_from_all_billing_endpoints(app_client,
     assert resp.status_code == 403
 
 
-async def test_admin_staff_can_read_but_not_write_invoices(app_client, active_admin_staff_user):
+async def test_admin_staff_has_the_accounting_invoice_permissions(app_client, active_admin_staff_user):
+    """Desde el 4 nov 2026 Administración tiene los permisos de Contabilidad
+    (pedido del cliente): crea, cobra, exporta y ve el tablero financiero."""
     token = await _login(app_client, "admin-staff@acme-demo.com")
 
-    # invoices.read is granted.
-    resp = await app_client.get("/api/v1/invoices", headers=_auth(token))
-    assert resp.status_code == 200
+    for path in ["/api/v1/invoices", "/api/v1/invoices-export.csv", "/api/v1/finance/dashboard"]:
+        resp = await app_client.get(path, headers=_auth(token))
+        assert resp.status_code == 200, f"{path} -> {resp.status_code} {resp.text}"
 
-    # But no invoices.create/update/record_payment/export or dashboards.finance.
+    # El permiso deja pasar; lo que falla es el proyecto inexistente, no un 403.
     resp = await app_client.post(
         "/api/v1/invoices", json={"project_id": RANDOM_ID, "amount": 100}, headers=_auth(token)
     )
-    assert resp.status_code == 403
-
-    resp = await app_client.post(
-        f"/api/v1/invoices/{RANDOM_ID}/payments",
-        json={"amount": 10, "paid_at": "2026-01-01"},
-        headers=_auth(token),
-    )
-    assert resp.status_code == 403
-
-    resp = await app_client.get("/api/v1/invoices-export.csv", headers=_auth(token))
-    assert resp.status_code == 403
-
-    resp = await app_client.get("/api/v1/finance/dashboard", headers=_auth(token))
-    assert resp.status_code == 403
+    assert resp.status_code != 403
 
 
 async def test_accounting_can_manage_invoices_end_to_end_permission_gate(app_client, active_accounting_user):

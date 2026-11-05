@@ -141,7 +141,8 @@ async def test_reports_by_permission(app_client, login, active_admin_staff_user,
         h = await login(usuario.email)
         return [(await app_client.get(f"{API}/reports/{k}", headers=h)).status_code
                 for k in ("commercial", "operations", "finance")]
-    assert await codigos(active_admin_staff_user) == [200, 403, 403]   # tablero comercial, sin generar reportes
+    # Desde el 4 nov 2026 Administración tiene también los permisos de Contabilidad.
+    assert await codigos(active_admin_staff_user) == [200, 200, 200]
     assert await codigos(active_accounting_user) == [403, 200, 200]    # genera reportes, sin tablero comercial
     assert await codigos(active_management_user) == [200, 200, 200]
     r = await app_client.get(f"{API}/reports/commercial/csv", headers=await login(active_accounting_user.email))

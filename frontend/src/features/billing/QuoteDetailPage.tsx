@@ -127,7 +127,7 @@ export function QuoteDetailPage() {
               )}
             </div>
           </fieldset>
-          <LinesEditor lines={lineas} onChange={setLineas} options={opciones} />
+          <LinesEditor lines={lineas} onChange={setLineas} options={opciones} fromWarehouse />
           <div className="acta-actions" style={{ marginTop: "0.9rem" }}>
             <button type="button" className="acta-btn" disabled={guardar.isPending} onClick={() => guardar.mutate()}>Guardar borrador</button>
             <button type="submit" className="acta-btn is-primary" disabled={enviar.isPending}>Guardar y dejar lista para enviar</button>

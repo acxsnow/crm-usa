@@ -1,10 +1,10 @@
 """Instalar con el permiso solo radicado (spec 2026-10-16).
 
-`PERMIT_FILED_ALLOWS_INSTALL` en `false` (por defecto): como siempre, para pasar a
-«Listo para instalar» cada permiso tiene que estar aprobado y vigente o «No
-requerido». En `true` también deja pasar un permiso radicado. En los dos casos
-bloquean el rechazado y el aprobado vencido, y el cobro sigue pidiendo el
-permiso aprobado.
+`PERMIT_FILED_ALLOWS_INSTALL` en `false`: para pasar a «Listo para instalar» cada
+permiso tiene que estar aprobado y vigente o «No requerido». En `true` (por
+defecto desde el 5 nov 2026, decisión del cliente) también deja pasar un permiso
+radicado. En los dos casos bloquean el rechazado y el aprobado vencido. Aquí
+cada prueba parte del interruptor apagado y lo prende cuando lo necesita.
 """
 import uuid
 from datetime import date, timedelta
@@ -26,6 +26,11 @@ def _clean_registries():
     stages.clear_guards()
     stages.clear_effects()
     case_hooks._reset_for_tests()
+
+
+@pytest.fixture(autouse=True)
+def _interruptor_apagado(monkeypatch):
+    monkeypatch.setattr(get_settings(), "PERMIT_FILED_ALLOWS_INSTALL", False)
 
 
 @pytest.fixture

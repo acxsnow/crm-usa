@@ -193,7 +193,7 @@ export interface FieldCatalogs {
   visit_failure_reasons?: Record<string, string>;
 }
 
-export type PermitStatus = "submitted" | "approved" | "rejected" | "not_required";
+export type PermitStatus = "in_process" | "submitted" | "approved" | "rejected" | "not_required";
 
 export interface Permit {
   id: string;

@@ -193,6 +193,9 @@ export interface WarehouseKitItem {
   unit_label: string | null;
   quantity: string;
   unit_cost: string | null;
+  /** Precio de venta del artículo, para cargar la lista en una cotización. */
+  sale_price?: string | null;
+  category?: string | null;
   spec_label: string | null;
   section: string | null;
   is_required: boolean;

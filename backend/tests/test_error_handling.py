@@ -13,6 +13,7 @@ import pytest
 from fastapi import APIRouter
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import get_settings
 from app.shared.errors import (
     ConflictError,
     DomainError,
@@ -20,7 +21,6 @@ from app.shared.errors import (
     InvalidInputError,
     NotFoundError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Las excepciones de dominio no saben de HTTP
@@ -191,17 +191,19 @@ async def test_unexpected_error_still_carries_cors_headers(app_client, failing_a
     ahí, el navegador la bloqueaba por política de origen y el frontend recibía
     un error de red en vez del 500. El usuario nunca veía el código de
     referencia que necesita para reportar el problema."""
+    origen = get_settings().FRONTEND_APP_URL  # el del entorno, no uno fijo
     resp = await app_client.get(
-        "/_test_errors/boom", headers={"Origin": "http://localhost:5173"}
+        "/_test_errors/boom", headers={"Origin": origen}
     )
     assert resp.status_code == 500
-    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    assert resp.headers.get("access-control-allow-origin") == origen
     assert resp.json()["request_id"]
 
 
 async def test_domain_errors_carry_cors_headers(app_client, failing_app):
+    origen = get_settings().FRONTEND_APP_URL
     resp = await app_client.get(
-        "/_test_errors/not-found", headers={"Origin": "http://localhost:5173"}
+        "/_test_errors/not-found", headers={"Origin": origen}
     )
     assert resp.status_code == 404
-    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    assert resp.headers.get("access-control-allow-origin") == origen

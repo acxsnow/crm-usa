@@ -4,7 +4,8 @@ de la ciudad.
 - El primer permiso registrado con el expediente en `approved` lo pasa a
   `permit_in_progress`.
 - Cuando todos los permisos del proyecto quedan despejados (aprobados y
-  vigentes, o `not_required` con motivo), pasa a `ready_to_install`.
+  vigentes, o `not_required` con motivo), pasa a `ready_to_install`. «En
+  trámite» (`in_process`) también deja pasar a instalar (`allows_install`).
 """
 import uuid
 from datetime import date
@@ -43,8 +44,9 @@ def allows_install(permit: Permit, today: date) -> bool:
     """Si este permiso deja pasar a «Listo para instalar». Con
     PERMIT_FILED_ALLOWS_INSTALL también vale el permiso radicado (aún sin
     aprobar); rechazado y aprobado vencido bloquean siempre
-    (spec 2026-10-16-instalar-con-permiso-radicado)."""
-    if permit.is_cleared_on(today):
+    (spec 2026-10-16-instalar-con-permiso-radicado). «En trámite» deja pasar
+    siempre (pedido del cliente, 4 nov 2026)."""
+    if permit.is_cleared_on(today) or permit.status == PermitStatus.in_process:
         return True
     return get_settings().PERMIT_FILED_ALLOWS_INSTALL and permit.status == PermitStatus.submitted
 

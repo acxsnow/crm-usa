@@ -108,6 +108,9 @@ export function ProjectDetailPage() {
   // llenarla: el personal rota y el nuevo sigue donde el otro terminó.
   const trabaja = project.my_access !== "read_only";
   const estados = deriveStates(project, recordData);
+  // Ya pasó el permiso para instalar, pero la ciudad no lo ha aprobado (cliente, 5 nov 2026).
+  const faltaPermiso = project.status !== "cancelled" && recordData.permits.length > 0
+    && recordData.permits.every((p) => p.allows_install) && !recordData.permits.every((p) => p.is_cleared);
   const technicianName = project.primary_technician_user_id
     ? project.primary_technician_user_id === user?.id
       ? user.full_name
@@ -123,6 +126,13 @@ export function ProjectDetailPage() {
       {project.status === "cancelled" && (
         <div className="info-banner read-only-banner" role="status">
           <strong>Obra cancelada.</strong> {project.cancel_reason ?? ""} Queda en solo lectura.
+        </div>
+      )}
+      {faltaPermiso && (
+        <div className="info-banner permit-missing-banner" role="status">
+          <strong>Falta el permiso municipal aprobado.</strong> Se puede instalar y cobrar con el permiso radicado o en
+          trámite, pero el expediente no se cierra hasta registrar la aprobación de la ciudad.{" "}
+          <button type="button" className="acta-link" onClick={() => openActaStep("permit")}>Ver el permiso</button>
         </div>
       )}
       {!trabaja && project.status !== "cancelled" && (

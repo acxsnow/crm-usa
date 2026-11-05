@@ -247,6 +247,8 @@ export interface LineInput {
   unit_price: number;
   /** La opción de la cotización a la que pertenece; sin ella va en todas. */
   option_key?: string | null;
+  /** El artículo de bodega del que salió; un material sin él queda por validar. */
+  warehouse_item_id?: string | null;
 }
 
 export const LINE_KIND_LABELS: Record<string, string> = {

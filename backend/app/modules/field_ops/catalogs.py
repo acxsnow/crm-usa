@@ -68,6 +68,10 @@ VISIT_FAILURE_REASONS: dict[str, str] = {
 
 
 class PermitStatus(StrEnum):
+    # En trámite: la papelería se va a hacer. Deja seguir a instalar como antes
+    # «No requerido» (pedido del cliente, 4 nov 2026), pero el cobro sigue
+    # pidiendo el aprobado.
+    in_process = "in_process"
     submitted = "submitted"
     approved = "approved"
     rejected = "rejected"
@@ -77,6 +81,7 @@ class PermitStatus(StrEnum):
 
 
 PERMIT_STATUS_LABELS: dict[str, str] = {
+    PermitStatus.in_process: "En trámite",
     PermitStatus.submitted: "Radicado",
     PermitStatus.approved: "Aprobado",
     PermitStatus.rejected: "Rechazado",

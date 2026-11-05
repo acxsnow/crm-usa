@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { listCustomers } from "@/features/crm/api";
+import { CustomerSearch } from "@/features/crm/CustomerSearch";
+import type { Customer } from "@/types/crm";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import type { LineInput, QuoteStatus } from "@/types/billing";
 import { billingKeys, createQuote, getQuotesSummary, listQuotesPage, money, shortDay } from "./billingApi";
@@ -46,7 +48,7 @@ export function QuotesTab() {
         <section className="acta billing-list" aria-label="Nueva cotización">
           <header className="billing-list-head"><h2>Nueva cotización</h2>
             <p>Trabajo que paga el cliente. Queda en borrador hasta que la marques como enviada.</p></header>
-          <NewQuote customers={customers ?? []} onCancel={() => setNueva(false)} />
+          <NewQuote onCancel={() => setNueva(false)} />
         </section>
       )}
 
@@ -106,34 +108,35 @@ export function QuotesTab() {
   );
 }
 
-function NewQuote({ customers, onCancel }: { customers: { id: string; legal_name: string }[]; onCancel: () => void }) {
+function NewQuote({ onCancel }: { onCancel: () => void }) {
   const navigate = useNavigate();
-  const [cliente, setCliente] = useState("");
+  const [cliente, setCliente] = useState<Customer | null>(null);
   const [titulo, setTitulo] = useState("");
   const [vigencia, setVigencia] = useState("");
   const [lineas, setLineas] = useState<LineInput[]>([emptyLine()]);
   const [error, setError] = useState<string | null>(null);
   const crear = useMutation({
-    mutationFn: () => createQuote({ customer_id: cliente, title: titulo || undefined, valid_until: vigencia || undefined, lines: lineas }),
+    mutationFn: () => createQuote({ customer_id: cliente!.id, title: titulo || undefined, valid_until: vigencia || undefined, lines: lineas }),
     onSuccess: (q) => navigate(`/invoices/quotes/${q.id}`),
     onError: (err) => setError(apiErrorMessage(err)),
   });
   return (
-    <form onSubmit={(e) => { e.preventDefault(); crear.mutate(); }}>
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      if (!cliente) { setError("Busca y elige el cliente."); return; }
+      crear.mutate();
+    }}>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="panel-form">
         <div className="field"><label htmlFor="cot-cliente">Cliente</label>
-          <select id="cot-cliente" required value={cliente} onChange={(e) => setCliente(e.target.value)}>
-            <option value="">Elige un cliente</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.legal_name}</option>)}
-          </select></div>
+          <CustomerSearch id="cot-cliente" value={cliente} onChange={(c) => { setCliente(c); setError(null); }} /></div>
         <div className="field"><label htmlFor="cot-titulo">Trabajo</label>
           <input id="cot-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Reparación de ductos" /></div>
         <div className="field"><label htmlFor="cot-vigencia">Vigente hasta</label>
           <input id="cot-vigencia" type="date" value={vigencia} onChange={(e) => setVigencia(e.target.value)} /></div>
       </div>
       <h4 className="acta-section-title">Líneas</h4>
-      <LinesEditor lines={lineas} onChange={setLineas} />
+      <LinesEditor lines={lineas} onChange={setLineas} fromWarehouse />
       <div className="acta-actions" style={{ marginTop: "0.9rem" }}>
         <button type="button" className="acta-btn is-quiet" onClick={onCancel}>Cancelar</button>
         <button type="submit" className="acta-btn is-primary" disabled={crear.isPending}>Crear borrador</button>

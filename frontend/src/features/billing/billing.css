@@ -299,6 +299,28 @@ ul.billing-req li:last-child { border-bottom: 0; }
 .lines-row .billing-amount { text-align: right; }
 .lines-option { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--ink-soft); }
 .lines-option select { max-width: 16rem; }
+/* De dónde sale un material de la cotización: bodega o por validar. */
+.lines-origin { grid-column: 2 / -1; justify-self: start; font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px; margin-top: -0.2rem; }
+.lines-origin.is-ok { color: var(--ok); background: var(--ok-wash); }
+.lines-origin.is-check { color: var(--warn); background: var(--warn-wash); }
+.lines-check-note { margin: 0.4rem 0 0; font-size: 0.8125rem; color: var(--warn); }
+.lines-loader { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; margin-bottom: 0.9rem; align-items: start; }
+.lines-loader > .lines-check-note { grid-column: 1 / -1; color: var(--ink-soft); margin: 0; }
+.lines-loader-row { display: flex; gap: 0.45rem; }
+.lines-loader-row select { flex: 1; min-width: 0; }
+.lines-loader-search, .customer-search { position: relative; }
+.lines-loader-search input, .customer-search input { width: 100%; }
+/* Resultados de búsqueda (clientes, artículos de bodega). */
+.customer-search-results { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 0.25rem;
+  list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(16 24 40 / 12%); max-height: 18rem; overflow-y: auto; }
+.customer-search-results button { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; width: 100%; text-align: left;
+  padding: 0.45rem 0.6rem; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.customer-search-results button:hover, .customer-search-results button:focus-visible { background: var(--muted-wash); }
+.customer-search-results small, .customer-search-picked small { display: block; font-size: 0.75rem; color: var(--ink-soft); }
+.customer-search-empty { padding: 0.45rem 0.6rem; font-size: 0.8125rem; color: var(--ink-soft); }
+.customer-search-picked { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 2.5rem;
+  padding: 0.3rem 0.3rem 0.3rem 0.7rem; border: 1px solid var(--line-input); border-radius: var(--radius); }
+.customer-search-picked > span { min-width: 0; overflow-wrap: anywhere; }
 .quote-options { display: grid; gap: 0.5rem; margin-bottom: 0.9rem; }
 .quote-options-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .quote-options-row input[type="text"] { flex: 1 1 10rem; min-width: 0; }
@@ -343,6 +365,8 @@ ul.billing-req li:last-child { border-bottom: 0; }
   .billing-row > span:empty { display: none; }
   .billing-claim-row { grid-template-columns: minmax(0, 1fr) auto; }
   .lines-row { grid-template-columns: 1fr 1fr; }
+  .lines-loader { grid-template-columns: minmax(0, 1fr); }
+  .lines-origin { grid-column: 1 / -1; }
   .lines-row .lines-desc { grid-column: 1 / -1; }
   .lines-head { display: none; }
   .acta-amount { font-size: 1.25rem; }

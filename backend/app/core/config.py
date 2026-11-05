@@ -48,7 +48,9 @@ class Settings(BaseSettings):
     # pasar a «Listo para instalar» el permiso tiene que estar aprobado por la ciudad
     # (como siempre); true = basta con haberlo radicado. El cobro al programa sigue
     # pidiendo el permiso aprobado en los dos casos. Cambiarlo exige reiniciar la API.
-    PERMIT_FILED_ALLOWS_INSTALL: bool = False
+    # Con el permiso radicado ya se puede instalar (cliente, 5 nov 2026). En
+    # `false` vuelve a exigir el aprobado para «Listo para instalar».
+    PERMIT_FILED_ALLOWS_INSTALL: bool = True
 
     # Frontend URL used to build reset/invitation links (never an internal host)
     FRONTEND_APP_URL: str = Field(default_factory=lambda: os.getenv("RENDER_EXTERNAL_URL", "http://localhost:5173"))

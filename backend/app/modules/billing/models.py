@@ -31,6 +31,8 @@ LINE_KINDS = {
     "rebate": "Rebate o incentivo",
     "other": "Otro",
 }
+# Los tipos de línea que salen de bodega. La mano de obra no está en bodega.
+WAREHOUSE_LINE_KINDS = ("material", "equipment")
 
 
 class Invoice(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
@@ -530,5 +532,15 @@ class QuoteLine(UUIDPKMixin, Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     # La opción a la que pertenece (ver `Quote.options`); None = va en todas.
     option_key: Mapped[str | None] = mapped_column(String(10))
+    # El artículo de bodega del que salió (al cargar una lista o elegirlo del
+    # catálogo). Un material o equipo sin artículo queda «por validar»: no está
+    # en bodega y se ingresa aparte (pedido del cliente, 4 nov 2026).
+    warehouse_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("warehouse_items.id", ondelete="SET NULL")
+    )
 
     quote: Mapped["Quote"] = relationship("Quote", back_populates="lines")
+
+    @property
+    def needs_warehouse_check(self) -> bool:
+        return self.kind in WAREHOUSE_LINE_KINDS and self.warehouse_item_id is None

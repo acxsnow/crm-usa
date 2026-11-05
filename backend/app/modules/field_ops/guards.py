@@ -37,6 +37,31 @@ async def guard_permits_cleared(*, db, case, actor_id, reason):
         )
 
 
+async def guard_permit_approved_to_close(*, db, case, actor_id, reason):
+    """No se cierra un expediente con obra sin el permiso municipal aprobado
+    (cliente, 5 nov 2026): se instala y se cobra con el permiso radicado o en
+    trámite, pero el cierre lo exige. Si la obra se canceló, o nunca llegó a
+    tener permiso ni a instalarse, el cierre administrativo pasa."""
+    from sqlalchemy import select
+
+    from app.modules.field_ops.models import Project, ProjectStatus
+    from app.modules.field_ops.permits import all_cleared
+
+    project = (await db.execute(select(Project).where(
+        Project.case_id == case.id, Project.organization_id == case.organization_id))).scalar_one_or_none()
+    if project is None or project.status == ProjectStatus.cancelled:
+        return
+    permisos = await permits_of(db, project.id)
+    if not permisos and project.status != ProjectStatus.completed:
+        return
+    if not all_cleared(permisos, await org_today(db, case.organization_id)):
+        raise InvalidInputError(
+            "No se puede cerrar el expediente: falta el permiso municipal aprobado. "
+            "Registra la aprobación de la ciudad en la obra.",
+            code="permit_required_to_close",
+        )
+
+
 async def guard_installation_complete(*, db, case, actor_id, reason):
     from app.modules.field_ops.installation import installation_gaps
 

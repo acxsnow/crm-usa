@@ -4296,6 +4296,8 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
 
 /* Rotación del técnico (plan bodega-cierre, fase 5). */
 .read-only-banner { margin-bottom: 12px; }
+.permit-missing-banner { margin-bottom: 12px; border-color: var(--warn, #b54708); background: var(--warn-wash, #fffaeb); }
+.permit-missing-banner .acta-link { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; text-decoration: underline; }
 .assignments-history { margin-top: 14px; }
 .assignments-history ol { list-style: none; margin: 6px 0 0; padding: 0; }
 .assignments-history li { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }

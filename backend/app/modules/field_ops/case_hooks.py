@@ -57,6 +57,10 @@ def register() -> None:
 
     stages.register_guard("approved", "permit_in_progress", guards.guard_has_permit)
     stages.register_guard("permit_in_progress", "ready_to_install", guards.guard_permits_cleared)
+    # Cerrar el expediente exige el permiso aprobado, desde cualquier etapa.
+    for origen in stages.STAGES:
+        if stages.is_allowed(origen, "closed"):
+            stages.register_guard(origen, "closed", guards.guard_permit_approved_to_close)
 
     from app.modules.field_ops.installation import on_installed
 

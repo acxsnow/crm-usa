@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.models import (
     DRAFT_INVOICE_NUMBER,
+    WAREHOUSE_LINE_KINDS,
     DocumentStatus,
     Invoice,
     InvoiceKind,
@@ -51,6 +52,7 @@ async def create_quote(db: AsyncSession, *, organization_id: uuid.UUID, user, da
     customer_id, project_id = await _customer_and_project(db, organization_id, data)
     opciones = _options(data.get("options") or [])
     lineas = _lines(data.get("lines") or [], opciones)
+    await _check_items(db, organization_id, lineas)
     hoy = await org_today(db, organization_id)
     _check_valid_until(data.get("valid_until"), hoy)
     quote = Quote(
@@ -78,6 +80,7 @@ async def update_quote(db, *, organization_id, user, quote_id, changes: dict) ->
         quote.options = _options(changes["options"])
     if changes.get("lines") is not None:
         nuevas = _lines(changes["lines"], quote.options)
+        await _check_items(db, organization_id, nuevas)
         quote.lines.clear()
         await db.flush()
         quote.lines.extend(nuevas)
@@ -121,7 +124,8 @@ async def revise_quote(db, *, organization_id, user, quote_id) -> Quote:
         created_by_user_id=user.id, options=list(quote.options or []),
         lines=[QuoteLine(sort_order=l.sort_order, kind=l.kind, description=l.description,
                          service_code=l.service_code, quantity=l.quantity, unit_price=l.unit_price,
-                         amount=l.amount, option_key=l.option_key) for l in quote.lines],
+                         amount=l.amount, option_key=l.option_key,
+                         warehouse_item_id=l.warehouse_item_id) for l in quote.lines],
     )
     quote.status = QuoteStatus.superseded
     quote.public_token_hash = None  # el enlace de la versión vieja deja de servir
@@ -316,10 +320,24 @@ def _lines(datos: list[dict], opciones: list[dict] | None = None) -> list[QuoteL
             raise InvalidInputError(f"La opción «{clave}» de una línea no existe en la cotización.",
                                     code="quote_option_unknown")
         linea.option_key = clave
+        linea.warehouse_item_id = dato.get("warehouse_item_id") if linea.kind in WAREHOUSE_LINE_KINDS else None
     for clave in claves:
         if not any(l.option_key == clave for l in lineas):
             raise InvalidInputError("Cada opción necesita al menos una línea propia.", code="quote_option_empty")
     return lineas
+
+
+async def _check_items(db: AsyncSession, organization_id: uuid.UUID, lineas: list[QuoteLine]) -> None:
+    """El artículo de bodega de cada línea es de la organización."""
+    from app.modules.warehouse.models import WarehouseItem
+
+    ids = {l.warehouse_item_id for l in lineas if l.warehouse_item_id}
+    if not ids:
+        return
+    propios = set((await db.execute(select(WarehouseItem.id).where(
+        WarehouseItem.organization_id == organization_id, WarehouseItem.id.in_(ids)))).scalars().all())
+    if ids - propios:
+        raise InvalidInputError("Un artículo de bodega de la cotización no existe.", code="quote_item_not_found")
 
 
 def _options(datos: list[dict]) -> list[dict]:

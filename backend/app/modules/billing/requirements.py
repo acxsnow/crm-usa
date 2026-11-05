@@ -41,7 +41,11 @@ DEFAULT_REQUIREMENTS: list[dict] = [
     {"code": "installation_done", "kind": "auto"},
     {"code": "technician_info_complete", "kind": "auto"},
     {"code": "technician_info_confirmed", "kind": "auto"},
-    {"code": "permit_approved", "kind": "auto"},
+    # Apagado: el cobro se radica con el permiso en cualquier estado; lo que no
+    # se deja es cerrar el expediente sin él (cliente, 5 nov 2026,
+    # `field_ops/guards.guard_permit_approved_to_close`). El programa que lo
+    # exija lo enciende en su configuración.
+    {"code": "permit_approved", "kind": "auto", "active": False},
     {"code": "inspection_passed", "kind": "auto"},
     {"code": "invoice_issued", "kind": "auto"},
     {"code": "program_paperwork", "label": "Papeleo propio del programa", "kind": "manual"},
@@ -56,6 +60,7 @@ def default_requirements() -> list[dict]:
             "label": r.get("label") or AUTO_RULES[r["code"]],
             "kind": r["kind"],
             "sort_order": orden,
+            "active": r.get("active", True),
         }
         for orden, r in enumerate(DEFAULT_REQUIREMENTS)
     ]
