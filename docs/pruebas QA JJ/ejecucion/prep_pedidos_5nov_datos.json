@@ -1,0 +1,40 @@
+{
+ "pc": {
+  "A": {
+   "case": "035c314a-a79c-4a7a-8c3f-170d5fe04c57",
+   "project": "ce1e7271-3808-4463-b162-3c44ecefaf63",
+   "number": "CASE-2026-0032"
+  },
+  "B": {
+   "case": "a41d7943-087a-4191-b951-3e54c8e235db",
+   "project": "9f64a812-1300-4dea-86ca-1c99eb3d4d35",
+   "number": "CASE-2026-0033"
+  },
+  "C": {
+   "case": "b03abf00-0b35-4e1b-88e9-0c87f4971455",
+   "project": "34876fc2-b05b-409d-b037-fe0dfb27eb46",
+   "permit": "f2a22556-8d17-4488-b42b-e5486991f476",
+   "number": "CASE-2026-0034",
+   "stage": "paid"
+  }
+ },
+ "celular": {
+  "A": {
+   "case": "2b18ec93-1545-4da3-9f1c-4fae35dd7b8f",
+   "project": "683aa600-f9a7-4824-b625-3ae52a479e18",
+   "number": "CASE-2026-0035"
+  },
+  "B": {
+   "case": "d0f34554-ac56-4738-8be0-ab3c034e8083",
+   "project": "2e18bd9f-4e4b-49ee-9868-a1f352410b59",
+   "number": "CASE-2026-0036"
+  },
+  "C": {
+   "case": "a7b64095-47bf-45df-ae0e-fc8f6b797974",
+   "project": "aff5b2ef-4b6c-419b-8368-b74136d7ac9a",
+   "permit": "15b5f71f-1947-49d8-8974-835d4f5c50bd",
+   "number": "CASE-2026-0037",
+   "stage": "paid"
+  }
+ }
+}
