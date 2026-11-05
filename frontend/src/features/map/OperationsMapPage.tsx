@@ -9,10 +9,10 @@ import { ageLabel, geocodeProjects, getMapPeople, getMapProjects, getMapRoute, l
   type MapProject } from "@/features/attendance/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { LeafletMap, type MapLine, type MapMarker } from "./LeafletMap";
+import { PROJECT_STATUS_LABELS } from "@/types/fieldOps";
 import "@/features/attendance/attendance.css";
 
-const ESTADOS: Record<string, string> = { planning: "Planeación", scheduled: "Agendada", in_progress: "En curso",
-  completed: "Terminada", cancelled: "Cancelada" };
+const ESTADOS: Record<string, string> = PROJECT_STATUS_LABELS;
 const TONO: Record<string, MapMarker["tone"]> = { planning: "muted", scheduled: "info", in_progress: "warn",
   completed: "ok", cancelled: "muted" };
 

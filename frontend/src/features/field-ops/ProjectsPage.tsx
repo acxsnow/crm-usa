@@ -31,13 +31,8 @@ export function ProjectsPage() {
       key: "status",
       label: "Estado",
       type: "select",
-      options: [
-        { value: "planning", label: "Planeación" },
-        { value: "scheduled", label: "Programado" },
-        { value: "in_progress", label: "En progreso" },
-        { value: "completed", label: "Completado" },
-        { value: "cancelled", label: "Cancelado" },
-      ],
+      // Los mismos nombres que la etiqueta de la tabla.
+      options: Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => ({ value, label })),
     },
     ...(allUsers && allUsers.items.length > 0
       ? [
