@@ -69,8 +69,16 @@ async def list_customers(
         stmt = stmt.where(Customer.status == status_filter)
     if q:
         like = contains_pattern(q)
+        # También por dirección: la de facturación o la de la casa en alguno de
+        # sus expedientes (pedido del cliente, 4 nov 2026: buscar al cotizar).
+        en_expediente = select(Case.id).where(
+            Case.organization_id == organization_id, Case.customer_id == Customer.id,
+            Case.address_street.ilike(like, escape=LIKE_ESCAPE) | Case.address_unit.ilike(like, escape=LIKE_ESCAPE)
+            | Case.address_city.ilike(like, escape=LIKE_ESCAPE) | Case.address_zip.ilike(like, escape=LIKE_ESCAPE),
+        ).exists()
         stmt = stmt.where(
             (Customer.legal_name.ilike(like, escape=LIKE_ESCAPE)) | (Customer.email.ilike(like, escape=LIKE_ESCAPE)) | (Customer.main_phone.ilike(like, escape=LIKE_ESCAPE))
+            | Customer.billing_address.ilike(like, escape=LIKE_ESCAPE) | en_expediente
         )
     limit, offset = pagination
     return await paginate(db, stmt, limit=limit, offset=offset, response=response)

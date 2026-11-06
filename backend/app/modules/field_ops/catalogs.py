@@ -28,7 +28,9 @@ EVIDENCE_CATEGORIES: dict[str, str] = {
     "additional_video": "Video adicional",
     # La prueba de la inspección aprobada: el permiso con la firma del
     # inspector (módulo 6, spec D6.4). Sin esto no se cobra.
-    "permit_signed": "Permiso firmado por el inspector",
+    "permit_signed": "Permiso cerrado (firmado por el inspector)",
+    # Lo firmado a mano con las utilidades (cliente, 5 nov 2026).
+    "signed_paperwork": "Papelería firmada a mano (utilidades)",
 }
 
 # Condiciones de una instalación que vuelven obligatorios ciertos ítems del
@@ -68,6 +70,10 @@ VISIT_FAILURE_REASONS: dict[str, str] = {
 
 
 class PermitStatus(StrEnum):
+    # En trámite: la papelería se va a hacer. Deja seguir a instalar como antes
+    # «No requerido» (pedido del cliente, 4 nov 2026), pero el cobro sigue
+    # pidiendo el aprobado.
+    in_process = "in_process"
     submitted = "submitted"
     approved = "approved"
     rejected = "rejected"
@@ -77,6 +83,7 @@ class PermitStatus(StrEnum):
 
 
 PERMIT_STATUS_LABELS: dict[str, str] = {
+    PermitStatus.in_process: "En trámite",
     PermitStatus.submitted: "Radicado",
     PermitStatus.approved: "Aprobado",
     PermitStatus.rejected: "Rechazado",

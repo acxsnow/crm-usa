@@ -1,0 +1,426 @@
+{
+ "PED-1-EN-TRAMITE": [
+  {
+   "check": "[pc] El estado ofrece «En trámite»",
+   "ok": true,
+   "dato": "['En trámite', 'Radicado', 'Aprobado', 'Rechazado']"
+  },
+  {
+   "check": "[pc] Ya no ofrece «No requerido»",
+   "ok": true,
+   "dato": "['En trámite', 'Radicado', 'Aprobado', 'Rechazado']"
+  },
+  {
+   "check": "[pc] «En trámite» no pide fecha de radicado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] La tarjeta ofrece «Ya se radicó (hoy)»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] La tarjeta ofrece «La ciudad lo aprobó»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[pc] El expediente pasó solo a «Listo para instalar»",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "[pc] Finanzas › Permisos con filtro «En trámite» muestra la obra",
+   "ok": true,
+   "dato": "CASE-2026-0032"
+  },
+  {
+   "check": "[celular] El estado ofrece «En trámite»",
+   "ok": true,
+   "dato": "['En trámite', 'Radicado', 'Aprobado', 'Rechazado']"
+  },
+  {
+   "check": "[celular] Ya no ofrece «No requerido»",
+   "ok": true,
+   "dato": "['En trámite', 'Radicado', 'Aprobado', 'Rechazado']"
+  },
+  {
+   "check": "[celular] «En trámite» no pide fecha de radicado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] La tarjeta ofrece «Ya se radicó (hoy)»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] La tarjeta ofrece «La ciudad lo aprobó»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] El expediente pasó solo a «Listo para instalar»",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "[celular] Finanzas › Permisos con filtro «En trámite» muestra la obra",
+   "ok": true,
+   "dato": "CASE-2026-0035"
+  }
+ ],
+ "PED-2-RADICADO": [
+  {
+   "check": "[pc] Sale el aviso «Falta el permiso municipal aprobado»",
+   "ok": true,
+   "dato": "Falta el permiso municipal aprobado. Se puede instalar y cobrar con el permiso radicado o en trámite, pero el expediente no se cierra hasta registrar la aprobación de la ciudad. Ver el permiso"
+  },
+  {
+   "check": "[pc] «Ver el permiso» abre el paso del permiso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Con «Radicado» el expediente pasó a «Listo para instalar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Con el permiso aprobado el aviso desaparece",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sale el aviso «Falta el permiso municipal aprobado»",
+   "ok": true,
+   "dato": "Falta el permiso municipal aprobado. Se puede instalar y cobrar con el permiso radicado o en trámite, pero el expediente no se cierra hasta registrar la aprobación de la ciudad. Ver el permiso"
+  },
+  {
+   "check": "[celular] «Ver el permiso» abre el paso del permiso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Con «Radicado» el expediente pasó a «Listo para instalar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Con el permiso aprobado el aviso desaparece",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "PED-3-COBRO-Y-CIERRE": [
+  {
+   "check": "[pc] Con el permiso «En trámite» el cobro se radicó y el expediente quedó «Pagado»",
+   "ok": true,
+   "dato": "paid"
+  },
+  {
+   "check": "[pc] Sin el aprobado no deja cerrar y explica por qué",
+   "ok": true,
+   "dato": "No se puede cerrar el expediente: falta el permiso municipal aprobado. Registra la aprobación de la ciudad en la obra."
+  },
+  {
+   "check": "[pc] Con el permiso aprobado el expediente se cierra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Con el permiso «En trámite» el cobro se radicó y el expediente quedó «Pagado»",
+   "ok": true,
+   "dato": "paid"
+  },
+  {
+   "check": "[celular] Sin el aprobado no deja cerrar y explica por qué",
+   "ok": true,
+   "dato": "No se puede cerrar el expediente: falta el permiso municipal aprobado. Registra la aprobación de la ciudad en la obra."
+  },
+  {
+   "check": "[celular] Con el permiso aprobado el expediente se cierra",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "PED-5-BUSCAR-POR-DIRECCION": [
+  {
+   "check": "[pc] Por dirección («Mobile Park») aparecen clientes",
+   "ok": true,
+   "dato": "8"
+  },
+  {
+   "check": "[pc] Por nombre también aparece",
+   "ok": true,
+   "dato": "QA 1026023321 Cliente 401"
+  },
+  {
+   "check": "[pc] El cliente queda elegido con «Cambiar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Por dirección («Mobile Park») aparecen clientes",
+   "ok": true,
+   "dato": "8"
+  },
+  {
+   "check": "[celular] Por nombre también aparece",
+   "ok": true,
+   "dato": "QA 1026023321 Cliente 401"
+  },
+  {
+   "check": "[celular] El cliente queda elegido con «Cambiar»",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "PED-4-COTIZACION-BODEGA": [
+  {
+   "check": "[pc] Hay listas de bodega para cargar",
+   "ok": true,
+   "dato": "2"
+  },
+  {
+   "check": "[pc] Las líneas de la lista quedan «De bodega»",
+   "ok": true,
+   "dato": "46"
+  },
+  {
+   "check": "[pc] La búsqueda de artículo de bodega da resultados",
+   "ok": true,
+   "dato": "8"
+  },
+  {
+   "check": "[pc] El artículo buscado se agrega «De bodega»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El material a mano sale «No está en bodega · se valida aparte»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sale la nota de cuántos faltan por validar",
+   "ok": true,
+   "dato": "1 material no está en bodega: se cotizan, pero su ingreso se valida aparte con Bodega antes de la obra."
+  },
+  {
+   "check": "[pc] La mano de obra no lleva etiqueta de bodega",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Cambiar la descripción de una línea de bodega la desliga",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[pc] El aviso no bloquea: el borrador se guarda",
+   "ok": true,
+   "dato": "https://localhost:5173/invoices/quotes/9a0bbdde-34d3-4b30-96f5-06f5b846c248"
+  },
+  {
+   "check": "[celular] Hay listas de bodega para cargar",
+   "ok": true,
+   "dato": "2"
+  },
+  {
+   "check": "[celular] Las líneas de la lista quedan «De bodega»",
+   "ok": true,
+   "dato": "46"
+  },
+  {
+   "check": "[celular] La búsqueda de artículo de bodega da resultados",
+   "ok": true,
+   "dato": "8"
+  },
+  {
+   "check": "[celular] El artículo buscado se agrega «De bodega»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El material a mano sale «No está en bodega · se valida aparte»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sale la nota de cuántos faltan por validar",
+   "ok": true,
+   "dato": "1 material no está en bodega: se cotizan, pero su ingreso se valida aparte con Bodega antes de la obra."
+  },
+  {
+   "check": "[celular] La mano de obra no lleva etiqueta de bodega",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Cambiar la descripción de una línea de bodega la desliga",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] El aviso no bloquea: el borrador se guarda",
+   "ok": true,
+   "dato": "https://localhost:5173/invoices/quotes/fd82f940-1e5c-4591-a246-130de87dfe7e"
+  }
+ ],
+ "PED-6-ENLACE-COTIZACION": [
+  {
+   "check": "[pc] El enlace empieza por https://192.168.59.100:5173/cotizacion/",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/cotizacion/MtmU5arXgeuqMaV_slgC5yhzT0MfXbB2COGFR_Yp6AA"
+  },
+  {
+   "check": "[pc] El enlace abre la cotización en el celular sin iniciar sesión",
+   "ok": true,
+   "dato": "D\nDemo Organization\nCotización COT-2026-0004 · para <script>alert(1)</script> QA\nQA pedidos 5 nov (pc)\nDETALLE\nZ & Y-Series Smart Communicating WiFi Thermostat 2 Heat 2 Cool (editado)\n$0.00\nB-Series A"
+  },
+  {
+   "check": "[pc] La cotización pública permite firmar",
+   "ok": true,
+   "dato": " Return Filter Grille 30\" x 20\"\n$0.00\nSoporte especial QA\n$15.00\nMano de obra instalación QA\n$120.00\nTotal\n$135.00\nTu nombre completo\n\nFirma dentro del recuadro\n\nBorrar\nAceptar y firmar\nNo me interesa"
+  },
+  {
+   "check": "[celular] El enlace empieza por https://192.168.59.100:5173/cotizacion/",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/cotizacion/oF-i-JLI0J-AIJQpAYmQLrMEGhXHvheADy4t4OJkO5s"
+  },
+  {
+   "check": "[celular] El enlace abre la cotización en el celular sin iniciar sesión",
+   "ok": true,
+   "dato": "D\nDemo Organization\nCotización COT-2026-0005 · para <script>alert(1)</script> QA\nQA pedidos 5 nov (celular)\nDETALLE\nZ & Y-Series Smart Communicating WiFi Thermostat 2 Heat 2 Cool (editado)\n$0.00\nB-Ser"
+  },
+  {
+   "check": "[celular] La cotización pública permite firmar",
+   "ok": true,
+   "dato": " Return Filter Grille 30\" x 20\"\n$0.00\nSoporte especial QA\n$15.00\nMano de obra instalación QA\n$120.00\nTotal\n$135.00\nTu nombre completo\n\nFirma dentro del recuadro\n\nBorrar\nAceptar y firmar\nNo me interesa"
+  }
+ ],
+ "PED-7-ADMIN-CONTABILIDAD": [
+  {
+   "check": "[pc] Administración abre «Contabilidad»",
+   "ok": true,
+   "dato": "https://localhost:5173/accounting"
+  },
+  {
+   "check": "[pc] Administración abre «Facturación y cobros»",
+   "ok": true,
+   "dato": "https://localhost:5173/invoices"
+  },
+  {
+   "check": "[pc] Administración abre «Gastos de campo»",
+   "ok": true,
+   "dato": "https://localhost:5173/expenses"
+  },
+  {
+   "check": "[pc] Administración abre «Proveedores y pagos»",
+   "ok": true,
+   "dato": "https://localhost:5173/payables"
+  },
+  {
+   "check": "[pc] Administración abre «Banca»",
+   "ok": true,
+   "dato": "https://localhost:5173/banking"
+  },
+  {
+   "check": "[pc] Administración abre «Conciliación y rentabilidad»",
+   "ok": true,
+   "dato": "https://localhost:5173/finance-close"
+  },
+  {
+   "check": "[pc] Administración abre «Nómina»",
+   "ok": true,
+   "dato": "https://localhost:5173/payroll"
+  },
+  {
+   "check": "[pc] Administración abre «Configuración de programas»",
+   "ok": true,
+   "dato": "https://localhost:5173/programs"
+  },
+  {
+   "check": "[pc] Todas salen en el menú de Administración",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "[pc] Sin errores de JavaScript",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[celular] Administración abre «Contabilidad»",
+   "ok": true,
+   "dato": "https://localhost:5173/accounting"
+  },
+  {
+   "check": "[celular] Administración abre «Facturación y cobros»",
+   "ok": true,
+   "dato": "https://localhost:5173/invoices"
+  },
+  {
+   "check": "[celular] Administración abre «Gastos de campo»",
+   "ok": true,
+   "dato": "https://localhost:5173/expenses"
+  },
+  {
+   "check": "[celular] Administración abre «Proveedores y pagos»",
+   "ok": true,
+   "dato": "https://localhost:5173/payables"
+  },
+  {
+   "check": "[celular] Administración abre «Banca»",
+   "ok": true,
+   "dato": "https://localhost:5173/banking"
+  },
+  {
+   "check": "[celular] Administración abre «Conciliación y rentabilidad»",
+   "ok": true,
+   "dato": "https://localhost:5173/finance-close"
+  },
+  {
+   "check": "[celular] Administración abre «Nómina»",
+   "ok": true,
+   "dato": "https://localhost:5173/payroll"
+  },
+  {
+   "check": "[celular] Administración abre «Configuración de programas»",
+   "ok": true,
+   "dato": "https://localhost:5173/programs"
+  },
+  {
+   "check": "[celular] Sin errores de JavaScript",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[pc] Gerencia no entra a «Configuración de programas»",
+   "ok": true,
+   "dato": "https://localhost:5173/"
+  }
+ ]
+}

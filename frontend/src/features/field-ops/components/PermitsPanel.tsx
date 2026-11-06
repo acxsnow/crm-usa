@@ -88,16 +88,20 @@ export function PermitsPanel({ projectId, canManage }: { projectId: string; canM
             <label htmlFor="permit-status">Estado</label>
             <select id="permit-status" value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value as PermitStatus })}>
-              {Object.entries(catalogs?.permit_statuses ?? {}).map(([code, label]) => (
+              {/* «No requerido» ya no se ofrece: lo reemplazó «En trámite» (pedido
+                  del cliente, 4 nov 2026). Los que ya existen se siguen mostrando. */}
+              {Object.entries(catalogs?.permit_statuses ?? {}).filter(([code]) => code !== "not_required").map(([code, label]) => (
                 <option key={code} value={code}>{label}</option>
               ))}
             </select>
           </div>
-          <div className="field">
-            <label htmlFor="permit-filed">Radicado el</label>
-            <input id="permit-filed" type="date" max={hoy()} value={form.filed_on ?? ""}
-              onChange={(e) => setForm({ ...form, filed_on: e.target.value })} />
-          </div>
+          {form.status !== "in_process" && (
+            <div className="field">
+              <label htmlFor="permit-filed">Radicado el</label>
+              <input id="permit-filed" type="date" max={hoy()} value={form.filed_on ?? ""}
+                onChange={(e) => setForm({ ...form, filed_on: e.target.value })} />
+            </div>
+          )}
           {form.status === "approved" && (
             <>
               <div className="field">
@@ -143,16 +147,16 @@ function fechaCorta(iso: string | null): string {
 /** Qué falta, mirando todos los permisos del proyecto: una sola frase arriba de las tarjetas. */
 function SiguientePaso({ permits }: { permits: Permit[] }) {
   if (permits.length === 0) {
-    return <p className="permit-next">Registra el permiso que se radicó en la ciudad, o márcalo como «No requerido» con el motivo. Sin esto no se puede agendar la instalación.</p>;
+    return <p className="permit-next">Registra el permiso que se radicó en la ciudad, o márcalo «En trámite» si la papelería apenas se va a hacer. Se puede liberar la orden sin él, pero el expediente no se cierra sin el permiso aprobado.</p>;
   }
   if (permits.every((p) => p.is_cleared)) {
     return <p className="permit-next is-done">✓ Permisos listos. Ya se puede liberar la orden: elegir técnico y fecha de instalación.</p>;
   }
   // Con PERMIT_FILED_ALLOWS_INSTALL el radicado basta para instalar; el servidor lo dice en `allows_install`.
   if (permits.every((p) => p.allows_install)) {
-    return <p className="permit-next is-done">✓ Ya se puede liberar la orden. Registra la aprobación de la ciudad cuando llegue: el cobro al programa la va a pedir.</p>;
+    return <p className="permit-next is-done">✓ Ya se puede liberar la orden. Registra la aprobación de la ciudad cuando llegue: sin ella no se cierra el expediente.</p>;
   }
-  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.allows_install).length === 1 ? "el permiso" : "los permisos"} de abajo. Hasta entonces no se puede agendar la instalación.</p>;
+  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.allows_install).length === 1 ? "el permiso" : "los permisos"} de abajo. Se puede instalar igual, pero el expediente no se cierra sin la aprobación.</p>;
 }
 
 /**
@@ -176,15 +180,17 @@ function PermitCard({ permit, canManage, onError, onChanged }: {
 
   const titulo = [permit.permit_type ? `Permiso ${permit.permit_type.toLowerCase()}` : "Permiso", permit.jurisdiction,
     permit.permit_number ? `N.º ${permit.permit_number}` : null].filter(Boolean).join(" · ");
+  const enTramite = permit.status === "in_process";
   const radicado = permit.status !== "not_required";
   const aprobado = permit.status === "approved";
 
   let estado: { tono: "ok" | "wait" | "bad"; texto: string };
   if (permit.status === "not_required") estado = { tono: "ok", texto: `No requiere permiso: ${permit.not_required_reason ?? ""}` };
+  else if (enTramite) estado = { tono: "ok", texto: "En trámite: la papelería está por hacerse. Ya se puede instalar y cobrar; registra cuando se radique. Cerrar el expediente va a pedir el aprobado." };
   else if (permit.status === "rejected") estado = { tono: "bad", texto: `La ciudad lo rechazó${permit.notes ? `: ${permit.notes}` : "."} Corrige lo que pidió y vuelve a radicarlo.` };
   else if (aprobado && permit.is_expired) estado = { tono: "bad", texto: `Venció el ${fechaCorta(permit.expires_on)}. Registra la renovación para poder instalar.` };
   else if (aprobado) estado = { tono: "ok", texto: permit.expires_on ? `Aprobado. Vale hasta el ${fechaCorta(permit.expires_on)}; te avisamos antes de que venza.` : "Aprobado. No tiene fecha de vencimiento registrada." };
-  else if (permit.allows_install) estado = { tono: "ok", texto: "Radicado. Ya se puede instalar; registra la aprobación cuando la ciudad responda." };
+  else if (permit.allows_install) estado = { tono: "ok", texto: "Radicado. Ya se puede instalar y cobrar; registra la aprobación cuando la ciudad responda: sin ella no se cierra el expediente." };
   else estado = { tono: "wait", texto: "Falta que la ciudad lo apruebe. Cuando responda, regístralo aquí." };
 
   return (
@@ -192,7 +198,8 @@ function PermitCard({ permit, canManage, onError, onChanged }: {
       <h4>{titulo}</h4>
       {radicado && (
         <ol className="permit-steps">
-          <li className="is-done"><span aria-hidden="true">✓</span> Radicado<small>{permit.filed_on ? fechaCorta(permit.filed_on) : "sin fecha"}</small></li>
+          <li className={enTramite ? "" : "is-done"}><span aria-hidden="true">{enTramite ? "" : "✓"}</span> Radicado
+            <small>{enTramite ? "en trámite" : permit.filed_on ? fechaCorta(permit.filed_on) : "sin fecha"}</small></li>
           <li className={aprobado ? "is-done" : permit.status === "rejected" ? "is-bad" : ""}>
             <span aria-hidden="true">{aprobado ? "✓" : permit.status === "rejected" ? "✕" : ""}</span> Aprobado por la ciudad
             <small>{aprobado ? fechaCorta(permit.approved_on) : permit.status === "rejected" ? "rechazado" : "pendiente"}</small>
@@ -203,6 +210,11 @@ function PermitCard({ permit, canManage, onError, onChanged }: {
 
       {canManage && accion === null && (
         <div className="permit-actions">
+          {enTramite && (<>
+            <button type="button" className="acta-btn is-primary" disabled={guardar.isPending}
+              onClick={() => guardar.mutate({ status: "submitted", filed_on: hoy() })}>Ya se radicó (hoy)</button>
+            <button type="button" className="acta-btn is-quiet" onClick={() => setAccion("aprobar")}>La ciudad lo aprobó</button>
+          </>)}
           {permit.status === "submitted" && (<>
             <button type="button" className="acta-btn is-primary" onClick={() => setAccion("aprobar")}>La ciudad lo aprobó</button>
             <button type="button" className="acta-btn is-quiet" onClick={() => setAccion("rechazar")}>La ciudad lo rechazó</button>
@@ -264,5 +276,7 @@ function PermitCard({ permit, canManage, onError, onChanged }: {
 
 /** Los campos vacíos del formulario viajan como ausentes, no como "". */
 function limpiar(input: PermitInput): PermitInput {
-  return Object.fromEntries(Object.entries(input).filter(([, v]) => v !== "" && v != null)) as PermitInput;
+  // En trámite todavía no tiene fecha de radicado.
+  const datos = input.status === "in_process" ? { ...input, filed_on: undefined } : input;
+  return Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== "" && v != null)) as PermitInput;
 }

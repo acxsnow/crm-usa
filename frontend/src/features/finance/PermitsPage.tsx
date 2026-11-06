@@ -10,7 +10,7 @@ import type { InspectionRow, PermitRow } from "./api";
 import { Tabs, fecha } from "./common";
 
 type Tab = "permits" | "inspections";
-const PERMISO: Record<string, string> = { submitted: "is-preparing", approved: "is-accepted", rejected: "is-rejected", not_required: "is-void" };
+const PERMISO: Record<string, string> = { in_process: "is-preparing", submitted: "is-preparing", approved: "is-accepted", rejected: "is-rejected", not_required: "is-void" };
 const INSPECCION: Record<string, string> = { pending: "is-submitted", passed: "is-accepted", failed: "is-rejected" };
 
 /**
@@ -41,7 +41,7 @@ function Permits() {
     <article className="acta">
       <div className="notices-toolbar">
         <select aria-label="Filtro" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-          <option value="expiring">Vencen en 30 días</option><option value="submitted">Radicados (en trámite)</option>
+          <option value="expiring">Vencen en 30 días</option><option value="in_process">En trámite</option><option value="submitted">Radicados</option>
           <option value="approved">Aprobados</option><option value="rejected">Rechazados</option>
           <option value="not_required">No requeridos</option><option value="">Todos</option>
         </select>

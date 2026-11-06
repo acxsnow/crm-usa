@@ -26,6 +26,16 @@ def _clean_registries():
 HOY = date.today()
 
 
+@pytest.fixture(autouse=True)
+def _aprobado_obligatorio(monkeypatch):
+    """Estas pruebas son del camino estricto (el radicado no basta para
+    instalar). Desde el 5 nov 2026 el radicado basta por defecto; el
+    interruptor `PERMIT_FILED_ALLOWS_INSTALL` sigue existiendo."""
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "PERMIT_FILED_ALLOWS_INSTALL", False)
+
+
 def _aprobado(**extra):
     datos = {"jurisdiction": "Phoenix", "status": "approved", "approved_on": str(HOY),
              "expires_on": str(HOY + timedelta(days=180))}

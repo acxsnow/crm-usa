@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.modules.field_ops import (
     checklist_templates_router,
+    electrical_router,
     evidence_router,
     operations_router,
     permits_inspections_router,
@@ -18,3 +19,4 @@ router.include_router(evidence_router.router)
 router.include_router(operations_router.router)
 router.include_router(permits_inspections_router.router)
 router.include_router(reviews_router.router)
+router.include_router(electrical_router.router)

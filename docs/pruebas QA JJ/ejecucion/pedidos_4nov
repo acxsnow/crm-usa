@@ -1,0 +1,44 @@
+{
+ "PED-4NOV": [
+  {
+   "check": "[pc] Buscar cliente muestra resultados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Hay listas de bodega para cargar",
+   "ok": true,
+   "dato": "2"
+  },
+  {
+   "check": "[pc] Las líneas de la lista quedan «De bodega»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Buscar cliente muestra resultados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Hay listas de bodega para cargar",
+   "ok": true,
+   "dato": "2"
+  },
+  {
+   "check": "[celular] Las líneas de la lista quedan «De bodega»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ]
+}

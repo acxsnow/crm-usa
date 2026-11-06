@@ -85,7 +85,7 @@ CATALOG: list[tuple] = [
      {"sensitive": True, "help": "Vía alterna de elegibilidad por ingresos (PDF §2.2). Provisional."}),
     # --- Auditoría técnica preliminar del vendedor (PDF §2.4, provisional D7) --
     ("tech.panel_amperage", "Amperaje del panel eléctrico", "single_select", "Auditoría técnica",
-     {"options": _opts("100=100 A", "125=125 A", "150=150 A", "200=200 A", "other=Otro / no se sabe")}),
+     {"options": _opts("50=50 A", "70=70 A", "100=100 A", "125=125 A", "150=150 A", "200=200 A", "other=Otro / no se sabe")}),
     ("tech.existing_hvac", "Climatización existente", "single_select", "Auditoría técnica",
      {"options": _opts("none=Ninguna", "mini_split=Mini split", "central=Central", "window=Ventana / portátil")}),
     ("tech.induction_cooktop", "¿Tiene cocina de inducción?", "single_select", "Auditoría técnica",
@@ -108,6 +108,9 @@ CATALOG: list[tuple] = [
     ("docs.pedestal_photo", "Foto del pedestal", "photo", "Documentos", {}),
     ("docs.mobile_home_title", "Título de la mobile home", "document", "Documentos", {}),
     ("docs.mobile_home_decal", "Decal de la mobile home", "photo", "Documentos", {}),
+    # Título y decal prueban lo mismo: basta uno de los dos (cliente, 5 nov 2026).
+    ("docs.mobile_home_title_or_decal", "Título o decal de la casa móvil", "document", "Documentos",
+     {"help": "Sube el título o el decal: con uno de los dos basta."}),
     ("docs.additional_photos", "Fotos adicionales para el instalador", "photo", "Documentos", {}),
     # --- Autorización (§3.5) ------------------------------------------------
     # «Nombre de quien firma» y no «Nombre del cliente»: con esa etiqueta se
@@ -122,8 +125,8 @@ CATALOG: list[tuple] = [
     # --- Uso interno (§3.6) -------------------------------------------------
     ("internal.salesperson", "Vendedor", "system_user", "Uso interno", {"internal": True}),
     ("internal.result", "Resultado preliminar", "single_select", "Uso interno",
-     {"internal": True, "options": _opts("preapproved=Preaprobado", "pending=Pendiente",
-                                         "does_not_qualify=No califica")}),
+     # «Completo» o «Pendiente de algo» (cliente, 5 nov 2026).
+     {"internal": True, "options": _opts("preapproved=Completo", "pending=Pendiente de algo")}),
     ("internal.notes", "Observaciones internas", "textarea", "Uso interno", {"internal": True}),
 ]
 
@@ -131,19 +134,32 @@ R, O, C = "required", "optional", "conditional"
 MOBILE = {"field": "home.residence_type", "eq": "mobile_home"}
 
 # Flujo: [(paso, título, [(key, requisito, condición)])]. Fase única: Vendedor.
-_COMMON_START = [
-    ("customer", "Cliente", [
-        ("customer.full_name", R, None), ("customer.phone", R, None), ("customer.email", R, None),
-        ("customer.address_street", R, None), ("home.unit_number", O, None), ("customer.address_city", R, None),
-        ("customer.address_state", R, None), ("customer.address_zip", R, None),
-        ("customer.contact_preference", O, None), ("customer.id_photo", R, None),
-        ("customer.id_photo_back", O, None),
-    ]),
-]
+def _common_start(id_photo: str) -> list:
+    """El correo es opcional, y en California también la foto del documento
+    de identidad (cliente, 5 nov 2026)."""
+    return [
+        ("customer", "Cliente", [
+            ("customer.full_name", R, None), ("customer.phone", R, None), ("customer.email", O, None),
+            ("customer.address_street", R, None), ("home.unit_number", O, None), ("customer.address_city", R, None),
+            ("customer.address_state", R, None), ("customer.address_zip", R, None),
+            ("customer.contact_preference", O, None), ("customer.id_photo", id_photo, None),
+            ("customer.id_photo_back", O, None),
+        ]),
+    ]
+
+
+# El diagnóstico de viabilidad eléctrica lo hace el técnico en la inspección
+# eléctrica, no el vendedor (cliente, 5 nov 2026).
 _TECH_AUDIT = ("technical", "Auditoría técnica", [
     ("tech.panel_amperage", R, None), ("tech.existing_hvac", R, None), ("home.bedrooms", R, None),
     ("home.bathrooms", O, None), ("tech.induction_cooktop", R, None), ("tech.water_heater", R, None),
-    ("tech.electrical_viability", R, None), ("tech.access_notes", O, None),
+    ("tech.access_notes", O, None),
+])
+# Las fotos del furnace y del HVAC las sube el técnico, y la del subpanel
+# reemplaza la del pedestal; título o decal, uno de los dos (cliente, 5 nov 2026).
+_DOCUMENTS = ("documents", "Documentos y fotos", [
+    ("docs.electric_bill", R, None), ("docs.panel_photo", R, None),
+    ("docs.mobile_home_title_or_decal", C, MOBILE), ("docs.additional_photos", O, None),
 ])
 _AUTH_END = [
     ("authorization", "Autorización y firma", [
@@ -165,7 +181,7 @@ PROGRAMS: list[dict] = [
         "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi elegibilidad "
                               "en el programa de Eficiencia de Arizona. (Texto provisional: pendiente del cliente.)",
         "terms_title": "Autorización y términos del programa de Eficiencia de Arizona",
-        "steps": _COMMON_START + [
+        "steps": _common_start(R) + [
             ("home", "Vivienda y hogar", [
                 ("home.is_homeowner", R, None), ("home.residence_type", R, None),
                 ("home.household_members", O, None), ("home.education_level", O, None),
@@ -188,12 +204,7 @@ PROGRAMS: list[dict] = [
                 ("tech.garbage_disposal", O, None), ("tech.fans", O, None), ("tech.exhaust", O, None),
                 ("tech.dishwasher", O, None),
             ]),
-            ("documents", "Documentos y fotos", [
-                ("docs.electric_bill", R, None), ("docs.panel_photo", R, None), ("docs.furnace_photo", R, None),
-                ("docs.hvac_photos", R, None), ("docs.pedestal_photo", C, MOBILE),
-                ("docs.mobile_home_title", C, MOBILE), ("docs.mobile_home_decal", C, MOBILE),
-                ("docs.additional_photos", O, None),
-            ]),
+            _DOCUMENTS,
         ] + _AUTH_END,
     },
     {
@@ -205,7 +216,7 @@ PROGRAMS: list[dict] = [
         "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
                               "elegibilidad en TECH Clean California. (Texto provisional: pendiente del cliente.)",
         "terms_title": "Autorización y términos de TECH Clean California",
-        "steps": _COMMON_START + [
+        "steps": _common_start(O) + [
             ("home", "Vivienda", [("home.is_homeowner", R, None), ("home.residence_type", R, None)]),
             ("eligibility", "Elegibilidad", [
                 ("eligibility.programs_tech", R, None),
@@ -214,12 +225,7 @@ PROGRAMS: list[dict] = [
                 ("eligibility.tax_return", C, {"field": "eligibility.programs_tech", "eq": "none"}),
             ]),
             _TECH_AUDIT,
-            ("documents", "Documentos y fotos", [
-                ("docs.electric_bill", R, None), ("docs.panel_photo", R, None), ("docs.furnace_photo", O, None),
-                ("docs.hvac_photos", R, None), ("docs.pedestal_photo", C, MOBILE),
-                ("docs.mobile_home_title", C, MOBILE), ("docs.mobile_home_decal", C, MOBILE),
-                ("docs.additional_photos", O, None),
-            ]),
+            _DOCUMENTS,
         ] + _AUTH_END,
     },
 ]

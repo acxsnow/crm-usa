@@ -119,7 +119,9 @@ async def test_a_program_starts_with_the_real_process_checklist(app_client, db, 
     codes = [r["code"] for r in reqs]
     assert codes[0] == "benefit_documents"
     assert {"technician_info_confirmed", "permit_approved", "inspection_passed", "invoice_issued"} <= set(codes)
-    assert all(r["active"] for r in reqs)
+    # El cobro se radica con el permiso en cualquier estado (cliente, 5 nov 2026):
+    # el requisito existe, pero nace apagado.
+    assert [r["code"] for r in reqs if not r["active"]] == ["permit_approved"]
 
 
 async def test_tech_can_turn_off_the_inspection_requirement(app_client, db, seeded_org, active_accounting_user):
@@ -170,12 +172,18 @@ async def test_the_profile_holds_the_invoice_issuer(app_client, db, seeded_org, 
     assert r.status_code == 400
 
 
-async def test_administration_can_read_but_not_configure(app_client, db, seeded_org, active_admin_staff_user):
+async def test_administration_configures_and_management_does_not(app_client, db, seeded_org, active_admin_staff_user,
+                                                                active_management_user):
+    """Desde el 4 nov 2026 Administración tiene `billing.configure` (los permisos
+    de Contabilidad); Gerencia sigue sin configurar."""
     tech = await _program(db, seeded_org["org"].id, "TECH", "TECH Clean California")
+    tarifa = {"amount": 4000, "valid_from": "2026-01-01"}
     headers = await headers_for(app_client, active_admin_staff_user.email)
     assert (await app_client.get(f"/api/v1/billing/programs/{tech.id}/rates", headers=headers)).status_code == 200
-    r = await app_client.post(f"/api/v1/billing/programs/{tech.id}/rates",
-                              json={"amount": 4000, "valid_from": "2026-01-01"}, headers=headers)
+    r = await app_client.post(f"/api/v1/billing/programs/{tech.id}/rates", json=tarifa, headers=headers)
+    assert r.status_code == 201
+    gerencia = await headers_for(app_client, active_management_user.email)
+    r = await app_client.post(f"/api/v1/billing/programs/{tech.id}/rates", json=tarifa, headers=gerencia)
     assert r.status_code == 403
 
 

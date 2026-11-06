@@ -320,9 +320,11 @@ async def test_banca_solo_para_quien_tiene_permiso_y_su_organizacion(app_client,
     h = await headers_for(app_client, active_accounting_user.email)
     await _conectar(app_client, h)
     filas = (await app_client.get(f"{API}/bank-feeds/transactions", headers=h)).json()
-    for quien in (active_technician_user, active_admin_staff_user):
-        x = await headers_for(app_client, quien.email)
-        assert (await app_client.get(f"{API}/bank-feeds/transactions", headers=x)).status_code == 403
+    x = await headers_for(app_client, active_technician_user.email)
+    assert (await app_client.get(f"{API}/bank-feeds/transactions", headers=x)).status_code == 403
+    # Desde el 4 nov 2026 Administración tiene los permisos de Contabilidad, banca incluida.
+    x = await headers_for(app_client, active_admin_staff_user.email)
+    assert (await app_client.get(f"{API}/bank-feeds/transactions", headers=x)).status_code == 200
     otro = await headers_for(app_client, second_org_admin_user.email)
     assert (await app_client.get(f"{API}/bank-feeds/transactions", headers=otro)).json() == []
     assert (await app_client.post(f"{API}/bank-feeds/transactions/{filas[0]['id']}/exclude", json={},

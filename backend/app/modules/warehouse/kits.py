@@ -220,6 +220,9 @@ def kit_item_out(renglon: WarehouseKitItem, *, item: WarehouseItem | None = None
         "unit_label": ITEM_UNITS.get(item.unit, item.unit) if item else None,
         "quantity": str(_q(renglon.quantity)),
         "unit_cost": str(to_money(item.unit_cost)) if item else None,
+        # Para cargar la lista en una cotización (`_sin_costos` lo quita al técnico).
+        "sale_price": str(to_money(item.sale_price)) if item and item.sale_price is not None else None,
+        "category": item.category if item else None,
         "spec_label": renglon.spec_label, "section": renglon.section,
         "is_required": renglon.is_required, "notes": renglon.notes,
     }

@@ -227,6 +227,10 @@ async def seed_demo_programs(db) -> None:
         return
     resultado = await install_defaults(db, organization_id=org.id)
     print(f"Programas: {resultado['fields_created']} campos y {resultado['programs_created'] or 'ningún'} programa nuevos.")
+    from app.modules.programs.client_adjustments import apply
+
+    ajustados = await apply(db, organization_id=org.id)
+    print(f"Ajustes del cliente (5 nov 2026): {ajustados or 'ya estaban'}.")
 
 
 async def main() -> None:

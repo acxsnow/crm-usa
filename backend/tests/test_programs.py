@@ -68,7 +68,9 @@ async def test_arizona_asks_household_data_and_tech_does_not(app_client, active_
     assert {"home.education_level", "home.gas_type"} <= claves["AZ_EFFICIENCY"]
     assert not {"home.education_level", "home.gas_type"} & claves["TECH_CLEAN_CA"]
     # La auditoría técnica del vendedor (PDF §2.4) está en los dos.
-    assert {"tech.panel_amperage", "tech.electrical_viability"} <= claves["TECH_CLEAN_CA"]
+    assert "tech.panel_amperage" in claves["TECH_CLEAN_CA"]
+    # El diagnóstico de viabilidad eléctrica lo hace el técnico (cliente, 5 nov 2026).
+    assert "tech.electrical_viability" not in claves["TECH_CLEAN_CA"] | claves["AZ_EFFICIENCY"]
 
 
 async def test_the_preview_shows_what_the_salesperson_would_see(app_client, active_admin_user):
@@ -81,13 +83,13 @@ async def test_the_preview_shows_what_the_salesperson_would_see(app_client, acti
     assert vacio["can_submit"] is False
     assert "customer.full_name" in {m["key"] for m in vacio["missing"]}
 
-    # La foto del pedestal solo aparece en una casa móvil.
+    # El título o decal solo aparece en una casa móvil.
     pasos = lambda r: {c["key"] for s in r["steps"] for c in s["fields"]}
     casa = (await app_client.post(url, json={"answers": {"home.residence_type": "single_family_home"}},
                                   headers=headers)).json()
     movil = (await app_client.post(url, json={"answers": {"home.residence_type": "mobile_home"}},
                                    headers=headers)).json()
-    assert "docs.pedestal_photo" not in pasos(casa) and "docs.pedestal_photo" in pasos(movil)
+    assert "docs.mobile_home_title_or_decal" not in pasos(casa) and "docs.mobile_home_title_or_decal" in pasos(movil)
 
     # Lo de uso interno no se muestra al cliente.
     cliente = (await app_client.post(url, json={"answers": {}, "include_internal": False}, headers=headers)).json()

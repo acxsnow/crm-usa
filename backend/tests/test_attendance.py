@@ -291,11 +291,9 @@ async def test_aprobar_cerrar_periodo_bloquea_y_reabrir_exige_motivo(
     p = await app_client.post(f"{API}/payroll/periods", json={"start_date": "2026-10-26", "end_date": "2026-11-01"},
                               headers=conta)
     assert p.status_code == 201
-    # Administración no cierra períodos; Contabilidad sí.
+    # Desde el 4 nov 2026 Administración también cierra períodos (tiene los permisos de Contabilidad).
     assert (await app_client.post(f"{API}/payroll/periods/{p.json()['id']}/close", json={},
-                                  headers=oficina)).status_code == 403
-    assert (await app_client.post(f"{API}/payroll/periods/{p.json()['id']}/close", json={},
-                                  headers=conta)).json()["status"] == "closed"
+                                  headers=oficina)).json()["status"] == "closed"
     bloqueo = await app_client.post(f"{API}/entries/{eid}/unapprove", json={"reason": "revisar"}, headers=oficina)
     assert (bloqueo.status_code, bloqueo.json()["code"]) == (409, "period_closed")
     nuevo_turno = await app_client.post(f"{API}/shifts", json={

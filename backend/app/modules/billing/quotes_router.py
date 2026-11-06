@@ -27,6 +27,7 @@ public_router = APIRouter(prefix="/public/quotes", tags=["quotes"])
 
 class QuoteLineIn(InvoiceLineIn):
     option_key: str | None = Field(default=None, max_length=10)
+    warehouse_item_id: uuid.UUID | None = None
 
 
 class QuoteOptionIn(BaseModel):
@@ -89,6 +90,9 @@ class QuoteVersion(BaseModel):
 
 class QuoteLineResponse(InvoiceLineResponse):
     option_key: str | None = None
+    warehouse_item_id: uuid.UUID | None = None
+    # Material o equipo que no salió de bodega: se valida su ingreso aparte.
+    needs_warehouse_check: bool = False
 
 
 class QuoteOptionTotal(BaseModel):

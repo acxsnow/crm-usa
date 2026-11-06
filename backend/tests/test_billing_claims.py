@@ -437,14 +437,18 @@ async def test_reissuing_voids_the_invoice_and_replaces_it(app_client, db, seede
     assert vieja.document_status == "void"
 
 
-async def test_only_accounting_records_the_program_payment(app_client, db, seeded_org, active_admin_staff_user):
+async def test_management_does_not_record_the_program_payment(app_client, db, seeded_org, active_admin_staff_user,
+                                                              active_management_user):
+    """Desde el 4 nov 2026 Administración también registra el pago (tiene los
+    permisos de Contabilidad); Gerencia no."""
     org = seeded_org["org"].id
     progs = await _programas(db, org)
     _, project = await _listo_para_cobrar(db, org)
     headers = await headers_for(app_client, active_admin_staff_user.email)
     cobro = await _radicar(app_client, headers, (await _crear(app_client, headers, project.id, progs["TECH"].id)).json())
+    gerencia = await headers_for(app_client, active_management_user.email)
     r = await app_client.post(f"/api/v1/claims/{cobro['id']}/payment",
-                              json={"amount": 4000, "paid_on": "2026-09-28"}, headers=headers)
+                              json={"amount": 4000, "paid_on": "2026-09-28"}, headers=gerencia)
     assert r.status_code == 403
 
 

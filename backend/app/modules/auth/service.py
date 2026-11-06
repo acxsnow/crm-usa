@@ -15,12 +15,12 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.core.token_denylist import denylist_jti, is_denylisted
+from app.core.token_denylist import denylist_jti, in_grace, is_denylisted
 from app.modules.notifications.email import send_email
 from app.modules.users.models import Invitation, PasswordResetToken, User, UserStatus
 from app.shared.audit import record_audit_event
-from app.shared.errors import AuthenticationError, InvalidInputError
 from app.shared.datetime_utils import as_utc
+from app.shared.errors import AuthenticationError, InvalidInputError
 
 settings = get_settings()
 logger = structlog.get_logger(__name__)
@@ -87,7 +87,9 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[st
         raise invalid
 
     jti = payload.get("jti")
-    if jti and await is_denylisted(jti):
+    # Recién rotado: se acepta durante el margen y se entrega la llave vigente,
+    # en vez de cerrar la sesión porque la respuesta anterior no llegó.
+    if jti and await is_denylisted(jti) and not await in_grace(jti):
         raise invalid
 
     user_id = payload.get("sub")
@@ -105,7 +107,10 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[st
 
     if jti:
         remaining_seconds = int((datetime.fromtimestamp(payload["exp"], tz=timezone.utc) - datetime.now(timezone.utc)).total_seconds())
-        await denylist_jti(jti, remaining_seconds)
+        if await in_grace(jti):
+            logger.info("auth.refresh_within_grace", user_id=str(user.id))
+        else:
+            await denylist_jti(jti, remaining_seconds, grace_seconds=settings.REFRESH_ROTATION_GRACE_SECONDS)
 
     return access_token, new_refresh_token
 

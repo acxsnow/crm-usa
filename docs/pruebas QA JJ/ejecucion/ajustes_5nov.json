@@ -1,0 +1,274 @@
+{
+ "AJ-A-FORMULARIO": [
+  {
+   "check": "[pc] Correo electrónico opcional",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Foto del documento opcional en TECH (California)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El amperaje ofrece 50 A y 70 A",
+   "ok": true,
+   "dato": "['Elige…', '50 A', '70 A', '100 A', '125 A', '150 A', '200 A', 'Otro / no se sabe']"
+  },
+  {
+   "check": "[pc] Ya no pregunta el diagnóstico de viabilidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin fotos de furnace, HVAC ni pedestal",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Resultado preliminar: «Completo» o «Pendiente de algo»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Correo electrónico opcional",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Foto del documento opcional en TECH (California)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El amperaje ofrece 50 A y 70 A",
+   "ok": true,
+   "dato": "['Elige…', '50 A', '70 A', '100 A', '125 A', '150 A', '200 A', 'Otro / no se sabe']"
+  },
+  {
+   "check": "[celular] Ya no pregunta el diagnóstico de viabilidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin fotos de furnace, HVAC ni pedestal",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Resultado preliminar: «Completo» o «Pendiente de algo»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "AJ-C1-C2-PERMISO-Y-EVIDENCIAS": [
+  {
+   "check": "[pc] Sin permiso registrado sale el aviso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El permiso dice que no frena la instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] La orden liberada es el paso en curso, no el permiso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El acta tiene «Evidencias de la instalación» con «Papelería firmada»",
+   "ok": true,
+   "dato": "['Fachada', 'Pedestal', 'Panel o subpanel eléctrico', 'Furnace o equipo existente']"
+  },
+  {
+   "check": "[pc] Los anexos ya no repiten las evidencias",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Sin permiso registrado sale el aviso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El permiso dice que no frena la instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] La orden liberada es el paso en curso, no el permiso",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El acta tiene «Evidencias de la instalación» con «Papelería firmada»",
+   "ok": true,
+   "dato": "['Fachada', 'Pedestal', 'Panel o subpanel eléctrico', 'Furnace o equipo existente']"
+  },
+  {
+   "check": "[celular] Los anexos ya no repiten las evidencias",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ],
+ "AJ-C3-OBRA-DE-COTIZACION": [
+  {
+   "check": "[pc] La obra de cotización dice que no tiene checklist",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin casillas de condiciones cuando no hay checklist",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin aviso de permiso (no es de un expediente)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] La obra de cotización dice que no tiene checklist",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin casillas de condiciones cuando no hay checklist",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin aviso de permiso (no es de un expediente)",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "AJ-C3-DESPACHO": [
+  {
+   "check": "[pc] Tocar una celda vacía abre qué obra va ahí",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El diálogo lista las obras sin agendar",
+   "ok": true,
+   "dato": "Admin Demo · lun, 2 de nov\n\nElige la obra que va este día con este técnico.\n\nInstalación · CASE-2026-0001\n501 QA 1026023321 Mobile Park Dr, Spc 401, S"
+  }
+ ],
+ "AJ-C4-PERMISO-CERRADO": [
+  {
+   "check": "[pc] El cobro pide subir el permiso cerrado sin frenarlo",
+   "ok": true,
+   "dato": "Falta subir el permiso cerrado.\nNo frena el cobro, pero súbelo siempre antes de radicarlo.\nSubir el permiso cerrado"
+  },
+  {
+   "check": "[pc] Subido, queda «✓ Permiso cerrado subido»",
+   "ok": true,
+   "dato": "✓ Permiso cerrado subido\nel 5 de nov de 2026.\nSubir otra foto"
+  },
+  {
+   "check": "[celular] El cobro pide subir el permiso cerrado sin frenarlo",
+   "ok": true,
+   "dato": "Falta subir el permiso cerrado.\nNo frena el cobro, pero súbelo siempre antes de radicarlo.\nSubir el permiso cerrado"
+  },
+  {
+   "check": "[celular] Subido, queda «✓ Permiso cerrado subido»",
+   "ok": true,
+   "dato": "✓ Permiso cerrado subido\nel 5 de nov de 2026.\nSubir otra foto"
+  }
+ ],
+ "AJ-C5-INSPECCION-ELECTRICA": [
+  {
+   "check": "[pc] La revisión del expediente trae «Inspección eléctrica»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Queda agendada con Tito",
+   "ok": true,
+   "dato": "Inspección eléctrica\n\nLa visita del técnico antes de instalar: si la casa es viable, cuántas toneladas y si califica para calentador de agua o cocina de inducción.\n\nAgendada para el vie, 6 de nov con "
+  },
+  {
+   "check": "[pc] El técnico ve su inspección por hacer",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Queda «Hecha» con el resultado",
+   "ok": true,
+   "dato": "QA 1106021425 Cliente 551\n651 QA 1106021425 Mobile Park Dr, Spc 551, San Fernando\nvie, 6 de nov · Tito Técnico · CASE-2026-0048\nHecha\nViabilidad\nAdecuada\nPanel\n70 A\nToneladas\n2.5\nCalentador de agua\nSí"
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[pc] Administración ve el resultado en el expediente",
+   "ok": true,
+   "dato": "Inspección eléctrica\n\nLa visita del técnico antes de instalar: si la casa es viable, cuántas toneladas y si califica para calentador de agua o cocina de inducción.\n\nHecha por Tito Técnico el vie, 6 de"
+  },
+  {
+   "check": "[pc] Sin errores de JavaScript",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[celular] La revisión del expediente trae «Inspección eléctrica»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Queda agendada con Tito",
+   "ok": true,
+   "dato": "Inspección eléctrica\n\nLa visita del técnico antes de instalar: si la casa es viable, cuántas toneladas y si califica para calentador de agua o cocina de inducción.\n\nAgendada para el vie, 6 de nov con "
+  },
+  {
+   "check": "[celular] El técnico ve su inspección por hacer",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Queda «Hecha» con el resultado",
+   "ok": true,
+   "dato": "QA 1106021425 Cliente 561\n661 QA 1106021425 Mobile Park Dr, Spc 561, San Fernando\nvie, 6 de nov · Tito Técnico · CASE-2026-0051\nHecha\nViabilidad\nAdecuada\nPanel\n70 A\nToneladas\n2.5\nCalentador de agua\nSí"
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Administración ve el resultado en el expediente",
+   "ok": true,
+   "dato": "Inspección eléctrica\n\nLa visita del técnico antes de instalar: si la casa es viable, cuántas toneladas y si califica para calentador de agua o cocina de inducción.\n\nHecha por Tito Técnico el vie, 6 de"
+  },
+  {
+   "check": "[celular] Sin errores de JavaScript",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  }
+ ]
+}

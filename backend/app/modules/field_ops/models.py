@@ -470,3 +470,32 @@ class FieldOpsSettings(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __table_args__ = (UniqueConstraint("organization_id", name="uq_field_ops_settings_org"),)
 
     max_failed_visits: Mapped[int] = mapped_column(Integer, default=2, server_default="2", nullable=False)
+
+
+class ElectricalInspection(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Inspección eléctrica (cliente, 5 nov 2026): la visita del técnico antes
+    de la instalación, aparte de ella, para saber si la casa es viable y a qué
+    beneficios aplica (toneladas del aire, calentador de agua, cocina de
+    inducción). Cuelga del expediente, no de la obra: puede hacerse antes de la
+    aprobación del programa. No mueve la etapa del expediente."""
+
+    __tablename__ = "electrical_inspections"
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True)
+    technician_user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    scheduled_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # scheduled → done | cancelled
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled", server_default="scheduled")
+    notes: Mapped[str | None] = mapped_column(Text)
+    scheduled_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    # Resultado del técnico.
+    panel_amperage: Mapped[str | None] = mapped_column(String(20))
+    viability: Mapped[str | None] = mapped_column(String(20))
+    tons: Mapped[float | None] = mapped_column(Numeric(4, 1))
+    water_heater_eligible: Mapped[bool | None] = mapped_column(Boolean)
+    induction_eligible: Mapped[bool | None] = mapped_column(Boolean)
+    result_notes: Mapped[str | None] = mapped_column(Text)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    cancel_reason: Mapped[str | None] = mapped_column(Text)

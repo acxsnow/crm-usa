@@ -25,6 +25,9 @@ AUTO_RULES: dict[str, str] = {
     "permit_filed": "Permiso municipal radicado",
     "permit_approved": "Permiso municipal aprobado",
     "inspection_passed": "Inspección aprobada con firma del inspector",
+    # El permiso cerrado se sube siempre antes de cobrar, pero no frena el cobro
+    # (cliente, 5 nov 2026): la regla existe y el programa que lo exija la agrega.
+    "permit_closed_uploaded": "Permiso cerrado subido",
     "gas_to_electric": "Evidencia de reemplazo de gas por eléctrico",
     "invoice_issued": "Factura emitida",
 }
@@ -41,7 +44,11 @@ DEFAULT_REQUIREMENTS: list[dict] = [
     {"code": "installation_done", "kind": "auto"},
     {"code": "technician_info_complete", "kind": "auto"},
     {"code": "technician_info_confirmed", "kind": "auto"},
-    {"code": "permit_approved", "kind": "auto"},
+    # Apagado: el cobro se radica con el permiso en cualquier estado; lo que no
+    # se deja es cerrar el expediente sin él (cliente, 5 nov 2026,
+    # `field_ops/guards.guard_permit_approved_to_close`). El programa que lo
+    # exija lo enciende en su configuración.
+    {"code": "permit_approved", "kind": "auto", "active": False},
     {"code": "inspection_passed", "kind": "auto"},
     {"code": "invoice_issued", "kind": "auto"},
     {"code": "program_paperwork", "label": "Papeleo propio del programa", "kind": "manual"},
@@ -56,6 +63,7 @@ def default_requirements() -> list[dict]:
             "label": r.get("label") or AUTO_RULES[r["code"]],
             "kind": r["kind"],
             "sort_order": orden,
+            "active": r.get("active", True),
         }
         for orden, r in enumerate(DEFAULT_REQUIREMENTS)
     ]
@@ -106,6 +114,7 @@ async def _auto_results(db, *, claim, project, case, today) -> dict[str, tuple[b
             ultima == "passed" and await has_signed_permit(db, project.id),
             "Falta la inspección aprobada con el permiso firmado por el inspector.",
         ),
+        "permit_closed_uploaded": (await has_signed_permit(db, project.id), "Falta subir el permiso cerrado."),
         "gas_to_electric": (
             "gas_equipment_removed" in (project.installation_conditions or []) and foto_gas,
             "Falta marcar que se retiró el equipo de gas y su foto.",

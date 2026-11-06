@@ -47,7 +47,7 @@ MATRIZ = [
     ("GET", "/attendance/entries?date_from=2026-10-26&date_to=2026-10-26",
      {"active_admin_user", "active_admin_staff_user", "active_accounting_user", "active_management_user"}),
     ("PUT", "/attendance/settings", {"active_admin_user", "active_admin_staff_user"}),
-    ("POST", "/attendance/payroll/periods", {"active_admin_user", "active_accounting_user"}),
+    ("POST", "/attendance/payroll/periods", {"active_admin_user", "active_admin_staff_user", "active_accounting_user"}),
     ("GET", "/operations-map/people",
      {"active_admin_user", "active_admin_staff_user", "active_technician_user"}),
 ]

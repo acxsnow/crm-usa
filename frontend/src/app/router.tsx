@@ -58,6 +58,7 @@ import { BankingPage } from "@/features/payments/BankingPage";
 import { PayInvoicePage } from "@/features/payments/PayInvoicePage";
 import { PublicQuotePage } from "@/features/billing/PublicQuotePage";
 import { DispatchBoardPage } from "@/features/field-ops/DispatchBoardPage";
+import { ElectricalInspectionsPage } from "@/features/field-ops/ElectricalInspections";
 
 /**
  * Cada ruta declara qué módulo o permiso la habilita.
@@ -140,6 +141,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission="dispatch.manage" moduleLabel="el despacho">
             <DispatchBoardPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "electrical-inspections",
+        element: (
+          <RequireAccess permission={["dispatch.manage", "checklists.complete"]} moduleLabel="las inspecciones eléctricas">
+            <ElectricalInspectionsPage />
           </RequireAccess>
         ),
       },

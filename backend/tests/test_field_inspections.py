@@ -177,7 +177,7 @@ async def test_the_catalogs_are_exposed_with_labels(app_client, active_technicia
     resp = await app_client.get("/api/v1/field-ops/catalogs", headers=headers)
     assert resp.status_code == 200
     cuerpo = resp.json()
-    assert len(cuerpo["evidence_categories"]) == 16
+    assert len(cuerpo["evidence_categories"]) == 17
     assert cuerpo["permit_statuses"]["not_required"] == "No requerido"
 
 
