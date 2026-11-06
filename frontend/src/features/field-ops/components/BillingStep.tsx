@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   billingKeys,
@@ -12,6 +12,7 @@ import {
   shortDay,
   useRefreshBilling,
 } from "@/features/billing/billingApi";
+import { listProjectEvidence, uploadClosedPermit } from "@/features/field-ops/api";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { CLAIM_STATUS_LABELS, type EligibleProgram } from "@/types/billing";
 import type { Project } from "@/types/fieldOps";
@@ -21,8 +22,8 @@ import type { Project } from "@/types/fieldOps";
  * fecha de la instalación, los cobros que ya existen y crear los que faltan.
  * El seguimiento (checklist, radicar, pago) va en el detalle del cobro.
  */
-export function BillingStep({ project, canCreate, canRead }: {
-  project: Project; canCreate: boolean; canRead: boolean;
+export function BillingStep({ project, canCreate, canRead, canUploadPermit = false }: {
+  project: Project; canCreate: boolean; canRead: boolean; canUploadPermit?: boolean;
 }) {
   const { data: elegibilidad, error: errorElegibilidad } = useQuery({
     queryKey: billingKeys.eligibility(project.id), queryFn: () => getEligibility(project.id), enabled: canRead,
@@ -46,6 +47,8 @@ export function BillingStep({ project, canCreate, canRead }: {
           ? <>Programas según la dirección el <strong>{shortDay(elegibilidad.installation_date)}</strong> (fecha de la instalación). La tarifa es la vigente ese día.</>
           : "La instalación aún no está cerrada: se muestran los programas de hoy."}
       </p>
+
+      {project.case_id && <ClosedPermit projectId={project.id} canUpload={canUploadPermit} />}
 
       {vivos.length > 0 && (
         <>
@@ -137,5 +140,39 @@ function ProgramRow({ project, program, canCreate }: { project: Project; program
         </form>
       )}
     </li>
+  );
+}
+
+/**
+ * El permiso cerrado (firmado por el inspector) se sube siempre antes de
+ * cobrar, pero no frena el cobro: a veces se cobra sin haber pasado (cliente,
+ * 5 nov 2026). Es la misma evidencia que deja la inspección aprobada.
+ */
+function ClosedPermit({ projectId, canUpload }: { projectId: string; canUpload: boolean }) {
+  const qc = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const { data: evidencias } = useQuery({
+    queryKey: ["project-evidence", projectId, "all"], queryFn: () => listProjectEvidence(projectId),
+  });
+  const subir = useMutation({
+    mutationFn: (file: File) => uploadClosedPermit(projectId, file),
+    onSuccess: () => { setError(null); return qc.invalidateQueries({ queryKey: ["project-evidence", projectId], exact: false }); },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const subido = (evidencias ?? []).filter((e) => e.category === "permit_signed");
+  return (
+    <div className={`info-banner closed-permit${subido.length ? " is-done" : " permit-missing-banner"}`} role="status">
+      {subido.length
+        ? <><strong>✓ Permiso cerrado subido</strong> el {shortDay(subido[subido.length - 1].captured_at ?? subido[subido.length - 1].created_at)}.</>
+        : <><strong>Falta subir el permiso cerrado.</strong> No frena el cobro, pero súbelo siempre antes de radicarlo.</>}
+      {canUpload && (
+        <label className="acta-btn closed-permit-upload">
+          {subir.isPending ? "Subiendo…" : subido.length ? "Subir otra foto" : "Subir el permiso cerrado"}
+          <input type="file" hidden accept="image/*" capture="environment" disabled={subir.isPending}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) subir.mutate(f); e.target.value = ""; }} />
+        </label>
+      )}
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </div>
   );
 }

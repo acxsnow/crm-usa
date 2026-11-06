@@ -105,6 +105,13 @@ const NAV_GROUPS: NavGroup[] = [
         permission: ["dispatch.read_own", "dispatch.manage"],
       },
       { label: "Despacho", to: "/dispatch", icon: "▤", permission: "dispatch.manage" },
+      // La visita del técnico antes de instalar (cliente, 5 nov 2026).
+      {
+        label: "Inspecciones eléctricas",
+        to: "/electrical-inspections",
+        icon: "ϟ",
+        permission: ["dispatch.manage", "checklists.complete"],
+      },
       // Quién estuvo en cada obra y qué se hizo cada día (plan bodega-cierre, fase 5).
       {
         label: "Calendario de obras",

@@ -1,0 +1,36 @@
+{
+ "pc": {
+  "E": {
+   "case": "1e2e3761-9528-49e9-8199-ae69117f39ea",
+   "project": "825943e1-2d15-48e6-a1c3-7986cf1156a7",
+   "number": "CASE-2026-0048"
+  },
+  "Q": {
+   "project": "9917fa3e-d7a6-4634-a1a8-33457fc24443"
+  },
+  "P": {
+   "case": "8a95e199-f4dc-47c2-8a37-25e4b9efa82b",
+   "project": "fffc565b-f03d-4056-8805-43eaaeec3916"
+  },
+  "V": {
+   "case": "6c14bf5e-5b1a-42e9-8fab-66650765a157"
+  }
+ },
+ "celular": {
+  "E": {
+   "case": "302af9c5-88a6-4e2a-98a8-4d67eb9335ce",
+   "project": "0a97fa3b-1d33-44f9-8394-325283ca67f5",
+   "number": "CASE-2026-0051"
+  },
+  "Q": {
+   "project": "ccb221b4-3c7b-4281-805e-85b6fb4b4690"
+  },
+  "P": {
+   "case": "05753bb7-aea1-4f5d-aa59-0f5c3e12eb04",
+   "project": "e57dfc7d-cab7-44ee-9f93-fe51c1d1e123"
+  },
+  "V": {
+   "case": "f4870d84-e1b6-4c8b-900b-624d88ff1290"
+  }
+ }
+}

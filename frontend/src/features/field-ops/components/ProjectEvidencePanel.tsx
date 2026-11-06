@@ -167,7 +167,7 @@ export function ProjectEvidencePanel({ projectId, canUpload, geoStatus, coords }
         <h3 id="anexo-evidencias">Evidencias</h3>
         <span className="annex-count">{evidenceData?.total ?? 0} archivos</span>
       </div>
-      <p className="acta-lead">Las fotos del checklist se toman desde su línea; aquí van las adicionales.</p>
+      <p className="acta-lead">Las fotos del checklist se toman desde su línea; aquí va todo lo demás de la instalación: el equipo que se retiró, el nuevo, la papelería firmada a mano de las utilidades y lo que haga falta. Elige la categoría antes de subir.</p>
 
       {canUpload && (
         <form

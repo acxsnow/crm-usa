@@ -25,6 +25,9 @@ AUTO_RULES: dict[str, str] = {
     "permit_filed": "Permiso municipal radicado",
     "permit_approved": "Permiso municipal aprobado",
     "inspection_passed": "Inspección aprobada con firma del inspector",
+    # El permiso cerrado se sube siempre antes de cobrar, pero no frena el cobro
+    # (cliente, 5 nov 2026): la regla existe y el programa que lo exija la agrega.
+    "permit_closed_uploaded": "Permiso cerrado subido",
     "gas_to_electric": "Evidencia de reemplazo de gas por eléctrico",
     "invoice_issued": "Factura emitida",
 }
@@ -111,6 +114,7 @@ async def _auto_results(db, *, claim, project, case, today) -> dict[str, tuple[b
             ultima == "passed" and await has_signed_permit(db, project.id),
             "Falta la inspección aprobada con el permiso firmado por el inspector.",
         ),
+        "permit_closed_uploaded": (await has_signed_permit(db, project.id), "Falta subir el permiso cerrado."),
         "gas_to_electric": (
             "gas_equipment_removed" in (project.installation_conditions or []) and foto_gas,
             "Falta marcar que se retiró el equipo de gas y su foto.",

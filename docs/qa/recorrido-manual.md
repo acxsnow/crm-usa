@@ -246,10 +246,19 @@ El hilo conductor es **un solo expediente** (la venta), que va pasando de rol en
 
 - **PDF:** §3.2.
 - **Pantalla:** **Proyectos** → el proyecto → paso **Permiso municipal** · `components/PermitsPanel.tsx`.
-- **Qué hacer:** **Registrar el permiso** (ciudad o condado, número, tipo y fecha de radicado). Cada permiso queda como una tarjeta con sus pasos (Radicado → Aprobado por la ciudad). Cuando la ciudad responda: **La ciudad lo aprobó** (fecha de aprobación y, opcional, de vencimiento) o **La ciudad lo rechazó** (motivo; luego «Volver a radicar»). También existe «No requerido» con motivo.
+- **Qué hacer:** **Registrar el permiso**: ciudad o condado, número, tipo y estado, que puede ser **Radicado** (con su fecha) o **En trámite**. Cada permiso queda como una tarjeta con sus pasos (Radicado → Aprobado por la ciudad). Cuando la ciudad responda: **La ciudad lo aprobó** (fecha de aprobación y, opcional, de vencimiento) o **La ciudad lo rechazó** (motivo; luego «Volver a radicar»).
 - **API:** `POST /projects/{id}/permits`, `PATCH /permits/{id}`.
-- **Qué debe pasar:** el expediente pasa a **Permiso en trámite** y, al aprobarse, a **Listo para instalar**.
-- **Instalar con el permiso solo radicado** (variable `PERMIT_FILED_ALLOWS_INSTALL` en `backend/.env`, desde el 16 oct): en `false` (por defecto) hace falta la aprobación de la ciudad, como arriba. En `true` el expediente pasa a **Listo para instalar** apenas se radica, y la tarjeta dice «Radicado. Ya se puede instalar; registra la aprobación cuando la ciudad responda». En los dos casos un permiso rechazado o vencido bloquea, y el **cobro al programa sigue pidiendo el permiso aprobado**. Para probarlo: cambiar la variable, reiniciar (`docker compose restart api`) y registrar un permiso radicado en otro proyecto.
+- **Qué debe pasar** (cliente, 4 y 5 nov 2026):
+  - Con **En trámite** o **Radicado**, el expediente pasa a **Listo para instalar**. La variable `PERMIT_FILED_ALLOWS_INSTALL` ahora es `true` por defecto; en `false` vuelve a exigir el aprobado para «Radicado».
+  - El permiso tampoco frena la instalación si no se registra: la orden se libera sin él.
+  - Mientras falte el aprobado, la obra muestra el aviso «Falta el permiso municipal aprobado».
+  - El cobro se radica con el permiso en cualquier estado, pero el **expediente no se cierra** sin el aprobado.
+- **Permiso cerrado:** en el paso **Cobro al programa** sale «Falta subir el permiso cerrado» con **Subir el permiso cerrado**. No frena el cobro (`POST /projects/{id}/closed-permit`).
+- **Inspección eléctrica** (antes de instalar):
+  - **Agendar:** **Por revisar** → el expediente → tarjeta **Inspección eléctrica** → técnico y fecha → **Agendar inspección eléctrica**.
+  - **Resultado:** con el técnico, menú **Inspecciones eléctricas** → **Registrar resultado** (viabilidad, amperaje, toneladas, calentador de agua y cocina de inducción).
+  - **Qué debe pasar:** el resultado sale en la tarjeta del expediente y el expediente no cambia de etapa.
+  - **API:** `POST /cases/{id}/electrical-inspections` y `POST /electrical-inspections/{id}/result`.
 
 ### 3.2 Liberar la orden: técnico y fecha (Administración)
 

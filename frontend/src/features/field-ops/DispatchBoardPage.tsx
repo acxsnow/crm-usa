@@ -51,6 +51,8 @@ export function DispatchBoardPage() {
   const [vista, setVista] = useState<Vista>(() => (window.innerWidth < 768 ? "day" : "week"));
   const [ancla, setAncla] = useState(localISODate());
   const [abierta, setAbierta] = useState<Job | null>(null);
+  // Tocar una celda vacía: elegir qué obra sin agendar va ahí (cliente, 5 nov 2026).
+  const [celda, setCelda] = useState<{ technician: string; date: string } | null>(null);
   const desde = vista === "week" ? lunes(ancla) : ancla;
   const hasta = vista === "week" ? sumar(desde, 6) : ancla;
   const { data, isLoading, isError } = useQuery({
@@ -60,7 +62,7 @@ export function DispatchBoardPage() {
   const asignar = useMutation({
     mutationFn: (v: { job: Job; technician: string; date: string }) =>
       scheduleInstallation(v.job.project_id, { technician_user_id: v.technician, scheduled_date: v.date }),
-    onSuccess: () => { setAbierta(null); return qc.invalidateQueries({ queryKey: ["dispatch-board"] }); },
+    onSuccess: () => { setAbierta(null); setCelda(null); return qc.invalidateQueries({ queryKey: ["dispatch-board"] }); },
     onError: (e) => toast(apiErrorMessage(e)),
   });
   const soltar = (e: React.DragEvent, technician: string, date: string) => {
@@ -77,7 +79,7 @@ export function DispatchBoardPage() {
   return (
     <div className="dispatch-page">
       <PageHeader eyebrow="Operación de campo" title="Despacho"
-        description="Planea los próximos días por técnico: arrastra una obra a su celda o tócala para elegir técnico y fecha." />
+        description="Planea los próximos días por técnico: arrastra una obra de «Sin agendar» a su celda, toca una obra para elegir técnico y fecha, o toca una celda vacía para elegir qué obra va ahí." />
       <div className="dispatch-toolbar">
         <div className="dispatch-nav">
           <button type="button" className="acta-btn" aria-label="Anterior" onClick={() => setAncla(sumar(ancla, vista === "week" ? -7 : -1))}>‹</button>
@@ -111,7 +113,8 @@ export function DispatchBoardPage() {
                       <th scope="row">{t.name}</th>
                       {data.days.map((d) => (
                         <td key={d} className={d === data.today ? "is-today" : undefined}
-                          onDragOver={(e) => e.preventDefault()} onDrop={(e) => soltar(e, t.id, d)}>
+                          onDragOver={(e) => e.preventDefault()} onDrop={(e) => soltar(e, t.id, d)}
+                          onClick={() => setCelda({ technician: t.id, date: d })}>
                           {(t.shifts[d] ?? []).map((s, i) => <small key={i} className="dispatch-shift">{hora(s.starts_at)} – {hora(s.ends_at)}</small>)}
                           {(t.jobs[d] ?? []).map((j) => <JobChip key={j.project_id} job={j} onOpen={setAbierta} />)}
                         </td>
@@ -132,6 +135,11 @@ export function DispatchBoardPage() {
           </section>
         </>
       )}
+      {celda && data && (
+        <PickJobDialog jobs={bandeja} technician={data.technicians.find((t) => t.id === celda.technician)?.name ?? ""}
+          date={celda.date} saving={asignar.isPending} onClose={() => setCelda(null)}
+          onPick={(job) => asignar.mutate({ job, technician: celda.technician, date: celda.date })} />
+      )}
       {abierta && data && (
         <AssignDialog job={abierta} technicians={data.technicians} defaultDate={ancla} saving={asignar.isPending}
           onClose={() => setAbierta(null)} onSave={(technician, date) => asignar.mutate({ job: abierta, technician, date })} />
@@ -142,7 +150,7 @@ export function DispatchBoardPage() {
 
 function JobChip({ job, onOpen }: { job: Job; onOpen: (j: Job) => void }) {
   return (
-    <button type="button" draggable className={`dispatch-job${job.days_late ? " is-late" : ""}`} onClick={() => onOpen(job)}
+    <button type="button" draggable className={`dispatch-job${job.days_late ? " is-late" : ""}`} onClick={(e) => { e.stopPropagation(); onOpen(job); }}
       onDragStart={(e) => e.dataTransfer.setData("application/json", JSON.stringify(job))}>
       <strong>{job.title}</strong>
       {job.address && <small>{job.address}</small>}
@@ -179,6 +187,45 @@ function AssignDialog({ job, technicians, defaultDate, saving, onClose, onSave }
           <button type="submit" className="acta-btn is-primary" disabled={saving}>{saving ? "Guardando…" : "Agendar"}</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Qué obra sin agendar va en la celda que se tocó (técnico y día ya elegidos). */
+function PickJobDialog({ jobs, technician, date, saving, onClose, onPick }: {
+  jobs: Job[];
+  technician: string;
+  date: string;
+  saving: boolean;
+  onClose: () => void;
+  onPick: (job: Job) => void;
+}) {
+  return (
+    <div className="dispatch-dialog" role="dialog" aria-modal="true" aria-labelledby="dispatch-pick-title">
+      <div className="dispatch-dialog-card">
+        <h3 id="dispatch-pick-title">{technician} · {cabecera(date)}</h3>
+        {jobs.length === 0 ? (
+          <p className="acta-empty">
+            No hay obras sin agendar. Una obra nace al aprobarse un expediente o al aceptarse una cotización; entonces
+            aparece aquí y en «Sin agendar».
+          </p>
+        ) : (
+          <>
+            <p className="acta-lead">Elige la obra que va este día con este técnico.</p>
+            <div className="dispatch-tray-list">
+              {jobs.map((j) => (
+                <button key={j.project_id} type="button" className="dispatch-job" disabled={saving} onClick={() => onPick(j)}>
+                  <strong>{j.title}</strong>
+                  {j.address && <small>{j.address}</small>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        <div className="acta-actions">
+          <button type="button" className="acta-btn" onClick={onClose}>Cerrar</button>
+        </div>
+      </div>
     </div>
   );
 }

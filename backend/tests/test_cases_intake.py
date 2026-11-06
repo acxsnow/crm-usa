@@ -75,11 +75,9 @@ async def _llenar_todo(app_client, headers, case_id):
     assert (await paso("eligibility", {"eligibility.programs_tech": ["care"],
                                        "eligibility.benefit_document": doc})).status_code == 200
     assert (await paso("technical", {"tech.panel_amperage": "200", "tech.existing_hvac": "none", "home.bedrooms": 2,
-                                     "tech.induction_cooktop": "no", "tech.water_heater": "gas",
-                                     "tech.electrical_viability": "adequate"})).status_code == 200
+                                     "tech.induction_cooktop": "no", "tech.water_heater": "gas"})).status_code == 200
     docs = {}
-    for key in ("docs.electric_bill", "docs.panel_photo", "docs.hvac_photos", "docs.pedestal_photo",
-                "docs.mobile_home_title", "docs.mobile_home_decal"):
+    for key in ("docs.electric_bill", "docs.panel_photo", "docs.mobile_home_title_or_decal"):
         docs[key] = await _subir(app_client, headers, case_id, key)
     assert (await paso("documents", docs)).status_code == 200
     assert (await paso("internal", {"internal.result": "preapproved"})).status_code == 200
@@ -418,12 +416,14 @@ async def test_the_id_photo_has_front_and_an_optional_back(app_client, db, seede
         prog = next(p for p in await programs.list_programs(db, organization_id=seeded_org["org"].id)
                     if p.code == codigo)
         caso = (await _abrir(app_client, headers, prog.id,
-                             address_street=f"{len(codigo)}00 ID Photo St"))["case"]
+                             address_street=f"{len(codigo)}{codigo[:2]} ID Photo St"))["case"]
         form = (await app_client.get(f"/api/v1/cases/{caso['id']}/form", headers=headers)).json()
         cliente = next(s for s in form["definition"]["steps"] if s["code"] == "customer")
         campos = {f["key"]: f for f in cliente["fields"]}
         assert campos["customer.id_photo"]["label"].endswith("(frente)")
-        assert campos["customer.id_photo"]["requirement"] == "required"
+        # En California (TECH) la foto del documento es opcional (cliente, 5 nov 2026).
+        assert campos["customer.id_photo"]["requirement"] == ("optional" if codigo == "TECH_CLEAN_CA" else "required")
+        assert campos["customer.email"]["requirement"] == "optional"
         assert campos["customer.id_photo_back"]["requirement"] == "optional"
         assert campos["customer.id_photo_back"]["type"] == "photo"
 

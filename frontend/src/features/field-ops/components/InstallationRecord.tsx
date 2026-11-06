@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { getAttestation, getProjectChecklist } from "@/features/field-ops/api";
+import { getAttestation, getProjectChecklist, listProjectEvidencePage } from "@/features/field-ops/api";
 import {
   fieldKeys,
   getInstallationGaps,
@@ -61,6 +61,9 @@ export function useRecordData(projectId: string, closed: boolean) {
   const inspections = useQuery({ queryKey: fieldKeys.inspections(projectId), queryFn: () => listInspections(projectId) });
   const checklist = useQuery({ queryKey: fieldKeys.checklist(projectId), queryFn: () => getProjectChecklist(projectId) });
   const attestation = useQuery({ queryKey: attestationKey(projectId), queryFn: () => getAttestation(projectId) });
+  // La misma consulta que la primera página de «Evidencias»: comparten caché.
+  const evidence = useQuery({ queryKey: ["project-evidence", projectId, 1],
+    queryFn: () => listProjectEvidencePage(projectId, 1, 12) });
   const gaps = useQuery({
     queryKey: fieldKeys.gaps(projectId),
     queryFn: () => getInstallationGaps(projectId),
@@ -72,6 +75,7 @@ export function useRecordData(projectId: string, closed: boolean) {
     inspections: inspections.data ?? [],
     checklist: checklist.data ?? [],
     attestation: attestation.data ?? null,
+    evidenceCount: evidence.data?.total ?? 0,
     gaps: gaps.data,
   };
 }
@@ -87,7 +91,9 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
   const required = data.checklist.filter((i) => i.is_required &&
     (!i.condition_code || (project.installation_conditions ?? []).includes(i.condition_code)));
   const confirmed = required.filter((i) => i.is_complete || i.not_applicable).length;
-  const checklistDone = required.length > 0 && confirmed === required.length;
+  // Un trabajo particular (sin programa) no trae checklist: no hay nada que confirmar.
+  const sinChecklist = data.checklist.length === 0;
+  const checklistDone = sinChecklist || (required.length > 0 && confirmed === required.length);
   const lastInspection = data.inspections[data.inspections.length - 1];
   const inspectionPassed = lastInspection?.result === "passed";
 
@@ -96,6 +102,7 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     release: released,
     checklist: checklistDone || closed,
     equipment: (data.equipment.length > 0 && Boolean(project.equipment_confirmed_at)) || closed,
+    evidence: data.evidenceCount > 0 || closed,
     // Las firmas no bloquean el cierre (decisión pendiente con Mariana): son
     // el paso actual mientras falten, pero «Cierre» sigue disponible.
     signatures: Boolean(data.attestation?.is_fully_signed),
@@ -105,9 +112,11 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     billing: stageAtLeast(project, "paid"),
   };
   const order: (keyof typeof done)[] = [
-    "permit", "release", "checklist", "equipment", "signatures", "close", "review", "inspection", "billing",
+    "permit", "release", "checklist", "equipment", "evidence", "signatures", "close", "review", "inspection", "billing",
   ];
-  const current = order.find((k) => !done[k]);
+  // El permiso no frena la instalación (cliente, 5 nov 2026): nunca es «el paso
+  // actual»; lo recuerda el aviso de la obra y el cierre del expediente lo exige.
+  const current = order.find((k) => k !== "permit" && !done[k]);
 
   const state = (k: keyof typeof done, lockedWhen = false): StepState =>
     done[k] ? "done" : lockedWhen ? "locked" : k === current ? "current" : "pending";
@@ -118,7 +127,7 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
       state: state("permit"),
       summary: permitsCleared
         ? `Aprobado${lastPermit?.approved_on ? ` el ${shortDate(lastPermit.approved_on)}` : ""}${lastPermit?.expires_on ? `, vence el ${shortDate(lastPermit.expires_on)}` : ""}`
-        : data.permits.length ? "Radicado, esperando aprobación" : "Sin radicar",
+        : data.permits.length ? "Radicado o en trámite, esperando aprobación" : "Sin registrar · no frena la instalación",
     },
     release: {
       state: state("release"),
@@ -126,7 +135,7 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
     },
     checklist: {
       state: state("checklist"),
-      summary: `${confirmed} de ${required.length} confirmados`,
+      summary: sinChecklist ? "Este trabajo no tiene checklist" : `${confirmed} de ${required.length} confirmados`,
     },
     equipment: {
       state: state("equipment"),
@@ -135,6 +144,12 @@ export function deriveStates(project: Project, data: ReturnType<typeof useRecord
         : project.equipment_confirmed_at || closed
           ? data.equipment.map((e) => `${e.brand} ${e.model}`).join(", ")
           : `${data.equipment.length === 1 ? "1 registrado" : `${data.equipment.length} registrados`}, falta guardar la lista`,
+    },
+    evidence: {
+      state: state("evidence"),
+      summary: data.evidenceCount
+        ? `${data.evidenceCount} ${data.evidenceCount === 1 ? "archivo" : "archivos"}`
+        : "Equipo retirado, equipo nuevo y papelería firmada",
     },
     signatures: {
       state: state("signatures"),

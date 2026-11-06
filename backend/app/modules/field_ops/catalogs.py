@@ -28,7 +28,9 @@ EVIDENCE_CATEGORIES: dict[str, str] = {
     "additional_video": "Video adicional",
     # La prueba de la inspección aprobada: el permiso con la firma del
     # inspector (módulo 6, spec D6.4). Sin esto no se cobra.
-    "permit_signed": "Permiso firmado por el inspector",
+    "permit_signed": "Permiso cerrado (firmado por el inspector)",
+    # Lo firmado a mano con las utilidades (cliente, 5 nov 2026).
+    "signed_paperwork": "Papelería firmada a mano (utilidades)",
 }
 
 # Condiciones de una instalación que vuelven obligatorios ciertos ítems del

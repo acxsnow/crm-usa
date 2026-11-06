@@ -108,9 +108,10 @@ export function ProjectDetailPage() {
   // llenarla: el personal rota y el nuevo sigue donde el otro terminó.
   const trabaja = project.my_access !== "read_only";
   const estados = deriveStates(project, recordData);
-  // Ya pasó el permiso para instalar, pero la ciudad no lo ha aprobado (cliente, 5 nov 2026).
-  const faltaPermiso = project.status !== "cancelled" && recordData.permits.length > 0
-    && recordData.permits.every((p) => p.allows_install) && !recordData.permits.every((p) => p.is_cleared);
+  // Se instala sin el permiso aprobado, o sin permiso registrado, pero el expediente
+  // no se cierra sin él (cliente, 5 nov 2026). Solo aplica a la obra de un expediente.
+  const faltaPermiso = project.status !== "cancelled" && Boolean(project.case_id)
+    && !(recordData.permits.length > 0 && recordData.permits.every((p) => p.is_cleared));
   const technicianName = project.primary_technician_user_id
     ? project.primary_technician_user_id === user?.id
       ? user.full_name
@@ -130,8 +131,8 @@ export function ProjectDetailPage() {
       )}
       {faltaPermiso && (
         <div className="info-banner permit-missing-banner" role="status">
-          <strong>Falta el permiso municipal aprobado.</strong> Se puede instalar y cobrar con el permiso radicado o en
-          trámite, pero el expediente no se cierra hasta registrar la aprobación de la ciudad.{" "}
+          <strong>Falta el permiso municipal aprobado.</strong> Se puede instalar y cobrar sin él (radicado, en trámite o
+          sin registrar), pero el expediente no se cierra hasta registrar la aprobación de la ciudad.{" "}
           <button type="button" className="acta-link" onClick={() => openActaStep("permit")}>Ver el permiso</button>
         </div>
       )}
@@ -169,7 +170,9 @@ export function ProjectDetailPage() {
             key: "checklist", title: "Checklist técnico", ...estados.checklist,
             body: (
               <>
-                <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete") && trabaja} />
+                {(checklist ?? []).length > 0 && (
+                  <ConditionsPanel project={project} canEdit={hasPermission("checklists.complete") && trabaja} />
+                )}
                 <ChecklistPanel project={project} items={checklist ?? []}
                   canEdit={hasPermission("checklists.complete") && trabaja} coords={geo.coords} />
               </>
@@ -180,6 +183,11 @@ export function ProjectDetailPage() {
             body: <EquipmentPanel projectId={project.id} canManage={hasPermission("equipment.manage") && trabaja} closed={cerrada}
               confirmedAt={project.equipment_confirmed_at} />,
           },
+          // Todas las evidencias de la instalación van en el acta (cliente, 5 nov 2026).
+          ...(puedeVerEvidencias ? [{
+            key: "evidence", title: "Evidencias de la instalación", ...estados.evidence,
+            body: <ProjectEvidencePanel projectId={project.id} canUpload={trabaja} geoStatus={geo.status} coords={geo.coords} />,
+          }] : []),
           {
             key: "signatures", title: "Firmas del acta", ...estados.signatures,
             body: <SignaturesPanel projectId={project.id} canSign={hasPermission("evidence.create") && trabaja} />,
@@ -206,7 +214,7 @@ export function ProjectDetailPage() {
             key: "billing", title: "Cobro al programa", ...estados.billing,
             body: (
               <BillingStep project={project} canCreate={hasPermission("billing.submit")}
-                canRead={hasPermission("invoices.read")} />
+                canRead={hasPermission("invoices.read")} canUploadPermit={hasPermission("permits.manage")} />
             ),
           },
         ]}
@@ -216,7 +224,7 @@ export function ProjectDetailPage() {
         <header className="annex-header">
           <div>
             <h2 className="acta-title">Anexos</h2>
-            <p className="acta-lead">Evidencias y tareas internas de esta instalación. Las firmas están en el paso «Firmas del acta».</p>
+            <p className="acta-lead">Ubicación, cobros y tareas internas de esta instalación. Las evidencias y las firmas están en sus pasos del acta.</p>
           </div>
           <span className={`annex-gps ${geo.status === "granted" && geo.coords ? "is-on" : "is-off"}`}>
             <PinIcon size={16} />
@@ -225,10 +233,6 @@ export function ProjectDetailPage() {
               : geo.status === "denied" ? "Sin GPS: las fotos quedarán marcadas «sin GPS»" : "Buscando GPS…"}
           </span>
         </header>
-
-        {puedeVerEvidencias && (
-          <ProjectEvidencePanel projectId={project.id} canUpload={trabaja} geoStatus={geo.status} coords={geo.coords} />
-        )}
 
         <ProjectMiniMap projectId={project.id} />
 

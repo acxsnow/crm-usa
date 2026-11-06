@@ -46,7 +46,8 @@ async def _revisar(app_client, e, file_id, status, notes=None):
 
 async def test_the_case_lists_its_current_documents_with_their_field(app_client, enviado):
     docs = await _docs(app_client, enviado)
-    assert len(docs) == 8 and all(d["review_status"] == "pending" for d in docs)
+    # Cinco desde el 5 nov 2026: ID, beneficio, factura, panel y título o decal.
+    assert len(docs) == 5 and all(d["review_status"] == "pending" for d in docs)
     id_foto = next(d for d in docs if d["field_key"] == "customer.id_photo")
     assert id_foto["label"] and id_foto["step_title"] and id_foto["watermarked"] is True
 
@@ -138,7 +139,7 @@ async def test_admin_adds_an_extra_document(app_client, enviado):
 
 async def test_the_queue_lists_cases_with_documents_to_review(app_client, enviado):
     cola = (await app_client.get("/api/v1/documents/review-queue", headers=enviado["admin"])).json()
-    assert [c["case_id"] for c in cola] == [enviado["id"]] and cola[0]["pending"] == 8
+    assert [c["case_id"] for c in cola] == [enviado["id"]] and cola[0]["pending"] == 5
     for d in await _docs(app_client, enviado):
         await _revisar(app_client, enviado, d["id"], "accepted")
     assert (await app_client.get("/api/v1/documents/review-queue", headers=enviado["admin"])).json() == []

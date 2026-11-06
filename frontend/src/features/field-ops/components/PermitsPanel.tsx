@@ -147,7 +147,7 @@ function fechaCorta(iso: string | null): string {
 /** Qué falta, mirando todos los permisos del proyecto: una sola frase arriba de las tarjetas. */
 function SiguientePaso({ permits }: { permits: Permit[] }) {
   if (permits.length === 0) {
-    return <p className="permit-next">Registra el permiso que se radicó en la ciudad, o márcalo «En trámite» si la papelería apenas se va a hacer. Sin esto no se puede agendar la instalación.</p>;
+    return <p className="permit-next">Registra el permiso que se radicó en la ciudad, o márcalo «En trámite» si la papelería apenas se va a hacer. Se puede liberar la orden sin él, pero el expediente no se cierra sin el permiso aprobado.</p>;
   }
   if (permits.every((p) => p.is_cleared)) {
     return <p className="permit-next is-done">✓ Permisos listos. Ya se puede liberar la orden: elegir técnico y fecha de instalación.</p>;
@@ -156,7 +156,7 @@ function SiguientePaso({ permits }: { permits: Permit[] }) {
   if (permits.every((p) => p.allows_install)) {
     return <p className="permit-next is-done">✓ Ya se puede liberar la orden. Registra la aprobación de la ciudad cuando llegue: sin ella no se cierra el expediente.</p>;
   }
-  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.allows_install).length === 1 ? "el permiso" : "los permisos"} de abajo. Hasta entonces no se puede agendar la instalación.</p>;
+  return <p className="permit-next">Falta que la ciudad apruebe {permits.filter((p) => !p.allows_install).length === 1 ? "el permiso" : "los permisos"} de abajo. Se puede instalar igual, pero el expediente no se cierra sin la aprobación.</p>;
 }
 
 /**

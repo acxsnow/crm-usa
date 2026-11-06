@@ -6,6 +6,7 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "./sales.css";
 import { useAuth } from "@/features/auth/AuthContext";
+import { CaseElectricalInspection } from "@/features/field-ops/ElectricalInspections";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
@@ -143,6 +144,10 @@ export function CaseReviewPage() {
         <aside className="review-side">
           <Decision caseId={caseId!} stage={c.stage_code} substatus={c.substatus_code} pendientes={pendientes}
             rechazados={rechazados} onDone={refrescar} />
+          {/* Antes de instalar (cliente, 5 nov 2026). */}
+          {c.program_id && ELECTRICAL_STAGES.includes(c.stage_code) && (
+            <CaseElectricalInspection caseId={caseId!} canSchedule={hasPermission("dispatch.manage")} />
+          )}
           {hasPermission("cases.close_admin") && c.stage_code !== "closed" && (
             <CloseCase caseId={caseId!} onDone={refrescar} />
           )}
@@ -428,6 +433,9 @@ function Decision({ caseId, stage, substatus, pendientes, rechazados, onDone }: 
     </article>
   );
 }
+
+// Etapas en las que se ve y se agenda la inspección eléctrica (las de `field_ops/electrical.py`).
+const ELECTRICAL_STAGES = ["new_prospect", "pending_approval", "on_hold", "approved", "permit_in_progress"];
 
 /** Cierre administrativo (desde cualquier etapa, con `cases.close_admin`). Pide motivo. */
 function CloseCase({ caseId, onDone }: { caseId: string; onDone: () => void }) {

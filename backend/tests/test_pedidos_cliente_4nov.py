@@ -171,3 +171,25 @@ async def test_a_case_without_permits_or_installation_closes_administratively(db
     case = await case_service.transition(db, case=case, to_stage="closed", actor_id=uuid.uuid4(),
                                          actor_permissions=stages.SYSTEM_ACTOR)
     assert case.stage_code == "closed"
+
+
+async def test_administration_uploads_the_closed_permit_without_an_inspection(
+        app_client, db, seeded_org, active_admin_staff_user, active_technician_user):
+    """El permiso cerrado se sube siempre antes de cobrar, aunque el programa no
+    tenga inspección (cliente, 5 nov 2026); la regla del cobro lo reconoce."""
+    from app.modules.billing.requirements import AUTO_RULES
+    from app.modules.field_ops.inspections import has_signed_permit
+    from tests.field_helpers import jpeg_bytes
+
+    _, project = await approved_case_with_project(db, seeded_org["org"].id)
+    assert "permit_closed_uploaded" in AUTO_RULES
+    assert await has_signed_permit(db, project.id) is False
+    tec = await headers_for(app_client, active_technician_user.email)
+    url = f"/api/v1/projects/{project.id}/closed-permit"
+    archivo = {"file": ("permiso.jpg", jpeg_bytes(), "image/jpeg")}
+    assert (await app_client.post(url, files=archivo, headers=tec)).status_code == 403
+    adm = await headers_for(app_client, active_admin_staff_user.email)
+    r = await app_client.post(url, files={"file": ("permiso.jpg", jpeg_bytes(), "image/jpeg")}, headers=adm)
+    assert r.status_code == 201, r.text
+    assert r.json()["category"] == "permit_signed"
+    assert await has_signed_permit(db, project.id) is True

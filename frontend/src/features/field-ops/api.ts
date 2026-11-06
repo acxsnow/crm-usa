@@ -242,3 +242,13 @@ export async function fetchAttestationPdfObjectUrl(attestationId: string): Promi
   const res = await apiClient.get(`/attestations/${attestationId}/pdf`, { responseType: "blob" });
   return URL.createObjectURL(res.data);
 }
+
+/** El permiso cerrado, para cobrar (cliente, 5 nov 2026). Queda como evidencia «permit_signed». */
+export async function uploadClosedPermit(projectId: string, file: File): Promise<Evidence> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await apiClient.post<Evidence>(`/projects/${projectId}/closed-permit`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}

@@ -291,7 +291,34 @@ async def upload_signed_permit(
     )
 
 
-_permits_view = require_any_permission("permits.manage", "inspections.manage", "projects.read_all")
+@router.post("/projects/{project_id}/closed-permit", response_model=EvidenceResponse, status_code=201)
+async def upload_closed_permit(
+    project_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("permits.manage")),
+):
+    """El permiso cerrado, para cobrar (cliente, 5 nov 2026). Es la misma
+    evidencia que sube la inspección aprobada (`permit_signed`): aquí se sube
+    aunque el programa no tenga inspección."""
+    await get_visible_project(db, organization_id=organization_id, user=current_user, project_id=project_id)
+    return await field_ops_service.upload_evidence(
+        db,
+        organization_id=organization_id,
+        actor_id=current_user.id,
+        project_id=project_id,
+        file=file,
+        category="permit_signed",
+        latitude=None,
+        longitude=None,
+        captured_at=None,
+        task_id=None,
+        checklist_item_id=None,
+    )
+
+
+_permits_view =require_any_permission("permits.manage", "inspections.manage", "projects.read_all")
 
 
 async def _project_titles(db: AsyncSession, ids) -> dict:
