@@ -1,0 +1,929 @@
+{
+ "": [
+  {
+   "check": "Requisitos de cobro de TECH",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "COB-01 Camino completo con números exactos": [
+  {
+   "check": "TECH tiene tarifa vigente (6500.0)",
+   "ok": true,
+   "dato": "6500.0"
+  },
+  {
+   "check": "Visita «opened» en 801 QA 1110042657 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración agenda la obra con Tito",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Bodega entrega la salida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Turno aprobado de 8 h en la obra",
+   "ok": true,
+   "dato": "turno ok"
+  },
+  {
+   "check": "Tarifa de Tito: 45 USD la hora",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Técnico registra 40 USD de gasolina",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Contabilidad aprueba la gasolina",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al aprobar se creó el proyecto de instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico NO ve un proyecto que no es suyo",
+   "ok": false,
+   "dato": "HTTP 200: {\"address_street\":\"801 QA 1110042657 Mobile Park Dr\",\"address_unit\":\"Spc 701\",\"address_city\":\"San Fernando\",\"address_state\":\"CA\",\"address_zip\":\"91340\",\"latitude\":34.28,\"longitude\":-118.44,\"id\":\"01c541a4-f50c-4f58-b4ee-c4415df34eb6\",\"customer_id\":\"9b4"
+  },
+  {
+   "check": "Agendar instalación con técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve su orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar sin completar está bloqueado",
+   "ok": true,
+   "dato": "{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Registrar el equipo existente (furnace y s"
+  },
+  {
+   "check": "Cerrar instalación incompleta se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Checklist resuelto (14 ítems)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Equipo instalado con serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar equipos instalados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del técnico en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del cliente en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Equipo después del cierre se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede confirmar su propia acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Antes de cobrar: material 1.200 (1200.00)",
+   "ok": true,
+   "dato": "{'materials': '1200.00', 'equipment': '0.00', 'labor': '360.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '40.00'}"
+  },
+  {
+   "check": "Antes de cobrar: mano de obra 360 = 8 h × 45 (360.00)",
+   "ok": true,
+   "dato": "{'materials': '1200.00', 'equipment': '0.00', 'labor': '360.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '40.00'}"
+  },
+  {
+   "check": "Antes de cobrar: gastos de campo 40 (40.00)",
+   "ok": true,
+   "dato": "{'materials': '1200.00', 'equipment': '0.00', 'labor': '360.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '40.00'}"
+  },
+  {
+   "check": "Costos = 1.600 (1600.00)",
+   "ok": true,
+   "dato": "{'project_id': '01c541a4-f50c-4f58-b4ee-c4415df34eb6', 'title': 'Instalación · CASE-2026-0066', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0066', 'program': 'TECH Clean California', 'expected': '0.00', 'collected': '0.00', 'costs': '1600.00', 'cost_breakdown': {"
+  },
+  {
+   "check": "Sin cobro todavía, cobrado 0 (0.00)",
+   "ok": true,
+   "dato": "{'project_id': '01c541a4-f50c-4f58-b4ee-c4415df34eb6', 'title': 'Instalación · CASE-2026-0066', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0066', 'program': 'TECH Clean California', 'expected': '0.00', 'collected': '0.00', 'costs': '1600.00', 'cost_breakdown': {"
+  },
+  {
+   "check": "Crear el cobro al programa",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El cobro toma la tarifa vigente el día de la instalación (6500.0)",
+   "ok": true,
+   "dato": "6500.0"
+  },
+  {
+   "check": "Radicar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El expediente pasa a «En cobro»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Radicado: esperado = tarifa (6500.00)",
+   "ok": true,
+   "dato": "{'project_id': '01c541a4-f50c-4f58-b4ee-c4415df34eb6', 'title': 'Instalación · CASE-2026-0066', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0066', 'program': 'TECH Clean California', 'expected': '6500.00', 'collected': '0.00', 'costs': '1600.00', 'cost_breakdown'"
+  },
+  {
+   "check": "Contabilidad registra el pago completo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El expediente queda «Pagado»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cobrado = tarifa (6500.00)",
+   "ok": true,
+   "dato": "{'project_id': '01c541a4-f50c-4f58-b4ee-c4415df34eb6', 'title': 'Instalación · CASE-2026-0066', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0066', 'program': 'TECH Clean California', 'expected': '6500.00', 'collected': '6500.00', 'costs': '1600.00', 'cost_breakdo"
+  },
+  {
+   "check": "Margen = tarifa − 1.600 = 4900.0 (4900.00)",
+   "ok": true,
+   "dato": "{'project_id': '01c541a4-f50c-4f58-b4ee-c4415df34eb6', 'title': 'Instalación · CASE-2026-0066', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0066', 'program': 'TECH Clean California', 'expected': '6500.00', 'collected': '6500.00', 'costs': '1600.00', 'cost_breakdo"
+  },
+  {
+   "check": "Detalle de horas: 480 min y 360 USD (360.00)",
+   "ok": true,
+   "dato": "{'rows': [{'user_id': '91e4c66e-43a5-4347-9e33-8d3764c92d13', 'name': 'Tito Técnico', 'minutes': 480, 'hourly_rate': '45.00', 'pay_type': None, 'cost': '360.00'}], 'total': '360.00', 'missing_rate': ["
+  }
+ ],
+ "COB-02 Cobro: lo que no se debe poder": [
+  {
+   "check": "Visita «opened» en 802 QA 1110042657 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sin acta confirmada no se crea el cobro",
+   "ok": true,
+   "dato": "409 {\"detail\":\"Administración tiene que confirmar la información técnica del acta antes de crear el cobro.\",\"code\":\"acta_not_confirmed\",\"request_id\":\"c7b3"
+  },
+  {
+   "check": "Al aprobar se creó el proyecto de instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico NO ve un proyecto que no es suyo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Agendar instalación con técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve su orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar sin completar está bloqueado",
+   "ok": true,
+   "dato": "{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Registrar el equipo existente (furnace y s"
+  },
+  {
+   "check": "Cerrar instalación incompleta se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Checklist resuelto (14 ítems)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Equipo instalado con serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar equipos instalados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del técnico en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del cliente en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Equipo después del cierre se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede confirmar su propia acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se cobra a otro programa distinto al del expediente",
+   "ok": true,
+   "dato": "409 {\"detail\":\"El expediente de esta instalación es de otro programa; no se puede cobrar a Eficiencia de Arizona.\",\"code\":\"program_not_of_case\",\"request_i"
+  },
+  {
+   "check": "El vendedor no crea cobros",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El técnico no crea cobros",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Crear cobro (sin marcar los requisitos manuales)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cobro duplicado del mismo programa",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Radicar con requisitos manuales sin marcar se bloquea",
+   "ok": true,
+   "dato": "400 {\"detail\":\"No se puede radicar. Falta: Documentos del beneficio y demás documentos del cliente; Términos y condiciones firmados; Papeleo propio del pr"
+  },
+  {
+   "check": "No se paga un cobro sin radicar",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Radicar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Pago cero se rechaza",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: amount.\",\"code\":\"validation_error\",\"request_id\":\"e88aa358-2460-4379-aa07-723112bdb401"
+  },
+  {
+   "check": "Pago negativo se rechaza",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: amount.\",\"code\":\"validation_error\",\"request_id\":\"6f599a4d-5d54-48d2-a11b-e0e852644b1c"
+  },
+  {
+   "check": "Pago texto se rechaza",
+   "ok": true,
+   "dato": "422 {\"detail\":\"Hay datos inválidos en: amount.\",\"code\":\"validation_error\",\"request_id\":\"f3e1e9b5-bc19-45ca-9b82-203f9a7539f0"
+  },
+  {
+   "check": "Pago gigante se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"«1E+9999» no es un número válido o es demasiado grande.\",\"code\":\"invalid_number\",\"request_id\":\"52ed502c-b3ff-"
+  },
+  {
+   "check": "Pago con fecha futura se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "vendedor no registra pagos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "técnico no registra pagos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Gerencia no registra pagos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Rechazo con motivo de una letra se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El programa rechaza con motivo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Rechazado, el expediente sigue «En cobro»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se corrige y se vuelve a radicar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El programa paga de menos (6000.00)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La diferencia queda a la vista (−500: -500.0)",
+   "ok": true,
+   "dato": "-500.0"
+  },
+  {
+   "check": "Un segundo pago sobre un cobro pagado se bloquea (doble clic)",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "No se rechaza un cobro ya pagado",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "No se retira un cobro pagado",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Rentabilidad con pago de menos: cobrado 6000.00 (6000.00)",
+   "ok": true,
+   "dato": "{'project_id': 'c75752dc-b6b6-42b1-9f91-8dd5bc0ecf62', 'title': 'Instalación · CASE-2026-0067', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0067', 'program': 'TECH Clean California', 'expected': '6500.00', 'collected': '6000.00', 'costs': '0.00', 'cost_breakdown'"
+  },
+  {
+   "check": "Otra organización no ve el cobro",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización no le registra pagos",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización no ve la rentabilidad de la obra",
+   "ok": true,
+   "dato": "200 []"
+  },
+  {
+   "check": "El vendedor no ve rentabilidad",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El técnico no ve rentabilidad",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Visita «opened» en 803 QA 1110042657 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Al aprobar se creó el proyecto de instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico NO ve un proyecto que no es suyo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Agendar instalación con técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve su orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar sin completar está bloqueado",
+   "ok": true,
+   "dato": "{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Registrar el equipo existente (furnace y s"
+  },
+  {
+   "check": "Cerrar instalación incompleta se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Checklist resuelto (14 ítems)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Equipo instalado con serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar equipos instalados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del técnico en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del cliente en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Equipo después del cierre se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede confirmar su propia acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Crear el cobro al programa",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Retirar sin motivo se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Retirar con motivo (se equivocó la tarifa)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El cobro retirado no cuenta como esperado (0.00)",
+   "ok": true,
+   "dato": "{'project_id': '78e1ca7f-5c33-49ca-8563-cb1b561989e3', 'title': 'Instalación · CASE-2026-0068', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0068', 'program': 'TECH Clean California', 'expected': '0.00', 'collected': '0.00', 'costs': '0.00', 'cost_breakdown': {'ma"
+  },
+  {
+   "check": "Después de retirar se puede volver a cobrar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Solo cuenta el cobro vivo (6500.00)",
+   "ok": true,
+   "dato": "{'project_id': '78e1ca7f-5c33-49ca-8563-cb1b561989e3', 'title': 'Instalación · CASE-2026-0068', 'status': 'completed', 'completed_date': '2026-11-09', 'case_number': 'CASE-2026-0068', 'program': 'TECH Clean California', 'expected': '6500.00', 'collected': '0.00', 'costs': '0.00', 'cost_breakdown': {"
+  }
+ ],
+ "COB-03 Rentabilidad: lo que no debe contar": [
+  {
+   "check": "Visita «opened» en 804 QA 1110042657 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Bodega entrega la salida",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Solo cuenta lo entregado: material 1.000 (1000.00)",
+   "ok": true,
+   "dato": "{'materials': '1000.00', 'equipment': '0.00', 'labor': '0.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '0.00'}"
+  },
+  {
+   "check": "Vuelve 1 unidad a bodega (devolución)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La devolución descuenta: material 750 (750.00)",
+   "ok": true,
+   "dato": "{'materials': '750.00', 'equipment': '0.00', 'labor': '0.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '0.00'}"
+  },
+  {
+   "check": "No se devuelve más de lo que se entregó a la obra",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Gasto de 75 sin aprobar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gasto de 90 que se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gasto de 12,35 aprobado (centavos)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gasto de 500 aprobado de OTRA obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Gastos de campo: solo el aprobado de esta obra, 12,35 (12.35)",
+   "ok": true,
+   "dato": "{'materials': '750.00', 'equipment': '0.00', 'labor': '0.00', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '12.35'}"
+  },
+  {
+   "check": "El técnico no se aprueba su propio gasto",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Gasto negativo se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "90 min aprobados × 45 = 67,50 de mano de obra (67.50)",
+   "ok": true,
+   "dato": "{'materials': '750.00', 'equipment': '0.00', 'labor': '67.50', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '12.35'}"
+  },
+  {
+   "check": "Factura de proveedor: equipo 1.000 a esta obra + 100 de impuesto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Otra factura de 300 a esta obra, que luego se anula",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se anula la factura equivocada",
+   "ok": true,
+   "dato": "200 {\"id\":\"8acad5f6-e301-4359-b6cc-8af9fa80eb4d\",\"supplier_id\":\"a133bf4f-71e8-434d-b30d-dca3ce21ba62\",\"supplier_name\":\"QA Proveedor rentabilidad 111004265"
+  },
+  {
+   "check": "Equipo 1.100 (con su impuesto) y la anulada no cuenta (1100.00)",
+   "ok": true,
+   "dato": "{'materials': '750.00', 'equipment': '1100.00', 'labor': '67.50', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '12.35'}"
+  },
+  {
+   "check": "Costos totales = 1929.85 (1929.85)",
+   "ok": true,
+   "dato": "{'project_id': '511c2e1b-f55c-4f47-a774-0aeaf135f551', 'title': 'Instalación · CASE-2026-0069', 'status': 'scheduled', 'completed_date': None, 'case_number': 'CASE-2026-0069', 'program': 'TECH Clean California', 'expected': '0.00', 'collected': '0.00', 'costs': '1929.85', 'cost_breakdown': {'materia"
+  },
+  {
+   "check": "La suma del desglose da el total (1929.85)",
+   "ok": true,
+   "dato": "{'materials': '750.00', 'equipment': '1100.00', 'labor': '67.50', 'contractor': '0.00', 'permit': '0.00', 'services': '0.00', 'other': '0.00', 'sales_rep': '0.00', 'consumables': '0.00', 'field_expenses': '12.35'}"
+  }
+ ],
+ "COB-04 Trabajo particular: cotización, factura y pagos": [
+  {
+   "check": "Cotización con dos opciones",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se acepta una cotización en borrador (sin enviar)",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Enviar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Opción que no existe se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El cliente acepta la Premium",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Factura de la opción elegida: 300 + 199,99 = 499,99 (499.99)",
+   "ok": true,
+   "dato": "499.99"
+  },
+  {
+   "check": "Aceptar dos veces se bloquea",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Nació la obra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se paga una factura en borrador",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Emitir la factura",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Anticipo de 200",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Saldo 299,99 (299.99)",
+   "ok": true,
+   "dato": "299.99"
+  },
+  {
+   "check": "Un pago que supera el saldo se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El pago supera el saldo de la factura (USD 299.99).\",\"code\":\"payment_exceeds_balance\",\"request_id\":\"98745ae8-"
+  },
+  {
+   "check": "Paga el saldo exacto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda pagada con saldo 0 (0.0, paid)",
+   "ok": true,
+   "dato": "0.0"
+  },
+  {
+   "check": "No se anula una factura con pagos",
+   "ok": true,
+   "dato": "409 {\"detail\":\"No se puede anular una factura que tiene pagos registrados.\",\"code\":\"invoice_has_payments\",\"request_id\":\"a317"
+  },
+  {
+   "check": "Rentabilidad del particular: esperado y cobrado 499,99 (499.99 / 499.99)",
+   "ok": true,
+   "dato": "{'project_id': '0939655e-78ff-4d94-b787-b0b8d0d726b5', 'title': 'QA reparación', 'status': 'planning', 'completed_date': None, 'case_number': None, 'program': None, 'expected': '499.99', 'collected': '499.99', 'costs': '0.00', 'cost_breakdown': {'materials': '0.00', 'equipment': '0.00', 'labor': '0."
+  }
+ ],
+ "COB-05 Contabilidad cuadra": [
+  {
+   "check": "Balance de comprobación cuadrado (167988.59 = 167988.59)",
+   "ok": true,
+   "dato": "{'as_of': '2026-11-09', 'rows': [{'account_id': '5bd7e591-fe9e-4ee3-be71-93ee092efeb3', 'code': '1000', 'name': 'Banco operativo', 'account_type': 'Activo', 'debit': '90499.97', 'credit': '0.00'}, {'a"
+  }
+ ]
+}

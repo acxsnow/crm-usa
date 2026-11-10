@@ -65,28 +65,35 @@ def _category_of(item_category: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 async def warehouse_costs(db: AsyncSession, organization_id, project_ids: set) -> dict:
-    """{project_id: {categoría: Decimal}} de lo entregado a cada obra.
+    """{project_id: {categoría: Decimal}} de lo entregado a cada obra, menos
+    lo que volvió a bodega.
 
     Se valora a costo del catálogo —el que quedó guardado en el movimiento al
     entregar— y no al precio de venta: la obra se cuesta a lo que costó el
     material, no a lo que se le factura al cliente. Si el movimiento no guardó
     costo (la entrega de una orden no lo escribe), se cae al costo vigente del
     artículo en el catálogo: valorar en cero dejaría al material como gratis.
+
+    La devolución resta con la misma regla que su asiento contable
+    (`accounting/posting.py`): sin restarla, el material que sobró o el de una
+    obra cancelada seguía cargado a la obra aunque ya estuviera otra vez en
+    bodega (QA de cobro y rentabilidad, 9 nov 2026).
     """
     costos: dict = {pid: {c: ZERO for c in (BudgetCategory.MATERIALS, BudgetCategory.EQUIPMENT)}
                     for pid in project_ids}
     if not project_ids:
         return costos
     filas = (await db.execute(
-        select(WarehouseMovement.project_id, WarehouseItem.category, WarehouseMovement.quantity,
-               WarehouseMovement.unit_cost, WarehouseItem.unit_cost)
+        select(WarehouseMovement.project_id, WarehouseMovement.movement_type, WarehouseItem.category,
+               WarehouseMovement.quantity, WarehouseMovement.unit_cost, WarehouseItem.unit_cost)
         .join(WarehouseItem, WarehouseItem.id == WarehouseMovement.item_id)
         .where(WarehouseMovement.organization_id == organization_id,
                WarehouseMovement.project_id.in_(project_ids),
-               WarehouseMovement.movement_type == "salida"))).all()
-    for project_id, item_category, quantity, unit_cost, catalog_cost in filas:
+               WarehouseMovement.movement_type.in_(("salida", "devolucion"))))).all()
+    for project_id, tipo, item_category, quantity, unit_cost, catalog_cost in filas:
         costo_unitario = to_money(unit_cost) if unit_cost is not None else to_money(catalog_cost or ZERO)
-        costos[project_id][_category_of(item_category)] += to_money(costo_unitario * abs(Decimal(str(quantity))))
+        valor = to_money(costo_unitario * abs(Decimal(str(quantity))))
+        costos[project_id][_category_of(item_category)] += valor if tipo == "salida" else -valor
     return costos
 
 

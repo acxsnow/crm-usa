@@ -420,3 +420,30 @@ async def test_el_estado_dice_cuando_se_libero_la_orden_y_si_fue_tras_una_visita
     await _liberar(app_client, obra["oficina"], pid, obra["tecnico_id"])
     estado = (await app_client.get(f"{API}/projects/{pid}/visit-status", headers=obra["oficina"])).json()
     assert estado["last_release"]["after_failed_visit"] is True
+
+
+async def test_lo_que_vuelve_a_bodega_sale_del_costo_de_la_obra(app_client, db, seeded_org, login, obra,
+                                                                active_admin_user):
+    """QA de cobro y rentabilidad (9 nov 2026): la devolución no se restaba y la
+    obra seguía cargando el material que ya estaba otra vez en bodega."""
+    from decimal import Decimal
+
+    from app.modules.warehouse.costing import project_actual_costs
+
+    admin = await login(active_admin_user.email)
+    pid = obra["project"].id
+    m = await _material_entregado(app_client, admin, obra["oficina"], obra["tecnico"], pid)
+    oid = m["orden"]["id"]
+    await app_client.post(f"{API}/warehouse/releases/{oid}/approve", headers=obra["oficina"])
+    await app_client.post(f"{API}/warehouse/releases/{oid}/deliver", headers=obra["oficina"])
+    org = seeded_org["org"].id
+    assert (await project_actual_costs(db, org, {pid}))[pid]["materials"] == Decimal("32.50")  # 10 ft × 3,25
+
+    r = await app_client.post(f"{API}/warehouse/movements", json={
+        "item_id": m["item"]["id"], "movement_type": "devolucion", "quantity": "4", "project_id": str(pid)},
+        headers=admin)
+    assert r.status_code == 201, r.text
+    assert (await project_actual_costs(db, org, {pid}))[pid]["materials"] == Decimal("19.50")  # 6 ft × 3,25
+    fila = (await app_client.get(f"{API}/finance/profitability", params={"project_id": str(pid)},
+                                 headers=admin)).json()["rows"][0]
+    assert Decimal(str(fila["cost_breakdown"]["materials"])) == Decimal("19.50")
