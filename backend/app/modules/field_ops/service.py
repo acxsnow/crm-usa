@@ -18,6 +18,7 @@ from app.modules.field_ops.models import (
     InstalledEquipment,
     Project,
     ProjectChecklistItem,
+    ProjectStatus,
     Task,
     TaskStatus,
 )
@@ -252,8 +253,13 @@ async def upload_evidence(
     project_result = await db.execute(
         select(Project).where(Project.id == project_id, Project.organization_id == organization_id)
     )
-    if not project_result.scalar_one_or_none():
+    proyecto = project_result.scalar_one_or_none()
+    if not proyecto:
         raise NotFoundError("El proyecto no existe.", code="project_not_found")
+    # Con la instalación cerrada todavía se sube evidencia (el permiso cerrado
+    # para cobrar); con la obra cancelada no (QA de campo, 10 nov 2026).
+    if proyecto.status == ProjectStatus.cancelled:
+        raise ConflictError("La obra está cancelada; ya no se registra nada en ella.", code="project_cancelled")
 
     mime_type = (file.content_type or "").lower()
     if mime_type not in ALLOWED_EVIDENCE_MIME_TYPES:

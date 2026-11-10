@@ -447,3 +447,16 @@ async def test_lo_que_vuelve_a_bodega_sale_del_costo_de_la_obra(app_client, db, 
     fila = (await app_client.get(f"{API}/finance/profitability", params={"project_id": str(pid)},
                                  headers=admin)).json()["rows"][0]
     assert Decimal(str(fila["cost_breakdown"]["materials"])) == Decimal("19.50")
+
+
+async def test_en_una_obra_cancelada_no_se_suben_evidencias(app_client, db, seeded_org, login, obra):
+    """QA de campo (10 nov 2026): la obra cancelada seguía aceptando fotos."""
+    from tests.field_helpers import jpeg_bytes
+
+    pid = obra["project"].id
+    r = await app_client.post(f"{API}/projects/{pid}/cancel", json={"reason": "Cliente desistió"},
+                              headers=obra["oficina"])
+    assert r.status_code == 200, r.text
+    r = await app_client.post(f"{API}/projects/{pid}/evidence", data={"category": "additional_photo"},
+                              files={"file": ("x.jpg", jpeg_bytes(), "image/jpeg")}, headers=obra["tecnico"])
+    assert (r.status_code, r.json()["code"]) == (409, "project_cancelled")

@@ -520,13 +520,16 @@ def flujo_cobro(adm: Client, conta: Client, admin: Client, pid: str, case_id: st
             "reason": "QA: falta la firma del cliente en el formulario", "category": "documentary"}), 200)
         expect("Se vuelve a radicar", adm.post(f"/claims/{claim['id']}/submit", json={"portal_reference": f"QA-R2-{RUN}"}), 200)
     monto = float(claim.get("amount") or claim.get("expected_amount") or 0) or 1000
-    expect("Administración NO registra pagos (Contabilidad sí)", adm.post(f"/claims/{claim['id']}/payment",
-                                                                         json={"amount": monto, "paid_on": HOY.isoformat()}), 403, 200)
-    pagado = conta.post(f"/claims/{claim['id']}/payment", json={"amount": monto, "paid_on": HOY.isoformat(),
-                                                               "reference": f"QA-CHK-{RUN}"})
-    if pagado.status_code != 200 and "ya" in pagado.text.lower():
-        pagado = httpx.Response(200, json={})
-    expect("Contabilidad registra el pago", pagado, 200)
+    # Desde el 4 nov 2026 Administración tiene los permisos de Contabilidad
+    # (pedido del cliente): registra el pago ella o, si no lo tiene, Contabilidad.
+    expect("El vendedor no registra pagos", Client("vendedor").post(f"/claims/{claim['id']}/payment",
+                                                   json={"amount": monto, "paid_on": HOY.isoformat()}), 403)
+    pagado = adm.post(f"/claims/{claim['id']}/payment", json={"amount": monto, "paid_on": HOY.isoformat(),
+                                                             "reference": f"QA-CHK-{RUN}"})
+    if pagado.status_code == 403:
+        pagado = conta.post(f"/claims/{claim['id']}/payment", json={"amount": monto, "paid_on": HOY.isoformat(),
+                                                                   "reference": f"QA-CHK-{RUN}"})
+    expect("Administración o Contabilidad registra el pago", pagado, 200)
     case = admin.get(f"/cases/{case_id}").json()
     check("El expediente quedó «Pagado»", case["stage_code"] == "paid", case["stage_code"])
     if cerrar:
@@ -1328,17 +1331,20 @@ def flujo_turnos(c: dict) -> None:
           json.dumps(r2)[:200])
     check("La primera vez entró bien", [x["status"] for x in r1.get("results", [])] == ["ok", "ok"], json.dumps(r1)[:200])
     offline = sql(f"SELECT offline FROM attendance_events WHERE client_event_id = 'qa-{RUN}-off1'")
-    check("La marca sin señal queda señalada (hora del teléfono)", offline == "t", offline)
+    check("La marca sin señal queda señalada (hora del teléfono)", offline in ("t", "True"), offline)
 
     expect("Contabilidad ve el panel", conta.get("/attendance/dashboard", params={"date_from": dia, "date_to": dia}), 200)
-    vivo = expect("Gerencia ve el tablero de hoy", ger.get("/attendance/live"), 200) or []
+    vivo = expect("Administración ve el tablero de hoy", adm.get("/attendance/live"), 200) or []
+    # Gerencia ve el tablero sin ubicaciones desde el 1 nov 2026 (Don Aldo).
+    expect("Gerencia ve el tablero de hoy", ger.get("/attendance/live"), 200)
     fila = next((f for f in vivo if f["user_id"] == tec.me["id"]), {})
     check("El tablero separa turno abierto y ubicación con su antigüedad",
           fila.get("entry_status") == "open" and (fila.get("location") or {}).get("age_minutes") is not None, json.dumps(fila)[:200])
     sin_ubic = next((f for f in conta.get("/attendance/live").json() if f["user_id"] == tec.me["id"]), {})
     check("Contabilidad no ve la ubicación", sin_ubic.get("location") is None)
     expect("El vendedor no ve el panel", v.get("/attendance/dashboard", params={"date_from": dia, "date_to": dia}), 403)
-    gente = expect("Gerencia ve el mapa del personal", ger.get("/operations-map/people"), 200) or []
+    expect("Gerencia no ve el mapa del personal (Don Aldo, 1 nov 2026)", ger.get("/operations-map/people"), 403)
+    gente = expect("Administración ve el mapa del personal", adm.get("/operations-map/people"), 200) or []
     check("El técnico aparece en el mapa", any(g["user_id"] == tec.me["id"] for g in gente))
     mapa = expect("Administración ve las obras en el mapa", adm.get("/operations-map/projects"), 200) or {}
     check("El mapa separa obras ubicadas y sin ubicar", {"projects", "unlocated"} <= set(mapa))

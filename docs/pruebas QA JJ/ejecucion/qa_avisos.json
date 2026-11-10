@@ -1,0 +1,118 @@
+{
+ "AVI-A1 Avisos personales": [
+  {
+   "check": "Nadie marca como leído el aviso de otro",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización tampoco",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "La campana del técnico solo trae sus avisos",
+   "ok": true,
+   "dato": "74"
+  },
+  {
+   "check": "El técnico no ve las entregas de todos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El vendedor no cambia plantillas",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Plantilla de un evento que no existe (404)",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "AVI-A2 Campañas": [
+  {
+   "check": "El técnico no crea campañas",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Campaña sin mensaje se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Canal inventado se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Campaña de prueba por SMS",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Otra organización no ve la campaña",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización no la lanza",
+   "ok": false,
+   "dato": "422"
+  },
+  {
+   "check": "La prueba no se manda a un número cualquiera",
+   "ok": true,
+   "dato": "400 {\"detail\":\"La prueba solo va a tu celular registrado en Notificaciones → «Cómo me avisan».\",\"code\":\"test_phone_not_own\","
+  },
+  {
+   "check": "La audiencia solo cuenta a quien dio permiso de mercadeo ({'summary': {'total': 61, 'with_consent': 0, 'without_consent': 60, 'opted_out':)",
+   "ok": true,
+   "dato": "{'summary': {'total': 61, 'with_consent': 0, 'without_consent': 60, 'opted_out': 0, 'no_address': 1}, 'email_summary': {'total': 61, 'with_consent': 0"
+  },
+  {
+   "check": "Importar contactos con un archivo basura no tumba nada",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Automatización con un disparador inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "AVI-A3 Webhooks y bajas": [
+  {
+   "check": "El webhook de Masiv sin su token no hace nada",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Con un token inventado tampoco",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Un evento de Stripe con firma falsa se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un evento de Plaid con verificación falsa se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un enlace de baja inventado no existe",
+   "ok": false,
+   "dato": "200"
+  },
+  {
+   "check": "Ni da de baja a nadie",
+   "ok": true,
+   "dato": "404"
+  }
+ ]
+}

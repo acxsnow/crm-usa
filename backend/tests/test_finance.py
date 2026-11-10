@@ -342,6 +342,10 @@ async def test_reports_and_csv(app_client, sesion):
         csv_ = await app_client.get(f"{API}/reports/{kind}/csv", headers=(await sesion("gerencia")))
         assert csv_.status_code == 200 and csv_.text.startswith("Reporte")
     assert (await app_client.get(f"{API}/reports/inventado", headers=(await sesion("gerencia")))).status_code == 404
+    # Fechas al revés: antes salía vacío como si no hubiera nada (QA de finanzas, 10 nov 2026).
+    r = await app_client.get(f"{API}/reports/finance", params={"date_from": "2026-11-10", "date_to": "2026-10-01"},
+                             headers=(await sesion("gerencia")))
+    assert (r.status_code, r.json()["code"]) == (400, "report_range_inverted")
     assert (await app_client.get(f"{API}/reports/commercial", headers=(await sesion("tecnico")))).status_code == 403
 
 

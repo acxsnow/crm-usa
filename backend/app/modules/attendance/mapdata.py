@@ -21,7 +21,7 @@ from app.modules.field_ops.models import Project, ProjectStatus
 from app.modules.users.models import User
 from app.shared.audit import record_audit_event
 from app.shared.datetime_utils import as_utc
-from app.shared.errors import InvalidInputError
+from app.shared.errors import InvalidInputError, NotFoundError
 
 MAX_PROJECTS = 500
 
@@ -209,6 +209,11 @@ async def purge_old_locations(db: AsyncSession, organization_id: uuid.UUID | Non
 async def purge_user_locations(db: AsyncSession, *, organization_id: uuid.UUID, actor: User,
                                user_id: uuid.UUID) -> int:
     """Borrado anticipado de las coordenadas de una persona (queda en auditoría)."""
+    # Con el id de alguien de otra organización no se borraba nada, pero
+    # respondía 200 y dejaba ese id en la auditoría (QA de turnos, 10 nov 2026).
+    if (await db.execute(select(User.id).where(User.id == user_id,
+                                               User.organization_id == organization_id))).first() is None:
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
     r = await db.execute(update(AttendanceEvent).where(
         AttendanceEvent.organization_id == organization_id, AttendanceEvent.user_id == user_id,
         AttendanceEvent.location_status == "ok").values(

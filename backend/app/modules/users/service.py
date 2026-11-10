@@ -149,6 +149,15 @@ async def set_user_active_state(
         user.status = UserStatus.active
         action = "users.activated"
     else:
+        # Desactivarse a sí mismo o al único Administrador activo dejaba a la
+        # organización sin quien la administre (QA de acceso, 10 nov 2026).
+        if user.id == actor.id:
+            raise ConflictError("No puedes desactivarte a ti mismo. Pídeselo a otro Administrador.",
+                                code="cannot_deactivate_self")
+        if user.status == UserStatus.active and await _is_last_active_admin(db, organization_id, user.id):
+            raise ConflictError(
+                "Es el único administrador activo. Asigna el rol de Administrador a otra persona "
+                "antes de desactivarlo.", code="last_admin")
         before = user.status
         user.status = UserStatus.inactive
         action = "users.deactivated"
@@ -351,6 +360,22 @@ def _require_exactly_one_role(codes: list[str]) -> None:
         )
 
 
+async def _is_last_active_admin(db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    """Si `user_id` es Administrador y no queda otro Administrador activo."""
+    es_admin = (await db.execute(
+        select(func.count(UserRole.id)).join(Role, Role.id == UserRole.role_id)
+        .where(UserRole.user_id == user_id, Role.code == "organization_admin"))).scalar_one()
+    if not es_admin:
+        return False
+    otros = (await db.execute(
+        select(func.count(UserRole.id))
+        .join(Role, Role.id == UserRole.role_id)
+        .join(User, User.id == UserRole.user_id)
+        .where(Role.organization_id == organization_id, Role.code == "organization_admin",
+               User.status == UserStatus.active, User.id != user_id))).scalar_one()
+    return not otros
+
+
 async def set_user_roles(
     db: AsyncSession,
     *,
@@ -378,20 +403,7 @@ async def set_user_roles(
     before = sorted(ur.role.code for ur in user.roles)
 
     if "organization_admin" in before and "organization_admin" not in {r.code for r in roles}:
-        remaining = (
-            await db.execute(
-                select(func.count(UserRole.id))
-                .join(Role, Role.id == UserRole.role_id)
-                .join(User, User.id == UserRole.user_id)
-                .where(
-                    Role.organization_id == organization_id,
-                    Role.code == "organization_admin",
-                    User.status == UserStatus.active,
-                    User.id != user.id,
-                )
-            )
-        ).scalar_one()
-        if not remaining:
+        if await _is_last_active_admin(db, organization_id, user.id):
             raise ConflictError(
                 "Es el único administrador activo. Asigna el rol de "
                 "Administrador a otra persona antes de quitárselo.",

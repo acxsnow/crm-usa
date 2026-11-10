@@ -1,0 +1,247 @@
+{
+ "": [
+  {
+   "check": "Requisitos de cobro de TECH",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-A1 Catálogo y movimientos": [
+  {
+   "check": "Costo negativo se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Artículo sin nombre se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Artículo filtro",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Entrada con cantidad negativa se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Entrada con cantidad cero se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Entrada con cantidad con texto se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Entrada con cantidad gigante se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una salida a mano, sin orden, se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Trasladar más de lo que hay (o a la misma bodega) se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no mete existencias",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Otra organización no ve el artículo",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización no le mueve existencias",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "El técnico no ve el costo de los artículos",
+   "ok": true,
+   "dato": "{'id': '700283e8-a6b6-46fa-bc61-6cb4edc5c4e2', 'name': 'QA 1110060732 filtro 77078', 'sku': None, 'brand': None, 'manufacturer_part': None, 'category'"
+  }
+ ],
+ "BOD-A2 Salidas a obra": [
+  {
+   "check": "Visita «opened» en 1201 QA 1110060732 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Una salida con cantidad negativa se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Otro técnico no pide material para una obra ajena",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Tito pide 8 filtros (hay 5)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "La envía a autorizar",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no autoriza su propia salida",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El vendedor no autoriza salidas",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "No se entrega sin autorizar",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Administración la autoriza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Tres entregas a la vez: solo una pasa ([400, 400, 200])",
+   "ok": true,
+   "dato": "[400, 400, 200]"
+  },
+  {
+   "check": "La existencia nunca queda negativa (antes 5.00, después 0.00)",
+   "ok": true,
+   "dato": "0.00"
+  },
+  {
+   "check": "Entregar de nuevo una salida ya entregada se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "No se anula una salida ya entregada",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "BOD-A3 Seriales": [
+  {
+   "check": "Artículo condensadora",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El mismo serial dos veces en una entrada se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Dos unidades con un solo serial se rechazan",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Entrada de 1 con su serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Un serial que ya está en bodega no entra otra vez",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "BOD-A4 Costos anotados y presupuesto": [
+  {
+   "check": "Un costo anotado negativo se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no anota costos internos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Otra organización no anota costos en nuestra obra",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Un cobro adicional negativo se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico anota 40 en efectivo (201)",
+   "ok": true,
+   "dato": "201"
+  },
+  {
+   "check": "El técnico no marca como recibido su propio efectivo",
+   "ok": true,
+   "dato": "403"
+  }
+ ]
+}

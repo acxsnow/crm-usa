@@ -1,0 +1,231 @@
+{
+ "ACC-01 Ingreso": [
+  {
+   "check": "Clave equivocada → 401 sin decir si el correo existe",
+   "ok": true,
+   "dato": "401"
+  },
+  {
+   "check": "Correo que no existe → la misma respuesta",
+   "ok": true,
+   "dato": "El correo o la contraseña no son correctos. / El correo o la contraseña no son correctos."
+  },
+  {
+   "check": "Ingreso con datos raros ({}…) no entra ni da 500",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Ingreso con datos raros ({'email': 'x'}…) no entra ni da 500",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Ingreso con datos raros ({'email': \"' OR 1=1 --\", 'pass…) no entra ni da 500",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Ingreso con datos raros ({'email': 'aaaaaaaaaaaaaaaaaaa…) no entra ni da 500",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Muchos intentos seguidos se frenan (límite) [401, 401, 401, 401, 401, 429, 429, 429, 429, 429, 429, 429]",
+   "ok": true,
+   "dato": "[401, 401, 401, 401, 401, 429, 429, 429, 429, 429, 429, 429]"
+  }
+ ],
+ "ACC-02 Sesión": [
+  {
+   "check": "Entra y recibe la sesión larga en cookie (no en el cuerpo)",
+   "ok": true,
+   "dato": "['crm_refresh']"
+  },
+  {
+   "check": "Renueva la sesión con la cookie",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "Después de salir, la cookie ya no renueva",
+   "ok": true,
+   "dato": "401"
+  },
+  {
+   "check": "Un token falso (alg none) no entra",
+   "ok": true,
+   "dato": "401"
+  },
+  {
+   "check": "Un token alterado no entra",
+   "ok": true,
+   "dato": "401"
+  }
+ ],
+ "ACC-03 Nadie se da más permisos de los que tiene": [
+  {
+   "check": "Mi perfil solo cambia el nombre: ni correo, ni rol, ni superadmin",
+   "ok": true,
+   "dato": "{'id': 'da49ad57-c1b3-4887-9481-b331610b7c68', 'email': 'vendedor@demo-org.com', 'full_name': 'Vicky Vendedora', 'organization_id': '0c940083-4af9-493a-8ecf-a272a3e669df', 'roles': ['salesperson'], 'r"
+  },
+  {
+   "check": "Administración no se pone el rol de Administrador",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El vendedor no crea usuarios",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El vendedor no crea roles",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Administración y el vendedor ven la auditoría solo si tienen el permiso (200)",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El vendedor no cambia la organización",
+   "ok": true,
+   "dato": "403"
+  }
+ ],
+ "ACC-04 Usuarios: crear, desactivar y lo que no se debe": [
+  {
+   "check": "Administrador invita a un técnico nuevo",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El mismo correo con mayúsculas no crea un duplicado",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Correo inválido se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Rol que no existe se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El Administrador no se desactiva a sí mismo",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "El último Administrador no se quita su propio rol",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Se desactiva a Carlos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Su sesión abierta deja de servir al desactivarlo",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Desactivado, ya no puede entrar",
+   "ok": true,
+   "dato": "401"
+  },
+  {
+   "check": "Se reactiva a Carlos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Reactivado vuelve a entrar",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "ACC-05 Roles": [
+  {
+   "check": "No se borra el rol de Administrador",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "No se borra un rol del sistema en uso",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Un rol con un permiso inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Rol propio con dos permisos reales",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El mismo código de rol no se repite",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "ACC-06 Otra organización no toca nuestro equipo": [
+  {
+   "check": "Otra organización: GET profile → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización: PATCH da49ad57-c1b3-4887-9481-b331610b7c68 → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización: PATCH roles → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización: POST deactivate → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "En su lista de usuarios no aparece nadie nuestro",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Su auditoría no muestra lo nuestro",
+   "ok": true,
+   "dato": "200"
+  }
+ ],
+ "ACC-07 Restablecer contraseña e invitaciones": [
+  {
+   "check": "Pedir el enlace responde igual exista o no el correo",
+   "ok": true,
+   "dato": "200 200"
+  },
+  {
+   "check": "Un token de restablecer inventado no sirve",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una invitación inventada no sirve",
+   "ok": true,
+   "dato": "400"
+  }
+ ]
+}

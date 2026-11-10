@@ -1,0 +1,35 @@
+{
+ "BAR-0 Inventario": [
+  {
+   "check": "Rutas de la API recorridas: 476",
+   "ok": true,
+   "dato": "476"
+  }
+ ],
+ "BAR-1 Ninguna entrada tumba el servidor (500)": [
+  {
+   "check": "Ninguna de 11830 llamadas da 500 ({4: 11108, 2: 698, 5: 24})",
+   "ok": false,
+   "dato": "[[\"POST\", \"/api/v1/bank-feeds/link-token\", \"admin\", \"None\", \"{\\\"detail\\\":\\\"La banca conectada no está configurada.\\\",\\\"code\\\":\\\"plaid_not_configured\\\",\\\"request_id\\\":\\\"f794b2df-e27f-4b0d-aabe-641dadaadf33\\\"}\"], [\"POST\", \"/api/v1/bank-feeds/link-token\", \"admin\", \"{}\", \"{\\\"detail\\\":\\\"La banca conectad"
+  }
+ ],
+ "BAR-2 Sin sesión, solo lo público responde": [
+  {
+   "check": "Todas las rutas privadas piden sesión (476 revisadas)",
+   "ok": false,
+   "dato": "[[\"POST\", \"/api/v1/auth/password-reset/request\", 422], [\"POST\", \"/api/v1/auth/password-reset/confirm\", 422]]"
+  }
+ ],
+ "BAR-3 Otra organización no lee nuestros registros": [
+  {
+   "check": "Ids reales de nuestra organización para 19 tipos de registro",
+   "ok": true,
+   "dato": "['account_id', 'case_id', 'claim_id', 'customer_id', 'entry_id', 'evidence_id', 'expense_id', 'invoice_id', 'item_id', 'location_id', 'permit_id', 'program_id', 'project_id', 'quote_id', 'shift_id', 'supplier_id', 'user_id', 'version_id', 'zone_id']"
+  },
+  {
+   "check": "Ningún registro nuestro le llega a otra organización (59 rutas con ids reales)",
+   "ok": true,
+   "dato": "[]"
+  }
+ ]
+}
