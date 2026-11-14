@@ -96,6 +96,19 @@ export function CaseFormPage() {
   // porque el servidor revisa lo guardado y no lo que hay en pantalla.
   const sinGuardar = new Set(pasos.filter((s) => s.fields.some((f) => sucio.has(f.key))).map((s) => s.code));
 
+  // La dirección ya se escribió al tocar la puerta (cliente, 11 nov 2026): si
+  // llega completa, el paso la muestra en una línea con «Cambiar» en vez de
+  // volver a pedir calle, ciudad, estado y ZIP.
+  const [editarDireccion, setEditarDireccion] = useState(false);
+  const camposDireccion = (pasos.find((s) => s.code === actual)?.fields ?? [])
+    .filter((f) => (f.binding ?? "").startsWith("case.address")).map((f) => f.key);
+  const obligatoriosDireccion = (pasos.find((s) => s.code === actual)?.fields ?? [])
+    .filter((f) => camposDireccion.includes(f.key) && f.requirement === "required").map((f) => f.key);
+  const direccionLista = !editarDireccion && obligatoriosDireccion.length > 0
+    && obligatoriosDireccion.every((k) => answers[k] !== undefined && answers[k] !== null && answers[k] !== "");
+  const direccionTexto = camposDireccion.map((k) => answers[k]).filter((v) => v !== undefined && v !== null && v !== "")
+    .join(", ");
+
   // La firma dibujada en el paso de autorización se guarda junto con el paso.
   const firmaPendiente = useRef<(() => Promise<unknown>) | null>(null);
   const registrarFirma = useCallback((f: (() => Promise<unknown>) | null) => { firmaPendiente.current = f; }, []);
@@ -239,8 +252,22 @@ export function CaseFormPage() {
                 editable={form.editable} defaultName={(answers["customer.full_name"] as string) ?? ""} coords={geo.coords}
                 onSigned={refrescar} onError={setError} registerPending={registrarFirma} />
             )}
-            <FormRenderer evaluation={esAutorizacion && form.terms ? { ...evaluacion, steps: evaluacion.steps.map((st) =>
-              st.code === actual ? { ...st, title: "Otros datos", fields: st.fields.filter((f) => !isAuthField(f)) } : st) } : evaluacion}
+            {direccionLista && (
+              <div className="sales-address-known" role="status">
+                <span><strong>Dirección de la visita:</strong> {direccionTexto}</span>
+                {form.editable && (
+                  <button type="button" className="acta-btn is-quiet" onClick={() => setEditarDireccion(true)}>Cambiar</button>
+                )}
+              </div>
+            )}
+            <FormRenderer evaluation={{ ...evaluacion, steps: evaluacion.steps.map((st) => {
+              if (st.code !== actual) return st;
+              let fields = st.fields;
+              if (esAutorizacion && form.terms) fields = fields.filter((f) => !isAuthField(f));
+              // La dirección de la visita se muestra arriba en una línea, no campo por campo.
+              if (direccionLista) fields = fields.filter((f) => !camposDireccion.includes(f.key));
+              return { ...st, fields, ...(esAutorizacion && form.terms ? { title: "Otros datos" } : {}) };
+            }) }}
               answers={answers} stepCode={actual} media={media} disabled={!form.editable}
               onChange={cambiar} />
             {form.editable && avisoFaltan === actual && faltanAqui.length > 0 && (

@@ -235,6 +235,16 @@ async def current_answers(db, case: Case) -> tuple[dict, dict]:
     respuestas: dict = {}
     for f in ultimos.values():
         respuestas.update(f.answers or {})
+    # La dirección ya se escribió al tocar la puerta: cuenta como respuesta y no
+    # se vuelve a pedir (cliente, 11 nov 2026). Solo donde no hay respuesta propia.
+    if case.program_version_id:
+        for paso in (await _definition(db, case))["steps"]:
+            for campo in paso["fields"]:
+                destino = campo.get("binding") or ""
+                if destino.startswith("case.") and respuestas.get(campo["key"]) in engine.EMPTY:
+                    valor = getattr(case, destino.removeprefix("case."), None)
+                    if valor not in (None, ""):
+                        respuestas[campo["key"]] = valor
     return respuestas, {code: f.submitted_at for code, f in ultimos.items()}
 
 

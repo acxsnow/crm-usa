@@ -151,7 +151,7 @@ def expect(name: str, r: httpx.Response, *codes: int) -> dict | list | None:
 
 PREFER = {"home.is_homeowner": "yes", "home.residence_type": "mobile_home", "internal.result": "preapproved",
           "tech.electrical_viability": "adequate", "tech.existing_hvac": "none", "tech.water_heater": "gas",
-          "tech.induction_cooktop": "no"}
+          "tech.induction_cooktop": "no", "tech.heating": "gas_furnace"}
 SKIP_TYPES = {"info", "system_datetime", "system_user", "signature", "terms_checkbox"}
 MEDIA = {"photo", "document", "video"}
 

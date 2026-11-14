@@ -1,0 +1,124 @@
+{
+ "FORM-11NOV": [
+  {
+   "check": "[pc] Visita creada",
+   "ok": true,
+   "dato": "{'status': 201, 'body': '{\"outcome\":\"created\",\"case\":{\"id\":\"8c771b64-5956-4f5d-879d-51bba2ca3e2a\",\"case_number\":\"CASE-2026-0095\",\"source\":\"visit\",\"stage_code\":\"new_prospect\",\"stage_label\":\"Nuevo prosp"
+  },
+  {
+   "check": "[pc] El vendedor puede elegir Eficiencia de Arizona",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El vendedor puede elegir TECH Clean California",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El vendedor puede elegir LADWP",
+   "ok": false,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El vendedor puede elegir GoZero",
+   "ok": false,
+   "dato": ""
+  },
+  {
+   "check": "[pc] La dirección de la visita sale en una línea, sin repetirla",
+   "ok": true,
+   "dato": "Dirección de la visita: 7131 QA Balboa Blvd, 123, Van Nuys, CA, 91406\nCambiar"
+  },
+  {
+   "check": "[pc] Vivienda: lo pedido por el cliente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Elegibilidad: lo pedido por el cliente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Amperaje con 50 A y 70 A",
+   "ok": true,
+   "dato": "['Elige…', '50 A', '70 A', '100 A', '125 A', '150 A', '200 A', 'Otro / no se sabe']"
+  },
+  {
+   "check": "[pc] Pregunta la calefacción",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Ya no pregunta el diagnóstico de viabilidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Visita creada",
+   "ok": true,
+   "dato": "{'status': 201, 'body': '{\"outcome\":\"created\",\"case\":{\"id\":\"f669aea0-ca2f-42a6-b175-ac8e2aa002f9\",\"case_number\":\"CASE-2026-0096\",\"source\":\"visit\",\"stage_code\":\"new_prospect\",\"stage_label\":\"Nuevo prosp"
+  },
+  {
+   "check": "[celular] El vendedor puede elegir Eficiencia de Arizona",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El vendedor puede elegir TECH Clean California",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El vendedor puede elegir LADWP",
+   "ok": false,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El vendedor puede elegir GoZero",
+   "ok": false,
+   "dato": ""
+  },
+  {
+   "check": "[celular] La dirección de la visita sale en una línea, sin repetirla",
+   "ok": true,
+   "dato": "Dirección de la visita: 3388 QA Balboa Blvd, 123, Van Nuys, CA, 91406\nCambiar"
+  },
+  {
+   "check": "[celular] Vivienda: lo pedido por el cliente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Elegibilidad: lo pedido por el cliente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Amperaje con 50 A y 70 A",
+   "ok": true,
+   "dato": "['Elige…', '50 A', '70 A', '100 A', '125 A', '150 A', '200 A', 'Otro / no se sabe']"
+  },
+  {
+   "check": "[celular] Pregunta la calefacción",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Ya no pregunta el diagnóstico de viabilidad",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ]
+}

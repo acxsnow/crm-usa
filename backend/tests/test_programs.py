@@ -47,7 +47,7 @@ async def _version_publicada(app_client, headers, program_id):
 async def test_defaults_install_arizona_and_tech_and_are_idempotent(app_client, active_admin_user):
     headers = await _admin(app_client)
     primero = await _instalar(app_client, headers)
-    assert primero["programs_created"] == ["AZ_EFFICIENCY", "TECH_CLEAN_CA"]
+    assert primero["programs_created"] == ["AZ_EFFICIENCY", "TECH_CLEAN_CA", "LADWP", "GOZERO"]
     assert primero["fields_created"] > 50
     segundo = await _instalar(app_client, headers)
     assert segundo == {"fields_created": 0, "programs_created": []}
@@ -327,7 +327,7 @@ def test_the_two_transitions_requested_by_billing_exist():
 
 async def test_install_defaults_can_run_from_the_service(db, seeded_org):
     r = await svc.install_defaults(db, organization_id=seeded_org["org"].id)
-    assert r["programs_created"] == ["AZ_EFFICIENCY", "TECH_CLEAN_CA"]
+    assert r["programs_created"] == ["AZ_EFFICIENCY", "TECH_CLEAN_CA", "LADWP", "GOZERO"]
 
 
 async def test_administration_configures_programs_and_assigns_salespeople(

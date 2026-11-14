@@ -44,7 +44,7 @@ CATALOG: list[tuple] = [
     ("home.is_homeowner", "¿Es propietario de la vivienda?", "single_select", "Vivienda", {"options": SI_NO}),
     ("home.residence_type", "Tipo de vivienda", "single_select", "Vivienda",
      {"options": _opts("single_family_home=Casa", "mobile_home=Casa móvil (mobile home)",
-                       "condominium=Condominio", "duplex=Dúplex")}),
+                       "condominium=Multifamiliar", "duplex=Dúplex")}),  # «Multifamiliar» (cliente, 11 nov 2026)
     ("home.unit_number", "Número de unidad o espacio", "text", "Vivienda", {"binding": "case.address_unit"}),
     ("home.bedrooms", "Número de habitaciones", "integer", "Vivienda", {"validation": {"min": 0, "max": 20}}),
     ("home.bathrooms", "Número de baños", "integer", "Vivienda", {"validation": {"min": 0, "max": 20}}),
@@ -74,10 +74,13 @@ CATALOG: list[tuple] = [
                        "nslp=National School Lunch Program (NSLP)", "snap=SNAP", "ssi=SSI",
                        "other_government_nonprofit=Programa gubernamental o sin ánimo de lucro acreditado",
                        "none=Ninguno de los anteriores")}),
-    ("eligibility.programs_tech", "Programas de beneficio del hogar (TECH Clean)", "multi_select", "Elegibilidad",
+    # Los programas de California comparten esta lista. 1040, W-2 y talones de
+    # cheque prueban los ingresos (cliente, 11 nov 2026).
+    ("eligibility.programs_tech", "Programas de beneficio del hogar (California)", "multi_select", "Elegibilidad",
      {"sensitive": True, "validation": {"exclusive": ["none"]},
       "options": _opts("care=CARE", "fera=FERA", "medi_cal=Medi-Cal", "calfresh=CalFresh (SNAP)", "wic=WIC",
-                       "calworks=CalWORKS", "ssi=SSI", "none=Ninguno")}),
+                       "calworks=CalWORKS", "ssi=SSI", "tax_1040=Taxes (1040)", "w2=W-2",
+                       "pay_stubs=Talones de cheque", "none=Ninguno")}),
     ("eligibility.other_program", "Otro programa o documento aceptado", "text", "Elegibilidad", {}),
     ("eligibility.benefit_document", "Documento que demuestra el beneficio", "document", "Elegibilidad",
      {"sensitive": True}),
@@ -92,6 +95,11 @@ CATALOG: list[tuple] = [
      {"options": SI_NO}),
     ("tech.water_heater", "Calentador de agua", "single_select", "Auditoría técnica",
      {"options": _opts("gas=De gas", "electric=Eléctrico", "none=No tiene")}),
+    # Lo que calienta la casa en el invierno (cliente, 11 nov 2026).
+    ("tech.heating", "Calefacción: ¿con qué se calienta la casa en el invierno?", "single_select",
+     "Auditoría técnica", {"options": _opts("gas_furnace=Furnace de gas", "electric_furnace=Furnace eléctrico",
+                                           "heat_pump=Bomba de calor", "space_heater=Calentador de pared o portátil",
+                                           "none=No tiene")}),
     ("tech.electrical_viability", "Diagnóstico de viabilidad eléctrica", "single_select", "Auditoría técnica",
      {"options": _opts("adequate=Adecuada", "needs_upgrade=Requiere adecuación", "not_viable=No viable")}),
     ("tech.garbage_disposal", "Triturador de basura (cantidad y ubicación)", "text", "Auditoría técnica", {}),
@@ -152,8 +160,8 @@ def _common_start(id_photo: str) -> list:
 # eléctrica, no el vendedor (cliente, 5 nov 2026).
 _TECH_AUDIT = ("technical", "Auditoría técnica", [
     ("tech.panel_amperage", R, None), ("tech.existing_hvac", R, None), ("home.bedrooms", R, None),
-    ("home.bathrooms", O, None), ("tech.induction_cooktop", R, None), ("tech.water_heater", R, None),
-    ("tech.access_notes", O, None),
+    ("home.bathrooms", O, None), ("tech.heating", R, None), ("tech.induction_cooktop", R, None),
+    ("tech.water_heater", R, None), ("tech.access_notes", O, None),
 ])
 # Las fotos del furnace y del HVAC las sube el técnico, y la del subpanel
 # reemplaza la del pedestal; título o decal, uno de los dos (cliente, 5 nov 2026).
@@ -170,6 +178,24 @@ _AUTH_END = [
         ("internal.salesperson", O, None), ("internal.result", R, None), ("internal.notes", O, None),
     ]),
 ]
+
+# Lo que prueba el beneficio o los ingresos con un documento (11 nov 2026: 1040, W-2 y talones).
+CA_CON_DOCUMENTO = ["care", "fera", "medi_cal", "calfresh", "wic", "calworks", "ssi", "tax_1040", "w2", "pay_stubs"]
+
+
+def _california_steps() -> list:
+    """El formulario de los programas de California (TECH, LADWP y GoZero)."""
+    return _common_start(O) + [
+        ("home", "Vivienda", [("home.is_homeowner", R, None), ("home.residence_type", R, None)]),
+        ("eligibility", "Elegibilidad", [
+            ("eligibility.programs_tech", R, None),
+            ("eligibility.benefit_document", C, {"field": "eligibility.programs_tech", "in": CA_CON_DOCUMENTO}),
+            ("eligibility.tax_return", C, {"field": "eligibility.programs_tech", "eq": "none"}),
+        ]),
+        _TECH_AUDIT,
+        _DOCUMENTS,
+    ] + _AUTH_END
+
 
 PROGRAMS: list[dict] = [
     {
@@ -216,16 +242,30 @@ PROGRAMS: list[dict] = [
         "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
                               "elegibilidad en TECH Clean California. (Texto provisional: pendiente del cliente.)",
         "terms_title": "Autorización y términos de TECH Clean California",
-        "steps": _common_start(O) + [
-            ("home", "Vivienda", [("home.is_homeowner", R, None), ("home.residence_type", R, None)]),
-            ("eligibility", "Elegibilidad", [
-                ("eligibility.programs_tech", R, None),
-                ("eligibility.benefit_document", C, {"field": "eligibility.programs_tech", "in": [
-                    "care", "fera", "medi_cal", "calfresh", "wic", "calworks", "ssi"]}),
-                ("eligibility.tax_return", C, {"field": "eligibility.programs_tech", "eq": "none"}),
-            ]),
-            _TECH_AUDIT,
-            _DOCUMENTS,
-        ] + _AUTH_END,
+        "steps": _california_steps(),
+    },
+    # LADWP y GoZero (cliente, 11 nov 2026): mismo formulario de California que
+    # TECH mientras el cliente no diga qué piden distinto. Se ajustan en pantalla.
+    {
+        "code": "LADWP",
+        "name": "LADWP",
+        "customer_facing_name": "LADWP",
+        "funder_name": "Los Angeles Department of Water and Power",
+        "invoice_entity": "Delta HVAC Service Inc.",
+        "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
+                              "elegibilidad en el programa de LADWP. (Texto provisional: pendiente del cliente.)",
+        "terms_title": "Autorización y términos del programa de LADWP",
+        "steps": _california_steps(),
+    },
+    {
+        "code": "GOZERO",
+        "name": "GoZero",
+        "customer_facing_name": "GoZero",
+        "funder_name": "GoZero",
+        "invoice_entity": "Delta HVAC Service Inc.",
+        "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
+                              "elegibilidad en el programa GoZero. (Texto provisional: pendiente del cliente.)",
+        "terms_title": "Autorización y términos del programa GoZero",
+        "steps": _california_steps(),
     },
 ]

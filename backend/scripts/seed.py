@@ -230,7 +230,7 @@ async def seed_demo_programs(db) -> None:
     from app.modules.programs.client_adjustments import apply
 
     ajustados = await apply(db, organization_id=org.id)
-    print(f"Ajustes del cliente (5 nov 2026): {ajustados or 'ya estaban'}.")
+    print(f"Ajustes del cliente al formulario: {ajustados or 'ya estaban'}.")
 
 
 async def main() -> None:

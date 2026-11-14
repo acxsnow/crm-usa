@@ -21,6 +21,10 @@ async def _como_antes(db, org_id):
     campos = {f.key: f for f in await service.list_fields(db, organization_id=org_id)}
     campos["tech.panel_amperage"].options = [o for o in campos["tech.panel_amperage"].options
                                              if o["value"] not in ("50", "70")]
+    campos["home.residence_type"].options = [{**o, "label": "Condominio" if o["value"] == "condominium" else o["label"]}
+                                             for o in campos["home.residence_type"].options]
+    campos["eligibility.programs_tech"].options = [o for o in campos["eligibility.programs_tech"].options
+                                                   if o["value"] not in ("tax_1040", "w2", "pay_stubs")]
     campos["internal.result"].options = [{"value": "preapproved", "label": "Preaprobado"},
                                          {"value": "pending", "label": "Pendiente"},
                                          {"value": "does_not_qualify", "label": "No califica"}]
@@ -39,6 +43,13 @@ async def _como_antes(db, org_id):
                                  "docs.mobile_home_title", "docs.mobile_home_decal")):
             db.add(WorkflowStepField(organization_id=org_id, step_id=pasos["documents"].id, field_id=campos[key].id,
                                      requirement="required", sort_order=10 + n))
+        # Antes del 11 nov: sin calefacción ni documentos de ingresos.
+        for c in pasos["technical"].fields:
+            if c.field_id == campos["tech.heating"].id:
+                await db.delete(c)
+        for c in pasos["eligibility"].fields:
+            if c.field_id == campos["eligibility.benefit_document"].id and code == "TECH_CLEAN_CA":
+                c.condition = {"field": "eligibility.programs_tech", "in": ["care", "fera", "ssi"]}
     await db.commit()
 
 
@@ -56,12 +67,21 @@ async def test_an_existing_org_gets_a_new_published_version_with_the_adjustments
         assert claves["customer.id_photo"]["requirement"] == ("optional" if code == "TECH_CLEAN_CA" else "required")
         assert not client_adjustments.QUITAR & set(claves)
         assert claves["docs.mobile_home_title_or_decal"]["requirement"] == "conditional"
+        assert claves["tech.heating"]["requirement"] == "required"
 
     campos = {f.key: f for f in (await db.execute(select(FieldDefinition).where(
         FieldDefinition.organization_id == org_id))).scalars().all()}
     assert [o["value"] for o in campos["tech.panel_amperage"].options][:2] == ["50", "70"]
     assert campos["internal.result"].options == [{"value": "preapproved", "label": "Completo"},
                                                  {"value": "pending", "label": "Pendiente de algo"}]
+    assert next(o["label"] for o in campos["home.residence_type"].options if o["value"] == "condominium") == "Multifamiliar"
+    assert {"tax_1040", "w2", "pay_stubs"} <= {o["value"] for o in campos["eligibility.programs_tech"].options}
+    _, tech = await _claves(db, org_id, "TECH_CLEAN_CA")
+    assert {"tax_1040", "w2", "pay_stubs"} <= set(tech["eligibility.benefit_document"]["condition"]["in"])
+    # LADWP y GoZero llegan con su formulario de California.
+    for code in ("LADWP", "GOZERO"):
+        _, claves = await _claves(db, org_id, code)
+        assert claves["customer.id_photo"]["requirement"] == "optional" and "tech.heating" in claves
 
     # Otra vez no hace nada: la versión ya lleva la marca.
     assert await client_adjustments.apply(db, organization_id=org_id) == []

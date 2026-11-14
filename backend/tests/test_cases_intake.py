@@ -75,7 +75,8 @@ async def _llenar_todo(app_client, headers, case_id):
     assert (await paso("eligibility", {"eligibility.programs_tech": ["care"],
                                        "eligibility.benefit_document": doc})).status_code == 200
     assert (await paso("technical", {"tech.panel_amperage": "200", "tech.existing_hvac": "none", "home.bedrooms": 2,
-                                     "tech.induction_cooktop": "no", "tech.water_heater": "gas"})).status_code == 200
+                                     "tech.induction_cooktop": "no", "tech.water_heater": "gas",
+                                     "tech.heating": "gas_furnace"})).status_code == 200
     docs = {}
     for key in ("docs.electric_bill", "docs.panel_photo", "docs.mobile_home_title_or_decal"):
         docs[key] = await _subir(app_client, headers, case_id, key)
@@ -437,3 +438,18 @@ async def test_the_id_photo_has_front_and_an_optional_back(app_client, db, seede
         assert "customer.id_photo_back" not in faltan
         docs = (await app_client.get(f"/api/v1/cases/{caso['id']}/documents", headers=headers)).json()
         assert {"customer.id_photo", "customer.id_photo_back"} <= {d["field_key"] for d in docs}
+
+
+async def test_the_address_from_the_visit_is_already_answered(app_client, db, seeded_org, active_salesperson_user):
+    """Cliente, 11 nov 2026: la dirección ya se escribió al tocar la puerta; el
+    formulario la trae como respondida y no la vuelve a pedir."""
+    await programs.install_defaults(db, organization_id=seeded_org["org"].id)
+    tech = next(p for p in await programs.list_programs(db, organization_id=seeded_org["org"].id)
+                if p.code == "TECH_CLEAN_CA")
+    headers = await headers_for(app_client, "vendedor@acme-demo.com")
+    caso = (await _abrir(app_client, headers, tech.id, address_street="77 Address Visit Rd"))["case"]
+    form = (await app_client.get(f"/api/v1/cases/{caso['id']}/form", headers=headers)).json()
+    assert form["answers"]["customer.address_street"] == "77 Address Visit Rd"
+    assert (form["answers"]["customer.address_city"], form["answers"]["customer.address_zip"]) == ("San Fernando", "91340")
+    faltan = {m["key"] for m in form["evaluation"]["missing"]}
+    assert not {"customer.address_street", "customer.address_city", "customer.address_zip"} & faltan
