@@ -222,15 +222,26 @@ async def seed_demo_programs(db) -> None:
     se puede correr sobre una base que ya los tenga."""
     from app.modules.programs.service import install_defaults
 
-    org = (await db.execute(select(Organization).where(Organization.name == "Demo Organization"))).scalar_one_or_none()
-    if org is None:
-        return
-    resultado = await install_defaults(db, organization_id=org.id)
-    print(f"Programas: {resultado['fields_created']} campos y {resultado['programs_created'] or 'ningún'} programa nuevos.")
     from app.modules.programs.client_adjustments import apply
 
-    ajustados = await apply(db, organization_id=org.id)
-    print(f"Ajustes del cliente al formulario: {ajustados or 'ya estaban'}.")
+    # A todas las organizaciones, no solo a la demo: la del cliente en producción
+    # también recibe los programas nuevos y los ajustes del formulario (14 nov 2026).
+    for org in (await db.execute(select(Organization).order_by(Organization.created_at))).scalars().all():
+        resultado = await install_defaults(db, organization_id=org.id)
+        ajustados = await apply(db, organization_id=org.id)
+        print(f"{org.name}: {resultado['fields_created']} campos, programas nuevos "
+              f"{resultado['programs_created'] or 'ninguno'}, ajustes del formulario {ajustados or 'ya estaban'}.")
+        # Catálogo de AC Pro y lista de 3 ton del cliente (antes solo los cargaba seed_qa).
+        from app.modules.warehouse import client_catalog
+
+        admin = (await db.execute(
+            select(User).join(UserRole, UserRole.user_id == User.id).join(Role, Role.id == UserRole.role_id)
+            .where(User.organization_id == org.id, User.status == UserStatus.active,
+                   Role.code == "organization_admin").order_by(User.created_at).limit(1))).scalar_one_or_none()
+        if admin is not None:
+            catalogo = await client_catalog.apply(db, organization_id=org.id, user=admin)
+            print(f"{org.name}: catálogo de AC Pro, {catalogo['items_created']} artículos nuevos"
+                  f"{', lista de 3 ton creada' if catalogo['kit_created'] else ''}.")
 
 
 async def main() -> None:
