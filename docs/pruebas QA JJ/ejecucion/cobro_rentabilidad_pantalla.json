@@ -1,0 +1,80 @@
+{
+ "COB-P1 Rentabilidad": [
+  {
+   "check": "[pc] La rentabilidad abre sin errores",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[celular] La rentabilidad abre sin errores",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  }
+ ],
+ "COB-P2 Obra - costo del trabajo y cobro": [
+  {
+   "check": "[pc] El paso de cobro muestra el cobro pagado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El costo del trabajo muestra 2.100 de costos (igual que la API)",
+   "ok": true,
+   "dato": "['0.00', '1200.00', '2100.00', '360.00', '4400.00', '45.00', '540.00', '6500.00']"
+  },
+  {
+   "check": "[pc] El costo del trabajo muestra el margen 4.400 (igual que la API)",
+   "ok": true,
+   "dato": "['0.00', '1200.00', '2100.00', '360.00', '4400.00', '45.00', '540.00', '6500.00']"
+  },
+  {
+   "check": "[celular] El paso de cobro muestra el cobro pagado",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El costo del trabajo muestra 2.100 de costos (igual que la API)",
+   "ok": true,
+   "dato": "['0.00', '1200.00', '2100.00', '360.00', '4400.00', '45.00', '540.00', '6500.00']"
+  },
+  {
+   "check": "[celular] El costo del trabajo muestra el margen 4.400 (igual que la API)",
+   "ok": true,
+   "dato": "['0.00', '1200.00', '2100.00', '360.00', '4400.00', '45.00', '540.00', '6500.00']"
+  }
+ ],
+ "COB-P3 Detalle del cobro": [
+  {
+   "check": "[pc] El detalle del cobro dice pagado y su monto",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] El detalle del cobro dice pagado y su monto",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "COB-P4 Tablero de cobros": [
+  {
+   "check": "[pc] El tablero de facturación abre sin errores",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] El tablero de facturación abre sin errores",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ]
+}

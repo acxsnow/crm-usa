@@ -1,0 +1,351 @@
+{
+ "": [
+  {
+   "check": "Requisitos de cobro de TECH",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "VEN-A1 Un vendedor no mira ni toca el expediente de otro": [
+  {
+   "check": "Visita «opened» en 901 QA 1110053934 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Expediente de Vicky con un archivo",
+   "ok": true,
+   "dato": "45aea4ba-c8b9-40ac-a7aa-27e42de229b8 bf2a0f43-e97c-480c-8455-1ca9c15a850f"
+  },
+  {
+   "check": "Otro vendedor: GET 45aea4ba-c8b9-40ac-a7aa-27e42d → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor: GET form → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor: PUT steps/customer → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor: POST submit → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor: GET bf2a0f43-e97c-480c-8455-1ca9c1 → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor: GET documents → no",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro vendedor no sube archivos a ese expediente",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "En el tablero del otro vendedor no aparece",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El buscador del otro vendedor no lo encuentra",
+   "ok": true,
+   "dato": "{'q': '901 QA 11100', 'groups': []}"
+  },
+  {
+   "check": "Otra organización no lo ve",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "VEN-A2 Archivos: lo que no se debe aceptar": [
+  {
+   "check": "Visita «opened» en 902 QA 1110053934 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El archivo de un expediente no se puede usar en otro",
+   "ok": true,
+   "dato": "400 {\"detail\":\"El archivo no corresponde a este campo del expediente.\",\"code\":\"file_not_in_case\",\"request_id\":\"95f9c340-56e1-4c09-888c-931bc54f048a\"}"
+  },
+  {
+   "check": "Archivo vacío se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Archivo exe como jpg se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Archivo html se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Archivo PDF falso se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un campo que no existe en el formulario se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Subir un archivo a un campo de texto se rechaza",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "VEN-A3 Respuestas inventadas": [
+  {
+   "check": "Respuesta con opción que no existe: no queda guardada",
+   "ok": true,
+   "dato": "400 None"
+  },
+  {
+   "check": "Respuesta con texto donde va número: no queda guardada",
+   "ok": true,
+   "dato": "400 None"
+  },
+  {
+   "check": "Respuesta con número fuera de rango: no queda guardada",
+   "ok": true,
+   "dato": "400 None"
+  },
+  {
+   "check": "Respuesta con campo inventado: no queda guardada",
+   "ok": true,
+   "dato": "400 None"
+  },
+  {
+   "check": "Un nombre de 100.000 letras no entra",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un paso que no existe se rechaza",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Términos sin firma se rechazan",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Una firma que no es imagen se rechaza",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "VEN-A4 Etapas: no se salta nada": [
+  {
+   "check": "Visita «opened» en 903 QA 1110053934 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar dos veces se bloquea",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "El vendedor no aprueba su propio expediente",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El Administrador no salta a «paid» desde la revisión",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El Administrador no salta a «installed» desde la revisión",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El Administrador no salta a «billing_in_progress» desde la revisión",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El Administrador no salta a «ready_to_install» desde la revisión",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "No se aprueba con documentos sin revisar",
+   "ok": true,
+   "dato": "400 {\"detail\":\"Faltan 7 documento(s) por revisar antes de aprobar.\",\"code\":\"documents_pending\",\"request_id\":\"568427e7-13e6-4"
+  },
+  {
+   "check": "Rechazar sin motivo se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una etapa inventada se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El vendedor no revisa documentos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Rechazar un documento sin nota se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un estado de revisión inventado se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Otra organización no revisa nuestros documentos",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "VEN-A5 Cliente y datos personales": [
+  {
+   "check": "Sin la autorización de datos no se crea el cliente",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Cliente con autorización",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cambiar el teléfono sin volver a autorizar se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una nota no pide autorización",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "Un nombre con HTML se guarda como texto (no se ejecuta en pantalla)",
+   "ok": true,
+   "dato": "<img src=x onerror=alert(1)>"
+  },
+  {
+   "check": "El vendedor no ve clientes ajenos a sus expedientes (200)",
+   "ok": false,
+   "dato": "200"
+  },
+  {
+   "check": "Otra organización no ve el cliente",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otra organización no borra el cliente",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "No se borra un cliente con expediente",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "VEN-A6 Enlaces públicos inventados": [
+  {
+   "check": "Enlace público inventado /public/customer-signature → no existe",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Enlace público inventado /public/quotes/inventado → no existe",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Enlace público inventado /public/pay/inventado → no existe",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Aceptar una cotización con un enlace inventado → no",
+   "ok": true,
+   "dato": "422"
+  }
+ ]
+}

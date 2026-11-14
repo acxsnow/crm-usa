@@ -160,3 +160,8 @@ async def test_la_retencion_borra_coordenadas_y_deja_el_evento(app_client, login
     assert r.json() == {"purged": 1}
     assert (await app_client.delete(f"{API}/attendance/users/{active_technician_user.id}/locations",
                                     headers=tec)).status_code == 403
+    # Con el id de alguien que no es de la organización: no existe (QA de turnos, 10 nov 2026).
+    import uuid
+
+    r = await app_client.delete(f"{API}/attendance/users/{uuid.uuid4()}/locations", headers=oficina)
+    assert (r.status_code, r.json()["code"]) == (404, "user_not_found")

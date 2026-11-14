@@ -1,0 +1,456 @@
+{
+ "": [
+  {
+   "check": "Requisitos de cobro de TECH",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "CAM-01 Permiso": [
+  {
+   "check": "Visita «opened» en 1001 QA 1110060654 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Aprobado sin fecha de aprobación se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Vence antes de aprobarse: se rechaza o queda vencido, nunca vigente",
+   "ok": true,
+   "dato": "400 {\"detail\":\"La fecha de vencimiento no puede ser anterior a la de aprobación.\",\"code\":\"permit_dates_inconsistent\",\"reques"
+  },
+  {
+   "check": "Radicado con fecha futura se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Sin ciudad o condado se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Estado inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no registra permisos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Otra organización no registra permisos en nuestra obra",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "CAM-02 Orden liberada": [
+  {
+   "check": "No se agenda en el pasado",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "No se asigna a un vendedor como instalador",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "No se asigna a alguien de otra organización",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no se agenda solo",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Se libera la orden sin permiso (no frena)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El expediente pasa a «Listo para instalar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Otro técnico no ve la obra",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Otro técnico no registra equipos en ella",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "CAM-03 Acta: checklist, equipos, firmas y cierre": [
+  {
+   "check": "No se cierra con el checklist incompleto",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una línea que exige foto no se completa sin foto",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "«No aplica» no se usa en una línea que no lo permite",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Tipo de equipo inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Cantidad cero se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Firma vacía se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Al aprobar se creó el proyecto de instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico NO ve un proyecto que no es suyo",
+   "ok": false,
+   "dato": "HTTP 200: {\"address_street\":\"1001 QA 1110060654 Mobile Park Dr\",\"address_unit\":\"Spc 901\",\"address_city\":\"San Fernando\",\"address_state\":\"CA\",\"address_zip\":\"91340\",\"latitude\":34.28,\"longitude\":-118.44,\"id\":\"d24dbfc5-2e86-4b4c-a9fe-844e94d44626\",\"customer_id\":\"23"
+  },
+  {
+   "check": "Agendar instalación con técnico",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico ve su orden",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar sin completar está bloqueado",
+   "ok": true,
+   "dato": "{'can_close': False, 'missing': ['Verificar orden y dirección', 'Confirmar distribución de la vivienda (habitaciones, cocina y sala)', 'Foto de la fachada', 'Registrar el equipo existente (furnace y s"
+  },
+  {
+   "check": "Cerrar instalación incompleta se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Checklist resuelto (14 ítems)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Equipo instalado con serial",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Guardar equipos instalados",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del técnico en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Firma del cliente en el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar instalación",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Equipo después del cierre se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no puede confirmar su propia acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Administración confirma el acta",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar dos veces se bloquea",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "La firma no se reescribe",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Evidencia con la obra cerrada (201)",
+   "ok": true,
+   "dato": "201"
+  },
+  {
+   "check": "Contabilidad no confirma actas (403)",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Devolver el acta sin motivo se bloquea",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Instalada y sin permiso aprobado, el expediente no se cierra",
+   "ok": true,
+   "dato": "400"
+  }
+ ],
+ "CAM-04 Inspección municipal": [
+  {
+   "check": "Visita «opened» en 1002 QA 1110060654 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Sin permiso registrado no se agenda inspección",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Inspección antes de cerrar la instalación (409)",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "CAM-05 Visita fallida y cancelación": [
+  {
+   "check": "Visita «opened» en 1003 QA 1110060654 Mobile Park Dr",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Enviar incompleto se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Archivo disfrazado (exe como jpg) se rechaza",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Formulario lleno, salvo la firma (7 archivos con GPS)",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "El vendedor no puede aprobar su expediente",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cliente acepta términos y firma",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Puede enviarse",
+   "ok": true,
+   "dato": "[]"
+  },
+  {
+   "check": "Enviar a revisión",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Queda en Pendiente aprobación · en revisión",
+   "ok": true,
+   "dato": "('pending_approval', 'pending_review')"
+  },
+  {
+   "check": "Editar después de enviar se bloquea",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Visita fallida sin contar qué pasó se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Motivo inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Al llegar al límite no se reagenda solo (2 de 2)",
+   "ok": true,
+   "dato": "{'failed_visits': 2, 'limit': 2, 'limit_reached': True, 'extra_visits_authorized': 0, 'last_release': {'at': '2026-11-10T06:07:26.812991+00:00', 'by_name': 'Andrés Administración', 'after_failed_visit': True}}"
+  },
+  {
+   "check": "El técnico no cancela la obra",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Cancelar sin motivo se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Cancelar con motivo (200)",
+   "ok": true,
+   "dato": "200 {\"address_street\":\"1003 QA 1110060654 Mobile Park Dr\",\"address_unit\":\"Spc 903\",\"address_city\":\"San Fernando\",\"address_state\":\"CA\",\"address_zip\":\"91340"
+  },
+  {
+   "check": "Una obra cancelada no se vuelve a agendar",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "En una obra cancelada no se sube nada",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "CAM-06 Despacho y tareas": [
+  {
+   "check": "El tablero no acepta rangos gigantes",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El tablero no acepta rangos al revés",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no ve el despacho",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Tarea sin título se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Otra organización no ve las tareas",
+   "ok": true,
+   "dato": "404"
+  }
+ ]
+}

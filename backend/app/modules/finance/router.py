@@ -81,6 +81,13 @@ def _check_report(kind: str, user: User) -> None:
         raise ForbiddenError("No tienes permiso para ver este reporte.", code="report_not_allowed")
 
 
+def _check_range(date_from: date | None, date_to: date | None) -> None:
+    """Con las fechas al revés el reporte salía vacío, como si no hubiera nada
+    (QA de finanzas, 10 nov 2026)."""
+    if date_from and date_to and date_to < date_from:
+        raise InvalidInputError("La fecha final es anterior a la inicial.", code="report_range_inverted")
+
+
 def _file(path: str | None, mime: str | None):
     if not path:
         raise NotFoundError("No hay archivo.", code="file_not_found")
@@ -663,6 +670,7 @@ async def get_report(kind: str, date_from: date | None = None, date_to: date | N
                      db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                      current_user: User = Depends(_reports)) -> dict:
     _check_report(kind, current_user)
+    _check_range(date_from, date_to)
     return await reports.REPORTS[kind](db, organization_id=organization_id, date_from=date_from, date_to=date_to)
 
 
@@ -671,6 +679,7 @@ async def export_report(kind: str, date_from: date | None = None, date_to: date 
                         db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                         current_user: User = Depends(_reports_export)):
     _check_report(kind, current_user)
+    _check_range(date_from, date_to)
     rep = await reports.REPORTS[kind](db, organization_id=organization_id, date_from=date_from, date_to=date_to)
     return Response(content=reports.to_csv(rep), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="reporte-{kind}.csv"'})

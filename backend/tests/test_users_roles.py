@@ -471,3 +471,24 @@ async def test_profile_needs_permission_and_stays_in_the_organization(
     ajeno = await _login(app_client, second_org_admin_user.email)
     assert (await app_client.get(f"/api/v1/users/{active_admin_user.id}/profile",
                                  headers=ajeno)).status_code == 404
+
+
+async def test_nobody_deactivates_themselves_nor_the_last_admin(app_client, active_admin_user, active_salesperson_user):
+    """QA de acceso (10 nov 2026): el Administrador se podía desactivar a sí
+    mismo y dejar a la organización sin quien la administre."""
+    headers = await _login(app_client, active_admin_user.email)
+    r = await app_client.post(f"/api/v1/users/{active_admin_user.id}/deactivate", headers=headers)
+    assert (r.status_code, r.json()["code"]) == (409, "cannot_deactivate_self")
+    # Desactivar a otra persona sigue funcionando.
+    r = await app_client.post(f"/api/v1/users/{active_salesperson_user.id}/deactivate", headers=headers)
+    assert r.status_code == 200 and r.json()["status"] == "inactive"
+
+
+async def test_the_last_active_admin_is_not_deactivated(db, seeded_org, active_admin_user, active_admin_staff_user):
+    from app.shared.errors import ConflictError
+
+    org = seeded_org["org"].id
+    with pytest.raises(ConflictError) as error:
+        await user_service.set_user_active_state(db, organization_id=org, user_id=active_admin_user.id,
+                                                 actor=active_admin_staff_user, active=False)
+    assert error.value.code == "last_admin"

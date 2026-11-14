@@ -330,6 +330,19 @@ async def record_movement(
                 f"A esta obra solo le quedan {pendiente} por devolver de este artículo.",
                 code="return_exceeds_delivered")
 
+    if movement_type == MovementType.TRASLADO:
+        # Sin estos topes, trasladar de más dejaba la bodega en negativo y la
+        # camioneta con material que no existe (QA de bodega, 10 nov 2026).
+        if to_location_id == location_id:
+            raise InvalidInputError("El origen y el destino del traslado son la misma ubicación.",
+                                    code="transfer_same_location")
+        en_origen = (await db.execute(select(WarehouseStock.quantity).where(
+            WarehouseStock.organization_id == organization_id, WarehouseStock.item_id == item_id,
+            WarehouseStock.location_id == location_id))).scalar_one_or_none()
+        if cantidad > _q(en_origen or ZERO):
+            raise InvalidInputError(f"En el origen solo hay {_q(en_origen or ZERO)} de este artículo.",
+                                    code="transfer_exceeds_stock")
+
     # Lo que había antes de mover: contra esto se detecta si el movimiento dejó
     # el artículo en su mínimo.
     total_antes = await _total_quantity(db, organization_id, item_id)

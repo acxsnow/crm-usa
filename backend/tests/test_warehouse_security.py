@@ -282,3 +282,25 @@ async def test_una_celda_en_una_columna_imposible_no_infla_la_memoria(app_client
         "file": ("catalogo.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         headers=admin)
     assert (r.status_code, r.json()["code"]) == (400, "invalid_workbook")
+
+
+async def test_no_se_traslada_mas_de_lo_que_hay_ni_a_la_misma_ubicacion(app_client, login, active_admin_user):
+    """QA de bodega (10 nov 2026): el traslado no tenía tope y dejaba la bodega en negativo."""
+    admin = await login(active_admin_user.email)
+    item = await _item(app_client, admin)
+    camioneta = await _ubicacion(app_client, admin, "Camioneta QA")
+    await _cargar(app_client, admin, item["id"], "5")
+    r = await app_client.post(f"{API}/warehouse/movements", json={
+        "item_id": item["id"], "movement_type": "traslado", "quantity": "8", "to_location_id": camioneta["id"]},
+        headers=admin)
+    assert (r.status_code, r.json()["code"]) == (400, "transfer_exceeds_stock")
+    bodega = (await app_client.get(f"{API}/warehouse/locations", headers=admin)).json()
+    origen = next(l for l in bodega if l["id"] != camioneta["id"])
+    r = await app_client.post(f"{API}/warehouse/movements", json={
+        "item_id": item["id"], "movement_type": "traslado", "quantity": "1", "location_id": origen["id"],
+        "to_location_id": origen["id"]}, headers=admin)
+    assert (r.status_code, r.json()["code"]) == (400, "transfer_same_location")
+    r = await app_client.post(f"{API}/warehouse/movements", json={
+        "item_id": item["id"], "movement_type": "traslado", "quantity": "5", "to_location_id": camioneta["id"]},
+        headers=admin)
+    assert r.status_code == 201, r.text

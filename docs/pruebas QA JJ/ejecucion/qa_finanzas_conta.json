@@ -1,0 +1,220 @@
+{
+ "FIN-A1 Gastos de campo": [
+  {
+   "check": "Gasto de 25",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se reembolsa un gasto sin aprobar",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Se aprueba",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se reembolsa",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se reembolsa dos veces",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "No se rechaza un gasto ya reembolsado",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Categoría inventada se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Gasto sin recibo (422)",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "El vendedor no ve los gastos de otros",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "Otra organización no baja nuestros recibos",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "FIN-A2 Proveedores y pagos": [
+  {
+   "check": "Proveedor",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Proveedor con el mismo nombre (409)",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Factura de proveedor negativa se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Factura de 500",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Quien la registra no la aprueba sola",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Un pago mayor que la factura se rechaza",
+   "ok": true,
+   "dato": "400 {\"detail\":\"A la factura QA-F-1110060005-1 le quedan 500.00 USD por pagar.\",\"code\":\"allocation_over_balance\",\"request_id\""
+  },
+  {
+   "check": "Un reparto negativo se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Pago de 500",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No se le paga más a una factura ya pagada",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "No se anula una factura de proveedor pagada",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "El técnico no cambia los datos bancarios del proveedor",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Otra organización no ve el proveedor",
+   "ok": true,
+   "dato": "404"
+  }
+ ],
+ "FIN-A3 Conciliación y reportes": [
+  {
+   "check": "Un extracto que no es CSV se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un extracto vacío se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Filas con fecha o monto inválidos no tumban la importación",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Reporte con fechas al revés se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no ve la rentabilidad",
+   "ok": true,
+   "dato": "403"
+  }
+ ],
+ "FIN-A4 Contabilidad": [
+  {
+   "check": "Hay plan de cuentas",
+   "ok": true,
+   "dato": "33"
+  },
+  {
+   "check": "Un asiento descuadrado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Un asiento en cero se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una línea con débito y crédito a la vez se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Asiento manual cuadrado de 100",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Se reversa una vez",
+   "ok": true,
+   "dato": "201"
+  },
+  {
+   "check": "No se reversa dos veces",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "El vendedor no hace asientos",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Otra organización no reversa nuestros asientos",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "No se usa una cuenta de otra organización",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Cierre contable hasta ayer",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "No entra un asiento en un período cerrado",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Tipo de cuenta inventado se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Después de todo, el balance sigue cuadrado (168978.59 = 168978.59)",
+   "ok": true,
+   "dato": "{'as_of': '2026-11-10', 'rows': [{'account_id': '5bd7e591-fe9e-4ee3-be71-93ee092efeb3', 'code': '1000', 'name': 'Banco operativo', 'account_type': 'Ac"
+  },
+  {
+   "check": "El técnico no ve la contabilidad",
+   "ok": true,
+   "dato": "403"
+  }
+ ]
+}

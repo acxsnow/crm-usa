@@ -1,0 +1,207 @@
+{
+ "TUR-A1 Marcas": [
+  {
+   "check": "Salir sin haber entrado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Pausa sin turno abierto se rechaza",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Tipo de marca inventado se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Coordenadas imposibles no se guardan como ubicación (400, latitud guardada «»)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Marca desde el futuro se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una cola de más de 100 marcas se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Con el permiso de ubicación negado no inicia turno",
+   "ok": true,
+   "dato": "409"
+  }
+ ],
+ "TUR-A3 Horas extras": [
+  {
+   "check": "Horas extras cero se rechazan",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Horas extras negativas se rechazan",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Horas extras más de 24 se rechazan",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Horas extras de un día futuro se rechazan",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico declara 2 h extras",
+   "ok": false,
+   "dato": "HTTP 409: {\"detail\":\"Ya declaraste horas extras de ese día. Bórrala si sigue pendiente y decláralas de nuevo.\",\"code\":\"overtime_already_declared\",\"request_id\":\"0cee9136-cae8-4c54-b6e7-e55fdbf76414\"}"
+  },
+  {
+   "check": "El técnico no aprueba sus extras",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Un valor negativo para las extras se rechaza",
+   "ok": true,
+   "dato": "422"
+  },
+  {
+   "check": "Otra organización no revisa nuestras extras",
+   "ok": false,
+   "dato": "422"
+  },
+  {
+   "check": "El jefe las aprueba con su valor",
+   "ok": false,
+   "dato": "HTTP 422: {\"detail\":\"Hay datos inválidos en: path.declaration_id.\",\"code\":\"validation_error\",\"request_id\":\"e25c5600-9929-42b2-809a-dbbceffde0b7\",\"errors\":[{\"field\":\"path.declaration_id\",\"message\":\"Input should be a valid UUID, invalid character: expected an op"
+  },
+  {
+   "check": "Unas extras ya aprobadas no las borra el técnico",
+   "ok": false,
+   "dato": "422"
+  }
+ ],
+ "TUR-A4 Malla de turnos": [
+  {
+   "check": "Rango de fechas al revés se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Hora 25:00 se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Programar años de una vez se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "No se programa a alguien de otra organización",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Una pausa de 10 h se rechaza",
+   "ok": true,
+   "dato": "422"
+  }
+ ],
+ "TUR-A5 Nómina": [
+  {
+   "check": "Período de nómina al revés se rechaza",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "Período de nómina de dos semanas",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Un período que se cruza con otro se rechaza",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Se cierra el período",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "Cerrar dos veces se bloquea",
+   "ok": true,
+   "dato": "409"
+  },
+  {
+   "check": "Reabrir sin motivo se bloquea",
+   "ok": true,
+   "dato": "400"
+  },
+  {
+   "check": "El técnico no ve la nómina",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El técnico no cambia su forma de pago",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Nadie cambia su propia forma de pago",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Forma de pago inventada se rechaza",
+   "ok": true,
+   "dato": "422"
+  }
+ ],
+ "TUR-A6 Mapa y ubicaciones": [
+  {
+   "check": "vendedor no ve dónde está el personal",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Gerencia no ve dónde está el personal",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "Contabilidad no ve dónde está el personal",
+   "ok": true,
+   "dato": "403"
+  },
+  {
+   "check": "El técnico solo se ve a sí mismo en el mapa",
+   "ok": true,
+   "dato": "1"
+  },
+  {
+   "check": "Otra organización no ve a nuestra gente en su mapa",
+   "ok": true,
+   "dato": "200"
+  },
+  {
+   "check": "Otra organización no borra nuestras ubicaciones",
+   "ok": true,
+   "dato": "404"
+  },
+  {
+   "check": "Retención de ubicaciones en 0 días se rechaza",
+   "ok": true,
+   "dato": "422"
+  }
+ ]
+}
