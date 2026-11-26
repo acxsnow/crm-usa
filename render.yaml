@@ -70,14 +70,13 @@ services:
         sync: false
 
   # Frontend (React + Vite) como sitio estático.
-  # Revisar en el dashboard que buildCommand, rootDir y VITE_API_BASE_URL coincidan.
   - type: web
     name: crm-usa-frontend-acxsnow
     runtime: static
     branch: main
     autoDeployTrigger: "off"
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_BASE_URL
