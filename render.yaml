@@ -1,53 +1,98 @@
-envVarGroups:
-  - name: crm-usa-common
+# Producción en Render (actualizado el 2026-11-26).
+#
+# Este archivo DOCUMENTA cómo están configurados los servicios en Render. No está
+# conectado a un Blueprint: los cambios se hacen en el dashboard y aquí se reflejan
+# a mano. Editarlo no cambia producción.
+#
+# - Región: Oregon (EE. UU.), para usuarios en Estados Unidos.
+# - Auto-deploy apagado: después de cada push a main hay que hacer Manual Deploy.
+# - La API tiene un disco, así que cada deploy la deja caída unos 30-60 s.
+# - Costo fijo aproximado: API $25 + BD $19 + Redis $10 + disco 10 GB $2,50.
+#
+# Las variables con `sync: false` son secretos o valores propios del entorno y
+# solo viven en el dashboard; nunca se escriben aquí.
+
+services:
+  # API (FastAPI) + worker y beat de Celery embebidos (scripts/render_start.sh).
+  - type: web
+    name: crm-usa-api-acxsnow
+    runtime: docker
+    plan: standard # 1 CPU, 2 GB
+    region: oregon
+    branch: main
+    autoDeployTrigger: "off"
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /health
+    disk:
+      name: crm-storage
+      mountPath: /app/storage # adjuntos; debe coincidir con STORAGE_DIR
+      sizeGB: 10
     envVars:
+      - key: WEB_CONCURRENCY # procesos de uvicorn
+        value: "3"
+      - key: STORAGE_DIR
+        value: /app/storage
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
         value: "false"
-      - key: JWT_SECRET_KEY
-        generateValue: true
-      - key: EMAIL_PROVIDER
-        value: console
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "15"
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: "14"
-
-services:
-  - type: web
-    name: crm-usa-app
-    runtime: docker
-    plan: starter
-    dockerfilePath: ./backend/Dockerfile.render
-    dockerContext: .
-    healthCheckPath: /health
-    initialDeployHook: python -m scripts.seed --demo-org
-    dockerCommand: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"
-    disk:
-      name: crm-storage
-      mountPath: /app/storage
-      sizeGB: 5
-    envVars:
-      - fromGroup: crm-usa-common
       - key: DATABASE_URL
         fromDatabase:
-          name: crm-usa-db
+          name: crm-usa-db-acxsnow-v2
           property: connectionString
       - key: REDIS_URL
         fromService:
           type: keyvalue
-          name: crm-usa-redis
+          name: crm-usa-redis-acxsnow
           property: connectionString
-      - key: STORAGE_DIR
-        value: /app/storage
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: FRONTEND_APP_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: PAYMENTS_ENCRYPTION_KEY
+        sync: false
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_ENV
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
 
+  # Frontend (React + Vite) como sitio estático.
+  # Revisar en el dashboard que buildCommand, rootDir y VITE_API_BASE_URL coincidan.
+  - type: web
+    name: crm-usa-frontend-acxsnow
+    runtime: static
+    branch: main
+    autoDeployTrigger: "off"
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+
+  # Broker de Celery. Sin persistencia: solo guarda colas de tareas.
   - type: keyvalue
-    name: crm-usa-redis
-    plan: free
+    name: crm-usa-redis-acxsnow
+    plan: starter # 256 MB, 250 conexiones
+    region: oregon
     maxmemoryPolicy: noeviction
-    persistenceMode: off
+    ipAllowList: [] # solo acceso interno
 
 databases:
-  - name: crm-usa-db
-    plan: free
+  - name: crm-usa-db-acxsnow-v2
+    plan: basic-1gb # 0.5 CPU, 1 GB
+    region: oregon
+    postgresMajorVersion: "16"
