@@ -100,16 +100,8 @@ async def invite_user(
     for role in roles:
         db.add(UserRole(user_id=user.id, role_id=role.id))
 
-    raw_token, token_hash = generate_secure_token()
-    invitation = Invitation(
-        organization_id=organization_id,
-        email=normalized_email,
-        token_hash=token_hash,
-        invited_by_user_id=inviter.id,
-        role_ids=",".join(str(r.id) for r in roles),
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.INVITATION_EXPIRE_HOURS),
-    )
-    db.add(invitation)
+    raw_token = _new_invitation(db, organization_id=organization_id, email=normalized_email, inviter=inviter,
+                                role_ids=[r.id for r in roles])
 
     await record_audit_event(
         db,
@@ -124,9 +116,54 @@ async def invite_user(
     await db.commit()
     await db.refresh(user)
 
-    invite_link = f"{settings.FRONTEND_APP_URL}/accept-invitation?token={raw_token}"
+    invite_link = _invite_link(raw_token)
     await send_email(to=email, template="account_invitation", context={"invite_link": invite_link, "full_name": full_name})
+    # El enlace también vuelve a quien invita, para copiarlo y mandarlo por
+    # WhatsApp si el correo no llega (14 nov 2026).
+    user.invite_link = invite_link
     return user
+
+
+def _invite_link(raw_token: str) -> str:
+    return f"{settings.FRONTEND_APP_URL}/accept-invitation?token={raw_token}"
+
+
+def _new_invitation(db: AsyncSession, *, organization_id, email: str, inviter: User, role_ids) -> str:
+    """Crea la invitación y devuelve el token en claro (en la base solo queda su hash)."""
+    raw_token, token_hash = generate_secure_token()
+    db.add(Invitation(
+        organization_id=organization_id, email=email, token_hash=token_hash, invited_by_user_id=inviter.id,
+        role_ids=",".join(str(r) for r in role_ids),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=settings.INVITATION_EXPIRE_HOURS)))
+    return raw_token
+
+
+async def regenerate_invitation_link(db: AsyncSession, *, organization_id: uuid.UUID, actor: User,
+                                     user_id: uuid.UUID) -> str:
+    """Un enlace nuevo para quien todavía no ha entrado (se venció o se perdió).
+    Apaga los anteriores: solo sirve el último."""
+    from app.modules.users.models import UserRole
+
+    user = (await db.execute(select(User).where(User.id == user_id, User.organization_id == organization_id))
+            ).scalar_one_or_none()
+    if user is None:
+        raise NotFoundError("El usuario no existe.", code="user_not_found")
+    if user.status != UserStatus.invited:
+        raise ConflictError("Esta persona ya aceptó la invitación; si olvidó la clave, que use «¿Olvidaste tu "
+                            "contraseña?».", code="invitation_already_accepted")
+    ahora = datetime.now(timezone.utc)
+    for previa in (await db.execute(select(Invitation).where(
+            Invitation.organization_id == organization_id, Invitation.email == user.email,
+            Invitation.accepted_at.is_(None)))).scalars():
+        previa.expires_at = ahora
+    role_ids = (await db.execute(select(UserRole.role_id).where(UserRole.user_id == user.id))).scalars().all()
+    raw_token = _new_invitation(db, organization_id=organization_id, email=user.email, inviter=actor,
+                                role_ids=role_ids)
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=actor.id,
+                             action="users.invitation_regenerated", entity_type="User", entity_id=str(user.id),
+                             after_data={"email": user.email})
+    await db.commit()
+    return _invite_link(raw_token)
 
 
 async def set_user_active_state(

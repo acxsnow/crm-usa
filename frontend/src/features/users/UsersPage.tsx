@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { activateUser, deactivateUser, inviteUser, listRoles, listUsersPage } from "./api";
+import { activateUser, deactivateUser, inviteUser, listRoles, listUsersPage, regenerateInvitationLink } from "./api";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { PaginatedTable, type Column } from "@/components/DataTable";
 import { useTableFilters } from "@/lib/useTableFilters";
@@ -30,12 +30,19 @@ export function UsersPage() {
   const [editando, setEditando] = useState<OrgUser | null>(null);
   const [viendo, setViendo] = useState<OrgUser | null>(null);
 
+  // El enlace de la invitación, para copiarlo y mandarlo por WhatsApp si el
+  // correo no llega (14 nov 2026).
+  const [enlace, setEnlace] = useState<{ nombre: string; link: string } | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const mostrarEnlace = (nombre: string, link: string) => { setEnlace({ nombre, link }); setCopiado(false); };
+
   const inviteMutation = useMutation({
     mutationFn: inviteUser,
-    onSuccess: () => {
+    onSuccess: (nuevo) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setForm(emptyForm);
       setError(null);
+      mostrarEnlace(nuevo.full_name, nuevo.invite_link);
     },
     onError: (err: unknown) => {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -52,6 +59,25 @@ export function UsersPage() {
     mutationFn: deactivateUser,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
+
+  const linkMutation = useMutation({
+    mutationFn: (u: OrgUser) => regenerateInvitationLink(u.id),
+    onSuccess: (link, u) => { setError(null); mostrarEnlace(u.full_name, link); },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(detail ?? "No se pudo generar el enlace.");
+    },
+  });
+
+  async function copiarEnlace() {
+    if (!enlace) return;
+    try {
+      await navigator.clipboard.writeText(enlace.link);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);  // sin permiso del portapapeles: el campo queda seleccionado para copiarlo a mano
+    }
+  }
 
   /** Una persona tiene un rol y solo uno: elegir reemplaza, no suma. */
   function elegirRol(code: string) {
@@ -134,6 +160,11 @@ export function UsersPage() {
           <button className="link-button" onClick={() => { setViendo(null); setEditando(u); }}>
             Editar
           </button>
+          {u.status === "invited" && (
+            <button className="link-button" disabled={linkMutation.isPending} onClick={() => linkMutation.mutate(u)}>
+              Generar enlace nuevo
+            </button>
+          )}
           {u.status === "active" ? (
             <button className="link-button" disabled={deactivateMutation.isPending} onClick={() => deactivateMutation.mutate(u.id)}>
               Desactivar
@@ -193,6 +224,19 @@ export function UsersPage() {
         </button>
       </form>
       {error && <p className="warning-banner">{error}</p>}
+      {enlace && (
+        <div className="invite-link-box" role="status">
+          <p>
+            <strong>Enlace de invitación de {enlace.nombre}.</strong> También se envió por correo. Si no le llega,
+            cópialo y mándaselo por WhatsApp: sirve una sola vez y vence en 72 horas. Generar otro apaga este.
+          </p>
+          <div className="invite-link-row">
+            <input readOnly aria-label="Enlace de invitación" value={enlace.link} onFocus={(e) => e.target.select()} />
+            <button type="button" className="acta-btn is-primary" onClick={copiarEnlace}>{copiado ? "¡Copiado!" : "Copiar enlace"}</button>
+            <button type="button" className="link-button" onClick={() => setEnlace(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
 
       {editando && (
         <UserEditPanel

@@ -4431,3 +4431,9 @@ a.ui-person:hover .ui-person-name { color: var(--red); }
 
 /* Auditoría (D-020): antes → después de cada campo. */
 .audit-changes { margin: 4px 0; padding-left: 16px; font-size: 0.8125rem; overflow-wrap: anywhere; }
+
+/* Enlace de invitación para copiar (14 nov 2026). */
+.invite-link-box { margin: 12px 0; padding: 12px 14px; border-radius: 10px; border: 1px solid #b2ddff; background: #eff8ff; display: grid; gap: 8px; }
+.invite-link-box p { margin: 0; font-size: 0.9rem; }
+.invite-link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.invite-link-row input { flex: 1 1 260px; min-width: 0; }

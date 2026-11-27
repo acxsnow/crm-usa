@@ -492,3 +492,31 @@ async def test_the_last_active_admin_is_not_deactivated(db, seeded_org, active_a
         await user_service.set_user_active_state(db, organization_id=org, user_id=active_admin_user.id,
                                                  actor=active_admin_staff_user, active=False)
     assert error.value.code == "last_admin"
+
+
+async def test_the_invitation_link_comes_back_to_copy_and_can_be_regenerated(app_client, db, active_admin_user,
+                                                                             active_salesperson_user):
+    """14 nov 2026: el enlace de la invitación vuelve a quien invita, para
+    mandarlo por WhatsApp si el correo no llega, y se puede generar uno nuevo."""
+    headers = await _login(app_client, active_admin_user.email)
+    r = await app_client.post("/api/v1/users", headers=headers, json={
+        "email": "ricardo@acme-demo.com", "full_name": "Ricardo", "role_codes": ["admin_staff"]})
+    assert r.status_code == 201, r.text
+    nuevo = r.json()
+    assert "/accept-invitation?token=" in nuevo["invite_link"]
+    primero = nuevo["invite_link"].split("token=")[1]
+
+    r = await app_client.post(f"/api/v1/users/{nuevo['id']}/invitation-link", headers=headers)
+    assert r.status_code == 200, r.text
+    segundo = r.json()["invite_link"].split("token=")[1]
+    assert segundo != primero
+    # El enlace anterior se apaga; el nuevo sirve.
+    viejo = await app_client.post("/api/v1/auth/invitations/accept", json={"token": primero, "password": "OtraClave123!"})
+    assert viejo.status_code in (400, 401, 404, 410)
+    ok = await app_client.post("/api/v1/auth/invitations/accept", json={"token": segundo, "password": "OtraClave123!"})
+    assert ok.status_code == 200, ok.text
+    # Ya aceptada, no se genera otro; y el vendedor no puede pedirlo.
+    r = await app_client.post(f"/api/v1/users/{nuevo['id']}/invitation-link", headers=headers)
+    assert (r.status_code, r.json()["code"]) == (409, "invitation_already_accepted")
+    vendedor = await _login(app_client, active_salesperson_user.email)
+    assert (await app_client.post(f"/api/v1/users/{nuevo['id']}/invitation-link", headers=vendedor)).status_code == 403

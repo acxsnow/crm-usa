@@ -17,8 +17,8 @@ export async function listUsersPage(
   return res.data;
 }
 
-export async function inviteUser(payload: { email: string; full_name: string; role_codes: string[] }): Promise<OrgUser> {
-  const res = await apiClient.post<OrgUser>("/users", payload);
+export async function inviteUser(payload: { email: string; full_name: string; role_codes: string[] }): Promise<OrgUser & { invite_link: string }> {
+  const res = await apiClient.post<OrgUser & { invite_link: string }>("/users", payload);
   return res.data;
 }
 
@@ -50,4 +50,10 @@ export async function updateUser(userId: string, fullName: string): Promise<OrgU
 export async function getUserProfile(userId: string): Promise<UserProfile> {
   const res = await apiClient.get<UserProfile>(`/users/${userId}/profile`);
   return res.data;
+}
+
+/** Enlace nuevo de invitación para quien no ha entrado; apaga los anteriores. */
+export async function regenerateInvitationLink(userId: string): Promise<string> {
+  const res = await apiClient.post<{ invite_link: string }>(`/users/${userId}/invitation-link`, {});
+  return res.data.invite_link;
 }

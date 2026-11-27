@@ -1,0 +1,44 @@
+{
+ "USR-ENLACE": [
+  {
+   "check": "[pc] Al invitar aparece el enlace para copiar",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/accept-invitation?token=4ojVjKmIWNH-Ime7alpqCyyuowRq"
+  },
+  {
+   "check": "[pc] Tiene el botón «Copiar enlace»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] «Generar enlace nuevo» da otro enlace",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/accept-invitation?token=zfDi-a7gxJAq0tcgyQLYo3BhV1tm"
+  },
+  {
+   "check": "[pc] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Al invitar aparece el enlace para copiar",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/accept-invitation?token=5w_jjPb711e8ZyiCpEA7-E_D-GQW"
+  },
+  {
+   "check": "[celular] Tiene el botón «Copiar enlace»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] «Generar enlace nuevo» da otro enlace",
+   "ok": true,
+   "dato": "https://192.168.59.100:5173/accept-invitation?token=bvDMbbG7njphUZFLEeY5jr4N11QU"
+  },
+  {
+   "check": "[celular] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  }
+ ]
+}

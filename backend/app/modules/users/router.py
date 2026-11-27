@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request, Response
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,7 +73,28 @@ async def list_users(
     )
 
 
-@router.post("", response_model=UserResponse, status_code=201)
+class InvitedUserResponse(UserResponse):
+    # Para copiarlo y mandarlo por WhatsApp si el correo no llega (14 nov 2026).
+    invite_link: str
+
+
+class InvitationLinkResponse(BaseModel):
+    invite_link: str
+
+
+@router.post("/{user_id}/invitation-link", response_model=InvitationLinkResponse)
+async def regenerate_invitation_link(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    organization_id: uuid.UUID = Depends(get_organization_id),
+    current_user: User = Depends(require_permission("users.manage")),
+):
+    """Enlace nuevo para quien no ha entrado: apaga los anteriores."""
+    return InvitationLinkResponse(invite_link=await users_service.regenerate_invitation_link(
+        db, organization_id=organization_id, actor=current_user, user_id=user_id))
+
+
+@router.post("", response_model=InvitedUserResponse, status_code=201)
 async def invite_user(
     payload: UserInviteRequest,
     request: Request,
@@ -90,13 +112,14 @@ async def invite_user(
         role_codes=payload.role_codes,
         client_ip=client_ip,
     )
-    return UserResponse(
+    return InvitedUserResponse(
         id=user.id,
         email=user.email_display,
         full_name=user.full_name,
         status=user.status,
         roles=payload.role_codes,
         last_login_at=None,
+        invite_link=user.invite_link,
     )
 
 
