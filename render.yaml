@@ -78,9 +78,22 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
+    # La página llama a la API por su misma dirección (/api/...) y Render se la
+    # pasa a la API por detrás. Así la cookie de la sesión (SameSite=strict) es
+    # del mismo sitio y F5 no saca al login. El orden importa: /api/* va primero.
+    # Dashboard: sitio del frontend > Redirects/Rewrites.
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://crm-usa-api-acxsnow.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
+      # Relativa, para que pase por la regla de arriba. Se lee al construir:
+      # después de cambiarla hay que hacer Manual Deploy del frontend.
       - key: VITE_API_BASE_URL
-        sync: false
+        value: /api/v1
 
   # Broker de Celery. Sin persistencia: solo guarda colas de tareas.
   - type: keyvalue
