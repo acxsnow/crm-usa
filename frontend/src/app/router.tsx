@@ -47,6 +47,8 @@ import { WarehouseKitsPage } from "@/features/warehouse/WarehouseKitsPage";
 import { WarehousePurchasingPage } from "@/features/warehouse/WarehousePurchasingPage";
 import { CostTemplatesPage } from "@/features/warehouse/CostTemplatesPage";
 import { WarehouseSerialsPage } from "@/features/warehouse/WarehouseSerialsPage";
+import { WarehouseReceiptsPage } from "@/features/warehouse/WarehouseReceiptsPage";
+import { WarehouseCountsPage } from "@/features/warehouse/WarehouseCountsPage";
 import { ProfilePage } from "@/features/auth/ProfilePage";
 import { MyShiftPage } from "@/features/attendance/MyShiftPage";
 import { ShiftPlannerPage } from "@/features/attendance/ShiftPlannerPage";
@@ -270,6 +272,22 @@ export const router = createBrowserRouter([
         element: (
           <RequireAccess permission={["warehouse.read", "warehouse.manage", "warehouse.count"]} moduleLabel="Bodega">
             <WarehouseMovementsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/receipts",
+        element: (
+          <RequireAccess permission={["warehouse.read", "warehouse.manage", "payables.manage"]} moduleLabel="Bodega">
+            <WarehouseReceiptsPage />
+          </RequireAccess>
+        ),
+      },
+      {
+        path: "warehouse/counts",
+        element: (
+          <RequireAccess permission={["warehouse.count"]} moduleLabel="Bodega">
+            <WarehouseCountsPage />
           </RequireAccess>
         ),
       },

@@ -1,0 +1,162 @@
+{
+ "BOD-R1 Recepción con llegada parcial (computador)": [
+  {
+   "check": "[pc] Abre Recepción de compras",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El menú de Bodega muestra Recepción de compras y Conteos",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] El formulario muestra el total con impuesto y envío (120 + 12 = 132)",
+   "ok": true,
+   "dato": "['Total con impuesto y envío $132.00']"
+  },
+  {
+   "check": "[pc] Guardada: el detalle dice que faltan 2 capacitores",
+   "ok": true,
+   "dato": "egistre, se asocia aquí.\n\nPendientes por llegar\nSin factura asociada\nTodas\nRECEPCIÓN\tPROVEEDOR\tESTADO\tRECIBIDO\tFACTURA\t\nREC-2026-0009\n2026-11-27 · Andrés Administración\n\tQA Ferguson 747753\nDoc. F-747753\n\tPendiente por llegar\n1 artículo con pendiente\n\t$105.60\t\nSin asociar\n\t\nRecibir\nCambios guardados."
+  },
+  {
+   "check": "[pc] El costo con impuesto y envío del capacitor es 13,20",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Queda «Pendiente por llegar»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Llegan los 2: queda completa",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nDespacho\nϟ\nInspecciones eléctricas\nCalendario de obras\nChecklists"
+  }
+ ],
+ "BOD-R2 Traslado a la camioneta y ajuste con motivo (computador)": [
+  {
+   "check": "[pc] Existencias: el capacitor tiene 10",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nDespacho\nϟ\nInspecciones eléctricas\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asiste"
+  },
+  {
+   "check": "[pc] Traslado registrado y la camioneta tiene 3",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nDespacho\nϟ\nInspecciones eléctricas\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asiste"
+  },
+  {
+   "check": "[pc] Sin motivo, el ajuste no se registra",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Ajuste registrado: quedan 9 en total",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nDespacho\nϟ\nInspecciones eléctricas\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asiste"
+  }
+ ],
+ "BOD-R3 Conteo mensual (computador)": [
+  {
+   "check": "[pc] La planilla de la bodega muestra 6 en el sistema (10 − 3 trasladados − 1 dañado)",
+   "ok": true,
+   "dato": "QA Capacitor 45/5 747753 QA-cap-747753 · Repuestos (motores, capacitores, ignitores) · unidades\t6\t\t—"
+  },
+  {
+   "check": "[pc] La diferencia se ve antes de registrar (+1)",
+   "ok": true,
+   "dato": "QA Capacitor 45/5 747753 QA-cap-747753 · Repuestos (motores, capacitores, ignitores) · unidades\t6\t\t+1"
+  },
+  {
+   "check": "[pc] Conteo registrado con 1 ajuste",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nCampañas\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nMonitor de técnicos\nAgenda\nDespacho\nϟ\nInspecciones eléctricas\nCalendario de obras\nChecklists de instalación\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nMalla de turnos\nPanel de asiste"
+  },
+  {
+   "check": "[pc] El libro muestra el motivo «Dañado o vencido» y el «Conteo físico»",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[pc] Sin errores de página",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  }
+ ],
+ "BOD-R4 Contabilidad asocia la factura del proveedor": [
+  {
+   "check": "Contabilidad registró la factura en Proveedores",
+   "ok": true,
+   "dato": "{'id': '9c007318-94ba-46ae-9ccd-293f82f89c0a', 'supplier_id': '066b401b-43f2-4996-92be-e2cf68f6d4ef', 'supplier_name': 'QA Ferguson 747753', 'number': 'F-747753', 'invoice_date': '2026-11-27', 'due_date': '2026-12-27', 'subtotal': '132.00', 'tax': '0.00', 'shipping': '0.00', 'total': '132.00', 'paid"
+  },
+  {
+   "check": "[pc] Contabilidad ve REC-2026-0009 en «Sin factura asociada»",
+   "ok": true,
+   "dato": "REC-2026-0009"
+  },
+  {
+   "check": "[pc] Factura asociada",
+   "ok": true,
+   "dato": "P\nPAP.CRM\nInicio\nOPERACIÓN COMERCIAL\nClientes\nExpedientes\nPor revisar\nOPERACIÓN DE CAMPO\nProyectos\nCalendario de obras\nPermisos e inspecciones\nTURNOS Y ASISTENCIA\nMi turno\nPanel de asistencia\nNómina\nBODEGA\nExistencias\n⇤\nRecepción de compras\nArtículos\nListas\nSalidas\nMovimientos\n#\nSeriales\nCompras sug"
+  },
+  {
+   "check": "[pc] Contabilidad no ve botones de recibir",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "El técnico no entra a Recepción de compras",
+   "ok": true,
+   "dato": ""
+  }
+ ],
+ "BOD-R5 En el celular": [
+  {
+   "check": "[celular formulario] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] Recepción guardada con 3 pendientes",
+   "ok": true,
+   "dato": "☰\nMenú\n78\nA\nRecepción de compras\n\nLo que llega del proveedor entra aquí a la bodega (o a una camioneta). Si llega una parte, el resto queda pendiente hasta que llegue o se cierre.\n\nNueva recepción\nREC-2026-0010 · QA Home Depot 747753\n\nPendiente por llegar · Se recibe en Bodega\n\nCerrar detalle\nQA Con"
+  },
+  {
+   "check": "[celular] Se cierra con faltante",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular recepción] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular conteo] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular existencias] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular movimientos] Sin desborde horizontal",
+   "ok": true,
+   "dato": "0"
+  },
+  {
+   "check": "[celular] El conteo en celular se puede escribir y no muestra diferencia (1 = 1)",
+   "ok": true,
+   "dato": ""
+  },
+  {
+   "check": "[celular] Sin errores de página",
+   "ok": true,
+   "dato": "[\"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:5173/dev-sw.js?dev-sw'): An SSL certificate error occurred when fetching the script.\", \"Failed to register a ServiceWorker for scope ('https://localhost:5173/') with script ('https://localhost:"
+  }
+ ]
+}

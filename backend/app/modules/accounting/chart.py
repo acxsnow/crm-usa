@@ -17,6 +17,9 @@ DEFAULT_CHART = [
     ("2100", "Tarjeta de crédito de la empresa", "liability", "credit_card", None),
     ("2200", "Reembolsos por pagar a empleados", "liability", "reimbursements", None),
     ("2300", "Nómina por pagar", "liability", "payroll_payable", None),
+    # Lo que entró a bodega y todavía no tiene la factura del proveedor asociada
+    # (recepción de compras, 26 nov 2026). Se salda al asociar la factura.
+    ("2050", "Compras recibidas por facturar", "liability", "grni", None),
     ("3000", "Patrimonio inicial", "equity", "opening_equity", None),
     ("3900", "Utilidades retenidas", "equity", "retained", None),
     ("4000", "Ingresos por trabajo particular", "income", "income_particular", "Ingresos brutos"),

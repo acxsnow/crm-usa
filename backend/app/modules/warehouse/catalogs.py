@@ -257,3 +257,33 @@ def code_of(label: str | None, catalog: dict[str, str], fallback: str) -> tuple[
         if nombre.casefold() == buscado or code.casefold() == buscado:
             return code, True
     return fallback, False
+
+# Por qué se ajusta una existencia a mano (26 nov 2026). El conteo físico pone
+# `count` solo; el resto lo elige quien ajusta y queda en el libro.
+ADJUSTMENT_REASONS: dict[str, str] = {
+    "count": "Conteo físico",
+    "damaged": "Dañado o vencido",
+    "lost": "Pérdida o robo",
+    "found": "Sobrante encontrado",
+    "no_invoice": "Entrada sin factura",
+    "count_error": "Corrección de un error",
+    "other": "Otro (explicar en la nota)",
+}
+
+# La recepción de una compra (respuesta 3 del cuestionario: la recibe el
+# supervisor). Puede llegar por partes: queda `abierta` hasta que llega todo
+# (`recibida`) o hasta que se cierra con el faltante y su motivo (`cerrada`).
+# `anulada` solo si no llegó nada.
+class ReceiptStatus(StrEnum):
+    ABIERTA = "abierta"
+    RECIBIDA = "recibida"
+    CERRADA = "cerrada"
+    ANULADA = "anulada"
+
+
+RECEIPT_STATUSES: dict[str, str] = {
+    ReceiptStatus.ABIERTA: "Pendiente por llegar",
+    ReceiptStatus.RECIBIDA: "Recibida completa",
+    ReceiptStatus.CERRADA: "Cerrada con faltante",
+    ReceiptStatus.ANULADA: "Anulada",
+}

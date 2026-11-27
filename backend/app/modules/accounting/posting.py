@@ -14,11 +14,15 @@ Criterios (base de causación, los valida el contador):
   liquidar contra Cuentas por cobrar; la comisión de Stripe es gasto.
 - Factura de proveedor aprobada: gasto o costo contra Cuentas por pagar; lo que
   entró a bodega va a Inventario y pasa a costo cuando sale.
+- Compra recibida en bodega (recepción): Inventario contra «Compras recibidas
+  por facturar». Su factura de proveedor, al asociarla, salda esa cuenta contra
+  Cuentas por pagar; la diferencia de precio ajusta el Inventario.
 - Gasto aprobado: contra la tarjeta o el banco (según de dónde vino el
   movimiento), o contra reembolsos por pagar si fue dinero propio.
 - Nómina y mano de obra no se causan solas: el sistema no calcula ni paga
   nómina, y `warehouse/labor.py` es un costo de gestión. Entran por asiento manual.
 """
+import uuid
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
@@ -101,8 +105,23 @@ async def _payables(db, org, out: list) -> None:
         for l in (await db.execute(select(SupplierInvoiceLine).where(
                 SupplierInvoiceLine.invoice_id.in_([f.id for f in facturas])))).scalars():
             lineas.setdefault(l.invoice_id, []).append(l)
+    recibido = await _received_by_invoice(db, org)
     for f in facturas:
         d = Desired(f"supplier-invoice:{f.id}", f.invoice_date, f"Factura de proveedor {f.number}")
+        if f.id in recibido:
+            # Factura de una compra que ya entró a bodega (recepción de compras):
+            # salda «Compras recibidas por facturar» con lo que se recibió, y la
+            # diferencia de precio (o de impuesto) ajusta el inventario.
+            valor = recibido[f.id]
+            d.dr("grni", valor)
+            diferencia = to_money(f.total) - valor
+            if diferencia > ZERO:
+                d.dr("inventory", diferencia)
+            elif diferencia < ZERO:
+                d.cr("inventory", -diferencia)
+            d.cr("ap", to_money(f.total))
+            out.append(d)
+            continue
         renglones = lineas.get(f.id, [])
         for l in renglones:
             cuenta = "inventory" if warehouse_entry_key(l.id) in en_bodega else COST_ACCOUNT.get(l.category, "exp_other")
@@ -118,6 +137,39 @@ async def _payables(db, org, out: list) -> None:
         d.dr("ap", p.amount)
         d.cr("credit_card" if p.method == "card" else "bank", p.amount)
         out.append(d)
+
+
+async def _received_by_invoice(db, org) -> dict:
+    """Factura del proveedor → valor de lo que entró a bodega con sus recepciones."""
+    from app.modules.finance.models import SupplierInvoice
+    from app.modules.warehouse.models import WarehouseMovement, WarehouseReceipt, WarehouseReceiptLine
+
+    recepciones = dict((await db.execute(select(WarehouseReceipt.id, WarehouseReceipt.supplier_invoice_id).join(
+        SupplierInvoice, SupplierInvoice.id == WarehouseReceipt.supplier_invoice_id).where(
+        WarehouseReceipt.organization_id == org,
+        WarehouseReceipt.status != "anulada",
+        SupplierInvoice.status != "void",
+    ))).all())
+    if not recepciones:
+        return {}
+    renglones = dict((await db.execute(select(WarehouseReceiptLine.id, WarehouseReceiptLine.receipt_id).where(
+        WarehouseReceiptLine.receipt_id.in_(list(recepciones))))).all())
+    totales: dict = {f: ZERO for f in recepciones.values()}
+    for m in (await db.execute(select(WarehouseMovement).where(
+            WarehouseMovement.organization_id == org, WarehouseMovement.source_key.like("receipt-line:%")))).scalars():
+        try:
+            line_id = uuid.UUID(m.source_key.split(":")[1])
+        except (IndexError, ValueError):
+            continue
+        receipt_id = renglones.get(line_id)
+        if receipt_id is None:
+            continue
+        totales[recepciones[receipt_id]] += _movement_value(m)
+    return totales
+
+
+def _movement_value(m) -> Decimal:
+    return to_money(abs(Decimal(str(m.quantity))) * to_money(m.unit_cost or ZERO))
 
 
 async def _expenses(db, org, out: list) -> None:
@@ -168,6 +220,10 @@ async def _warehouse(db, org, out: list) -> None:
         elif m.movement_type == "devolucion":
             d.dr("inventory", valor)
             d.cr(consumo, valor, m.project_id)
+        elif clave.startswith("receipt-line:"):
+            # Compra recibida: queda debiendo al proveedor hasta que se asocie la factura.
+            d.dr("inventory", valor)
+            d.cr("grni", valor)
         elif m.movement_type == "ajuste":
             contra = "exp_inventory_adjust"
             if Decimal(str(m.quantity)) >= 0:

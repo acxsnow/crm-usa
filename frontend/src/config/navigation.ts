@@ -153,6 +153,20 @@ const NAV_GROUPS: NavGroup[] = [
         icon: "⬓",
         permission: ["warehouse.read", "warehouse.manage", "warehouse.count"],
       },
+      // Lo que llega del proveedor: se recibe completo o por partes (26 nov 2026).
+      {
+        label: "Recepción de compras",
+        to: "/warehouse/receipts",
+        icon: "⇤",
+        permission: ["warehouse.read", "warehouse.manage", "payables.manage"],
+      },
+      // El conteo físico: el inicial del arranque y el mensual (respuestas 8 y 12).
+      {
+        label: "Conteos",
+        to: "/warehouse/counts",
+        icon: "✓",
+        permission: ["warehouse.count"],
+      },
       // El catálogo de artículos (SKU, categoría, unidad, costo, mínimo).
       {
         label: "Artículos",
