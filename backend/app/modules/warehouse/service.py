@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.billing.money import ZERO, to_money
 from app.modules.warehouse.catalogs import (
+    ADJUSTMENT_REASONS,
     DEFAULT_WAREHOUSE_NAME,
     ITEM_CATEGORIES,
     ITEM_UNITS,
@@ -274,6 +275,7 @@ async def record_movement(
     source_key: str | None = None,
     commit: bool = True,
     serials: list[str] | None = None,
+    reason: str | None = None,
 ) -> WarehouseMovement:
     """Registra un movimiento y mueve el saldo en la misma transacción.
 
@@ -291,6 +293,13 @@ async def record_movement(
         raise InvalidInputError("El tipo de movimiento no existe.", code="invalid_movement_type")
     if movement_type == MovementType.TRASLADO and to_location_id is None:
         raise InvalidInputError("Un traslado necesita la ubicación de destino.", code="transfer_destination_required")
+    if movement_type == MovementType.AJUSTE:
+        # Todo ajuste dice por qué (26 nov 2026). Quien no lo da es un conteo.
+        reason = reason or "count"
+        if reason not in ADJUSTMENT_REASONS:
+            raise InvalidInputError("El motivo del ajuste no existe.", code="invalid_adjustment_reason")
+    else:
+        reason = None
 
     if source_key is not None:
         previo = (await db.execute(select(WarehouseMovement).where(
@@ -354,7 +363,7 @@ async def record_movement(
         unit_cost=None if unit_cost is None else _price(unit_cost),
         movement_date=movement_date or await _today(db, organization_id),
         reference=(reference or "").strip() or None, note=(note or "").strip() or None,
-        project_id=project_id, source_key=source_key, created_by_user_id=user.id if user else None,
+        project_id=project_id, source_key=source_key, reason=reason, created_by_user_id=user.id if user else None,
         recorded_at=_now(),
     )
     db.add(movimiento)
@@ -396,6 +405,26 @@ async def project_outstanding(db: AsyncSession, organization_id, *, project_id, 
         WarehouseMovement.item_id == item_id,
         WarehouseMovement.movement_type.in_((MovementType.SALIDA, MovementType.DEVOLUCION))))).scalar()
     return max(_q(-(total or ZERO)), ZERO)
+
+
+async def apply_average_cost(db: AsyncSession, organization_id, *, item: WarehouseItem, quantity, unit_cost) -> Decimal:
+    """Costo promedio ponderado (26 nov 2026): lo que entra a otro precio mueve
+    el costo del artículo según cuánto había y cuánto llega. Se llama ANTES de
+    registrar la entrada, con la existencia de todas las ubicaciones.
+
+    Sin existencia (o con existencia negativa por una entrega sin stock,
+    D-BOD-4) el costo pasa a ser el de la compra."""
+    cantidad, costo = _q(quantity), _price(unit_cost)
+    if cantidad <= ZERO:
+        return to_money(item.unit_cost)
+    hay = await _total_quantity(db, organization_id, item.id)
+    if hay <= ZERO:
+        nuevo = costo
+    else:
+        nuevo = to_money((hay * to_money(item.unit_cost) + cantidad * costo) / (hay + cantidad))
+    item.unit_cost = nuevo
+    await db.flush()
+    return nuevo
 
 
 async def _total_quantity(db: AsyncSession, organization_id, item_id) -> Decimal:
@@ -667,32 +696,87 @@ async def import_catalog(db: AsyncSession, *, organization_id, user, rows: list[
 # ---------------------------------------------------------------------------
 
 async def register_count(db: AsyncSession, *, organization_id, user, location_id, lines: list[dict],
-                         note: str | None = None, counted_on: date | None = None) -> dict:
+                         note: str | None = None, counted_on: date | None = None, initial: bool = False) -> dict:
     """Cuadra el saldo con lo contado. La diferencia queda como movimiento
-    `ajuste` con su motivo, nunca como un saldo escrito a mano."""
+    `ajuste` con su motivo, nunca como un saldo escrito a mano.
+
+    `initial` es el conteo del arranque (respuesta 12, D-BOD-1): lo que aparece
+    de más no es una ganancia sino el inventario con el que se empieza, así que
+    entra como `entrada` (en contabilidad, contra el patrimonio inicial) y, si
+    la línea trae costo, ese costo pasa al artículo."""
     ubicacion = await get_location(db, organization_id, location_id)
+    vistos: set = set()
+    for linea in lines:
+        if linea["item_id"] in vistos:
+            raise InvalidInputError("Un artículo aparece dos veces en el conteo.", code="count_duplicate_item")
+        vistos.add(linea["item_id"])
+        if _q(linea["counted_quantity"]) < ZERO:
+            raise InvalidInputError("La cantidad contada no puede ser negativa.", code="invalid_quantity")
+    referencia = "Conteo inicial" if initial else "Conteo físico"
     ajustes, sin_cambio = [], 0
     for linea in lines:
         item = await get_item(db, organization_id, linea["item_id"])
         contado = _q(linea["counted_quantity"])
+        costo = linea.get("unit_cost")
+        if costo not in (None, ""):
+            costo = _price(costo)
+        else:
+            costo = None
         actual = await stock_quantity(db, organization_id, item_id=item.id, location_id=ubicacion.id)
         diferencia = contado - actual
         if diferencia == ZERO:
+            if initial and costo is not None and actual == ZERO:
+                item.unit_cost = costo
             sin_cambio += 1
             continue
-        movimiento = await record_movement(
-            db, organization_id=organization_id, user=user, item_id=item.id, location_id=ubicacion.id,
-            movement_type=MovementType.AJUSTE, quantity=diferencia, unit_cost=item.unit_cost,
-            reference="Conteo físico", note=(note or "").strip() or None, movement_date=counted_on, commit=False)
+        if initial and diferencia > ZERO:
+            if costo is not None:
+                await apply_average_cost(db, organization_id, item=item, quantity=diferencia, unit_cost=costo)
+            movimiento = await record_movement(
+                db, organization_id=organization_id, user=user, item_id=item.id, location_id=ubicacion.id,
+                movement_type=MovementType.ENTRADA, quantity=diferencia, unit_cost=item.unit_cost,
+                reference=referencia, note=(note or "").strip() or None, movement_date=counted_on, commit=False)
+        else:
+            movimiento = await record_movement(
+                db, organization_id=organization_id, user=user, item_id=item.id, location_id=ubicacion.id,
+                movement_type=MovementType.AJUSTE, quantity=diferencia, unit_cost=item.unit_cost,
+                reference=referencia, note=(note or "").strip() or None, movement_date=counted_on, commit=False,
+                reason="count")
         ajustes.append({"item_id": str(item.id), "item_name": item.name, "antes": str(actual), "contado": str(contado),
-                        "diferencia": str(diferencia), "movement_id": str(movimiento.id)})
+                        "diferencia": str(diferencia), "movement_id": str(movimiento.id),
+                        "movement_type": movimiento.movement_type,
+                        "valor": str(to_money(abs(diferencia) * to_money(item.unit_cost)))})
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="warehouse.counted", entity_type="warehouse_location",
                              entity_id=str(ubicacion.id),
-                             after_data={"ajustes": len(ajustes), "sin_cambio": sin_cambio})
+                             after_data={"ajustes": len(ajustes), "sin_cambio": sin_cambio, "inicial": initial})
     await db.commit()
     return {"location_id": str(ubicacion.id), "location_name": ubicacion.name, "revisados": len(lines),
-            "sin_cambio": sin_cambio, "ajustes": ajustes}
+            "sin_cambio": sin_cambio, "ajustes": ajustes, "initial": initial}
+
+
+def count_sheet_stmt(organization_id, *, q: str | None = None, category: str | None = None):
+    """Los artículos de la planilla del conteo: los activos (también los que
+    están en cero en esa ubicación). Se pagina como cualquier listado."""
+    return items_stmt(organization_id, q=q, category=category, active=True).order_by(None).order_by(
+        WarehouseItem.name, WarehouseItem.id)
+
+
+async def count_sheet(db: AsyncSession, organization_id, *, location_id, items) -> list[dict]:
+    """Una página de la planilla con lo que el sistema dice que hay en esa ubicación."""
+    ubicacion = await get_location(db, organization_id, location_id)
+    ids = [i.id for i in items]
+    saldos = dict((await db.execute(select(WarehouseStock.item_id, WarehouseStock.quantity).where(
+        WarehouseStock.organization_id == organization_id, WarehouseStock.location_id == ubicacion.id,
+        WarehouseStock.item_id.in_(ids)))).all()) if ids else {}
+    from app.modules.warehouse import categories as cat_svc
+
+    etiquetas = await cat_svc.category_labels(db, organization_id)
+    return [{"item_id": str(i.id), "name": i.name, "sku": i.sku, "brand": i.brand,
+             "category": i.category, "category_label": etiquetas.get(i.category, i.category),
+             "unit_label": ITEM_UNITS.get(i.unit, i.unit), "has_serial": i.has_serial,
+             "unit_cost": str(to_money(i.unit_cost)),
+             "system_quantity": str(_q(saldos.get(i.id, ZERO)))} for i in items]
 
 
 # ---------------------------------------------------------------------------
@@ -748,6 +832,8 @@ def movement_out(m: WarehouseMovement, *, item_name=None, unit_label=None, locat
         "amount": None if m.unit_cost is None else str(to_money(to_money(m.unit_cost) * abs(_q(m.quantity)))),
         "movement_date": m.movement_date.isoformat() if m.movement_date else None,
         "reference": m.reference, "note": m.note,
+        "reason": m.reason, "reason_label": ADJUSTMENT_REASONS.get(m.reason) if m.reason else None,
+        "to_location_id": str(m.to_location_id) if m.to_location_id else None,
         "project_id": str(m.project_id) if m.project_id else None,
         "created_at": m.created_at.isoformat() if m.created_at else None,
     }

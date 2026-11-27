@@ -5,7 +5,9 @@ import "../billing/billing.css";
 import "../programs/programs.css";
 import "../notifications/notifications.css";
 import "../finance/finance.css";
-import { PaginatedTable } from "@/components/DataTable";
+import { PaginatedTable, RowAction, RowActions } from "@/components/DataTable";
+import { Link } from "react-router-dom";
+import { StockMoveForm } from "./StockMoveForm";
 import { FilterBar, type FilterFieldDef } from "@/components/FilterBar";
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiErrorMessage } from "@/features/field-ops/module5Api";
@@ -26,15 +28,19 @@ const PAGE_SIZE = 25;
  * Existencias de la bodega (Fase 0 del plan control-bodega).
  *
  * Es la pantalla del conteo del fin de semana: qué hay hoy, dónde está (bodega
- * o camioneta) y qué está en o por debajo del mínimo. Aquí no se mueve nada a
- * mano: la existencia cambia por la carga del Excel, los conteos y —cuando
- * exista— las órdenes de salida autorizadas.
+ * o camioneta) y qué está en o por debajo del mínimo. El saldo no se escribe a
+ * mano: cambia por la carga del Excel, las compras recibidas, los conteos, las
+ * órdenes de salida autorizadas y, desde aquí, los traslados a una camioneta y
+ * los ajustes con motivo (26 nov 2026). Todo queda en el libro de movimientos.
  */
 export function WarehouseStockPage() {
   const { hasPermission } = useAuth();
   const { data: cat } = useQuery({ queryKey: warehouseKeys.catalogs, queryFn: warehouseCatalogs, staleTime: Infinity });
   const [filtros, setFiltros] = useState<Record<string, string>>({});
   const [importar, setImportar] = useState(false);
+  // Traslado o ajuste del artículo elegido (26 nov 2026).
+  const [mover, setMover] = useState<{ item: WarehouseItem; mode: "traslado" | "ajuste" } | null>(null);
+  const puedeMover = hasPermission("warehouse.manage");
 
   const params = {
     q: filtros.q || undefined,
@@ -60,10 +66,12 @@ export function WarehouseStockPage() {
       <header className="billing-head">
         <div>
           <h1>Existencias de bodega</h1>
-          <p>Qué hay hoy en la bodega y en las camionetas. El saldo solo lo mueven las entradas, las salidas autorizadas y los conteos.</p>
+          <p>Qué hay hoy en la bodega y en las camionetas. El saldo lo mueven las compras recibidas, las salidas autorizadas, los traslados, los ajustes y los conteos.</p>
         </div>
         {hasPermission("warehouse.manage") && (
           <div className="acta-actions">
+            <Link className="acta-btn" to="/warehouse/receipts">Recibir compra</Link>
+            {hasPermission("warehouse.count") && <Link className="acta-btn" to="/warehouse/counts">Contar</Link>}
             <button type="button" className="acta-btn is-primary" onClick={() => setImportar((v) => !v)}>
               {importar ? "Cerrar" : "Importar catálogo"}
             </button>
@@ -72,6 +80,10 @@ export function WarehouseStockPage() {
       </header>
 
       {importar && <ImportCatalog onClose={() => setImportar(false)} />}
+      {mover && (
+        <StockMoveForm key={`${mover.item.id}-${mover.mode}`} mode={mover.mode} onClose={() => setMover(null)}
+          item={lista.items.find((i) => i.id === mover.item.id) ?? mover.item} />
+      )}
 
       <div className="fin-kpis">
         <div className="fin-kpi"><small>Artículos activos</small><strong>{lista.total}</strong></div>
@@ -105,6 +117,13 @@ export function WarehouseStockPage() {
               <small key={l.location_id}>{l.name}: {l.quantity}</small>
             ))) },
             { key: "valor", header: "Valor", className: "mono", render: (i) => money(i.value) },
+            ...(puedeMover ? [{ key: "acciones", header: "", render: (i: WarehouseItem) => (
+              <RowActions>
+                <RowAction onClick={() => { setMover({ item: i, mode: "traslado" }); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  disabled={Number(i.total_quantity) <= 0}>Trasladar</RowAction>
+                <RowAction onClick={() => { setMover({ item: i, mode: "ajuste" }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Ajustar</RowAction>
+              </RowActions>
+            ) }] : []),
           ]} />
       </article>
     </div>

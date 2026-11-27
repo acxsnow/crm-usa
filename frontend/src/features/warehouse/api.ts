@@ -21,6 +21,9 @@ export interface WarehouseCatalogs {
   budget_categories: Record<string, string>;
   budget_statuses: Record<string, string>;
   serial_statuses: Record<string, string>;
+  /** Motivos de un ajuste a mano (el del conteo lo pone el sistema). */
+  adjustment_reasons?: Record<string, string>;
+  receipt_statuses?: Record<string, string>;
 }
 
 /** Cuánto hay de un artículo en una ubicación concreta (bodega o camioneta). */
@@ -73,6 +76,10 @@ export interface WarehouseMovement {
   movement_date: string | null;
   reference: string | null;
   note: string | null;
+  /** Motivo del ajuste (Dañado, Pérdida, Conteo físico…). */
+  reason?: string | null;
+  reason_label?: string | null;
+  to_location_id?: string | null;
   project_id: string | null;
   created_at: string | null;
 }

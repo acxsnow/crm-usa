@@ -26,6 +26,8 @@ SERIES = {
     # Orden de salida de material de bodega (cuestionario del 19 de octubre, punto 1).
     "SAL": "Orden de salida de bodega",
     "AS": "Asiento contable",
+    # Recepción de una compra en bodega (26 nov 2026).
+    "REC": "Recepción de compra en bodega",
 }
 
 

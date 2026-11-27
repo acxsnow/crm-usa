@@ -155,6 +155,8 @@ class WarehouseMovement(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     # La obra a la que se carga lo que sale (costo real, punto 3).
     project_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("projects.id"), index=True)
     source_key: Mapped[str | None] = mapped_column(String(160))
+    # Por qué se ajustó (`ADJUSTMENT_REASONS`); solo en ajustes y conteos.
+    reason: Mapped[str | None] = mapped_column(String(30))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
     recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -541,3 +543,62 @@ class LaborRate(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     hourly_rate: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+
+class WarehouseReceipt(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """La recepción de una compra en bodega (respuesta 3: la recibe el supervisor).
+
+    Se anota lo que se pidió y lo que va llegando: una compra puede llegar por
+    partes y queda abierta con lo pendiente. Cada llegada es una entrada al
+    libro (`receipt-line:…`), con el costo de la factura más su parte del
+    impuesto y del envío. La factura del proveedor la asocia Contabilidad
+    después (`supplier_invoice_id`), sin volver a digitar renglones.
+    """
+
+    __tablename__ = "warehouse_receipts"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "number", name="uq_warehouse_receipt_number"),
+        Index("ix_warehouse_receipts_org_status", "organization_id", "status"),
+    )
+
+    number: Mapped[str] = mapped_column(String(30), nullable=False)
+    supplier_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("suppliers.id"), index=True)
+    # Cuando el proveedor no está registrado en Proveedores.
+    supplier_name: Mapped[str | None] = mapped_column(String(255))
+    # Factura o remisión que trae el material.
+    document_number: Mapped[str | None] = mapped_column(String(80))
+    document_date: Mapped[date | None] = mapped_column(Date)
+    location_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_locations.id"), nullable=False)
+    tax: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    shipping: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal("0"))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="abierta")
+    note: Mapped[str | None] = mapped_column(Text)
+    close_reason: Mapped[str | None] = mapped_column(Text)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    supplier_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("supplier_invoices.id"), index=True)
+    invoice_linked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invoice_linked_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), ForeignKey("users.id"))
+
+    lines: Mapped[list["WarehouseReceiptLine"]] = relationship(
+        "WarehouseReceiptLine", back_populates="receipt", cascade="all, delete-orphan",
+        order_by="WarehouseReceiptLine.sort_order", lazy="selectin")
+
+
+class WarehouseReceiptLine(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Un artículo de la compra: cuánto se pidió, cuánto ha llegado y a cuánto."""
+
+    __tablename__ = "warehouse_receipt_lines"
+
+    receipt_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("warehouse_receipts.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id: Mapped[uuid.UUID] = mapped_column(GUID(), ForeignKey("warehouse_items.id"), nullable=False, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ordered_quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False)
+    received_quantity: Mapped[Decimal] = mapped_column(QUANTITY, nullable=False, default=Decimal("0"))
+    # Precio unitario de la factura, sin impuesto ni envío.
+    unit_cost: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+
+    receipt: Mapped["WarehouseReceipt"] = relationship("WarehouseReceipt", back_populates="lines", lazy="raise")

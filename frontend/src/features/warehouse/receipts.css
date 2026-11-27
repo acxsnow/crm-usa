@@ -1,0 +1,46 @@
+/* Recepción de compras, conteos y traslados/ajustes (26 nov 2026). */
+
+.rec-lines { display: grid; gap: 0.75rem; margin: 0.75rem 0; }
+.rec-line { display: grid; gap: 0.5rem; padding: 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.rec-line-nums, .rec-money-pair { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.rec-money-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rec-line-nums input, .rec-money-pair input, .rec-arrive input { width: 100%; }
+.rec-line .acta-link { justify-self: start; }
+.rec-total { margin: 0.5rem 0; }
+
+.rec-detail-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; flex-wrap: wrap; }
+.rec-detail-lines { list-style: none; margin: 0.5rem 0; padding: 0; }
+.rec-detail-lines li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--line-soft, var(--line)); }
+.rec-detail-text { display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.rec-pending { color: var(--danger, #b42318); }
+.rec-arrive { display: grid; grid-template-columns: minmax(90px, 140px) auto; gap: 4px 8px; align-items: end; flex: 0 1 320px; }
+.rec-arrive .form-label { grid-column: 1 / -1; margin: 0; }
+.rec-arrive textarea { grid-column: 1 / -1; }
+.rec-invoice { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.rec-invoice h4 { margin: 0 0 0.4rem; }
+
+/* Conteo: planilla con lo del sistema, lo contado y la diferencia. */
+.count-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; align-items: end; }
+.count-sheet { width: 100%; border-collapse: collapse; }
+.count-sheet th, .count-sheet td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line-soft, var(--line)); text-align: left; vertical-align: middle; }
+.count-sheet td.num, .count-sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.count-sheet input { width: 100%; max-width: 110px; }
+.count-sheet tr.is-diff td { background: var(--warn-soft, rgba(245, 158, 11, 0.08)); }
+.count-diff-up { color: var(--ok, #067647); font-weight: 600; }
+.count-diff-down { color: var(--danger, #b42318); font-weight: 600; }
+.count-footer { position: sticky; bottom: 0; background: var(--surface, #fff); padding: 0.6rem 0; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; z-index: 2; }
+
+/* Traslado y ajuste desde existencias. */
+.move-form .fin-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 720px) {
+  .rec-line-nums { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .count-toolbar, .move-form .fin-row { grid-template-columns: 1fr; }
+  .count-sheet thead { display: none; }
+  .count-sheet, .count-sheet tbody, .count-sheet tr, .count-sheet td { display: block; width: 100%; }
+  .count-sheet tr { padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+  .count-sheet td { border: 0; padding: 0.15rem 0; }
+  .count-sheet td.num { text-align: left; }
+  .count-sheet td[data-label]::before { content: attr(data-label) ": "; color: var(--ink-soft, #667085); font-size: 0.8125rem; }
+  .count-sheet input { max-width: none; }
+}

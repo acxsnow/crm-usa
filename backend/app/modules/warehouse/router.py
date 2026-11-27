@@ -19,12 +19,14 @@ from app.modules.warehouse import kits as kit_svc
 from app.modules.warehouse import releases as rel
 from app.modules.warehouse import xlsx
 from app.modules.warehouse.catalogs import (
+    ADJUSTMENT_REASONS,
     BUDGET_CATEGORIES,
     BUDGET_STATUSES,
     ITEM_UNITS,
     LINE_ORIGINS,
     LOCATION_KINDS,
     MOVEMENT_TYPES,
+    RECEIPT_STATUSES,
     RELEASE_STATUSES,
     SERIAL_STATUSES,
 )
@@ -152,7 +154,9 @@ async def warehouse_catalogs(db: AsyncSession = Depends(get_db),
             "units": ITEM_UNITS, "movement_types": MOVEMENT_TYPES,
             "location_kinds": LOCATION_KINDS, "release_statuses": RELEASE_STATUSES,
             "line_origins": LINE_ORIGINS, "budget_categories": BUDGET_CATEGORIES,
-            "budget_statuses": BUDGET_STATUSES, "serial_statuses": SERIAL_STATUSES}
+            "budget_statuses": BUDGET_STATUSES, "serial_statuses": SERIAL_STATUSES,
+            "adjustment_reasons": {k: v for k, v in ADJUSTMENT_REASONS.items() if k != "count"},
+            "receipt_statuses": RECEIPT_STATUSES}
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +344,8 @@ class MovementIn(BaseModel):
     # Artículo con serial (D-007): uno por unidad. Obligatorio en la devolución,
     # opcional en la entrada.
     serials: list[str] | None = Field(default=None, max_length=500)
+    # Motivo del ajuste (`ADJUSTMENT_REASONS`): obligatorio en un ajuste a mano.
+    reason: str | None = Field(default=None, max_length=30)
 
 
 async def _movement_out(db, organization_id, movimientos: list[WarehouseMovement]) -> list[dict]:
@@ -380,14 +386,24 @@ async def create_movement(payload: MovementIn, db: AsyncSession = Depends(get_db
         # una orden de salida, no por aquí.
         raise InvalidInputError("Las salidas se hacen con una orden autorizada, no a mano.",
                                 code="movement_type_not_manual")
+    if payload.movement_type == "ajuste":
+        # El ajuste a mano dice por qué (26 nov 2026); «otro» lo explica en la nota.
+        if not payload.reason or payload.reason == "count" or payload.reason not in ADJUSTMENT_REASONS:
+            raise InvalidInputError("Elige el motivo del ajuste.", code="adjustment_reason_required")
+        if payload.reason == "other" and not (payload.note or "").strip():
+            raise InvalidInputError("Explica el motivo en la nota.", code="adjustment_note_required")
     item = await wh.get_item(db, organization_id, payload.item_id)
     location_id = payload.location_id or (await wh.default_location(db, organization_id)).id
+    if payload.movement_type == "entrada" and payload.unit_cost is not None:
+        await wh.apply_average_cost(db, organization_id, item=item, quantity=payload.quantity,
+                                    unit_cost=payload.unit_cost)
     movimiento = await wh.record_movement(
         db, organization_id=organization_id, user=current_user, item_id=item.id, location_id=location_id,
         movement_type=payload.movement_type, quantity=payload.quantity,
         unit_cost=payload.unit_cost if payload.unit_cost is not None else item.unit_cost,
         reference=payload.reference, note=payload.note, project_id=payload.project_id,
-        to_location_id=payload.to_location_id, movement_date=payload.movement_date, serials=payload.serials)
+        to_location_id=payload.to_location_id, movement_date=payload.movement_date, serials=payload.serials,
+        reason=payload.reason)
     return (await _movement_out(db, organization_id, [movimiento]))[0]
 
 
@@ -471,6 +487,8 @@ async def import_catalog_rows(payload: ImportRowsIn, db: AsyncSession = Depends(
 class CountLineIn(BaseModel):
     item_id: uuid.UUID
     counted_quantity: str
+    # Solo en el conteo inicial: el costo con que arranca el artículo.
+    unit_cost: str | None = None
 
 
 class CountIn(BaseModel):
@@ -478,6 +496,8 @@ class CountIn(BaseModel):
     counted_on: date | None = None
     note: str | None = Field(default=None, max_length=1000)
     lines: list[CountLineIn] = Field(min_length=1, max_length=2000)
+    # El conteo del arranque (D-BOD-1): lo de más entra como inventario inicial.
+    initial: bool = False
 
 
 @router.post("/warehouse/counts")
@@ -487,7 +507,22 @@ async def create_count(payload: CountIn, db: AsyncSession = Depends(get_db),
     location_id = payload.location_id or (await wh.default_location(db, organization_id)).id
     return await wh.register_count(db, organization_id=organization_id, user=current_user, location_id=location_id,
                                    lines=[l.model_dump() for l in payload.lines], note=payload.note,
-                                   counted_on=payload.counted_on)
+                                   counted_on=payload.counted_on, initial=payload.initial)
+
+
+@router.get("/warehouse/counts/sheet")
+async def count_sheet(response: Response, location_id: uuid.UUID | None = None, q: str | None = None,
+                      category: str | None = None, db: AsyncSession = Depends(get_db),
+                      organization_id: uuid.UUID = Depends(get_organization_id),
+                      pag: tuple[int, int] = Depends(pagination_params),
+                      current_user: User = Depends(_count)) -> list[dict]:
+    """La planilla para contar una ubicación, por páginas: cada artículo activo
+    con lo que el sistema dice que hay. Sin costos para quien no los ve."""
+    location_id = location_id or (await wh.default_location(db, organization_id)).id
+    items = await paginate(db, wh.count_sheet_stmt(organization_id, q=q, category=category), limit=pag[0],
+                           offset=pag[1], response=response)
+    filas = await wh.count_sheet(db, organization_id, location_id=location_id, items=items)
+    return filas if _ve_costos(current_user) else [{k: v for k, v in f.items() if k != "unit_cost"} for f in filas]
 
 
 # ---------------------------------------------------------------------------
@@ -970,3 +1005,161 @@ async def day_log_helpers(response: Response, db: AsyncSession = Depends(get_db)
     filas = [{"id": str(u.id), "full_name": u.full_name}
              for u in await list_installers(db, organization_id=organization_id) if u.id != current_user.id]
     return paginate_list(filas, limit=pag[0], offset=pag[1], response=response)
+
+
+# ---------------------------------------------------------------------------
+# Recepción de compras (respuesta 3 del cuestionario, 26 nov 2026)
+# ---------------------------------------------------------------------------
+
+from app.modules.warehouse import receipts as rec_svc  # noqa: E402
+
+# Asociar la factura: quien administra la bodega o Contabilidad.
+_receipt_invoice = require_any_permission("warehouse.manage", "payables.manage")
+_receipt_read = require_any_permission("warehouse.read", "warehouse.manage", "payables.manage")
+
+
+class ReceiptLineIn(BaseModel):
+    item_id: uuid.UUID
+    ordered_quantity: str
+    unit_cost: str = "0"
+    # Lo que llegó hoy (vacío = todavía nada).
+    received: str | None = None
+    serials: list[str] | None = Field(default=None, max_length=500)
+
+
+class ReceiptIn(BaseModel):
+    supplier_id: uuid.UUID | None = None
+    supplier_name: str | None = Field(default=None, max_length=255)
+    document_number: str | None = Field(default=None, max_length=80)
+    document_date: date | None = None
+    location_id: uuid.UUID | None = None
+    tax: str | None = None
+    shipping: str | None = None
+    note: str | None = Field(default=None, max_length=2000)
+    received_on: date | None = None
+    lines: list[ReceiptLineIn] = Field(min_length=1, max_length=rec_svc.MAX_LINES)
+
+
+class ReceiveLineIn(BaseModel):
+    line_id: uuid.UUID
+    quantity: str
+    serials: list[str] | None = Field(default=None, max_length=500)
+
+
+class ReceiveIn(BaseModel):
+    received_on: date | None = None
+    note: str | None = Field(default=None, max_length=2000)
+    lines: list[ReceiveLineIn] = Field(min_length=1, max_length=rec_svc.MAX_LINES)
+
+
+class CloseReceiptIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class LinkInvoiceIn(BaseModel):
+    supplier_invoice_id: uuid.UUID | None = None
+
+
+class ReceiptSupplierIn(BaseModel):
+    supplier_id: uuid.UUID
+
+
+async def _receipt_out(db, organization_id, user, receipts) -> list[dict]:
+    ve = bool({"warehouse.read", "warehouse.manage", "payables.manage"} & get_effective_permissions(user))
+    return await rec_svc.receipts_out(db, organization_id, receipts, with_costs=ve)
+
+
+@router.get("/warehouse/receipts")
+async def list_receipts(response: Response, status: str | None = None, q: str | None = None,
+                        db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
+                        pag: tuple[int, int] = Depends(pagination_params),
+                        current_user: User = Depends(_receipt_read)) -> list[dict]:
+    filas = await paginate(db, rec_svc.receipts_stmt(organization_id, status=status, q=q), limit=pag[0],
+                           offset=pag[1], response=response)
+    return await _receipt_out(db, organization_id, current_user, filas)
+
+
+@router.get("/warehouse/receipts/suppliers")
+async def receipt_suppliers(response: Response, q: str | None = None, db: AsyncSession = Depends(get_db),
+                            organization_id: uuid.UUID = Depends(get_organization_id),
+                            pag: tuple[int, int] = Depends(pagination_params),
+                            current_user: User = Depends(_receipt_read)) -> list[dict]:
+    """Los proveedores activos, solo el nombre: quien recibe no necesita ver
+    sus datos bancarios ni sus saldos (eso es de Proveedores)."""
+    from sqlalchemy import select
+
+    from app.modules.finance.models import Supplier
+    from app.shared.text_search import LIKE_ESCAPE, contains_pattern
+
+    stmt = select(Supplier.id, Supplier.name).where(Supplier.organization_id == organization_id,
+                                                    Supplier.active.is_(True))
+    if q:
+        stmt = stmt.where(Supplier.name.ilike(contains_pattern(q), escape=LIKE_ESCAPE))
+    filas = await paginate(db, stmt.order_by(Supplier.name, Supplier.id), limit=pag[0], offset=pag[1],
+                           response=response, scalars=False)
+    return [{"id": str(i), "name": n} for i, n in filas]
+
+
+@router.get("/warehouse/receipts/{receipt_id}")
+async def get_receipt(receipt_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                      organization_id: uuid.UUID = Depends(get_organization_id),
+                      current_user: User = Depends(_receipt_read)) -> dict:
+    r = await rec_svc.get_receipt(db, organization_id, receipt_id)
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]
+
+
+@router.post("/warehouse/receipts", status_code=201)
+async def create_receipt(payload: ReceiptIn, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_manage)) -> dict:
+    r = await rec_svc.create_receipt(db, organization_id=organization_id, user=current_user,
+                                     data={**payload.model_dump(), "lines": [l.model_dump() for l in payload.lines]})
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]
+
+
+@router.post("/warehouse/receipts/{receipt_id}/receive")
+async def receive_receipt(receipt_id: uuid.UUID, payload: ReceiveIn, db: AsyncSession = Depends(get_db),
+                          organization_id: uuid.UUID = Depends(get_organization_id),
+                          current_user: User = Depends(_manage)) -> dict:
+    r = await rec_svc.receive(db, organization_id=organization_id, user=current_user, receipt_id=receipt_id,
+                              lines=[l.model_dump() for l in payload.lines], received_on=payload.received_on,
+                              note=payload.note)
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]
+
+
+@router.post("/warehouse/receipts/{receipt_id}/close")
+async def close_receipt(receipt_id: uuid.UUID, payload: CloseReceiptIn, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_manage)) -> dict:
+    r = await rec_svc.close(db, organization_id=organization_id, user=current_user, receipt_id=receipt_id,
+                            reason=payload.reason)
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]
+
+
+@router.put("/warehouse/receipts/{receipt_id}/supplier")
+async def set_receipt_supplier(receipt_id: uuid.UUID, payload: ReceiptSupplierIn, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               current_user: User = Depends(_receipt_invoice)) -> dict:
+    r = await rec_svc.set_supplier(db, organization_id=organization_id, user=current_user, receipt_id=receipt_id,
+                                   supplier_id=payload.supplier_id)
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]
+
+
+@router.get("/warehouse/receipts/{receipt_id}/invoice-candidates")
+async def receipt_invoice_candidates(receipt_id: uuid.UUID, response: Response, db: AsyncSession = Depends(get_db),
+                                     organization_id: uuid.UUID = Depends(get_organization_id),
+                                     pag: tuple[int, int] = Depends(pagination_params),
+                                     current_user: User = Depends(_receipt_invoice)) -> list[dict]:
+    r = await rec_svc.get_receipt(db, organization_id, receipt_id)
+    filas = await paginate(db, rec_svc.invoice_candidates_stmt(organization_id, r), limit=pag[0], offset=pag[1],
+                           response=response)
+    return rec_svc.invoice_candidates_out(filas)
+
+
+@router.put("/warehouse/receipts/{receipt_id}/invoice")
+async def link_receipt_invoice(receipt_id: uuid.UUID, payload: LinkInvoiceIn, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               current_user: User = Depends(_receipt_invoice)) -> dict:
+    r = await rec_svc.link_invoice(db, organization_id=organization_id, user=current_user, receipt_id=receipt_id,
+                                   supplier_invoice_id=payload.supplier_invoice_id)
+    return (await _receipt_out(db, organization_id, current_user, [r]))[0]

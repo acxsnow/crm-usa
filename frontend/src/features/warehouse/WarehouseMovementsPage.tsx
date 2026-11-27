@@ -60,7 +60,7 @@ export function WarehouseMovementsPage() {
             { key: "articulo", header: "Artículo", render: (m) => (
               <><strong>{m.item_name ?? "Artículo"}</strong>{m.note && <small>{m.note}</small>}</>
             ) },
-            { key: "tipo", header: "Tipo", render: (m) => m.movement_type_label },
+            { key: "tipo", header: "Tipo", render: (m) => <>{m.movement_type_label}{m.reason_label && <small>{m.reason_label}</small>}</> },
             { key: "cantidad", header: "Cantidad", className: "mono", render: (m) => <>{m.quantity} <small>{m.unit_label ?? ""}</small></> },
             { key: "donde", header: "Dónde", render: (m) => (
               <>{m.location_name ?? "—"}{m.vendor_location_id && <small>Entra a la camioneta</small>}</>
