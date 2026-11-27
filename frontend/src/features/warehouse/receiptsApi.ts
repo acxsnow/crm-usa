@@ -151,7 +151,7 @@ export interface CountResult {
 
 export const registerCount = async (data: {
   location_id: string; initial: boolean; note?: string | null;
-  lines: { item_id: string; counted_quantity: string; unit_cost?: string | null }[];
+  lines: { item_id: string; counted_quantity: string; unit_cost?: string | null; serials?: string[] | null }[];
 }) => (await apiClient.post<CountResult>("/warehouse/counts", data)).data;
 
 // --- Traslados y ajustes ----------------------------------------------------

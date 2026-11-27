@@ -30,8 +30,8 @@ from app.modules.warehouse.models import (
     WarehouseStock,
 )
 from app.shared import events as domain_events
-from app.shared.decimals import to_quantity
 from app.shared.audit import record_audit_event
+from app.shared.decimals import to_quantity
 from app.shared.errors import ConflictError, InvalidInputError, NotFoundError
 from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
@@ -247,7 +247,7 @@ async def stock_quantity(db: AsyncSession, organization_id, *, item_id, location
 async def _apply_to_stock(db: AsyncSession, organization_id, *, item_id, location_id, delta: Decimal) -> WarehouseStock:
     fila = (await db.execute(select(WarehouseStock).where(
         WarehouseStock.organization_id == organization_id, WarehouseStock.item_id == item_id,
-        WarehouseStock.location_id == location_id))).scalar_one_or_none()
+        WarehouseStock.location_id == location_id).with_for_update())).scalar_one_or_none()
     if fila is None:
         fila = WarehouseStock(organization_id=organization_id, item_id=item_id, location_id=location_id,
                               quantity=ZERO)
@@ -308,6 +308,14 @@ async def record_movement(
         if previo is not None:
             return previo
 
+    # Serializa los movimientos del mismo artículo: protege el costo promedio
+    # y el saldo cuando dos recepciones distintas llegan simultáneamente.
+    item = (await db.execute(select(WarehouseItem).where(
+        WarehouseItem.organization_id == organization_id, WarehouseItem.id == item_id
+    ).with_for_update())).scalar_one_or_none()
+    if item is None:
+        raise NotFoundError("El artículo no existe.", code="warehouse_item_not_found")
+
     cantidad = _q(quantity)
     if movement_type == MovementType.AJUSTE:
         delta = cantidad
@@ -321,9 +329,9 @@ async def record_movement(
             raise InvalidInputError("La cantidad debe ser mayor que cero.", code="invalid_quantity")
 
     con_serial = movement_type in (MovementType.ENTRADA, MovementType.DEVOLUCION) or bool(serials)
-    item = await db.get(WarehouseItem, item_id) if con_serial else None
+    serial_item = item if con_serial else None
     if serials:
-        if item is None or not item.has_serial:
+        if serial_item is None or not serial_item.has_serial:
             raise InvalidInputError("Este artículo no lleva serial.", code="serials_not_expected")
         if movement_type not in (MovementType.ENTRADA, MovementType.DEVOLUCION):
             raise InvalidInputError("Los seriales se anotan al recibir, al entregar y al devolver.",
@@ -376,14 +384,14 @@ async def record_movement(
     else:
         await _avisar_si_bajo_del_minimo(db, organization_id, item_id=item_id, total_antes=total_antes, delta=delta)
 
-    if item is not None and item.has_serial:
+    if serial_item is not None and serial_item.has_serial:
         from app.modules.warehouse import serials as serial_svc
 
         if movement_type == MovementType.ENTRADA:
-            await serial_svc.receive(db, organization_id=organization_id, user=user, item=item, serials=serials,
+            await serial_svc.receive(db, organization_id=organization_id, user=user, item=serial_item, serials=serials,
                                      cantidad=cantidad, location_id=location_id)
         else:
-            await serial_svc.return_to_stock(db, organization_id=organization_id, user=user, item=item,
+            await serial_svc.return_to_stock(db, organization_id=organization_id, user=user, item=serial_item,
                                              serials=serials, cantidad=cantidad, project_id=project_id,
                                              location_id=location_id)
 
@@ -722,8 +730,14 @@ async def register_count(db: AsyncSession, *, organization_id, user, location_id
             costo = _price(costo)
         else:
             costo = None
+        seriales = linea.get("serials") or None
         actual = await stock_quantity(db, organization_id, item_id=item.id, location_id=ubicacion.id)
         diferencia = contado - actual
+        if initial and item.has_serial and diferencia > ZERO:
+            from app.modules.warehouse.serials import _check_count, clean_list, whole_units
+
+            seriales = clean_list(item, seriales)
+            _check_count(item, seriales, whole_units(item, diferencia), "contada")
         if diferencia == ZERO:
             if initial and costo is not None and actual == ZERO:
                 item.unit_cost = costo
@@ -735,7 +749,8 @@ async def register_count(db: AsyncSession, *, organization_id, user, location_id
             movimiento = await record_movement(
                 db, organization_id=organization_id, user=user, item_id=item.id, location_id=ubicacion.id,
                 movement_type=MovementType.ENTRADA, quantity=diferencia, unit_cost=item.unit_cost,
-                reference=referencia, note=(note or "").strip() or None, movement_date=counted_on, commit=False)
+                reference=referencia, note=(note or "").strip() or None, movement_date=counted_on, commit=False,
+                serials=seriales)
         else:
             movimiento = await record_movement(
                 db, organization_id=organization_id, user=user, item_id=item.id, location_id=ubicacion.id,

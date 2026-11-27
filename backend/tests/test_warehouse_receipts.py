@@ -261,3 +261,66 @@ async def test_permisos_y_aislamiento(app_client, db, seeded_org, admin, active_
     assert r.status_code == 404
     lista = (await app_client.get(f"{API}/warehouse/receipts", headers=ajeno)).json()
     assert rec["id"] not in str(lista)
+
+
+async def test_seriales_obligatorios_en_recepcion_y_conteo_inicial(app_client, admin):
+    equipo = await _item(app_client, admin, "Equipo serializado", "SER-1", "10.00", has_serial=True)
+
+    r = await app_client.post(f"{API}/warehouse/receipts", headers=admin, json={
+        "supplier_name": "Proveedor serial", "lines": [{
+            "item_id": equipo["id"], "ordered_quantity": "2", "unit_cost": "10", "received": "2"
+        }]})
+    assert (r.status_code, r.json()["code"]) == (400, "serials_count_mismatch")
+
+    r = await app_client.post(f"{API}/warehouse/receipts", headers=admin, json={
+        "supplier_name": "Proveedor serial", "lines": [{
+            "item_id": equipo["id"], "ordered_quantity": "2", "unit_cost": "10", "received": "2",
+            "serials": ["SER-A", "SER-B"]
+        }]})
+    assert r.status_code == 201, r.text
+    seriales = (await app_client.get(f"{API}/warehouse/serials", headers=admin,
+                                    params={"item_id": equipo["id"]})).json()
+    assert sorted(s["serial"] for s in seriales) == ["SER-A", "SER-B"]
+
+    inicial = await _item(app_client, admin, "Equipo inicial serializado", "SER-2", "20.00", has_serial=True)
+    r = await app_client.post(f"{API}/warehouse/counts", headers=admin, json={
+        "initial": True, "lines": [{"item_id": inicial["id"], "counted_quantity": "2"}]})
+    assert (r.status_code, r.json()["code"]) == (400, "serials_count_mismatch")
+    r = await app_client.post(f"{API}/warehouse/counts", headers=admin, json={
+        "initial": True, "lines": [{"item_id": inicial["id"], "counted_quantity": "2",
+                                     "serials": ["INI-A", "INI-B"]}]})
+    assert r.status_code == 200, r.text
+    seriales = (await app_client.get(f"{API}/warehouse/serials", headers=admin,
+                                    params={"item_id": inicial["id"]})).json()
+    assert sorted(s["serial"] for s in seriales) == ["INI-A", "INI-B"]
+
+
+async def test_factura_no_se_reutiliza_y_anulada_vuelve_a_pendientes(app_client, db, seeded_org, admin):
+    org = seeded_org["org"].id
+    proveedor = await _proveedor(db, org, "Proveedor único")
+    item = await _item(app_client, admin, "Material único", "UNI-1", "10.00")
+    recibos = []
+    for documento in ("U-1", "U-2"):
+        r = await app_client.post(f"{API}/warehouse/receipts", headers=admin, json={
+            "supplier_id": str(proveedor.id), "document_number": documento,
+            "lines": [{"item_id": item["id"], "ordered_quantity": "1", "unit_cost": "10", "received": "1"}]})
+        assert r.status_code == 201, r.text
+        recibos.append(r.json())
+    factura = SupplierInvoice(organization_id=org, supplier_id=proveedor.id, number="U-FAC",
+                              invoice_date=HOY, due_date=HOY, subtotal=Decimal("10"),
+                              tax=Decimal("0"), shipping=Decimal("0"), total=Decimal("10"), status="approved")
+    db.add(factura)
+    await db.commit()
+
+    r = await app_client.put(f"{API}/warehouse/receipts/{recibos[0]['id']}/invoice", headers=admin,
+                             json={"supplier_invoice_id": str(factura.id)})
+    assert r.status_code == 200, r.text
+    r = await app_client.put(f"{API}/warehouse/receipts/{recibos[1]['id']}/invoice", headers=admin,
+                             json={"supplier_invoice_id": str(factura.id)})
+    assert (r.status_code, r.json()["code"]) == (409, "supplier_invoice_already_linked")
+
+    factura.status = "void"
+    await db.commit()
+    pendientes = (await app_client.get(f"{API}/warehouse/receipts", headers=admin,
+                                       params={"status": "sin_factura"})).json()
+    assert recibos[0]["id"] in {r["id"] for r in pendientes}

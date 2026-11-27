@@ -10,13 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_effective_permissions, get_organization_id, require_any_permission, require_permission
 from app.db.session import get_db
 from app.modules.users.models import User
-from app.modules.warehouse import service as wh
 from app.modules.warehouse import budgets as budget_svc
 from app.modules.warehouse import categories as cat_svc
 from app.modules.warehouse import costing as costing_svc
 from app.modules.warehouse import day_logs as daylog_svc
 from app.modules.warehouse import kits as kit_svc
 from app.modules.warehouse import releases as rel
+from app.modules.warehouse import serials as serial_svc
+from app.modules.warehouse import service as wh
 from app.modules.warehouse import xlsx
 from app.modules.warehouse.catalogs import (
     ADJUSTMENT_REASONS,
@@ -30,7 +31,6 @@ from app.modules.warehouse.catalogs import (
     RELEASE_STATUSES,
     SERIAL_STATUSES,
 )
-from app.modules.warehouse import serials as serial_svc
 from app.modules.warehouse.models import WarehouseItem, WarehouseLocation, WarehouseMovement
 from app.shared.errors import InvalidInputError, NotFoundError
 from app.shared.files.validation import read_limited
@@ -386,13 +386,16 @@ async def create_movement(payload: MovementIn, db: AsyncSession = Depends(get_db
         # una orden de salida, no por aquí.
         raise InvalidInputError("Las salidas se hacen con una orden autorizada, no a mano.",
                                 code="movement_type_not_manual")
+    item = await wh.get_item(db, organization_id, payload.item_id)
+    # Mantener el error específico de seriales antes de las reglas del ajuste.
+    if payload.serials and (not item.has_serial or payload.movement_type == "ajuste"):
+        raise InvalidInputError("Este artículo no lleva serial.", code="serials_not_expected")
     if payload.movement_type == "ajuste":
         # El ajuste a mano dice por qué (26 nov 2026); «otro» lo explica en la nota.
         if not payload.reason or payload.reason == "count" or payload.reason not in ADJUSTMENT_REASONS:
             raise InvalidInputError("Elige el motivo del ajuste.", code="adjustment_reason_required")
         if payload.reason == "other" and not (payload.note or "").strip():
             raise InvalidInputError("Explica el motivo en la nota.", code="adjustment_note_required")
-    item = await wh.get_item(db, organization_id, payload.item_id)
     location_id = payload.location_id or (await wh.default_location(db, organization_id)).id
     if payload.movement_type == "entrada" and payload.unit_cost is not None:
         await wh.apply_average_cost(db, organization_id, item=item, quantity=payload.quantity,
@@ -489,6 +492,7 @@ class CountLineIn(BaseModel):
     counted_quantity: str
     # Solo en el conteo inicial: el costo con que arranca el artículo.
     unit_cost: str | None = None
+    serials: list[str] | None = Field(default=None, max_length=500)
 
 
 class CountIn(BaseModel):

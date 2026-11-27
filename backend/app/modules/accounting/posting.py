@@ -141,10 +141,15 @@ async def _payables(db, org, out: list) -> None:
 
 async def _received_by_invoice(db, org) -> dict:
     """Factura del proveedor → valor de lo que entró a bodega con sus recepciones."""
+    from app.modules.finance.models import SupplierInvoice
     from app.modules.warehouse.models import WarehouseMovement, WarehouseReceipt, WarehouseReceiptLine
 
-    recepciones = dict((await db.execute(select(WarehouseReceipt.id, WarehouseReceipt.supplier_invoice_id).where(
-        WarehouseReceipt.organization_id == org, WarehouseReceipt.supplier_invoice_id.is_not(None)))).all())
+    recepciones = dict((await db.execute(select(WarehouseReceipt.id, WarehouseReceipt.supplier_invoice_id).join(
+        SupplierInvoice, SupplierInvoice.id == WarehouseReceipt.supplier_invoice_id).where(
+        WarehouseReceipt.organization_id == org,
+        WarehouseReceipt.status != "anulada",
+        SupplierInvoice.status != "void",
+    ))).all())
     if not recepciones:
         return {}
     renglones = dict((await db.execute(select(WarehouseReceiptLine.id, WarehouseReceiptLine.receipt_id).where(

@@ -64,6 +64,7 @@ export function WarehouseCountsPage() {
   const [inicial, setInicial] = useState(false);
   const [contado, setContado] = useState<Record<string, string>>({});
   const [costos, setCostos] = useState<Record<string, string>>({});
+  const [seriales, setSeriales] = useState<Record<string, string>>({});
   const [nota, setNota] = useState("");
   const [confirmar, setConfirmar] = useState(false);
   const [resultado, setResultado] = useState<CountResult | null>(null);
@@ -84,10 +85,11 @@ export function WarehouseCountsPage() {
       lines: escritos.map((f) => ({
         item_id: f.item_id, counted_quantity: contado[f.item_id],
         unit_cost: inicial && (costos[f.item_id] ?? "") !== "" ? costos[f.item_id] : null,
+        serials: inicial && f.has_serial ? (seriales[f.item_id] ?? "").split(/\n|,/).map((s) => s.trim()).filter(Boolean) : null,
       })),
     }),
     onSuccess: (r) => {
-      setError(null); setResultado(r); setConfirmar(false); setContado({}); setCostos({}); setNota(""); setVistos({});
+      setError(null); setResultado(r); setConfirmar(false); setContado({}); setCostos({}); setSeriales({}); setNota(""); setVistos({});
       [warehouseKeys.stock, warehouseKeys.items, warehouseKeys.movements, warehouseKeys.summary].forEach((k) =>
         qc.invalidateQueries({ queryKey: k }));
       qc.invalidateQueries({ queryKey: ["warehouse-count-sheet"] });
@@ -124,7 +126,7 @@ export function WarehouseCountsPage() {
         <div className="count-toolbar">
           <div className="form-field">
             <label className="form-label" htmlFor="cnt-lugar">Qué se cuenta</label>
-            <select id="cnt-lugar" value={ubicacion} onChange={(e) => { setLugar(e.target.value); setContado({}); setCostos({}); setVistos({}); }}>
+            <select id="cnt-lugar" value={ubicacion} onChange={(e) => { setLugar(e.target.value); setContado({}); setCostos({}); setSeriales({}); setVistos({}); }}>
               {lugares.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
@@ -158,6 +160,7 @@ export function WarehouseCountsPage() {
                 <th>Contado</th>
                 <th className="num">Diferencia</th>
                 {inicial && veCostos && <th>Costo unitario</th>}
+                {inicial && <th>Seriales (si aplica)</th>}
               </tr>
             </thead>
             <tbody>
@@ -185,6 +188,13 @@ export function WarehouseCountsPage() {
                       <td data-label="Costo unitario">
                         <input inputMode="decimal" aria-label={`Costo de ${f.name}`} placeholder={f.unit_cost ? String(Number(f.unit_cost)) : ""}
                           value={costos[f.item_id] ?? ""} onChange={(e) => setCostos((v) => ({ ...v, [f.item_id]: e.target.value }))} />
+                      </td>
+                    )}
+                    {inicial && f.has_serial && (
+                      <td data-label="Seriales">
+                        <textarea rows={2} aria-label={`Seriales de ${f.name}`} placeholder="Uno por línea"
+                          value={seriales[f.item_id] ?? ""}
+                          onChange={(e) => setSeriales((v) => ({ ...v, [f.item_id]: e.target.value }))} />
                       </td>
                     )}
                   </tr>

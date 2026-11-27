@@ -79,14 +79,24 @@ def receipts_stmt(organization_id, *, status: str | None = None, q: str | None =
     if status == "pendientes":
         stmt = stmt.where(WarehouseReceipt.status == ReceiptStatus.ABIERTA)
     elif status == "sin_factura":
+        from sqlalchemy import or_
+
+        from app.modules.finance.models import SupplierInvoice
+
+        factura_anulada = select(SupplierInvoice.id).where(
+            SupplierInvoice.id == WarehouseReceipt.supplier_invoice_id,
+            SupplierInvoice.organization_id == organization_id,
+            SupplierInvoice.status == "void",
+        ).exists()
         stmt = stmt.where(WarehouseReceipt.status.in_((ReceiptStatus.RECIBIDA, ReceiptStatus.CERRADA,
                                                        ReceiptStatus.ABIERTA)),
-                          WarehouseReceipt.supplier_invoice_id.is_(None))
+                          or_(WarehouseReceipt.supplier_invoice_id.is_(None), factura_anulada))
     elif status:
         stmt = stmt.where(WarehouseReceipt.status == status)
     if q:
-        from app.shared.text_search import LIKE_ESCAPE, contains_pattern
         from sqlalchemy import or_
+
+        from app.shared.text_search import LIKE_ESCAPE, contains_pattern
 
         patron = contains_pattern(q)
         stmt = stmt.where(or_(WarehouseReceipt.number.ilike(patron, escape=LIKE_ESCAPE),
@@ -197,6 +207,12 @@ async def _receive(db, *, organization_id, user, receipt: WarehouseReceipt, line
             raise InvalidInputError(
                 f"De «{item.name}» faltan {pendiente} por llegar; no se pueden recibir {cantidad}. "
                 "Si llegó de más, corrige lo pedido en una recepción nueva.", code="receipt_exceeds_pending")
+        seriales = l.get("serials") or None
+        if item.has_serial:
+            from app.modules.warehouse.serials import _check_count, clean_list, whole_units
+
+            seriales = clean_list(item, seriales)
+            _check_count(item, seriales, whole_units(item, cantidad), "recibida")
         n = (await db.execute(select(func.count()).select_from(WarehouseMovement).where(
             WarehouseMovement.organization_id == organization_id,
             WarehouseMovement.source_key.like(f"receipt-line:{renglon.id}:%")))).scalar_one() + 1
@@ -206,7 +222,7 @@ async def _receive(db, *, organization_id, user, receipt: WarehouseReceipt, line
             db, organization_id=organization_id, user=user, item_id=item.id, location_id=receipt.location_id,
             movement_type=MovementType.ENTRADA, quantity=cantidad, unit_cost=costo, reference=referencia[:120],
             note=note, movement_date=received_on, source_key=line_key(renglon.id, n), commit=False,
-            serials=l.get("serials") or None)
+            serials=seriales)
         renglon.received_quantity = to_quantity(renglon.received_quantity) + cantidad
     if all(_pending(r) == ZERO for r in receipt.lines):
         receipt.status = ReceiptStatus.RECIBIDA
@@ -275,12 +291,19 @@ async def link_invoice(db: AsyncSession, *, organization_id, user, receipt_id, s
     """Contabilidad asocia la factura del proveedor (o la quita con `None`)."""
     from app.modules.finance.models import SupplierInvoice
 
-    receipt = await get_receipt(db, organization_id, receipt_id)
+    receipt = (await db.execute(select(WarehouseReceipt).where(
+        WarehouseReceipt.id == receipt_id, WarehouseReceipt.organization_id == organization_id
+    ).with_for_update())).scalar_one_or_none()
+    if receipt is None:
+        raise NotFoundError("La recepción no existe.", code="warehouse_receipt_not_found")
     if receipt.status == ReceiptStatus.ANULADA:
         raise ConflictError("La recepción está anulada.", code="receipt_void")
     antes = receipt.supplier_invoice_id
     if supplier_invoice_id is not None:
-        f = await db.get(SupplierInvoice, supplier_invoice_id)
+        f = (await db.execute(select(SupplierInvoice).where(
+            SupplierInvoice.id == supplier_invoice_id,
+            SupplierInvoice.organization_id == organization_id,
+        ).with_for_update())).scalar_one_or_none()
         if f is None or f.organization_id != organization_id:
             raise NotFoundError("La factura del proveedor no existe.", code="supplier_invoice_not_found")
         if f.status == "void":
@@ -290,6 +313,14 @@ async def link_invoice(db: AsyncSession, *, organization_id, user, receipt_id, s
                                     code="receipt_without_supplier")
         if f.supplier_id != receipt.supplier_id:
             raise InvalidInputError("La factura es de otro proveedor.", code="supplier_mismatch")
+        usada = (await db.execute(select(WarehouseReceipt.id).where(
+            WarehouseReceipt.organization_id == organization_id,
+            WarehouseReceipt.supplier_invoice_id == f.id,
+            WarehouseReceipt.id != receipt.id,
+            WarehouseReceipt.status != ReceiptStatus.ANULADA,
+        ).limit(1))).scalar_one_or_none()
+        if usada is not None:
+            raise ConflictError("Esa factura ya está asociada a otra recepción.", code="supplier_invoice_already_linked")
     receipt.supplier_invoice_id = supplier_invoice_id
     receipt.invoice_linked_at = _now() if supplier_invoice_id else None
     receipt.invoice_linked_by_user_id = user.id if supplier_invoice_id else None

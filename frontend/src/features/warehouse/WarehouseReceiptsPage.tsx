@@ -288,7 +288,7 @@ function ReceiptForm({ onDone, onCancel }: { onDone: (r: Receipt) => void; onCan
             </div>
             {l.item?.has_serial && num(l.llego) > 0 && (
               <div className="form-field">
-                <label className="form-label" htmlFor={`rec-ser-${l.key}`}>Seriales de lo que llegó (uno por línea, opcional)</label>
+                <label className="form-label" htmlFor={`rec-ser-${l.key}`}>Seriales de lo que llegó (uno por línea, obligatorios)</label>
                 <textarea id={`rec-ser-${l.key}`} rows={2} value={l.seriales} onChange={(e) => cambiar(l.key, { seriales: e.target.value })} />
               </div>
             )}
