@@ -11,6 +11,7 @@ import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
 import { ApprovalDays } from "./ApprovalDays";
+import { CasePrograms } from "./CasePrograms";
 import { ImportedBadge, ImportedFiles, ImportedNotes, ImportedProgram } from "./ImportedCaseSections";
 import {
   caseEvents,
@@ -117,6 +118,9 @@ export function CaseReviewPage() {
               <DocumentGroups docs={lista} canReview={enRevision && hasPermission("documents.review")} onDone={refrescar} />
               {hasPermission("documents.manage") && !["closed"].includes(c.stage_code) && <ExtraDocument caseId={caseId!} onDone={refrescar} />}
             </section>
+
+            <CasePrograms caseId={caseId!} stage={c.stage_code} canEdit={hasPermission("cases.review")}
+              canDecide={hasPermission("cases.approve")} onDone={refrescar} />
 
             {importado && <ImportedProgram caseId={caseId!} programId={c.program_id}
               canEdit={hasPermission("cases.review")} onDone={refrescar} />}

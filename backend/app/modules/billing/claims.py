@@ -73,13 +73,15 @@ async def eligibility(db: AsyncSession, *, organization_id: uuid.UUID, user, pro
     )
     vivos = {c.program_id: c for c in await _claims_of_project(db, project.id) if c.status != ClaimStatus.withdrawn}
     del_expediente = await case_program_id(db, project)
+    cobrables = await case_billable_programs(db, project)
     programas = []
     for programa in await program_config.list_programs(db, organization_id=organization_id):
         if not programa.active:
             continue
-        # La instalación se cobra al programa de su expediente; los demás no se
+        # La instalación se cobra a los programas de su expediente: el principal
+        # y los adicionales aprobados (cliente, 28 nov 2026). Los demás no se
         # ofrecen. Un proyecto sin expediente o sin programa los ve todos.
-        if del_expediente and programa.id != del_expediente:
+        if cobrables and programa.id not in cobrables:
             continue
         tarifa = await program_config.rate_for(db, organization_id=organization_id, program_id=programa.id, on=fecha)
         jurisdiccion = aplican.get(programa.id)
@@ -111,6 +113,20 @@ async def case_program_id(db: AsyncSession, project: Project) -> uuid.UUID | Non
     return case.program_id if case else None
 
 
+async def case_billable_programs(db: AsyncSession, project: Project) -> set[uuid.UUID]:
+    """Los programas a los que se le cobra la instalación: el principal del
+    expediente y sus adicionales aprobados (`cases/multiprogram.py`). Vacío si
+    el proyecto no cuelga de un expediente con programa."""
+    if not project.case_id:
+        return set()
+    case = await db.get(Case, project.case_id)
+    if case is None or case.program_id is None:
+        return set()
+    from app.modules.cases.multiprogram import billable_program_ids
+
+    return await billable_program_ids(db, case)
+
+
 # ---------------------------------------------------------------------------
 # Crear
 # ---------------------------------------------------------------------------
@@ -131,10 +147,11 @@ async def create_claim(
     if fecha is None:
         raise ConflictError("La instalación no tiene fecha de cierre.", code="installation_without_date")
 
-    del_expediente = await case_program_id(db, project)
-    if del_expediente and program_id != del_expediente:
+    cobrables = await case_billable_programs(db, project)
+    if cobrables and program_id not in cobrables:
         raise ConflictError(
-            f"El expediente de esta instalación es de otro programa; no se puede cobrar a {programa.name}.",
+            f"{programa.name} no es un programa aprobado del expediente de esta instalación; no se le puede "
+            "cobrar.",
             code="program_not_of_case",
         )
 

@@ -40,11 +40,22 @@ async def _extract(args) -> int:
     return 0
 
 
+def _creators(pares: list[str]) -> dict[str, str]:
+    out = {}
+    for par in pares:
+        cuenta, _, correo = par.rpartition("=")
+        if not cuenta.strip() or "@" not in correo:
+            raise SystemExit(f"--creator-email espera CUENTA=CORREO, llegó: {par}")
+        out[cuenta.strip()] = correo.strip()
+    return out
+
+
 async def _load(args) -> int:
     cache = ExportCache(args.cache)
     async with worker_session() as db:
         try:
-            r = await Loader(db, uuid.UUID(args.org), cache, dry_run=args.dry_run).run(
+            r = await Loader(db, uuid.UUID(args.org), cache, dry_run=args.dry_run,
+                             creator_emails=_creators(args.creator_email)).run(
                 only=_ids(args.only), limit=args.limit)
         except ImportAborted as exc:
             print(f"Abortado: {exc}")
@@ -79,6 +90,9 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--dry-run", action="store_true")
     c.add_argument("--only")
     c.add_argument("--limit", type=int)
+    c.add_argument("--creator-email", action="append", default=[], metavar="CUENTA=CORREO",
+                   help="los proyectos de esa cuenta de CompanyCam (nombre o id) van a ese usuario del CRM; "
+                        "ej. \"Vendedores 4=correo@ejemplo.com\"")
     r = sub.add_parser("rollback")
     r.add_argument("--org", required=True)
     r.add_argument("--confirm", action="store_true")

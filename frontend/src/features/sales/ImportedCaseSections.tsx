@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
 import { listPrograms } from "@/features/programs/api";
@@ -18,7 +18,7 @@ const PAGINA_ARCHIVOS = 12;
 const PAGINA_NOTAS = 10;
 
 const NOTA: Record<ImportedNote["kind"], string> = {
-  notepad: "Bloc de notas", comment: "Comentario", checklist: "Lista de verificación",
+  notepad: "Bloc de notas", comment: "Comentario", checklist: "Lista de verificación", labels: "Etiquetas",
 };
 
 function fecha(iso: string) {
@@ -39,19 +39,24 @@ export function ImportedBadge() {
 export function ImportedProgram({ caseId, programId, canEdit, onDone }: {
   caseId: string; programId: string | null; canEdit: boolean; onDone: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { data: programas } = useQuery({ queryKey: ["board-programs"], queryFn: listPrograms, staleTime: 5 * 60 * 1000, enabled: canEdit });
   const [elegido, setElegido] = useState(programId ?? "");
   const [error, setError] = useState<string | null>(null);
   const guardar = useMutation({
     mutationFn: () => setImportedProgram(caseId, elegido),
-    onSuccess: () => { setError(null); onDone(); },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["case-programs-detail", caseId] });
+      onDone();
+    },
     onError: (e) => setError(apiErrorMessage(e)),
   });
   if (!canEdit) return null;
   return (
     <section className="review-section imp-program" aria-labelledby="imp-program">
-      <h2 id="imp-program">Programa</h2>
-      <p className="acta-note">Este expediente viene de CompanyCam. Elige a qué programa pertenece; no cambia su etapa.</p>
+      <h2 id="imp-program">Programa principal</h2>
+      <p className="acta-note">Este expediente viene de CompanyCam. {programId ? "Puedes cambiar su programa principal" : "Elige a qué programa pertenece"}; no cambia su etapa.</p>
       <div className="imp-program-row">
         <select aria-label="Programa" value={elegido} onChange={(e) => setElegido(e.target.value)}>
           <option value="">Sin programa</option>

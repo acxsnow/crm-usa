@@ -185,6 +185,14 @@
 .sales-address-known span { min-width: 0; overflow-wrap: anywhere; }
 
 /* Importados de CompanyCam (features/sales/ImportedCaseSections.tsx). */
+/* Programas del expediente (features/sales/CasePrograms.tsx). */
+.case-program-list { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 0.5rem; }
+.case-program-item { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.6rem 0.75rem; min-width: 0; }
+.case-program-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.case-program-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.case-program-item .imp-program-row { margin-top: 0.5rem; }
+.case-program-item .imp-program-row input { flex: 1 1 12rem; min-width: 0; border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 0.5rem 0.6rem; font-size: 16px; }
 .imp-program-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .imp-program-row select { flex: 1 1 14rem; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius);
   padding: 0.55rem 0.7rem; font: inherit; font-size: 0.88rem; color: var(--ink); background: #fff; }

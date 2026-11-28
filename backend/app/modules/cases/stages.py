@@ -70,8 +70,9 @@ INITIAL_STAGES: set[str] = {
 
 # Etapas en las que puede nacer un expediente importado de otro sistema
 # (`service.import_case`): trabajo ya hecho o archivado allá, que aquí solo se
-# consulta. Nunca entra al flujo de ventas.
-IMPORT_STAGES: set[str] = {"on_hold", "closed"}
+# consulta, o una venta en proceso de un vendedor (`new_prospect`, cliente 28
+# nov 2026), que sigue el flujo normal desde ahí.
+IMPORT_STAGES: set[str] = {"new_prospect", "on_hold", "closed"}
 
 # Sub-estados por etapa. Los define el dueño de la etapa y sirven para el
 # detalle interno sin mover el expediente de sitio en el tablero.

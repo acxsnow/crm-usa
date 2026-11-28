@@ -217,7 +217,7 @@ export interface ImportedFile {
 /** Nota, comentario o lista de verificación de CompanyCam. */
 export interface ImportedNote {
   id: string;
-  kind: "notepad" | "comment" | "checklist";
+  kind: "notepad" | "comment" | "checklist" | "labels";
   body: string;
   author_name: string | null;
   occurred_at: string | null;
@@ -231,3 +231,38 @@ export const importedKeys = {
 /** Administración elige el programa de un expediente importado (no cambia la etapa). */
 export const setImportedProgram = async (caseId: string, programId: string) =>
   (await apiClient.put<Case>(`/cases/${caseId}/imported-program`, { program_id: programId })).data;
+
+export interface CaseProgramItem {
+  program_id: string;
+  code: string;
+  name: string;
+  is_primary: boolean;
+  source: string;
+}
+
+/** Los programas del expediente: el principal primero y los adicionales. */
+export const getCasePrograms = async (caseId: string) =>
+  (await apiClient.get<{ programs: CaseProgramItem[] }>(`/cases/${caseId}/programs`)).data.programs;
+
+export interface CaseProgramDetail extends CaseProgramItem {
+  status: "pending" | "approved" | "rejected";
+  approval_code: string | null;
+  application_number: string | null;
+  decision_reason: string | null;
+  decided_at: string | null;
+  missing: string[];
+}
+
+export const getCaseProgramsDetail = async (caseId: string) =>
+  (await apiClient.get<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs`)).data.programs;
+
+/** Deja los programas adicionales del expediente (el principal no cambia). */
+export const setAdditionalPrograms = async (caseId: string, programIds: string[]) =>
+  (await apiClient.put<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs`, { program_ids: programIds }))
+    .data.programs;
+
+/** Aprobación o rechazo de un programa adicional. */
+export const decideProgram = async (caseId: string, programId: string, body: {
+  decision: "approved" | "rejected" | "pending"; approval_code?: string; reason?: string;
+}) => (await apiClient.post<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs/${programId}/decision`, body))
+  .data.programs;

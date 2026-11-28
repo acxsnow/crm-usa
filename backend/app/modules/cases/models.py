@@ -193,6 +193,38 @@ class Case(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Ba
         return STAGE_LABELS.get(self.stage_code, self.stage_code)
 
 
+class CaseProgram(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Los programas de un expediente (cliente, 28 nov 2026): una misma
+    instalación puede ir a varios programas, cada uno con su solicitud y su
+    pago (por ejemplo TECH y GoZero).
+
+    `Case.program_id` sigue siendo el programa **principal**: el que manda en el
+    formulario del vendedor y el checklist. Aquí está siempre también el
+    principal (`is_primary`) más los adicionales."""
+
+    __tablename__ = "case_programs"
+    __table_args__ = (UniqueConstraint("case_id", "program_id", name="uq_case_program"),)
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("programs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    # De dónde salió: `companycam` (etiqueta del proyecto) o `manual`.
+    source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="manual")
+    # Decisión del programa: `pending`, `approved` o `rejected`. El principal la
+    # copia del expediente (aprobar o rechazar el expediente); cada adicional se
+    # decide aparte (`cases/multiprogram.decide`). Solo un aprobado se cobra.
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="pending")
+    approval_code: Mapped[str | None] = mapped_column(String(100))
+    application_number: Mapped[str | None] = mapped_column(String(100))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+
+
 class CaseStageEvent(UUIDPKMixin, OrgScopedMixin, Base):
     """Historial inmutable: una fila por cada cambio de etapa o sub-estado.
 
@@ -319,6 +351,9 @@ class CaseTermsAcceptance(UUIDPKMixin, OrgScopedMixin, Base):
     longitude: Mapped[float | None] = mapped_column(Float)
     ip_address: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(500))
+    # Una sola firma vale para todos los programas del expediente (cliente, 28
+    # nov 2026): la constancia guarda cuáles cubrió, el principal primero.
+    program_codes: Mapped[list | None] = mapped_column(JSON)
 
 
 class CaseNote(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):

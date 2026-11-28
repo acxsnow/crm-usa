@@ -36,8 +36,12 @@ class ImportAborted(Exception):
 
 class Loader:
     def __init__(self, db: AsyncSession, organization_id: uuid.UUID, cache: ExportCache, *,
-                 dry_run: bool = False, log=print) -> None:
+                 dry_run: bool = False, log=print, creator_emails: dict[str, str] | None = None) -> None:
         self.db = db
+        # Cuenta de CompanyCam (nombre o id del creador) → correo del usuario del
+        # CRM que se queda con sus proyectos («Vendedores 4» → la vendedora real).
+        self.creator_emails = {m.fold(k): normalize_email(v) for k, v in (creator_emails or {}).items()}
+        self._programs: dict[str, tuple] = {}
         self.org = organization_id
         self.cache = cache
         self.dry_run = dry_run
@@ -97,6 +101,12 @@ class Loader:
             self.stats.update(self._cstats)
             self.ambiguous.extend(self._cambiguous)
             self.created_users.extend(self._cusers)
+        except ImportAborted:  # falta configuración (programa, usuario destino): para todo
+            if savepoint is not None:
+                await savepoint.rollback()
+            else:
+                await self.db.rollback()
+            raise
         except Exception as exc:  # un proyecto malo no frena a los demás
             if savepoint is not None:
                 await savepoint.rollback()
@@ -143,13 +153,13 @@ class Loader:
             case = existente
             self._cstats["cases_existing"] += 1
         else:
-            case, pendiente = await self._create_case(p)
+            case, pendiente = await self._create_case(p, data)
         await self._notes(case, p, data)
         await self._items(case, p, data)
         await self.db.flush()
         return pendiente
 
-    async def _create_case(self, p: dict):
+    async def _create_case(self, p: dict, data: dict):
         addr = m.map_address(p)
         stage, reason = m.map_stage(p)
         salesperson = await self._creator_user(p)
@@ -162,7 +172,44 @@ class Loader:
         if creado:
             self._cstats["cases_created"] += 1
             self._cstats[f"stage_{stage}"] += 1
+            await self._programs_of(case, data.get("labels") or [])
         return case, pendiente
+
+    # ---------------------------------------------------------- programas
+    async def _program(self, code: str) -> tuple:
+        """(programa, versión publicada) por código; aborta si el programa no
+        existe: el arranque (`seed`) lo crea en todas las organizaciones."""
+        if code not in self._programs:
+            from app.modules.cases.models import Program
+            from app.modules.programs import service as programs
+
+            prog = (await self.db.execute(select(Program).where(
+                Program.organization_id == self.org, Program.code == code))).scalar_one_or_none()
+            if prog is None:
+                raise ImportAborted(f"Falta el programa {code} en la organización: corre el seed primero.")
+            version = await programs.published_version(self.db, organization_id=self.org, program_id=prog.id)
+            self._programs[code] = (prog, version)
+        return self._programs[code]
+
+    async def _programs_of(self, case: Case, labels: list[dict]) -> None:
+        """Programas del expediente según las etiquetas del proyecto: el
+        principal manda en el formulario; los demás quedan como adicionales."""
+        codigos = m.programs_from_labels(labels)
+        if not codigos:
+            self._cstats["cases_without_program"] += 1
+            return
+        filas = [await self._program(c) for c in codigos]
+        principal, version = filas[0]
+        await case_service.set_case_programs(self.db, case, primary_id=principal.id,
+                                             additional_ids=[f[0].id for f in filas[1:]], source=SOURCE)
+        if version is not None:
+            case.program_version_id = version.id
+        # Sigue siendo el expediente tal como lo trajo la importación: la reversa
+        # reconoce lo intacto porque `updated_at` es igual a `created_at`.
+        case.updated_at = case.created_at
+        self._cstats[f"program_{codigos[0]}"] += 1
+        if len(codigos) > 1:
+            self._cstats["cases_multi_program"] += 1
 
     # ---------------------------------------------------------- vendedor
     async def _salesperson(self) -> Role:
@@ -182,6 +229,14 @@ class Loader:
         if p.get("creator_type") not in (None, "User") or not p.get("creator_id"):
             return None
         cid = str(p["creator_id"])
+        destino = self.creator_emails.get(m.fold(cid)) or self.creator_emails.get(m.fold(p.get("creator_name") or ""))
+        if destino:
+            user = self.users_by_email.get(destino)
+            if user is None:
+                raise ImportAborted(f"No existe en la organización el usuario {destino} al que van los proyectos "
+                                    f"de «{p.get('creator_name')}».")
+            self._cstats["creators_reassigned"] += 1
+            return user
         if cid in self.users_by_ref:
             return self.users_by_ref[cid]
         cc = self.cc_users.get(cid, {})
@@ -275,6 +330,10 @@ class Loader:
             self._cstats[f"notes_{kind}"] += 1
 
         agregar("notepad", "notepad", m.notepad_body(p), p.get("creator_name"), m.to_dt(p.get("created_at")))
+        etiquetas = m.label_names(data.get("labels") or [])
+        if etiquetas:
+            agregar("labels", "labels", "Etiquetas en CompanyCam: " + ", ".join(etiquetas), None,
+                    m.to_dt(p.get("created_at")), {"labels": etiquetas})
         for c in data["comments"]:
             texto = m.comment_body(c)
             if texto:

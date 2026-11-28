@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_any_permission, require_permission
@@ -128,6 +129,69 @@ async def imported_files(case_id: uuid.UUID, response: Response,
     filas, total = await intake.list_imported_files(db, case, limit=limit, offset=offset)
     response.headers["X-Total-Count"] = str(total)
     return filas
+
+
+@router.get("/cases/{case_id}/programs")
+async def case_programs(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_read)) -> dict:
+    """Los programas del expediente: el principal primero y los adicionales,
+    con su decisión y lo que le falta a cada adicional (cliente, 28 nov 2026)."""
+    from app.modules.cases import multiprogram
+
+    case = await intake._get_case(db, organization_id, case_id)
+    intake._require_owner(current_user, case)
+    return {"programs": await multiprogram.describe(db, case)}
+
+
+class AdditionalProgramsIn(BaseModel):
+    program_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)
+
+
+@router.put("/cases/{case_id}/programs")
+async def set_additional_programs(case_id: uuid.UUID, payload: AdditionalProgramsIn,
+                                  db: AsyncSession = Depends(get_db),
+                                  organization_id: uuid.UUID = Depends(get_organization_id),
+                                  current_user: User = Depends(require_any_permission("cases.create",
+                                                                                      "cases.review"))) -> dict:
+    """Los programas adicionales del expediente. Administración los cambia
+    mientras el expediente no termine; el vendedor, en el suyo y mientras es
+    «Nuevo prospecto»."""
+    from app.modules.cases import multiprogram
+    from app.shared.errors import ConflictError
+    from app.api.deps import get_effective_permissions
+
+    case = await intake._get_case(db, organization_id, case_id)
+    intake._require_owner(current_user, case)
+    if "cases.review" not in get_effective_permissions(current_user) and case.stage_code != "new_prospect":
+        raise ConflictError("Los programas se eligen mientras el expediente es «Nuevo prospecto».",
+                            code="program_locked")
+    await multiprogram.set_additional(db, user=current_user, case=case, program_ids=payload.program_ids)
+    case = await intake._get_case(db, organization_id, case_id)
+    return {"programs": await multiprogram.describe(db, case)}
+
+
+class ProgramDecisionIn(BaseModel):
+    decision: str = Field(pattern="^(approved|rejected|pending)$")
+    approval_code: str | None = Field(default=None, max_length=100)
+    application_number: str | None = Field(default=None, max_length=100)
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+@router.post("/cases/{case_id}/programs/{program_id}/decision")
+async def decide_program(case_id: uuid.UUID, program_id: uuid.UUID, payload: ProgramDecisionIn,
+                         db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(require_permission("cases.approve"))) -> dict:
+    """Aprobación o rechazo de un programa adicional del expediente."""
+    from app.modules.cases import multiprogram
+
+    case = await intake._get_case(db, organization_id, case_id)
+    await multiprogram.decide(db, user=current_user, case=case, program_id=program_id, decision=payload.decision,
+                              approval_code=payload.approval_code, application_number=payload.application_number,
+                              reason=payload.reason)
+    case = await intake._get_case(db, organization_id, case_id)
+    return {"programs": await multiprogram.describe(db, case)}
 
 
 @router.get("/cases/{case_id}/notes")
