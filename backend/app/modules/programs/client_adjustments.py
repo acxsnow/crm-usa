@@ -36,7 +36,7 @@ from app.modules.programs.templates import CA_CON_DOCUMENTO
 
 MARCA = "Ajustes del cliente"
 MOBILE = {"field": "home.residence_type", "eq": "mobile_home"}
-CALIFORNIA = {"TECH_CLEAN_CA", "LADWP", "GOZERO"}
+CALIFORNIA = {"TECH_CLEAN_CA", "LADWP", "GOZERO", "HEERA", "PEDESTALES", "QUALITY_SERVICES"}
 OPCIONALES = {"AZ_EFFICIENCY": {"customer.email"},
               **{code: {"customer.email", "customer.id_photo"} for code in CALIFORNIA}}
 QUITAR = {"tech.electrical_viability", "docs.furnace_photo", "docs.hvac_photos", "docs.pedestal_photo",

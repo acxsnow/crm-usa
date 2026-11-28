@@ -193,6 +193,29 @@ class Case(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Ba
         return STAGE_LABELS.get(self.stage_code, self.stage_code)
 
 
+class CaseProgram(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Los programas de un expediente (cliente, 28 nov 2026): una misma
+    instalación puede ir a varios programas, cada uno con su solicitud y su
+    pago (por ejemplo TECH y GoZero).
+
+    `Case.program_id` sigue siendo el programa **principal**: el que manda en el
+    formulario del vendedor y el checklist. Aquí está siempre también el
+    principal (`is_primary`) más los adicionales."""
+
+    __tablename__ = "case_programs"
+    __table_args__ = (UniqueConstraint("case_id", "program_id", name="uq_case_program"),)
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    program_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("programs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    # De dónde salió: `companycam` (etiqueta del proyecto) o `manual`.
+    source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="manual")
+
+
 class CaseStageEvent(UUIDPKMixin, OrgScopedMixin, Base):
     """Historial inmutable: una fila por cada cambio de etapa o sub-estado.
 

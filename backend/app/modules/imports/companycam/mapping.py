@@ -93,12 +93,52 @@ def map_address(project: dict) -> dict:
     }
 
 
+# El programa viene en las ETIQUETAS DEL PROYECTO (`/projects/{id}/labels`), no
+# en los tags, que son de las fotos (cliente, 28 nov 2026). Etiqueta en
+# minúsculas → código del programa en el CRM. Un proyecto puede tener varios.
+LABEL_PROGRAMS: dict[str, str] = {
+    "tech program": "TECH_CLEAN_CA", "tech 2026": "TECH_CLEAN_CA", "tech clean invoice": "TECH_CLEAN_CA",
+    "needs tech invoice": "TECH_CLEAN_CA",
+    "heera program": "HEERA", "heehra invoice sumited": "HEERA", "needs hehra invoice": "HEERA",
+    "ladwp": "LADWP",
+    "go zero submited": "GOZERO", "needs go zero application": "GOZERO", "paid on go zero": "GOZERO",
+    "missing email on go zero": "GOZERO", "overburden community for go zero": "GOZERO",
+    "pedestales": "PEDESTALES", "electrical panels": "PEDESTALES",
+    "quality services": "QUALITY_SERVICES",
+}
+# Cuál queda de principal cuando hay varios: GoZero casi siempre acompaña a otro.
+PROGRAM_PRIORITY: tuple[str, ...] = ("TECH_CLEAN_CA", "HEERA", "LADWP", "PEDESTALES", "QUALITY_SERVICES", "GOZERO")
+
+# Las cuentas compartidas de los vendedores de puerta en CompanyCam («Vendedores
+# 4»): lo activo de ellas es una venta en proceso y entra como prospecto.
+PROSPECT_CREATOR = re.compile(r"^\s*vendedores\b", re.IGNORECASE)
+
+
+def label_names(labels: list[dict]) -> list[str]:
+    return [n for n in ((l.get("display_value") or l.get("value") or "").strip() for l in labels or []) if n]
+
+
+def programs_from_labels(labels: list[dict]) -> list[str]:
+    """Códigos de programa del proyecto, el principal primero."""
+    codigos = {LABEL_PROGRAMS[n.lower()] for n in label_names(labels) if n.lower() in LABEL_PROGRAMS}
+    return [c for c in PROGRAM_PRIORITY if c in codigos]
+
+
+def is_prospect(project: dict) -> bool:
+    """Venta en proceso: proyecto activo creado por una cuenta de vendedores."""
+    return (project.get("status") != "deleted" and not project.get("archived")
+            and bool(PROSPECT_CREATOR.match(project.get("creator_name") or "")))
+
+
 def map_stage(project: dict) -> tuple[str, str]:
     """(etapa, motivo) del expediente importado."""
     if project.get("status") == "deleted":
         return "closed", "Importado de CompanyCam: el proyecto estaba eliminado en CompanyCam"
     if project.get("archived"):
         return "closed", "Importado de CompanyCam: el proyecto estaba archivado en CompanyCam"
+    if is_prospect(project):
+        return "new_prospect", ("Importado de CompanyCam: venta en proceso de un vendedor, por asignar programa "
+                                "y completar el formulario")
     return "on_hold", "Importado de CompanyCam: proyecto activo, pendiente de que Administración elija programa"
 
 

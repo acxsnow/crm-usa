@@ -200,7 +200,7 @@ async def set_program(db, *, organization_id, user, case_id, program_id, zone_id
         if zona is None or zona.organization_id != organization_id or zona.program_id != programa.id:
             raise InvalidInputError("La zona no es de ese programa.", code="invalid_zone")
         case.zone_id = zona.id
-    case.program_id = programa.id
+    await case_service.set_case_programs(db, case, primary_id=programa.id)
     case.program_version_id = version.id
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="cases.program_selected", entity_type="case", entity_id=str(case.id),
@@ -239,7 +239,7 @@ async def set_imported_program(db, *, organization_id, user, case_id, program_id
         if zona is None or zona.organization_id != organization_id or zona.program_id != programa.id:
             raise InvalidInputError("La zona no es de ese programa.", code="invalid_zone")
         case.zone_id = zona.id
-    case.program_id = programa.id
+    await case_service.set_case_programs(db, case, primary_id=programa.id)
     case.program_version_id = version.id
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="cases.program_selected", entity_type="case", entity_id=str(case.id),

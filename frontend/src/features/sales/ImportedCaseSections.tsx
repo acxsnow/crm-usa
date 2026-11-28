@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PaginationControls } from "@/components/PaginationControls";
 import { listPrograms } from "@/features/programs/api";
@@ -8,6 +8,7 @@ import { usePaginatedQuery } from "@/lib/usePaginatedQuery";
 import {
   thumbBlobUrl,
   importedKeys,
+  getCasePrograms,
   openCaseFile,
   setImportedProgram,
   type ImportedFile,
@@ -18,7 +19,7 @@ const PAGINA_ARCHIVOS = 12;
 const PAGINA_NOTAS = 10;
 
 const NOTA: Record<ImportedNote["kind"], string> = {
-  notepad: "Bloc de notas", comment: "Comentario", checklist: "Lista de verificación",
+  notepad: "Bloc de notas", comment: "Comentario", checklist: "Lista de verificación", labels: "Etiquetas",
 };
 
 function fecha(iso: string) {
@@ -39,19 +40,36 @@ export function ImportedBadge() {
 export function ImportedProgram({ caseId, programId, canEdit, onDone }: {
   caseId: string; programId: string | null; canEdit: boolean; onDone: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { data: programas } = useQuery({ queryKey: ["board-programs"], queryFn: listPrograms, staleTime: 5 * 60 * 1000, enabled: canEdit });
+  const { data: delExpediente } = useQuery({ queryKey: ["case-programs", caseId], queryFn: () => getCasePrograms(caseId) });
   const [elegido, setElegido] = useState(programId ?? "");
   const [error, setError] = useState<string | null>(null);
   const guardar = useMutation({
     mutationFn: () => setImportedProgram(caseId, elegido),
-    onSuccess: () => { setError(null); onDone(); },
+    onSuccess: () => { setError(null); queryClient.invalidateQueries({ queryKey: ["case-programs", caseId] }); onDone(); },
     onError: (e) => setError(apiErrorMessage(e)),
   });
-  if (!canEdit) return null;
+  const lista = delExpediente ?? [];
+  if (!canEdit && lista.length === 0) return null;
   return (
     <section className="review-section imp-program" aria-labelledby="imp-program">
-      <h2 id="imp-program">Programa</h2>
-      <p className="acta-note">Este expediente viene de CompanyCam. Elige a qué programa pertenece; no cambia su etapa.</p>
+      <h2 id="imp-program">{lista.length > 1 ? "Programas" : "Programa"}</h2>
+      {lista.length > 0 && (
+        <ul className="imp-program-list">
+          {lista.map((p) => (
+            <li key={p.program_id}>
+              <strong>{p.name}</strong>
+              <span className="billing-chip">{p.is_primary ? "Principal" : "Adicional"}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {lista.length > 1 && (
+        <p className="acta-note">Cada programa lleva su propia solicitud y su propio pago. El principal manda en el formulario.</p>
+      )}
+      {canEdit && <>
+      <p className="acta-note">Este expediente viene de CompanyCam. {lista.length > 0 ? "Puedes cambiar el programa principal" : "Elige a qué programa pertenece"}; no cambia su etapa.</p>
       <div className="imp-program-row">
         <select aria-label="Programa" value={elegido} onChange={(e) => setElegido(e.target.value)}>
           <option value="">Sin programa</option>
@@ -63,6 +81,7 @@ export function ImportedProgram({ caseId, programId, canEdit, onDone }: {
         </button>
       </div>
       {error && <p className="form-error-text" role="alert">{error}</p>}
+      </>}
     </section>
   );
 }

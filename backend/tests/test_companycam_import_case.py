@@ -18,7 +18,7 @@ async def _import(db, org_id, ref="555", stage="on_hold", **kw):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("stage", ["on_hold", "closed"])
+@pytest.mark.parametrize("stage", ["new_prospect", "on_hold", "closed"])
 async def test_import_case_nace_en_etapa_de_importacion(db, seeded_org, stage):
     caso, creado = await _import(db, seeded_org["org"].id, stage=stage)
     assert creado and caso.stage_code == stage and caso.case_number == "CC-555"
@@ -29,7 +29,7 @@ async def test_import_case_nace_en_etapa_de_importacion(db, seeded_org, stage):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("stage", ["new_prospect", "approved", "no_contact", "paid"])
+@pytest.mark.parametrize("stage", ["pending_approval", "approved", "no_contact", "paid"])
 async def test_import_case_rechaza_etapas_del_flujo(db, seeded_org, stage):
     with pytest.raises(InvalidInputError):
         await case_service.import_case(db, organization_id=seeded_org["org"].id, source="companycam",

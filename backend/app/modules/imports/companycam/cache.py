@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 DEFAULT_ROOT = Path.home() / "companycam_export"
-SUBRESOURCES = ("photos", "comments", "documents", "checklists")
+SUBRESOURCES = ("photos", "comments", "documents", "checklists", "labels")
 
 
 class ExportCache:

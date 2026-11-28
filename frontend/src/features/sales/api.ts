@@ -217,7 +217,7 @@ export interface ImportedFile {
 /** Nota, comentario o lista de verificación de CompanyCam. */
 export interface ImportedNote {
   id: string;
-  kind: "notepad" | "comment" | "checklist";
+  kind: "notepad" | "comment" | "checklist" | "labels";
   body: string;
   author_name: string | null;
   occurred_at: string | null;
@@ -231,3 +231,15 @@ export const importedKeys = {
 /** Administración elige el programa de un expediente importado (no cambia la etapa). */
 export const setImportedProgram = async (caseId: string, programId: string) =>
   (await apiClient.put<Case>(`/cases/${caseId}/imported-program`, { program_id: programId })).data;
+
+export interface CaseProgramItem {
+  program_id: string;
+  code: string;
+  name: string;
+  is_primary: boolean;
+  source: string;
+}
+
+/** Los programas del expediente: el principal primero y los adicionales. */
+export const getCasePrograms = async (caseId: string) =>
+  (await apiClient.get<{ programs: CaseProgramItem[] }>(`/cases/${caseId}/programs`)).data.programs;

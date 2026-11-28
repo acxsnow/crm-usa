@@ -268,4 +268,41 @@ PROGRAMS: list[dict] = [
         "terms_title": "Autorización y términos del programa GoZero",
         "steps": _california_steps(),
     },
+    # Programas que el cliente ya trabajaba en CompanyCam (28 nov 2026): llegan
+    # con la migración y por etiqueta del proyecto. Mismo formulario de
+    # California mientras el cliente no diga qué piden distinto.
+    {
+        "code": "HEERA",
+        "name": "HEERA",
+        "customer_facing_name": "HEERA",
+        "funder_name": "HEERA",
+        "invoice_entity": "Delta HVAC Service Inc.",
+        "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
+                              "elegibilidad en el programa HEERA. (Texto provisional: pendiente del cliente.)",
+        "terms_title": "Autorización y términos del programa HEERA",
+        "steps": _california_steps(),
+    },
+    {
+        "code": "PEDESTALES",
+        "name": "Pedestales",
+        "customer_facing_name": "Pedestales",
+        "funder_name": "Pedestales",
+        "invoice_entity": "Delta HVAC Service Inc.",
+        "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
+                              "elegibilidad en el programa de pedestales. (Texto provisional: pendiente del cliente.)",
+        "terms_title": "Autorización y términos del programa de pedestales",
+        "steps": _california_steps(),
+    },
+    {
+        "code": "QUALITY_SERVICES",
+        "name": "Quality Services",
+        "customer_facing_name": "Quality Services",
+        "funder_name": "Quality Services",
+        "invoice_entity": "Delta HVAC Service Inc.",
+        "authorization_text": "Autorizo el uso de esta información exclusivamente para verificar mi posible "
+                              "elegibilidad en el programa Quality Services. (Texto provisional: pendiente del "
+                              "cliente.)",
+        "terms_title": "Autorización y términos del programa Quality Services",
+        "steps": _california_steps(),
+    },
 ]

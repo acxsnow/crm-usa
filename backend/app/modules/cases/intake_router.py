@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_organization_id, require_any_permission, require_permission
@@ -128,6 +129,24 @@ async def imported_files(case_id: uuid.UUID, response: Response,
     filas, total = await intake.list_imported_files(db, case, limit=limit, offset=offset)
     response.headers["X-Total-Count"] = str(total)
     return filas
+
+
+@router.get("/cases/{case_id}/programs")
+async def case_programs(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                        organization_id: uuid.UUID = Depends(get_organization_id),
+                        current_user: User = Depends(_read)) -> dict:
+    """Los programas del expediente: el principal primero y los adicionales
+    (una instalación puede ir a varios programas, cliente 28 nov 2026)."""
+    from app.modules.cases.models import CaseProgram, Program
+
+    case = await intake._get_case(db, organization_id, case_id)
+    intake._require_owner(current_user, case)
+    filas = (await db.execute(
+        select(CaseProgram, Program).join(Program, Program.id == CaseProgram.program_id)
+        .where(CaseProgram.case_id == case.id, CaseProgram.organization_id == organization_id)
+        .order_by(CaseProgram.is_primary.desc(), Program.name))).all()
+    return {"programs": [{"program_id": str(p.id), "code": p.code, "name": p.name, "is_primary": cp.is_primary,
+                          "source": cp.source} for cp, p in filas]}
 
 
 @router.get("/cases/{case_id}/notes")
