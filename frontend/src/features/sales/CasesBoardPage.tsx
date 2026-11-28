@@ -45,6 +45,7 @@ export function CasesBoardPage() {
   const [q, setQ] = useState("");
   const [vendedor, setVendedor] = useState("");
   const [programa, setPrograma] = useState("");
+  const [origen, setOrigen] = useState<"" | "companycam" | "app">("");
   // Espera a que se deje de escribir: una búsqueda por frase, no por tecla.
   useEffect(() => { const t = setTimeout(() => setQ(buscar.trim()), 350); return () => clearTimeout(t); }, [buscar]);
 
@@ -61,8 +62,9 @@ export function CasesBoardPage() {
 
   const filtros = useMemo<BoardFilters>(() => ({
     q: q || undefined, salesperson_id: vendedor || undefined, program_id: programa || undefined,
-  }), [q, vendedor, programa]);
-  const hayFiltros = !!(q || vendedor || programa);
+    source: origen || undefined,
+  }), [q, vendedor, programa, origen]);
+  const hayFiltros = !!(q || vendedor || programa || origen);
 
   // Revisa la revisión quien aprueba; el vendedor abre su formulario.
   const revisa = hasPermission("cases.review") || hasPermission("cases.approve");
@@ -110,8 +112,13 @@ export function CasesBoardPage() {
             {(programas ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         )}
+        <select aria-label="Origen" value={origen} onChange={(e) => setOrigen(e.target.value as "" | "companycam" | "app")}>
+          <option value="">Todos los orígenes</option>
+          <option value="app">Creados en la app</option>
+          <option value="companycam">Importados de CompanyCam</option>
+        </select>
         {hayFiltros && (
-          <button type="button" className="acta-btn is-quiet" onClick={() => { setBuscar(""); setQ(""); setVendedor(""); setPrograma(""); }}>
+          <button type="button" className="acta-btn is-quiet" onClick={() => { setBuscar(""); setQ(""); setVendedor(""); setPrograma(""); setOrigen(""); }}>
             Borrar filtros
           </button>
         )}
@@ -220,8 +227,9 @@ function ColumnaPaginada({ col, tempranos, filtros, revisa, actual }: {
         <ul>
           {tarjetas.map((c) => (
             <li key={c.id} data-case={c.id}>
-              <Link to={revisa && col.code !== "new_prospect" ? `/cases/${c.id}/review` : `/cases/${c.id}/form`} className="board-card">
+              <Link to={(revisa && col.code !== "new_prospect") || c.source === "companycam" ? `/cases/${c.id}/review` : `/cases/${c.id}/form`} className="board-card">
                 <strong>{c.customer_name ?? c.address ?? c.case_number}</strong>
+                {c.source === "companycam" && <span className="billing-chip is-withdrawn">Importado de CompanyCam</span>}
                 <small>{c.case_number}{c.program_name ? ` · ${c.program_name}` : ""}</small>
                 {c.customer_name && <small>{c.address}</small>}
                 {c.substatus_code && SUB[c.substatus_code] && (

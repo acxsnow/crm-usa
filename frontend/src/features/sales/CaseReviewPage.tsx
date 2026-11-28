@@ -11,6 +11,7 @@ import { apiErrorMessage } from "@/features/field-ops/module5Api";
 import { FormRenderer } from "@/features/programs/FormRenderer";
 import { SignatureImage } from "./CaseFormPage";
 import { ApprovalDays } from "./ApprovalDays";
+import { ImportedBadge, ImportedFiles, ImportedNotes, ImportedProgram } from "./ImportedCaseSections";
 import {
   caseEvents,
   caseProject,
@@ -56,6 +57,7 @@ export function CaseReviewPage() {
   const { data: proyecto } = useQuery({ queryKey: ["case-project", caseId], queryFn: () => caseProject(caseId!),
     enabled: veProyectos, retry: false });
   const refrescar = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ["case", caseId] }),
     qc.invalidateQueries({ queryKey: salesKeys.form(caseId!) }),
     qc.invalidateQueries({ queryKey: docKeys.list(caseId!) }),
     qc.invalidateQueries({ queryKey: docKeys.events(caseId!) }),
@@ -72,6 +74,7 @@ export function CaseReviewPage() {
   const rechazados = lista.filter((d) => d.review_status === "rejected").length;
   const enRevision = ["pending_approval", "on_hold"].includes(c.stage_code);
   const nombre = (form?.answers["customer.full_name"] as string) || c.address_street || "Expediente";
+  const importado = c.source === "companycam";
 
   return (
     <div className="review-page">
@@ -82,6 +85,7 @@ export function CaseReviewPage() {
             <header className="acta-header">
               <div className="acta-title-row">
                 <h1 className="acta-title">{nombre}</h1>
+                {importado && <ImportedBadge />}
                 <span className={`billing-chip ${c.substatus_code === "returned" ? "is-rejected" : enRevision ? "is-submitted" : "is-paid"}`}>
                   {c.stage_label}{c.substatus_code && SUBSTATUS_LABELS[c.substatus_code] ? ` · ${SUBSTATUS_LABELS[c.substatus_code]}` : ""}
                 </span>
@@ -113,6 +117,11 @@ export function CaseReviewPage() {
               <DocumentGroups docs={lista} canReview={enRevision && hasPermission("documents.review")} onDone={refrescar} />
               {hasPermission("documents.manage") && !["closed"].includes(c.stage_code) && <ExtraDocument caseId={caseId!} onDone={refrescar} />}
             </section>
+
+            {importado && <ImportedProgram caseId={caseId!} programId={c.program_id}
+              canEdit={hasPermission("cases.review")} onDone={refrescar} />}
+            {importado && <ImportedFiles caseId={caseId!} />}
+            {importado && <ImportedNotes caseId={caseId!} />}
 
             {sinFormulario && (
               <p className="acta-note">Este expediente no tiene programa ni formulario: se creó antes del formulario por programa o por otra vía.

@@ -25,6 +25,7 @@ router = APIRouter(tags=["cases-intake"])
 _create = require_permission("cases.create")
 _read = require_any_permission("cases.read_own", "cases.read_all")
 _submit = require_permission("cases.submit")
+_review = require_permission("cases.review")
 _doc_review = require_permission("documents.review")
 _doc_manage = require_permission("documents.manage")
 
@@ -103,6 +104,47 @@ async def set_program(case_id: uuid.UUID, payload: ProgramIn, db: AsyncSession =
                                                  zone_id=payload.zone_id))
 
 
+@router.put("/cases/{case_id}/imported-program", response_model=CaseResponse)
+async def set_imported_program(case_id: uuid.UUID, payload: ProgramIn, db: AsyncSession = Depends(get_db),
+                               organization_id: uuid.UUID = Depends(get_organization_id),
+                               current_user: User = Depends(_review)):
+    """Programa de un expediente importado de CompanyCam (Administración)."""
+    return _to_response(await intake.set_imported_program(
+        db, organization_id=organization_id, user=current_user, case_id=case_id,
+        program_id=payload.program_id, zone_id=payload.zone_id))
+
+
+@router.get("/cases/{case_id}/imported-files")
+async def imported_files(case_id: uuid.UUID, response: Response,
+                         pagination: tuple[int, int] = Depends(pagination_params),
+                         db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_read)) -> list[dict]:
+    """Fotos y documentos importados de CompanyCam (paginado). El binario va por
+    `GET /case-files/{id}`."""
+    case = await intake._get_case(db, organization_id, case_id)
+    intake._require_owner(current_user, case)
+    limit, offset = pagination
+    filas, total = await intake.list_imported_files(db, case, limit=limit, offset=offset)
+    response.headers["X-Total-Count"] = str(total)
+    return filas
+
+
+@router.get("/cases/{case_id}/notes")
+async def case_notes(case_id: uuid.UUID, response: Response,
+                     pagination: tuple[int, int] = Depends(pagination_params),
+                     db: AsyncSession = Depends(get_db),
+                     organization_id: uuid.UUID = Depends(get_organization_id),
+                     current_user: User = Depends(_read)) -> list[dict]:
+    """Notas, comentarios y listas importados de CompanyCam (paginado)."""
+    case = await intake._get_case(db, organization_id, case_id)
+    intake._require_owner(current_user, case)
+    limit, offset = pagination
+    filas, total = await intake.list_notes(db, case, limit=limit, offset=offset)
+    response.headers["X-Total-Count"] = str(total)
+    return filas
+
+
 @router.get("/cases/{case_id}/form")
 async def get_form(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
                    organization_id: uuid.UUID = Depends(get_organization_id),
@@ -150,6 +192,19 @@ async def download_file(file_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     return FileResponse(str(absolute_path(f.file_path)), media_type=f.mime_type or "application/octet-stream")
 
 
+@router.get("/case-files/{file_id}/thumbnail")
+async def file_thumbnail(file_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                         organization_id: uuid.UUID = Depends(get_organization_id),
+                         current_user: User = Depends(_read)):
+    """Miniatura liviana de una foto importada (la cuadrícula); sin miniatura
+    devuelve el archivo original. Mismos permisos que `GET /case-files/{id}`."""
+    f = await intake.get_file(db, organization_id=organization_id, user=current_user, file_id=file_id)
+    miniatura = await intake.imported_thumbnail_path(db, f)
+    if miniatura:
+        return FileResponse(str(absolute_path(miniatura)), media_type="image/jpeg")
+    return FileResponse(str(absolute_path(f.file_path)), media_type=f.mime_type or "application/octet-stream")
+
+
 @router.post("/cases/{case_id}/terms-acceptance", response_model=CaseResponse, status_code=201)
 async def accept_terms(case_id: uuid.UUID, payload: TermsIn, request: Request, db: AsyncSession = Depends(get_db),
                        organization_id: uuid.UUID = Depends(get_organization_id),
@@ -174,7 +229,7 @@ async def submit(case_id: uuid.UUID, db: AsyncSession = Depends(get_db),
 async def board(include_early_closes: bool = False, mine: bool = False,
                 limit: int = Query(50, ge=1, le=200), stage: str | None = None, offset: int = Query(0, ge=0),
                 q: str | None = Query(None, max_length=100), salesperson_id: uuid.UUID | None = None,
-                program_id: uuid.UUID | None = None,
+                program_id: uuid.UUID | None = None, source: str | None = Query(None, pattern="^(companycam|app)$"),
                 db: AsyncSession = Depends(get_db), organization_id: uuid.UUID = Depends(get_organization_id),
                 current_user: User = Depends(_read)) -> list[dict]:
     """Columnas por etapa con su total y una página de `limit` de cada una.
@@ -184,7 +239,7 @@ async def board(include_early_closes: bool = False, mine: bool = False,
     return await intake.board(db, organization_id=organization_id, user=current_user,
                               include_early_closes=include_early_closes, mine=mine,
                               limit_per_stage=limit, stage=stage, offset=offset,
-                              q=q, salesperson_id=salesperson_id, program_id=program_id)
+                              q=q, salesperson_id=salesperson_id, program_id=program_id, source=source)
 
 
 @router.get("/cases/{case_id}/terms-acceptance/signature")

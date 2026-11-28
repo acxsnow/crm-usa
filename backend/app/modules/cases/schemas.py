@@ -48,6 +48,8 @@ class CaseResponse(BaseModel):
     id: uuid.UUID
     case_number: str
     source: str
+    # Id del expediente en el sistema de origen (solo importados).
+    external_ref: str | None = None
     stage_code: str
     # La etiqueta en español viaja con el dato para que el frontend no tenga que
     # repetir el diccionario de etapas ni desactualizarse cuando cambie.

@@ -45,6 +45,9 @@ ALLOWED_MIME = {
 }
 MAX_FILE_BYTES = 15 * 1024 * 1024
 MAX_FILES_PER_CASE = 60
+# Archivos traídos de CompanyCam (`field_key` `companycam_photo` / `companycam_document`):
+# no cuentan contra el máximo ni entran a la revisión de documentos.
+IMPORTED_KEY_LIKE = "companycam\\_%"
 
 
 def _now() -> datetime:
@@ -120,7 +123,8 @@ async def record_visit(db: AsyncSession, *, organization_id, user, data: dict) -
                                data.get("address_zip"))
     case = (await db.execute(
         select(Case).where(Case.organization_id == organization_id, Case.normalized_address == normal,
-                           Case.stage_code != "closed").order_by(Case.created_at.desc())
+                           Case.stage_code != "closed", Case.source != "companycam")
+        .order_by(Case.created_at.desc())
     )).scalars().first()
 
     if case is None:
@@ -205,6 +209,83 @@ async def set_program(db, *, organization_id, user, case_id, program_id, zone_id
     return await _get_case(db, organization_id, case.id)
 
 
+async def set_imported_program(db, *, organization_id, user, case_id, program_id, zone_id=None) -> Case:
+    """Programa de un expediente importado de CompanyCam (`on_hold` o `closed`).
+
+    Es la excepción a «el programa se elige en Nuevo prospecto»: Administración
+    decide a qué programa pertenece un trabajo que ya venía de otro sistema.
+    Solo para `source == "companycam"` y mientras no haya respuestas de
+    formulario; no mueve la etapa. La ruta exige `cases.review`."""
+    from app.modules.cases.models import ProgramZone
+    from app.modules.programs import service as programs
+
+    case = await _get_case(db, organization_id, case_id)
+    _require_owner(user, case)
+    if case.source != "companycam" or case.stage_code not in stages.IMPORT_STAGES:
+        raise ConflictError("Solo los expedientes importados de CompanyCam eligen programa por aquí.",
+                            code="program_locked")
+    if (await db.execute(select(CaseStepSubmission.id).where(
+            CaseStepSubmission.case_id == case.id, CaseStepSubmission.step_code != VISIT_STEP))).first():
+        raise ConflictError("Ya hay respuestas guardadas con este programa; no se cambia.",
+                            code="program_has_answers")
+    programa = await programs.get_program(db, organization_id=organization_id, program_id=program_id)
+    if not programa.active:
+        raise InvalidInputError("Ese programa no está activo.", code="program_inactive")
+    version = await programs.published_version(db, organization_id=organization_id, program_id=programa.id)
+    if version is None:
+        raise ConflictError(f"{programa.name} todavía no tiene formulario publicado.", code="program_without_form")
+    if zone_id:
+        zona = await db.get(ProgramZone, zone_id)
+        if zona is None or zona.organization_id != organization_id or zona.program_id != programa.id:
+            raise InvalidInputError("La zona no es de ese programa.", code="invalid_zone")
+        case.zone_id = zona.id
+    case.program_id = programa.id
+    case.program_version_id = version.id
+    await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
+                             action="cases.program_selected", entity_type="case", entity_id=str(case.id),
+                             after_data={"program": programa.code, "version": version.version, "imported": True})
+    await db.commit()
+    return await _get_case(db, organization_id, case.id)
+
+
+# ---------------------------------------------------------------------------
+# Archivos y notas importados (CompanyCam)
+# ---------------------------------------------------------------------------
+
+async def list_imported_files(db, case: Case, *, limit: int, offset: int) -> tuple[list[dict], int]:
+    """Una página de fotos y documentos traídos de CompanyCam (más recientes
+    primero) y el total. La paginación la hace la base."""
+    filtro = (CaseFile.case_id == case.id, CaseFile.field_key.like(IMPORTED_KEY_LIKE, escape="\\"))
+    total = (await db.execute(select(func.count(CaseFile.id)).where(*filtro))).scalar_one()
+    archivos = (await db.execute(select(CaseFile).where(*filtro)
+        .order_by(CaseFile.captured_at.desc().nulls_last(), CaseFile.created_at.desc(), CaseFile.id)
+        .limit(limit).offset(offset))).scalars().all()
+    return [{"id": str(f.id), "kind": "photo" if f.field_key == "companycam_photo" else "document",
+             "label": f.label, "original_filename": f.original_filename, "mime_type": f.mime_type,
+             "size_bytes": f.size_bytes, "author_name": f.author_name, "tags": f.tags or [],
+             "latitude": f.latitude, "longitude": f.longitude,
+             "captured_at": f.captured_at.isoformat() if f.captured_at else None} for f in archivos], total
+
+
+async def imported_thumbnail_path(db, file: CaseFile) -> str | None:
+    """Ruta de la miniatura liviana de una foto importada, si la hay."""
+    from app.modules.imports.models import ImportItem
+
+    item = (await db.execute(select(ImportItem).where(ImportItem.case_file_id == file.id))).scalars().first()
+    return (item.payload or {}).get("thumb_path") if item else None
+
+
+async def list_notes(db, case: Case, *, limit: int, offset: int) -> tuple[list[dict], int]:
+    from app.modules.cases.models import CaseNote
+
+    total = (await db.execute(select(func.count(CaseNote.id)).where(CaseNote.case_id == case.id))).scalar_one()
+    notas = (await db.execute(select(CaseNote).where(CaseNote.case_id == case.id)
+                              .order_by(CaseNote.occurred_at.asc().nulls_last(), CaseNote.id)
+                              .limit(limit).offset(offset))).scalars().all()
+    return [{"id": str(n.id), "kind": n.kind, "body": n.body, "author_name": n.author_name, "source": n.source,
+             "occurred_at": n.occurred_at.isoformat() if n.occurred_at else None} for n in notas], total
+
+
 # ---------------------------------------------------------------------------
 # Formulario
 # ---------------------------------------------------------------------------
@@ -251,7 +332,8 @@ async def current_answers(db, case: Case) -> tuple[dict, dict]:
 async def form_state(db, *, user, case: Case) -> dict:
     definicion = await _definition(db, case)
     respuestas, guardados = await current_answers(db, case)
-    archivos = (await db.execute(select(CaseFile).where(CaseFile.case_id == case.id))).scalars().all()
+    archivos = (await db.execute(select(CaseFile).where(
+        CaseFile.case_id == case.id, ~CaseFile.field_key.like(IMPORTED_KEY_LIKE, escape="\\")))).scalars().all()
     aceptacion = (await db.execute(
         select(CaseTermsAcceptance).where(CaseTermsAcceptance.case_id == case.id)
         .order_by(CaseTermsAcceptance.accepted_at.desc())
@@ -410,7 +492,8 @@ async def upload_file(db, *, organization_id, user, case_id, field_key, filename
     mime = check_type(data, content_type, ALLOWED_MIME[campo["type"]])
     if len(data) > MAX_FILE_BYTES:
         raise InvalidInputError("El archivo supera el límite de 15 MB.", code="file_too_large")
-    total = len((await db.execute(select(CaseFile.id).where(CaseFile.case_id == case.id))).all())
+    total = len((await db.execute(select(CaseFile.id).where(
+        CaseFile.case_id == case.id, ~CaseFile.field_key.like(IMPORTED_KEY_LIKE, escape="\\")))).all())
     if total >= MAX_FILES_PER_CASE:
         raise InvalidInputError("El expediente llegó al máximo de archivos.", code="too_many_files")
     marcado = False
@@ -578,7 +661,7 @@ async def submit(db, *, organization_id, user, case_id) -> Case:
 
 async def board(db, *, organization_id, user, include_early_closes=False, mine=False, limit_per_stage=50,
                 stage: str | None = None, offset: int = 0, q: str | None = None,
-                salesperson_id=None, program_id=None) -> list[dict]:
+                salesperson_id=None, program_id=None, source: str | None = None) -> list[dict]:
     """Tablero por etapa: cada columna con su total real y una página de
     `limit_per_stage` expedientes, los más recientes primero. Con `stage`
     devuelve solo esa columna desde `offset` (la página siguiente o anterior de
@@ -596,6 +679,9 @@ async def board(db, *, organization_id, user, include_early_closes=False, mine=F
         filtros.append(Case.assigned_salesperson_id == salesperson_id)
     if program_id:
         filtros.append(Case.program_id == program_id)
+    if source:
+        # Origen: `companycam` (importados) o `app` (todo lo demás).
+        filtros.append(Case.source == "companycam" if source == "companycam" else Case.source != "companycam")
     texto = (q or "").strip()
     if texto:
         patron = "%" + texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
@@ -641,6 +727,7 @@ async def board(db, *, organization_id, user, include_early_closes=False, mine=F
             "cases": [{"id": str(c.id), "case_number": c.case_number, "customer_name": clientes.get(c.customer_id),
                        "address": ", ".join(x for x in (c.address_street, c.address_unit, c.address_city) if x),
                        "program_name": programas.get(c.program_id), "substatus_code": c.substatus_code,
+                       "source": c.source,
                        "updated_at": c.updated_at.isoformat() if c.updated_at else None,
                        "approval_wait": approval_wait(c, reloj)}
                       for c in del_codigo],

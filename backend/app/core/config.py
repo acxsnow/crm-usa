@@ -114,6 +114,12 @@ class Settings(BaseSettings):
     AWS_REGION: str = "us-east-1"
     STORAGE_DIR: str = "storage"
 
+    # Importación desde CompanyCam (temporal, `app/modules/imports/companycam`).
+    # Vacío fuera de la migración; el servicio de descarga lo usa para renovar URL.
+    COMPANYCAM_TOKEN: str = ""
+    # La descarga de CompanyCam se detiene si quedan menos GB libres en el disco.
+    COMPANYCAM_MIN_FREE_GB: float = 2.0
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -31,6 +31,9 @@ export interface Customer {
   status: "active" | "inactive";
   tags?: string[] | null;
   notes?: string | null;
+  /** `companycam` = importado; ahí `has_consent` es falso (el aviso se dio en CompanyCam). */
+  source?: string;
+  has_consent?: boolean;
   contacts: CustomerContact[];
 }
 

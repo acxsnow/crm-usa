@@ -135,7 +135,8 @@ async def upload_extra(db: AsyncSession, *, organization_id, user, case_id, labe
         raise ConflictError(f"El expediente está en «{case.stage_label}»: ya no recibe documentos.",
                             code="case_closed")
     mime = check_type(data, content_type, EXTRA_MIME)
-    total = len((await db.execute(select(CaseFile.id).where(CaseFile.case_id == case.id))).all())
+    total = len((await db.execute(select(CaseFile.id).where(
+        CaseFile.case_id == case.id, ~CaseFile.field_key.like(intake.IMPORTED_KEY_LIKE, escape="\\")))).all())
     if total >= intake.MAX_FILES_PER_CASE:
         raise InvalidInputError("El expediente llegó al máximo de archivos.", code="too_many_files")
     marcado, momento = False, _now()
@@ -173,7 +174,8 @@ async def review_queue(db: AsyncSession, *, organization_id) -> list[dict]:
     # (prueba de carga, 11 oct 2026). El resultado no cambia: abajo se sigue
     # verificando con los archivos vigentes.
     por_revisar = select(CaseFile.id).where(CaseFile.case_id == Case.id,
-                                            CaseFile.review_status.in_(("pending", "rejected")))
+                                            CaseFile.review_status.in_(("pending", "rejected")),
+                                            ~CaseFile.field_key.like(intake.IMPORTED_KEY_LIKE, escape="\\"))
     casos = (await db.execute(
         select(Case).where(Case.organization_id == organization_id, Case.stage_code.in_(REVIEW_STAGES),
                            exists(por_revisar))
@@ -218,6 +220,15 @@ async def guard_documents_reviewed(*, db, case, actor_id, reason):
             f"Faltan {falta['pending']} documento(s) por revisar antes de aprobar.", code="documents_pending")
 
 
+async def guard_imported_has_program(*, db, case, actor_id, reason):
+    """Un expediente importado de CompanyCam sin programa no sale de «En
+    espera» por la ruta manual: aprobarlo crearía la obra sin programa."""
+    if case.source == "companycam" and case.program_id is None:
+        raise InvalidInputError(
+            "Este expediente viene de CompanyCam y no tiene programa: elige el programa antes de aprobarlo.",
+            code="imported_program_required")
+
+
 _registrado = False
 
 
@@ -229,6 +240,7 @@ def register() -> None:
 
     stages.register_guard("pending_approval", "approved", guard_documents_reviewed)
     stages.register_guard("on_hold", "approved", guard_documents_reviewed)
+    stages.register_guard("on_hold", "approved", guard_imported_has_program)
     _registrado = True
 
 

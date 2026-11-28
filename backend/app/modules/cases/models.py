@@ -116,6 +116,9 @@ class Case(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Ba
         # el service, que sí conoce las etapas.
         Index("ix_case_org_property", "organization_id", "normalized_address", "address_unit"),
         Index("ix_case_org_stage", "organization_id", "stage_code"),
+        # Un expediente importado se reconoce por su origen y su id allá; sin
+        # `external_ref` (nulo) no cuenta para la restricción.
+        UniqueConstraint("organization_id", "source", "external_ref", name="uq_case_org_source_ref"),
     )
 
     # Legible para la gente: CASE-2026-0001. Lo genera el service al crear y no
@@ -124,6 +127,9 @@ class Case(UUIDPKMixin, TimestampMixin, OrgScopedMixin, PropertyAddressMixin, Ba
     # visit = puerta tocada · import = CSV · manual = lo creó Administración
     # migration = venía del modelo anterior
     source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="visit")
+    # Id del expediente en el sistema de origen (`companycam`): solo lo llena la
+    # importación (`service.import_case`).
+    external_ref: Mapped[str | None] = mapped_column(String(64))
 
     # Nulos mientras la puerta no responde: sin cliente no hay programa que elegir.
     program_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -212,6 +218,9 @@ class CaseStageEvent(UUIDPKMixin, OrgScopedMixin, Base):
     # Nulo si lo hizo el sistema (una migración, una tarea programada).
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Verdadero solo en el evento único que crea un expediente importado: los
+    # reportes de tiempos y rechazos lo excluyen.
+    imported: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
 
 
@@ -278,6 +287,10 @@ class CaseFile(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     review_notes: Mapped[str | None] = mapped_column(Text)
     reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Solo archivos importados (CompanyCam): id de origen, quién lo tomó y etiquetas.
+    external_ref: Mapped[str | None] = mapped_column(String(64))
+    author_name: Mapped[str | None] = mapped_column(String(255))
+    tags: Mapped[list | None] = mapped_column(JSON)
 
 
 EXTRA_DOCUMENT_KEY = "__extra__"
@@ -306,3 +319,27 @@ class CaseTermsAcceptance(UUIDPKMixin, OrgScopedMixin, Base):
     longitude: Mapped[float | None] = mapped_column(Float)
     ip_address: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(500))
+
+
+class CaseNote(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
+    """Nota de texto de un expediente importado (bloc de notas, comentarios y
+    listas de CompanyCam). Solo se escribe desde la importación; el expediente
+    nativo no las usa."""
+
+    __tablename__ = "case_notes"
+    __table_args__ = (
+        UniqueConstraint("case_id", "kind", "external_ref", name="uq_case_note_ref"),
+    )
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(), ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # notepad | comment | checklist
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    author_name: Mapped[str | None] = mapped_column(String(255))
+    author_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
+    source: Mapped[str] = mapped_column(String(20), nullable=False, default="companycam")
+    external_ref: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict | list | None] = mapped_column(JSON)
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

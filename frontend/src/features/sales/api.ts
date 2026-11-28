@@ -37,7 +37,7 @@ export interface BoardColumn {
   count: number;
   cases: { id: string; case_number: string; customer_name: string | null; address: string;
     program_name: string | null; substatus_code: string | null; updated_at: string | null;
-    approval_wait?: ApprovalWait | null }[];
+    source?: string; approval_wait?: ApprovalWait | null }[];
 }
 
 export const salesKeys = {
@@ -98,6 +98,8 @@ export interface BoardFilters {
   q?: string;
   salesperson_id?: string;
   program_id?: string;
+  /** Origen del expediente: `companycam` (importados) o `app` (el resto). */
+  source?: "companycam" | "app";
 }
 
 /** Columnas del tablero: el total de cada etapa y su primera página de `limit`. */
@@ -186,3 +188,46 @@ export const caseProject = async (caseId: string) =>
   (await apiClient.get<{ id: string; title: string; status: string }>(`/cases/${caseId}/project`)).data;
 /** El código de error de la API (p. ej. "program_required"), si lo hay. */
 export const errorCode = (e: unknown) => (e as { response?: { data?: { code?: string } } })?.response?.data?.code;
+
+/** Miniatura liviana (cuadrículas); sin miniatura, el servidor devuelve el original. */
+export async function thumbBlobUrl(fileId: string): Promise<string> {
+  const r = await apiClient.get(`/case-files/${fileId}/thumbnail`, { responseType: "blob" });
+  return URL.createObjectURL(r.data);
+}
+
+// ---------------------------------------------------------------------------
+// Importados de CompanyCam
+// ---------------------------------------------------------------------------
+
+/** Foto o documento traído de CompanyCam; el binario sale por `fileBlobUrl(id)`. */
+export interface ImportedFile {
+  id: string;
+  kind: "photo" | "document";
+  label: string | null;
+  original_filename: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  author_name: string | null;
+  tags: string[];
+  latitude: number | null;
+  longitude: number | null;
+  captured_at: string | null;
+}
+
+/** Nota, comentario o lista de verificación de CompanyCam. */
+export interface ImportedNote {
+  id: string;
+  kind: "notepad" | "comment" | "checklist";
+  body: string;
+  author_name: string | null;
+  occurred_at: string | null;
+}
+
+export const importedKeys = {
+  files: (caseId: string) => ["imported-files", caseId] as const,
+  notes: (caseId: string) => ["imported-notes", caseId] as const,
+};
+
+/** Administración elige el programa de un expediente importado (no cambia la etapa). */
+export const setImportedProgram = async (caseId: string, programId: string) =>
+  (await apiClient.put<Case>(`/cases/${caseId}/imported-program`, { program_id: programId })).data;

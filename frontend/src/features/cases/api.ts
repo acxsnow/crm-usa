@@ -14,6 +14,8 @@ export interface Case {
   id: string;
   case_number: string;
   source: string;
+  /** Id del expediente en el sistema de origen (solo importados de CompanyCam). */
+  external_ref?: string | null;
   stage_code: string;
   /** Etiqueta en español. Viene del backend para no repetir el diccionario aquí. */
   stage_label: string;

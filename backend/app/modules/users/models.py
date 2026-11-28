@@ -108,8 +108,14 @@ class Role(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
 
 class User(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("organization_id", "email", name="uq_user_org_email"),)
+    __table_args__ = (
+        UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
+        UniqueConstraint("organization_id", "source", "external_ref", name="uq_user_org_source_ref"),
+    )
 
+    # `app` = alta normal; `companycam` = creado por la importación (inactivo, sin acceso).
+    source: Mapped[str] = mapped_column(String(20), default="app", server_default="app", nullable=False)
+    external_ref: Mapped[str | None] = mapped_column(String(64))
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     email_display: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)

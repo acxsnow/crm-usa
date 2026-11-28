@@ -57,6 +57,8 @@ def _record_event(
     to_substatus: str | None,
     reason: str | None,
     actor_id: uuid.UUID | None,
+    imported: bool = False,
+    occurred_at: datetime | None = None,
 ) -> None:
     db.add(
         CaseStageEvent(
@@ -68,7 +70,8 @@ def _record_event(
             to_substatus_code=to_substatus,
             reason=reason,
             actor_user_id=actor_id,
-            occurred_at=datetime.now(timezone.utc),
+            occurred_at=occurred_at or datetime.now(timezone.utc),
+            imported=imported,
         )
     )
 
@@ -195,6 +198,97 @@ async def create_case(
         {"case_id": str(case.id), "organization_id": str(organization_id), "stage": stage_code},
     )
     return case
+
+
+async def import_case(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    source: str,
+    external_ref: str,
+    stage_code: str,
+    reason: str | None = None,
+    created_at: datetime | None = None,
+    customer_id: uuid.UUID | None = None,
+    assigned_salesperson_id: uuid.UUID | None = None,
+    actor_id: uuid.UUID | None = None,
+    address_street: str | None = None,
+    address_unit: str | None = None,
+    address_city: str | None = None,
+    address_state: str | None = None,
+    address_zip: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+) -> tuple[Case, bool]:
+    """Segunda puerta de entrada de un expediente: el que viene de otro sistema.
+
+    `create_case` solo abre en las cuatro etapas iniciales y `transition()`
+    exige permisos, guardas y efectos del flujo de ventas. Un trabajo que ya
+    ocurrió en CompanyCam no pasó por nada de eso, y forzarlo por ahí
+    inventaría historial (aprobaciones, instalaciones) que nunca existió. Por
+    eso esta función crea el expediente directo en una etapa de
+    `stages.IMPORT_STAGES` (`on_hold` o `closed`), con un único evento de
+    historial marcado `imported=True` (los reportes de tiempos lo excluyen) y
+    sin guardas, efectos ni eventos de dominio: no dispara correos, obras ni
+    cobros. Sigue siendo `service.py` quien escribe `stage_code`.
+
+    Es idempotente por (organización, origen, `external_ref`): si ya existe lo
+    devuelve sin tocarlo (segundo valor `False`). No hace `commit`: el llamador
+    decide la transacción (el cargador hace una por proyecto)."""
+    if stage_code not in stages.IMPORT_STAGES:
+        raise InvalidInputError(
+            f"Un expediente importado solo puede nacer en: {', '.join(sorted(stages.IMPORT_STAGES))}.",
+            code="invalid_import_stage",
+        )
+    if source == "visit" or not source or not external_ref:
+        raise InvalidInputError("Un expediente importado necesita origen e id de origen.", code="invalid_import_source")
+
+    existente = (
+        await db.execute(
+            select(Case).where(
+                Case.organization_id == organization_id,
+                Case.source == source,
+                Case.external_ref == external_ref,
+            )
+        )
+    ).scalar_one_or_none()
+    if existente is not None:
+        return existente, False
+
+    momento = created_at or datetime.now(timezone.utc)
+    case = Case(
+        organization_id=organization_id,
+        case_number=f"CC-{external_ref}" if source == "companycam" else f"{source[:6].upper()}-{external_ref}",
+        source=source,
+        external_ref=external_ref,
+        stage_code=stage_code,
+        stage_reason=reason,
+        address_street=address_street,
+        address_unit=address_unit,
+        address_city=address_city,
+        address_state=address_state,
+        address_zip=address_zip,
+        latitude=latitude,
+        longitude=longitude,
+        normalized_address=normalize_address(address_street, address_unit, address_city, address_zip),
+        customer_id=customer_id,
+        assigned_salesperson_id=assigned_salesperson_id,
+        created_at=momento,
+        updated_at=momento,
+    )
+    db.add(case)
+    await db.flush()
+    _record_event(
+        db, case=case, from_stage=None, to_stage=stage_code, from_substatus=None, to_substatus=None,
+        reason=reason, actor_id=actor_id, imported=True, occurred_at=momento,
+    )
+    await record_audit_event(
+        db, organization_id=organization_id, actor_user_id=actor_id, action="cases.imported",
+        entity_type="case", entity_id=str(case.id),
+        after_data={"case_number": case.case_number, "stage_code": stage_code, "source": source,
+                    "external_ref": external_ref},
+    )
+    return case, True
 
 
 async def transition(
@@ -398,7 +492,8 @@ async def recent_activity(
         .join(Case, Case.id == CaseStageEvent.case_id)
         .outerjoin(Customer, Customer.id == Case.customer_id)
         .outerjoin(User, User.id == CaseStageEvent.actor_user_id)
-        .where(CaseStageEvent.organization_id == organization_id, Case.organization_id == organization_id)
+        .where(CaseStageEvent.organization_id == organization_id, Case.organization_id == organization_id,
+               CaseStageEvent.imported.is_(False))
         .order_by(CaseStageEvent.occurred_at.desc(), CaseStageEvent.id.desc())
         .limit(limit)
     )
