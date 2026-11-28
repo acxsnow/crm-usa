@@ -183,3 +183,27 @@
   margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: var(--card-soft, #f6f7fb);
   border: 1px solid var(--line-soft, #e3e7ef); font-size: 0.9rem; }
 .sales-address-known span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Importados de CompanyCam (features/sales/ImportedCaseSections.tsx). */
+.imp-program-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.imp-program-row select { flex: 1 1 14rem; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 0.55rem 0.7rem; font: inherit; font-size: 0.88rem; color: var(--ink); background: #fff; }
+.imp-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+.imp-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius);
+  background: #fff; overflow: hidden; min-width: 0; }
+.imp-thumb { display: grid; place-items: center; aspect-ratio: 4 / 3; border: 0; padding: 0; cursor: pointer;
+  background: var(--line); color: var(--ink-soft); font-weight: 600; }
+.imp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.imp-card-body { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.5rem 0.6rem 0.6rem; min-width: 0; }
+.imp-card-body strong { font-size: 0.82rem; overflow-wrap: anywhere; }
+.imp-card-body small { font-size: 0.74rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.imp-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.imp-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.imp-note { border-left: 3px solid var(--line); padding: 0.1rem 0 0.1rem 0.7rem; min-width: 0; }
+.imp-note-head { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.imp-note-head small { color: var(--ink-soft); font-size: 0.74rem; }
+.imp-note-body { margin: 0.25rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; }
+@media (max-width: 480px) {
+  .imp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+}

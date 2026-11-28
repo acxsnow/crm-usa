@@ -90,6 +90,10 @@ class CustomerResponse(BaseModel):
     status: CustomerStatus
     tags: list[str] | None
     notes: str | None
+    # `companycam` = importado; ahí `has_consent` es falso (no hay constancia en
+    # `data_consents`, el aviso se dio en CompanyCam).
+    source: str = "app"
+    has_consent: bool = True
     contacts: list[CustomerContactResponse] = []
     model_config = {"from_attributes": True}
 

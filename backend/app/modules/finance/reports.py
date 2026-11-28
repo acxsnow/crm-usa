@@ -57,16 +57,21 @@ async def commercial(db: AsyncSession, *, organization_id, date_from=None, date_
     for answers, uid in visitas:
         por_resultado[(answers or {}).get("result", "?")] += 1
         por_vendedor[uid]["visits"] += 1
+    # Los importados (CompanyCam) no cuentan como etapa del flujo: van en una fila aparte.
     etapas = (await db.execute(select(Case.stage_code, func.count()).where(
-        Case.organization_id == organization_id).group_by(Case.stage_code))).all()
+        Case.organization_id == organization_id, Case.source != "companycam").group_by(Case.stage_code))).all()
+    importados = (await db.execute(select(func.count(Case.id)).where(
+        Case.organization_id == organization_id, Case.source == "companycam"))).scalar_one()
     eventos = (await db.execute(select(CaseStageEvent).where(
-        CaseStageEvent.organization_id == organization_id, CaseStageEvent.occurred_at >= desde,
+        CaseStageEvent.organization_id == organization_id, CaseStageEvent.imported.is_(False),
+        CaseStageEvent.occurred_at >= desde,
         CaseStageEvent.occurred_at <= hasta).order_by(CaseStageEvent.occurred_at))).scalars().all()
     casos = {c.id: c for c in (await db.execute(select(Case).where(
         Case.id.in_({e.case_id for e in eventos})))).scalars().all()} if eventos else {}
     # Primer envío de cada caso (de todo el historial, para medir hasta la aprobación).
     envios = {cid: t for cid, t in (await db.execute(select(CaseStageEvent.case_id, func.min(CaseStageEvent.occurred_at))
                                                       .where(CaseStageEvent.organization_id == organization_id,
+                                                             CaseStageEvent.imported.is_(False),
                                                              CaseStageEvent.to_stage_code == "pending_approval",
                                                              CaseStageEvent.from_stage_code != "pending_approval")
                                                       .group_by(CaseStageEvent.case_id))).all()}
@@ -102,7 +107,8 @@ async def commercial(db: AsyncSession, *, organization_id, date_from=None, date_
         {"title": "Visitas por resultado", "columns": ["Resultado", "Visitas"],
          "rows": [[VISIT_RESULTS.get(k, k), v] for k, v in sorted(por_resultado.items(), key=lambda x: -x[1])]},
         {"title": "Expedientes por etapa (hoy)", "columns": ["Etapa", "Expedientes"],
-         "rows": [[stages.STAGE_LABELS.get(k, k), n] for k, n in sorted(etapas, key=lambda x: -x[1])]},
+         "rows": [[stages.STAGE_LABELS.get(k, k), n] for k, n in sorted(etapas, key=lambda x: -x[1])]
+         + ([["Importados de CompanyCam", importados]] if importados else [])},
         {"title": "Por vendedor", "columns": ["Vendedor", "Visitas", "Enviados", "Aprobados", "Rechazados"],
          "rows": [[nombres.get(uid, "Sin vendedor"), v["visits"], v["submitted"], v["approved"], v["rejected"]]
                   for uid, v in sorted(por_vendedor.items(), key=lambda x: -x[1]["visits"])]},
@@ -133,10 +139,12 @@ async def operations(db: AsyncSession, *, organization_id, date_from=None, date_
     ins = dict(inspecciones)
     aprob = {cid: t for cid, t in (await db.execute(select(CaseStageEvent.case_id, func.min(CaseStageEvent.occurred_at))
                                                      .where(CaseStageEvent.organization_id == organization_id,
+                                                            CaseStageEvent.imported.is_(False),
                                                             CaseStageEvent.to_stage_code == "approved")
                                                      .group_by(CaseStageEvent.case_id))).all()}
     instalados = (await db.execute(select(CaseStageEvent.case_id, func.min(CaseStageEvent.occurred_at)).where(
-        CaseStageEvent.organization_id == organization_id, CaseStageEvent.to_stage_code == "installed",
+        CaseStageEvent.organization_id == organization_id, CaseStageEvent.imported.is_(False),
+        CaseStageEvent.to_stage_code == "installed",
         CaseStageEvent.occurred_at >= desde, CaseStageEvent.occurred_at <= hasta).group_by(CaseStageEvent.case_id))).all()
     dias = [business_days(aprob[c], t) for c, t in instalados if c in aprob]
     nombres = await _names(db, set(por_tecnico))

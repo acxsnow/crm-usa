@@ -30,6 +30,7 @@ from app.modules.warehouse import models as warehouse_models  # noqa: F401
 from app.modules.attendance import models as attendance_models  # noqa: F401
 from app.modules.payments import models as payments_models  # noqa: F401
 from app.modules.accounting import models as accounting_models  # noqa: F401
+from app.modules.imports import models as imports_models  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

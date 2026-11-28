@@ -10,6 +10,7 @@ from app.modules.cases import models as _cases  # noqa: F401
 from app.modules.crm import models as _crm  # noqa: F401
 from app.modules.field_ops import models as _field_ops  # noqa: F401
 from app.modules.finance import models as _finance  # noqa: F401
+from app.modules.imports import models as _imports  # noqa: F401
 from app.modules.notifications import models as _notifications  # noqa: F401
 from app.modules.organizations import models as _organizations  # noqa: F401
 from app.modules.payments import models as _payments  # noqa: F401
