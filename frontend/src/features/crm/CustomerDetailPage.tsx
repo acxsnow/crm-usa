@@ -92,6 +92,9 @@ export function CustomerDetailPage() {
           <div className="ui-profile-meta">
             <StatusBadge tone={customer.status === "active" ? "ok" : "neutral"}>{customer.status === "active" ? "Activo" : "Inactivo"}</StatusBadge>
             <span>{TIPO[customer.customer_type] ?? customer.customer_type}</span>
+            {customer.source === "companycam" && customer.has_consent === false && (
+              <StatusBadge tone="warn">Importado · sin autorización registrada</StatusBadge>
+            )}
           </div>
         </div>
         {canEdit && <button className="primary-button ui-profile-action" onClick={alternarEdicion}>{editing ? "Cancelar" : "Editar cliente"}</button>}

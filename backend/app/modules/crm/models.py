@@ -46,6 +46,14 @@ class ActivityType(str, enum.Enum):
 
 class Customer(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     __tablename__ = "customers"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "source", "external_ref", name="uq_customer_org_source_ref"),
+    )
+
+    # `app` = capturado en la aplicación; `companycam` = importado. Los
+    # importados no traen constancia en `data_consents` (aviso dado en CompanyCam).
+    source: Mapped[str] = mapped_column(String(20), default="app", server_default="app", nullable=False)
+    external_ref: Mapped[str | None] = mapped_column(String(64))
 
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_type: Mapped[CustomerType] = mapped_column(

@@ -11,7 +11,7 @@ from app.modules.cases.models import Case
 from app.modules.cases.schemas import CaseResponse
 from app.modules.crm import privacy
 from app.modules.crm import service as crm_service
-from app.modules.crm.models import Activity, Customer, CustomerContact, CustomerStatus, FunderStatus
+from app.modules.crm.models import Activity, Customer, CustomerContact, CustomerStatus, DataConsent, FunderStatus
 from app.modules.crm.schemas import (
     ActivityCreate,
     ActivityResponse,
@@ -35,6 +35,18 @@ router = APIRouter(tags=["crm"])
 
 # Los datos personales del cliente: tocarlos exige su autorización.
 PERSONAL_FIELDS = {"legal_name", "main_phone", "email", "billing_address"}
+
+
+async def _attach_consent(db: AsyncSession, customers) -> None:
+    """Marca cada cliente con `has_consent` (¿hay constancia en `data_consents`?)
+    para que la respuesta lo exponga; no es una columna."""
+    clientes = list(customers)
+    if not clientes:
+        return
+    con = {i for (i,) in (await db.execute(select(DataConsent.customer_id).where(
+        DataConsent.customer_id.in_([c.id for c in clientes])))).all()}
+    for c in clientes:
+        c.has_consent = c.id in con
 
 
 def _evidence(request: Request) -> tuple[str | None, str | None]:
@@ -81,7 +93,9 @@ async def list_customers(
             | Customer.billing_address.ilike(like, escape=LIKE_ESCAPE) | en_expediente
         )
     limit, offset = pagination
-    return await paginate(db, stmt, limit=limit, offset=offset, response=response)
+    filas = await paginate(db, stmt, limit=limit, offset=offset, response=response)
+    await _attach_consent(db, filas)
+    return filas
 
 
 @router.post("/customers", response_model=CustomerResponse, status_code=201)
@@ -126,6 +140,7 @@ async def get_customer(
     customer = result.scalar_one_or_none()
     if not customer:
         raise NotFoundError("El cliente no existe.", code="customer_not_found")
+    await _attach_consent(db, [customer])
     return customer
 
 
@@ -165,6 +180,7 @@ async def update_customer(
     )
     await db.commit()
     await db.refresh(customer)
+    await _attach_consent(db, [customer])
     return customer
 
 
@@ -248,6 +264,7 @@ async def customer_timeline(
             .order_by(Case.created_at.desc())
         )
     ).scalars().all()
+    await _attach_consent(db, [customer])
     activities = (
         await db.execute(select(Activity).where(Activity.customer_id == customer_id).order_by(Activity.created_at.desc()))
     ).scalars().all()
