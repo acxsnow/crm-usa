@@ -204,6 +204,9 @@ class Loader:
                                              additional_ids=[f[0].id for f in filas[1:]], source=SOURCE)
         if version is not None:
             case.program_version_id = version.id
+        # Sigue siendo el expediente tal como lo trajo la importación: la reversa
+        # reconoce lo intacto porque `updated_at` es igual a `created_at`.
+        case.updated_at = case.created_at
         self._cstats[f"program_{codigos[0]}"] += 1
         if len(codigos) > 1:
             self._cstats["cases_multi_program"] += 1

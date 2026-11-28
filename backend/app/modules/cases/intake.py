@@ -567,6 +567,8 @@ async def accept_terms(db, *, organization_id, user, case_id, customer_name: str
         terms_language=terminos.language, customer_name=nombre, signature_path=ruta, accepted_at=ahora,
         salesperson_user_id=user.id, latitude=latitude, longitude=longitude, ip_address=ip_address,
         user_agent=(user_agent or "")[:500] or None,
+        # Una sola firma vale para todos los programas del expediente.
+        program_codes=await _program_codes(db, case),
     )
     db.add(aceptacion)
     await db.flush()
@@ -612,7 +614,8 @@ async def accept_terms(db, *, organization_id, user, case_id, customer_name: str
     await record_audit_event(db, organization_id=organization_id, actor_user_id=user.id,
                              action="cases.terms_accepted", entity_type="case", entity_id=str(case.id),
                              after_data={"terms_version": terminos.version, "language": terminos.language,
-                                         "data_consent_version": privacy.DOCUMENT_VERSION})
+                                         "data_consent_version": privacy.DOCUMENT_VERSION,
+                                         "programs": aceptacion.program_codes})
     await db.commit()
     return await _get_case(db, organization_id, case.id)
 
@@ -733,3 +736,9 @@ async def board(db, *, organization_id, user, include_early_closes=False, mine=F
                       for c in del_codigo],
         })
     return columnas
+
+
+async def _program_codes(db, case: Case) -> list[str]:
+    from app.modules.cases.multiprogram import program_codes
+
+    return await program_codes(db, case)

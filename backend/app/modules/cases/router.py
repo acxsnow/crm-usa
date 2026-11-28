@@ -217,6 +217,14 @@ async def transition_case(
         reason=payload.reason,
         substatus=payload.substatus,
     )
+    if payload.to_stage in ("approved", "rejected"):
+        # El programa principal lleva la decisión del expediente; los
+        # adicionales se deciden aparte (`cases/multiprogram.py`).
+        from app.modules.cases import multiprogram
+
+        await multiprogram.sync_primary(db, case, user_id=current_user.id)
+        await db.commit()
+        case = await case_service.get_case_or_404(db, organization_id=organization_id, case_id=case_id)
     return _to_response(case)
 
 

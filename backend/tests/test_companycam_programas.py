@@ -124,3 +124,23 @@ async def test_cambiar_el_principal_conserva_los_adicionales(db, seeded_org):
     filas = (await db.execute(select(CaseProgram).where(CaseProgram.case_id == caso.id))).scalars().all()
     assert {f.program_id: f.is_primary for f in filas} == {ids["HEERA"]: True, ids["GOZERO"]: False}
     assert caso.program_id == ids["HEERA"]
+
+
+@pytest.mark.asyncio
+async def test_la_reversa_borra_lo_importado_con_programas_y_respeta_lo_decidido(db, seeded_org, tmp_path):
+    from app.modules.imports.companycam.rollback import rollback_import
+
+    org = seeded_org["org"]
+    await programs.install_defaults(db, organization_id=org.id)
+    await db.commit()
+    a, b = _p(2101, archived=True), _p(2102, archived=True)
+    cache = _cache(tmp_path, {a: _labels("TECH PROGRAM", "GO ZERO SUBMITED"), b: _labels("HEERA PROGRAM")})
+    await _load(db, org.id, cache)
+    caso_b = (await db.execute(select(Case).where(Case.external_ref == "2102"))).scalar_one()
+    fila = (await db.execute(select(CaseProgram).where(CaseProgram.case_id == caso_b.id))).scalar_one()
+    fila.status = "approved"  # alguien lo decidió
+    await db.commit()
+    r = await rollback_import(db, org.id, cache, log=lambda *_: None)
+    assert r["cases_deleted"] == 1 and r["cases_blocked"] == 1
+    quedan = (await db.execute(select(Case.external_ref))).scalars().all()
+    assert quedan == ["2102"]

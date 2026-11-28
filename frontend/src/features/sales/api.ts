@@ -243,3 +243,26 @@ export interface CaseProgramItem {
 /** Los programas del expediente: el principal primero y los adicionales. */
 export const getCasePrograms = async (caseId: string) =>
   (await apiClient.get<{ programs: CaseProgramItem[] }>(`/cases/${caseId}/programs`)).data.programs;
+
+export interface CaseProgramDetail extends CaseProgramItem {
+  status: "pending" | "approved" | "rejected";
+  approval_code: string | null;
+  application_number: string | null;
+  decision_reason: string | null;
+  decided_at: string | null;
+  missing: string[];
+}
+
+export const getCaseProgramsDetail = async (caseId: string) =>
+  (await apiClient.get<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs`)).data.programs;
+
+/** Deja los programas adicionales del expediente (el principal no cambia). */
+export const setAdditionalPrograms = async (caseId: string, programIds: string[]) =>
+  (await apiClient.put<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs`, { program_ids: programIds }))
+    .data.programs;
+
+/** Aprobación o rechazo de un programa adicional. */
+export const decideProgram = async (caseId: string, programId: string, body: {
+  decision: "approved" | "rejected" | "pending"; approval_code?: string; reason?: string;
+}) => (await apiClient.post<{ programs: CaseProgramDetail[] }>(`/cases/${caseId}/programs/${programId}/decision`, body))
+  .data.programs;

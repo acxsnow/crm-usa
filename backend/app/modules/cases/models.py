@@ -214,6 +214,15 @@ class CaseProgram(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     # De dónde salió: `companycam` (etiqueta del proyecto) o `manual`.
     source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="manual")
+    # Decisión del programa: `pending`, `approved` o `rejected`. El principal la
+    # copia del expediente (aprobar o rechazar el expediente); cada adicional se
+    # decide aparte (`cases/multiprogram.decide`). Solo un aprobado se cobra.
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="pending")
+    approval_code: Mapped[str | None] = mapped_column(String(100))
+    application_number: Mapped[str | None] = mapped_column(String(100))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(GUID())
 
 
 class CaseStageEvent(UUIDPKMixin, OrgScopedMixin, Base):
@@ -342,6 +351,9 @@ class CaseTermsAcceptance(UUIDPKMixin, OrgScopedMixin, Base):
     longitude: Mapped[float | None] = mapped_column(Float)
     ip_address: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(500))
+    # Una sola firma vale para todos los programas del expediente (cliente, 28
+    # nov 2026): la constancia guarda cuáles cubrió, el principal primero.
+    program_codes: Mapped[list | None] = mapped_column(JSON)
 
 
 class CaseNote(UUIDPKMixin, TimestampMixin, OrgScopedMixin, Base):

@@ -203,20 +203,23 @@ async def create_case(
 
 
 async def set_case_programs(db: AsyncSession, case: Case, *, primary_id: uuid.UUID | None,
-                            additional_ids: list[uuid.UUID] = (), source: str = "manual") -> None:
+                            additional_ids: list[uuid.UUID] | None = None, source: str = "manual") -> None:
     """Deja los programas del expediente (`case_programs`) en: el principal
     (`Case.program_id`) más los adicionales. No hace `commit`.
 
-    Cambiar el principal no borra los adicionales; el principal anterior sale
-    si ya no está en la lista."""
+    Sin `additional_ids` (cambiar solo el principal) los adicionales se
+    conservan y el principal anterior sale; con una lista, los adicionales
+    quedan exactamente en esa lista."""
     from app.modules.cases.models import CaseProgram
 
     case.program_id = primary_id
-    queridos = [p for p in ([primary_id] if primary_id else []) + list(additional_ids) if p]
     filas = {f.program_id: f for f in (await db.execute(
         select(CaseProgram).where(CaseProgram.case_id == case.id))).scalars()}
+    if additional_ids is None:
+        additional_ids = [pid for pid, f in filas.items() if not f.is_primary]
+    queridos = [p for p in ([primary_id] if primary_id else []) + list(additional_ids) if p]
     for pid, fila in list(filas.items()):
-        if fila.is_primary and pid != primary_id and pid not in queridos:
+        if pid not in queridos:
             await db.delete(fila)
             del filas[pid]
     for pid in dict.fromkeys(queridos):

@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
-from app.modules.cases.models import Case, CaseFile, CaseNote, CaseStageEvent
+from app.modules.cases.models import Case, CaseFile, CaseNote, CaseProgram, CaseStageEvent
 from app.modules.crm.models import Customer
 from app.modules.imports.companycam.cache import ExportCache
 from app.modules.imports.models import ImportItem
@@ -23,7 +23,8 @@ from app.shared.audit import record_audit_event
 SOURCE = "companycam"
 # Tablas que cuelgan del expediente y se borran con él (se revisan aparte o no bloquean).
 # `data_consents` NO está aquí: una constancia de autorización es evidencia y bloquea.
-_SIN_BLOQUEO = {"case_notes", "import_items", "case_stage_events", "case_files"}
+# `case_programs` se revisa aparte: lo que puso la importación no bloquea.
+_SIN_BLOQUEO = {"case_notes", "import_items", "case_stage_events", "case_files", "case_programs"}
 _CLIENTE_SIN_BLOQUEO = {"customer_contacts", "cases"}
 
 
@@ -52,7 +53,11 @@ async def _count(db: AsyncSession, table: str, column: str, value) -> int:
 
 async def case_blockers(db: AsyncSession, case: Case) -> list[str]:
     motivos: list[str] = []
-    if case.program_id is not None:
+    # El programa que puso la importación (por etiqueta) no bloquea; uno elegido
+    # o decidido por una persona, sí.
+    programas = (await db.execute(select(CaseProgram).where(CaseProgram.case_id == case.id))).scalars().all()
+    if any(cp.source != SOURCE or cp.status != "pending" for cp in programas) or (
+            case.program_id is not None and case.program_id not in {cp.program_id for cp in programas}):
         motivos.append("tiene programa asignado")
     if (await db.execute(select(func.count(CaseStageEvent.id)).where(
             CaseStageEvent.case_id == case.id, CaseStageEvent.imported.is_(False)))).scalar_one():
@@ -85,7 +90,7 @@ async def rollback_import(db: AsyncSession, organization_id: uuid.UUID, cache: E
             continue
         # Los hijos se borran a mano: en la base real caen por cascada, pero así
         # no se depende de ella (SQLite de pruebas no la aplica).
-        for modelo in (CaseNote, ImportItem, CaseFile, CaseStageEvent):
+        for modelo in (CaseNote, ImportItem, CaseFile, CaseStageEvent, CaseProgram):
             await db.execute(delete(modelo).where(modelo.case_id == c.id))
         await db.delete(c)
         resumen["cases_deleted"] += 1

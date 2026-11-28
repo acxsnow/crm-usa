@@ -14,11 +14,13 @@ import { FormRenderer, type MediaSupport } from "@/features/programs/FormRendere
 import { apiClient } from "@/lib/apiClient";
 import { toast } from "@/lib/toast";
 import { useGeolocation } from "@/lib/useGeolocation";
+import { CasePrograms } from "./CasePrograms";
 import type { Evaluation } from "@/types/programs";
 import {
   acceptTerms,
   getCaseForm,
   getCase,
+  getCasePrograms,
   programOptions,
   openCaseFile,
   saveStep,
@@ -242,9 +244,14 @@ export function CaseFormPage() {
         {aviso && <p className="info-banner" role="status">{aviso}</p>}
 
         {actual === REVIEW ? (
+          <>
+          {/* Los programas del expediente: el vendedor agrega adicionales mientras es «Nuevo prospecto». */}
+          <CasePrograms caseId={caseId!} stage={c.stage_code} canEdit={c.stage_code === "new_prospect"} canDecide={false}
+            onDone={refrescar} />
           <Review caseId={caseId!} evaluation={evaluacion} unsaved={sinGuardar} editable={form.editable} resubmit={devuelto || rechazado}
             onGo={(code) => setPaso(code)} onSent={async () => { setAviso("Enviado a revisión. Administración lo revisa y te avisa si hay que corregir."); await refrescar(); }}
             onError={setError} />
+          </>
         ) : (
           <>
             {esAutorizacion && form.terms && (
@@ -397,6 +404,7 @@ function TermsAndSignature({ caseId, terms, consent, acceptance, editable, defau
   });
   const firmado = Boolean(acceptance) && !repitiendo;
   const listo = leido && nombre.trim().length >= 3;
+  const { data: cubre = [] } = useQuery({ queryKey: ["case-programs", caseId], queryFn: () => getCasePrograms(caseId) });
   const [dibujo, setDibujo] = useState<string | null>(null);
   useEffect(() => {
     registerPending(listo && dibujo && !firmado ? () => firmar.mutateAsync(dibujo) : null);
@@ -407,6 +415,9 @@ function TermsAndSignature({ caseId, terms, consent, acceptance, editable, defau
     <section className={`sales-terms${firmado ? " is-signed" : ""}`}>
       <h2>{terms.title}</h2>
       <div className="sales-terms-body"><p>{terms.body}</p><small>Versión {terms.version} · {terms.language === "es" ? "español" : "inglés"}</small></div>
+      {cubre.length > 1 && (
+        <p className="info-banner" role="note">Esta firma vale para todos los programas del expediente: {cubre.map((p) => p.name).join(", ")}.</p>
+      )}
       {consent && <DataConsentNotice notice={consent} />}
       {firmado && acceptance ? (
         <div className="sales-signed">
